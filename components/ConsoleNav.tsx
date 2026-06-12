@@ -7,6 +7,7 @@ const ITEMS = [
   { href: '/console/deals',     id: 'deals',    label: '案件',           icon: 'list' },
   { href: '/console/partners',  id: 'partners', label: 'パートナー',     icon: 'users' },
   { href: '/console/services',  id: 'svcs',     label: 'サービス・報酬', icon: 'svcs' },
+  { href: '/console/payouts',   id: 'payouts',  label: '支払管理',       icon: 'payouts' },
 ]
 
 function NavIcon({ id }: { id: string }) {
@@ -19,6 +20,8 @@ function NavIcon({ id }: { id: string }) {
       return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
     case 'svcs':
       return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 12l9-5M12 12v10M12 12L3 7"/></svg>
+    case 'payouts':
+      return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20M6 14h4"/></svg>
     default: return null
   }
 }

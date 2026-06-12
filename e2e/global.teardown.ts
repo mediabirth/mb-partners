@@ -38,56 +38,61 @@ export default async function globalTeardown() {
     try { testData = JSON.parse(readFileSync(testDataPath, 'utf-8')) } catch { /* ignore */ }
   }
 
-  const { adminId, partnerId, partnerRecordId, serviceId } = testData
+  const { adminId, partnerId, partner2Id, partnerRecordId, partner2RecordId, serviceId } = testData
 
   // ── Delete in dependency order ─────────────────────────────────
 
+  const allPartnerRecordIds = [partnerRecordId, partner2RecordId].filter(Boolean)
+
   // 1. deal_events for test deals
-  if (partnerRecordId) {
-    const { data: testDeals } = await service.from('deals')
-      .select('id').eq('partner_id', partnerRecordId)
-    if (testDeals?.length) {
-      await service.from('deal_events').delete()
-        .in('deal_id', testDeals.map(d => d.id))
-    }
+  const { data: testDeals } = await service.from('deals').select('id').like('customer_name', 'E2Eテスト%').then(r => r)
+  if (testDeals?.length) {
+    await service.from('deal_events').delete().in('deal_id', testDeals.map(d => d.id))
   }
 
-  // 2. notifications for test partner
-  if (partnerRecordId) {
-    await service.from('notifications').delete().eq('partner_id', partnerRecordId)
+  // 2. notifications for test partners
+  if (allPartnerRecordIds.length) {
+    await service.from('notifications').delete().in('partner_id', allPartnerRecordIds)
   }
 
-  // 3. test deals (all with E2Eテスト prefix, or by partner)
+  // 3. payout_items + payout_batches for test month
+  if (allPartnerRecordIds.length) {
+    await service.from('payout_items').delete().in('partner_id', allPartnerRecordIds)
+  }
+  await service.from('payout_batches').delete().eq('month', '2026-06-01')
+
+  // 4. test deals (all with E2Eテスト prefix)
   await service.from('deals').delete().like('customer_name', 'E2Eテスト%')
+  await service.from('deals').delete().like('customer_name', 'E2E%')
 
-  // 4. referral links
+  // 5. referral links
   if (serviceId) {
     await service.from('referral_links').delete().eq('service_id', serviceId)
   }
 
-  // 5. partner record
-  if (partnerRecordId) {
-    await service.from('partners').delete().eq('id', partnerRecordId)
+  // 6. partner records
+  if (allPartnerRecordIds.length) {
+    await service.from('partners').delete().in('id', allPartnerRecordIds)
   }
 
-  // 6. service menus
+  // 7. service menus
   if (serviceId) {
     await service.from('service_menus').delete().eq('service_id', serviceId)
   }
 
-  // 7. service
+  // 8. service
   if (serviceId) {
     await service.from('services').delete().eq('id', serviceId)
   }
 
-  // 8. profiles
-  const profileIds = [adminId, partnerId].filter(Boolean)
+  // 9. profiles
+  const profileIds = [adminId, partnerId, partner2Id].filter(Boolean)
   if (profileIds.length) {
     await service.from('profiles').delete().in('id', profileIds)
   }
 
-  // 9. auth users
-  for (const uid of [adminId, partnerId].filter(Boolean)) {
+  // 10. auth users
+  for (const uid of [adminId, partnerId, partner2Id].filter(Boolean)) {
     try { await service.auth.admin.deleteUser(uid) } catch { /* ignore if already deleted */ }
   }
 

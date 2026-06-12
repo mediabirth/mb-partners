@@ -102,19 +102,22 @@ export default async function globalSetup() {
   })
 
   // ── 1. Auth users ──────────────────────────────────────────────
-  const adminUser   = await getOrCreateUser(service, authClient, E2E.ADMIN_EMAIL, E2E.ADMIN_PASS)
-  const partnerUser = await getOrCreateUser(service, authClient, E2E.PARTNER_EMAIL, E2E.PARTNER_PASS)
+  const adminUser    = await getOrCreateUser(service, authClient, E2E.ADMIN_EMAIL, E2E.ADMIN_PASS)
+  const partnerUser  = await getOrCreateUser(service, authClient, E2E.PARTNER_EMAIL, E2E.PARTNER_PASS)
+  const partner2User = await getOrCreateUser(service, authClient, E2E.PARTNER2_EMAIL, E2E.PARTNER2_PASS)
 
   // ── 2. Profiles ────────────────────────────────────────────────
-  console.log('[setup] adminUser.id:', adminUser?.id, 'partnerUser.id:', partnerUser?.id)
+  console.log('[setup] adminUser.id:', adminUser?.id, 'partnerUser.id:', partnerUser?.id, 'partner2User.id:', partner2User?.id)
   const { error: profErr } = await service.from('profiles').upsert([
-    { id: adminUser!.id,   name: 'E2E管理者',      role: 'owner',   color: '#4733E6', email: E2E.ADMIN_EMAIL },
-    { id: partnerUser!.id, name: 'E2Eパートナー',  role: 'partner', color: '#C2479E', email: E2E.PARTNER_EMAIL },
+    { id: adminUser!.id,    name: 'E2E管理者',        role: 'owner',   color: '#4733E6', email: E2E.ADMIN_EMAIL },
+    { id: partnerUser!.id,  name: 'E2Eパートナー',    role: 'partner', color: '#C2479E', email: E2E.PARTNER_EMAIL },
+    { id: partner2User!.id, name: 'E2E法人パートナー', role: 'partner', color: '#4CAF50', email: E2E.PARTNER2_EMAIL },
   ], { onConflict: 'id' })
   if (profErr) throw new Error(`profiles upsert failed: ${profErr.message}`)
   console.log('[setup] profiles upserted OK')
 
-  // ── 3. Partner record ──────────────────────────────────────────
+  // ── 3. Partner records ─────────────────────────────────────────
+  // Individual partner (tax_type='individual')
   const { data: existingPartner } = await service.from('partners')
     .select('id').eq('profile_id', partnerUser!.id).maybeSingle()
   let partnerRecord: { id: string } | null = existingPartner as { id: string } | null
@@ -126,6 +129,20 @@ export default async function globalSetup() {
     partnerRecord = inserted as { id: string }
   } else {
     await service.from('partners').update({ code: E2E.PARTNER_CODE, status: 'active', tax_type: 'individual' }).eq('id', partnerRecord.id)
+  }
+
+  // Corporate partner (tax_type='corporate') — M3 tax comparison test
+  const { data: existingPartner2 } = await service.from('partners')
+    .select('id').eq('profile_id', partner2User!.id).maybeSingle()
+  let partner2Record: { id: string } | null = existingPartner2 as { id: string } | null
+  if (!partner2Record) {
+    const { data: inserted2, error: p2Err } = await service.from('partners')
+      .insert({ id: randomUUID(), profile_id: partner2User!.id, code: E2E.PARTNER2_CODE, status: 'active', tax_type: 'corporate' })
+      .select('id').single()
+    if (p2Err) throw new Error(`partner2 insert failed: ${p2Err.message}`)
+    partner2Record = inserted2 as { id: string }
+  } else {
+    await service.from('partners').update({ code: E2E.PARTNER2_CODE, status: 'active', tax_type: 'corporate' }).eq('id', partner2Record.id)
   }
 
   // ── 4. Test service ────────────────────────────────────────────
@@ -164,13 +181,33 @@ export default async function globalSetup() {
   await service.from('deals').delete().eq('customer_name', E2E.CUSTOMER_PAYOUT)
   await service.from('deals').delete().eq('customer_name', E2E.CUSTOMER_CANCEL)
   await service.from('deals').delete().eq('customer_name', E2E.CUSTOMER_REFERRAL)
+  await service.from('deals').delete().eq('customer_name', E2E.CUSTOMER_CORP)
 
-  // Payout math deal (status=confirmed, fixed_month=2026-06)
+  // Clean up any previous test payout batches
+  await service.from('payout_items').delete().in('partner_id', [partnerRecord!.id, partner2Record!.id])
+  await service.from('payout_batches').delete().eq('month', `${E2E.FIXED_MONTH}`)
+
+  // Payout math deal — individual partner (status=confirmed, fixed_month=2026-06)
   await service.from('deals').insert({
     partner_id:      partnerRecord!.id,
     service_id:      testService!.id,
     menu_id:         testMenu!.id,
     customer_name:   E2E.CUSTOMER_PAYOUT,
+    channel:         'referral',
+    source:          'link',
+    status:          'confirmed',
+    amount:          E2E.REWARD_AMOUNT,
+    fixed_month:     E2E.FIXED_MONTH,
+    consent:         true,
+    reward_snapshot: { id: testMenu!.id, name: 'E2Eメニュー', ref_type: 'fixed', ref_value: E2E.REWARD_AMOUNT },
+  })
+
+  // Corporate partner deal (status=confirmed, fixed_month=2026-06) — no withholding
+  await service.from('deals').insert({
+    partner_id:      partner2Record!.id,
+    service_id:      testService!.id,
+    menu_id:         testMenu!.id,
+    customer_name:   E2E.CUSTOMER_CORP,
     channel:         'referral',
     source:          'link',
     status:          'confirmed',
@@ -195,11 +232,13 @@ export default async function globalSetup() {
   // ── 8. Save test data IDs ──────────────────────────────────────
   mkdirSync(resolve(__dirname, 'storageState'), { recursive: true })
   writeFileSync(resolve(__dirname, '.test-data.json'), JSON.stringify({
-    adminId:        adminUser!.id,
-    partnerId:      partnerUser!.id,
-    partnerRecordId: partnerRecord!.id,
-    serviceId:      testService!.id,
-    menuId:         testMenu!.id,
+    adminId:          adminUser!.id,
+    partnerId:        partnerUser!.id,
+    partner2Id:       partner2User!.id,
+    partnerRecordId:  partnerRecord!.id,
+    partner2RecordId: partner2Record!.id,
+    serviceId:        testService!.id,
+    menuId:           testMenu!.id,
   }, null, 2))
 
   // ── 9. Admin browser session ───────────────────────────────────
