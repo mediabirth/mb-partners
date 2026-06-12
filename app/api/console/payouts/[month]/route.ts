@@ -69,12 +69,14 @@ export async function PATCH(
   }
 
   // 3. Insert deal_events for audit
-  await serviceSupabase.from('deal_events').insert({
-    deal_id: null,
-    body: `${month} バッチを支払済にしました (batch_id: ${batch.id})`,
-    created_by: user.id,
-    visible_to_partner: false,
-  }).catch(() => { /* deal_events may require deal_id */ })
+  try {
+    await serviceSupabase.from('deal_events').insert({
+      deal_id: null,
+      body: `${month} バッチを支払済にしました (batch_id: ${batch.id})`,
+      created_by: user.id,
+      visible_to_partner: false,
+    })
+  } catch { /* deal_events may require deal_id — ignore */ }
 
   return NextResponse.json({ ok: true, partner_count: partnerIds.length })
 }
