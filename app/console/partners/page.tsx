@@ -27,7 +27,7 @@ export default async function PartnersPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') redirect('/console')
+  if (profile?.role === 'partner' || !profile) redirect('/console')
 
   const [partners, deals] = await Promise.all([
     getPartnersWithProfiles(supabase),

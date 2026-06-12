@@ -15,7 +15,7 @@ export default async function ServicesPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') redirect('/console')
+  if (profile?.role === 'partner' || !profile) redirect('/console')
 
   const services = await getServicesWithMenus(supabase)
 
