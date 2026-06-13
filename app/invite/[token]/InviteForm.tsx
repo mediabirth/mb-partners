@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function InviteForm({
   email,
@@ -11,31 +13,50 @@ export default function InviteForm({
   defaultName: string
   token: string
 }) {
-  const [name, setName]       = useState(defaultName)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const router = useRouter()
+  const [name, setName]                 = useState(defaultName)
+  const [password, setPassword]         = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    setLoading(true)
     setError('')
 
+    if (!name.trim())    { setError('お名前を入力してください'); return }
+    if (password.length < 8) { setError('パスワードは8文字以上で設定してください'); return }
+    if (password !== passwordConfirm) { setError('パスワードが一致しません'); return }
+
+    setLoading(true)
+
+    // Step 1: Server creates the user account + partner record
     const res = await fetch('/api/invite/accept', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ token, name: name.trim() }),
+      body:    JSON.stringify({ token, name: name.trim(), email, password }),
     })
     const data = await res.json()
 
     if (!res.ok) {
-      setError(data.error || 'エラーが発生しました')
+      setError(data.error || 'アカウント作成に失敗しました')
       setLoading(false)
       return
     }
 
-    // Supabase verify → /auth/magic#access_token=... → セッション確立 → /app
-    window.location.href = data.action_link
+    // Step 2: Client signs in with the new credentials (password path — no magic link)
+    const supabase = createClient()
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (signInErr) {
+      setError('アカウントは作成されましたが、ログインに失敗しました。ログインページからサインインしてください。')
+      setLoading(false)
+      return
+    }
+
+    // Step 3: Navigate to partner portal
+    router.push('/app')
+    router.refresh()
   }
 
   return (
@@ -65,10 +86,11 @@ export default function InviteForm({
             招待を受け取りました
           </h1>
           <p style={{ fontSize: '.75rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 28 }}>
-            アカウントを作成してパートナープログラムに参加してください。
+            パスワードを設定してアカウントを作成します。
           </p>
 
           <form onSubmit={handleSubmit}>
+            {/* Email — readonly prefill */}
             <div className="fld" style={{ marginBottom: 14 }}>
               <label>メールアドレス</label>
               <input
@@ -78,8 +100,10 @@ export default function InviteForm({
                 style={{ background: 'var(--bg2)', color: 'var(--muted2)', cursor: 'default' }}
               />
             </div>
-            <div className="fld" style={{ marginBottom: 20 }}>
-              <label htmlFor="invite-name">お名前</label>
+
+            {/* Name */}
+            <div className="fld" style={{ marginBottom: 14 }}>
+              <label htmlFor="invite-name">お名前 <span style={{ color: 'var(--red)' }}>*</span></label>
               <input
                 id="invite-name"
                 type="text"
@@ -87,7 +111,36 @@ export default function InviteForm({
                 value={name}
                 onChange={e => setName(e.target.value)}
                 required
-                autoFocus
+                autoFocus={!defaultName}
+              />
+            </div>
+
+            {/* Password */}
+            <div className="fld" style={{ marginBottom: 14 }}>
+              <label htmlFor="invite-pw">パスワード <span style={{ color: 'var(--red)' }}>*</span></label>
+              <input
+                id="invite-pw"
+                type="password"
+                placeholder="8文字以上"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+                autoFocus={!!defaultName}
+              />
+            </div>
+
+            {/* Password confirm */}
+            <div className="fld" style={{ marginBottom: 20 }}>
+              <label htmlFor="invite-pw2">パスワード（確認） <span style={{ color: 'var(--red)' }}>*</span></label>
+              <input
+                id="invite-pw2"
+                type="password"
+                placeholder="もう一度入力"
+                value={passwordConfirm}
+                onChange={e => setPasswordConfirm(e.target.value)}
+                required
+                autoComplete="new-password"
               />
             </div>
 
@@ -99,11 +152,15 @@ export default function InviteForm({
               type="submit"
               className="btn btn-p"
               style={{ width: '100%', justifyContent: 'center' }}
-              disabled={loading || !name.trim()}
+              disabled={loading || !name.trim() || password.length < 8 || password !== passwordConfirm}
             >
               {loading ? 'アカウント作成中…' : 'アカウントを作成してログイン'}
             </button>
           </form>
+
+          <p style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 16, textAlign: 'center' }}>
+            すでにアカウントをお持ちの方は<a href="/login" style={{ color: 'var(--blue)' }}>ログイン</a>へ
+          </p>
         </div>
       </div>
     </div>

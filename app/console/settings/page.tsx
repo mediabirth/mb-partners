@@ -194,7 +194,7 @@ export default function SettingsPage() {
                   value={slackWebhook}
                   onChange={e => setSlackWebhook(e.target.value)}
                   placeholder="https://hooks.slack.com/services/..."
-                  style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.8rem', fontFamily: 'monospace' }}
+                  style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 13px', fontFamily: 'monospace', fontSize: '.8rem' }}
                 />
               </div>
             )}
