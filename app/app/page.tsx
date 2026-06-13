@@ -151,6 +151,26 @@ export default async function AppPage() {
         </div>
       </div>
 
+      {/* Help link */}
+      <div style={{ padding: '10px 20px 0' }}>
+        <Link href="/app/support" style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
+          background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
+          textDecoration: 'none',
+        }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="1.8">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--txt)' }}>お問い合わせ</div>
+            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1 }}>報酬・案件・アカウントのご質問はこちら</div>
+          </div>
+          <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
+        </Link>
+      </div>
+
       <div style={{ height: 20 }} />
     </div>
   )
