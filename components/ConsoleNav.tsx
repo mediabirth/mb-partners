@@ -2,6 +2,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+const NAV_STYLE = `
+  .cnav-link { transition: color .18s, background .18s; }
+  .cnav-link:hover:not(.cnav-active) { background: var(--bg2) !important; color: var(--txt) !important; }
+  .cnav-active { background: var(--blue-bg2) !important; color: var(--blue) !important; font-weight: 700 !important; }
+`
+
 const ITEMS = [
   { href: '/console',           id: 'dash',     label: 'ダッシュボード', icon: 'dash' },
   { href: '/console/deals',     id: 'deals',    label: '案件',           icon: 'list' },
@@ -10,6 +16,7 @@ const ITEMS = [
   { href: '/console/payouts',     id: 'payouts',     label: '支払管理',       icon: 'payouts' },
   { href: '/console/broadcasts', id: 'broadcasts', label: '配信',           icon: 'broadcasts' },
   { href: '/console/inquiries', id: 'inquiries',  label: '問い合わせ',     icon: 'inquiries' },
+  { href: '/console/settings',  id: 'settings',   label: '設定',           icon: 'settings' },
 ]
 
 function NavIcon({ id }: { id: string }) {
@@ -28,6 +35,8 @@ function NavIcon({ id }: { id: string }) {
       return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
     case 'inquiries':
       return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    case 'settings':
+      return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     default: return null
   }
 }
@@ -38,6 +47,8 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
     href === '/console' ? path === '/console' : path.startsWith(href)
 
   return (
+    <>
+    <style>{NAV_STYLE}</style>
     <aside style={{
       width: 230, background: '#fff', borderRight: '1px solid var(--line)',
       padding: '22px 14px', position: 'fixed', top: 0, bottom: 0,
@@ -59,14 +70,16 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
       </Link>
 
       {ITEMS.map(item => (
-        <Link key={item.href} href={item.href} style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 14px', borderRadius: 9,
-          fontSize: '.77rem', fontWeight: active(item.href) ? 700 : 500,
-          color: active(item.href) ? 'var(--blue)' : 'var(--muted2)',
-          background: active(item.href) ? 'var(--blue-bg2)' : 'transparent',
-          textDecoration: 'none', minHeight: 42, transition: 'color .18s, background .18s',
-        }}>
+        <Link key={item.href} href={item.href}
+          className={`cnav-link${active(item.href) ? ' cnav-active' : ''}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 14px', borderRadius: 9,
+            fontSize: '.77rem', fontWeight: active(item.href) ? 700 : 500,
+            color: active(item.href) ? 'var(--blue)' : 'var(--muted2)',
+            background: active(item.href) ? 'var(--blue-bg2)' : 'transparent',
+            textDecoration: 'none', minHeight: 42,
+          }}>
           <NavIcon id={item.id} />
           {item.label}
         </Link>
@@ -81,5 +94,6 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
         </div>
       </div>
     </aside>
+    </>
   )
 }

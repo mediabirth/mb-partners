@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId, getDealsForPartner } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 
@@ -23,9 +23,9 @@ export default async function CasesPage({
 }: {
   searchParams: Promise<{ f?: string }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCachedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   const partner = await getPartnerByUserId(supabase, user.id)
   if (!partner) redirect('/login')
@@ -80,7 +80,7 @@ export default async function CasesPage({
         ) : filtered.map(d => {
           const step = STATUS_STEP[d.status] ?? 0
           return (
-            <Link key={d.id} href={`/app/cases/${d.id}`} style={{ display: 'block', textDecoration: 'none', padding: '17px 6px', borderBottom: '1px solid var(--line)' }}>
+            <Link key={d.id} href={`/app/cases/${d.id}`} className="row-hover" style={{ display: 'block', textDecoration: 'none', padding: '17px 6px', borderBottom: '1px solid var(--line)', borderRadius: 8, margin: '0 -6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 11 }}>
                 {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={38} />}
                 <div style={{ flex: 1, minWidth: 0 }}>

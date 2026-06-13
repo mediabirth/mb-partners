@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
     .insert({
       inquiry_id: inquiry.id,
       sender_role: 'partner',
+      sender_profile_id: user.id,
       body: messageBody,
       created_by: user.id,
     })

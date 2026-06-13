@@ -40,6 +40,9 @@ export default async function globalTeardown() {
 
   const { adminId, partnerId, partner2Id, partnerRecordId, partner2RecordId, serviceId } = testData
 
+  // ── M6: invites 削除（invited user cleanup は m6a spec の afterAll が担当）
+  await service.from('invites').delete().like('email', '%@mb-partners.test')
+
   // ── Delete in dependency order ─────────────────────────────────
 
   const allPartnerRecordIds = [partnerRecordId, partner2RecordId].filter(Boolean)
@@ -64,6 +67,12 @@ export default async function globalTeardown() {
   // 4. test deals (all with E2Eテスト prefix)
   await service.from('deals').delete().like('customer_name', 'E2Eテスト%')
   await service.from('deals').delete().like('customer_name', 'E2E%')
+
+  // 4b. M5 test data: meetings → calendar_links (FK制約あり)
+  if (allPartnerRecordIds.length) {
+    await service.from('meetings').delete().in('partner_id', allPartnerRecordIds)
+    await service.from('calendar_links').delete().in('partner_id', allPartnerRecordIds)
+  }
 
   // 5. referral links
   if (serviceId) {

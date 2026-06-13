@@ -134,7 +134,7 @@ test.describe('M4A-B: broadcast_reads の記録 (DB)', () => {
     // Verify
     const { data: readRecord } = await sb
       .from('broadcast_reads')
-      .select('id, read_at')
+      .select('broadcast_id, read_at')
       .eq('broadcast_id', broadcastId)
       .eq('partner_id', testData.partnerRecordId)
       .single()
@@ -152,7 +152,7 @@ test.describe('M4A-B: broadcast_reads の記録 (DB)', () => {
 
     const { data: allReads } = await sb
       .from('broadcast_reads')
-      .select('id')
+      .select('broadcast_id')
       .eq('broadcast_id', broadcastId)
       .eq('partner_id', testData.partnerRecordId)
 

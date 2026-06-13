@@ -26,7 +26,7 @@ test.describe('M4B-1: パートナーが問い合わせを送信', () => {
 
   test('お問い合わせページが表示される', async ({ page }) => {
     await page.goto('/app/support')
-    await expect(page.getByRole('heading', { name: 'お問い合わせ' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'お問い合わせ', exact: true })).toBeVisible()
   })
 
   test('フォームを送信できる', async ({ page }) => {
@@ -71,7 +71,7 @@ test.describe('M4B-2: 管理者受信箱', () => {
 
   test('問い合わせ一覧ページが表示される', async ({ page }) => {
     await page.goto('/console/inquiries')
-    await expect(page.getByRole('heading', { name: '問い合わせ' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '問い合わせ', exact: true })).toBeVisible()
   })
 
   test('パートナーの問い合わせが一覧に表示される', async ({ page }) => {
@@ -98,9 +98,11 @@ test.describe('M4B-2: 管理者受信箱', () => {
         subject: TEST_SUBJECT,
       }).select('id').single()
       if (newInq) {
+        const { data: partnerProfile } = await sb.from('partners').select('profile_id').eq('id', partner!.id).single()
         await sb.from('inquiry_messages').insert({
           inquiry_id: newInq.id,
           sender_role: 'partner',
+          sender_profile_id: partnerProfile?.profile_id ?? partner!.id,
           body: TEST_BODY,
         })
       }
@@ -142,9 +144,11 @@ test.describe('M4B-3: 管理者返信と通知', () => {
         subject: TEST_SUBJECT,
       }).select('id').single()
       inquiryId = newInq!.id
+      const { data: partnerProfile2 } = await sb.from('partners').select('profile_id').eq('id', partner!.id).single()
       await sb.from('inquiry_messages').insert({
         inquiry_id: inquiryId,
         sender_role: 'partner',
+        sender_profile_id: partnerProfile2?.profile_id ?? partner!.id,
         body: TEST_BODY,
       })
     }

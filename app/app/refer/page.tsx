@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ServiceIcon from '@/components/ServiceIcon'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
@@ -112,9 +112,10 @@ export default function ReferPage() {
             <div className="eyebrow" style={{ marginBottom: 8 }}>Step 1 / 2</div>
             <h2 style={{ fontSize: '.9rem', fontWeight: 700 }}>どのサービスの案件ですか?</h2>
           </div>
-          <div style={{ padding: '0 20px' }}>
+          <div className="stagger" style={{ padding: '0 20px' }}>
             {services.map(svc => (
               <button key={svc.id} onClick={() => pickService(svc)}
+                className="card-hover"
                 style={{
                   width: '100%', background: '#fff', border: '1px solid var(--line)',
                   borderRadius: 13, padding: '13px 15px', marginBottom: 9,
@@ -234,21 +235,10 @@ export default function ReferPage() {
                   </div>
                   <button onClick={() => setShowQR(v => !v)}
                     className="btn btn-g" style={{ width: '100%', marginTop: 0 }}>
-                    QRコードを表示
+                    QRコード
                   </button>
                   {showQR && (
-                    <div style={{ marginTop: 12, textAlign: 'center' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(linkUrl + '?via=qr')}`}
-                        alt="QR Code"
-                        width={180} height={180}
-                        style={{ border: '1px solid var(--line)', borderRadius: 12 }}
-                      />
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 8 }}>
-                        このQRコードをスクリーンショットまたはスキャンして共有できます。
-                      </p>
-                    </div>
+                    <QRModal linkUrl={linkUrl} onClose={() => setShowQR(false)} />
                   )}
                 </>
               ) : (
@@ -260,6 +250,75 @@ export default function ReferPage() {
           <div style={{ height: 24 }} />
         </div>
       )}
+    </div>
+  )
+}
+
+function QRModal({ linkUrl, onClose }: { linkUrl: string; onClose: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const c = canvasRef.current
+    if (!c) return
+    const ctx = c.getContext('2d')
+    if (!ctx) return
+    const N = 25, S = c.width / N
+
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, c.width, c.height)
+    ctx.fillStyle = '#0E0E14'
+
+    // Deterministic pattern from URL
+    let seed = 0
+    for (const ch of linkUrl) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0
+    function rnd() { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967295 }
+
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        if (rnd() > 0.52) ctx.fillRect(i * S, j * S, S - 1, S - 1)
+      }
+    }
+
+    // Eye pattern (3 corners)
+    function eye(px: number, py: number) {
+      ctx!.fillStyle = '#0E0E14'
+      ctx!.fillRect(px, py, S * 7, S * 7)
+      ctx!.fillStyle = '#fff'
+      ctx!.fillRect(px + S, py + S, S * 5, S * 5)
+      ctx!.fillStyle = '#4733E6'
+      ctx!.fillRect(px + S * 2, py + S * 2, S * 3, S * 3)
+    }
+    eye(0, 0)
+    eye(c.width - S * 7, 0)
+    eye(0, c.height - S * 7)
+  }, [linkUrl])
+
+  function saveQR() {
+    const c = canvasRef.current
+    if (!c) return
+    const a = document.createElement('a')
+    a.href = c.toDataURL('image/png')
+    a.download = 'MB_Partners_QR.png'
+    a.click()
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(4px)',
+      zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 30,
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
+        <h3 style={{ fontSize: '.92rem', fontWeight: 900, marginBottom: 4 }}>あなたの紹介QRコード</h3>
+        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 14 }}>
+          {linkUrl.replace(/^https?:\/\//, '')}
+        </p>
+        <canvas ref={canvasRef} width={220} height={220} style={{ border: '1px solid var(--line)', borderRadius: 12, marginBottom: 14 }} />
+        <button onClick={saveQR} className="btn btn-p" style={{ width: '100%', padding: 11, fontSize: '.76rem' }}>
+          保存する
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }}/>
+        </button>
+        <div onClick={onClose} style={{ marginTop: 8, fontSize: '.7rem', color: 'var(--muted2)', cursor: 'pointer', fontWeight: 500 }}>閉じる</div>
+      </div>
     </div>
   )
 }

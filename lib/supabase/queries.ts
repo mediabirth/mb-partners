@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export async function getPartnerByUserId(supabase: SupabaseClient, userId: string) {
   const { data } = await supabase
     .from('partners')
-    .select('id, code, status, tax_type')
+    .select('id, code, status, tax_type, bank')
     .eq('profile_id', userId)
     .single()
   return data
@@ -149,5 +149,14 @@ export type AdminDealRow = DealRow & {
 export type PartnerRow = {
   id: string; code: string; status: string; tax_type: string
   created_at: string; kyc_verified_at: string | null
+  bank: BankInfo | null
   profiles: { name: string; email: string; color: string; avatar_url: string | null } | null
+}
+
+export type BankInfo = {
+  bank_name: string
+  branch_name: string
+  account_type: string
+  account_number: string
+  account_holder: string
 }

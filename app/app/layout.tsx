@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
+import PageTransition from '@/components/PageTransition'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCachedUser()
   if (!user) redirect('/login')
 
+  const supabase = await createClient()
   const { data: profile } = await supabase
     .from('profiles')
     .select('name, color')
@@ -39,22 +41,41 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               MB <span style={{ color: 'var(--blue)' }}>Partners</span>
             </b>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, border: '1px solid var(--line)', borderRadius: 30, padding: '4px 12px 4px 4px', minHeight: 40 }}>
-            <span style={{
-              width: 27, height: 27, borderRadius: '50%',
-              background: profile?.color ?? 'var(--blue)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '.72rem', fontWeight: 700, flexShrink: 0,
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Link href="/app/mypage" style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              border: '1px solid var(--line)', borderRadius: 30,
+              padding: '4px 12px 4px 4px', minHeight: 40, textDecoration: 'none', color: 'inherit',
+              transition: 'border-color .2s',
             }}>
-              {(profile?.name ?? 'P')[0]}
-            </span>
-            <b style={{ fontSize: '.72rem' }}>{profile?.name ?? '—'}</b>
+              <span style={{
+                width: 27, height: 27, borderRadius: '50%',
+                background: profile?.color ?? 'var(--blue)', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '.72rem', fontWeight: 700, flexShrink: 0,
+              }}>
+                {(profile?.name ?? 'P')[0]}
+              </span>
+              <b style={{ fontSize: '.72rem' }}>{profile?.name ?? '—'}</b>
+            </Link>
+            <Link href="/app/settings" aria-label="設定" style={{
+              width: 40, height: 40, borderRadius: '50%',
+              border: '1px solid var(--line)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', textDecoration: 'none', color: 'var(--txt)',
+              background: 'var(--bg)',
+            }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008.6 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </Link>
           </div>
         </header>
 
         {/* Page content */}
         <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 86 }}>
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
 
         <AppNav />

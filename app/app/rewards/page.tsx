@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId, getDealsForPartner } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
+import BankChangeSection from './BankChangeSection'
 
 export default async function RewardsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCachedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   const partner = await getPartnerByUserId(supabase, user.id)
   if (!partner) redirect('/login')
@@ -60,6 +62,16 @@ export default async function RewardsPage() {
         </div>
       </div>
 
+      {/* Statement buttons */}
+      <div style={{ display: 'flex', gap: 8, margin: '14px 20px 0' }}>
+        <Link href="/app/rewards/statement" className="btn btn-g" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
+          支払明細
+        </Link>
+        <Link href="/app/rewards/statement" className="btn btn-g" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
+          年間集計
+        </Link>
+      </div>
+
       {/* Monthly accordion */}
       <div style={{ padding: '22px 20px 6px' }}>
         <h2 style={{ fontSize: '.98rem', fontWeight: 700, marginBottom: 14 }}>月次明細</h2>
@@ -110,7 +122,9 @@ export default async function RewardsPage() {
         )
       })}
 
-      <div style={{ height: 20 }} />
+      <BankChangeSection currentBank={(partner as { bank?: unknown }).bank as import('@/lib/supabase/queries').BankInfo | null ?? null} />
+
+      <div style={{ height: 32 }} />
     </div>
   )
 }

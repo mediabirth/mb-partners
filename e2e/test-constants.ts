@@ -20,4 +20,7 @@ export const E2E = {
   NET:                71832,  // 80000 - 8168
   FIXED_MONTH:        '2026-06-01',
   BATCH_MONTH:        '2026-06',              // target month for close_month_batch
+  // M6: invite flow
+  INVITE_EMAIL:       'e2e-invited@mb-partners.test',
+  INVITE_NAME:        'E2E招待テスト',
 } as const

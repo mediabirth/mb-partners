@@ -35,6 +35,7 @@ export async function POST(
     .insert({
       inquiry_id: id,
       sender_role: 'partner',
+      sender_profile_id: user.id,
       body: messageBody,
       created_by: user.id,
     })

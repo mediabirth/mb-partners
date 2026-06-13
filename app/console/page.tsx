@@ -4,115 +4,184 @@ import { createClient } from '@/lib/supabase/server'
 import { getAllDeals } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
 import LogoutButton from '@/components/LogoutButton'
+import ChannelChart from './ChannelChart'
+import GlobalSearchClient from './GlobalSearchClient'
+import ConsoleMain from '@/components/ConsolePageTransition'
 
 export default async function ConsolePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/console/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, role, color')
-    .eq('id', user.id)
-    .single()
-
-  const deals = await getAllDeals(supabase)
+  const [profileRes, deals, recentEventsRes] = await Promise.all([
+    supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
+    getAllDeals(supabase),
+    supabase.from('deal_events')
+      .select('id, body, created_at, deal_id, deals(customer_name, service_id)')
+      .order('created_at', { ascending: false })
+      .limit(6),
+  ])
+  const profile = profileRes.data
+  const recentEvents = recentEventsRes.data
 
   // KPIs
   const now = new Date()
   const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  const monthDeals    = deals.filter(d => d.fixed_month?.startsWith(ym) && d.status === 'confirmed')
-  const monthGross    = monthDeals.reduce((s, d) => s + d.amount, 0)
+  const monthDeals     = deals.filter(d => d.fixed_month?.startsWith(ym) && d.status === 'confirmed')
+  const monthGross     = monthDeals.reduce((s, d) => s + d.amount, 0)
   const activePartners = new Set(deals.filter(d => ['received','in_progress'].includes(d.status)).map(d => d.partners?.id)).size
-  const pending       = deals.filter(d => d.status === 'received').length
+  const pending        = deals.filter(d => d.status === 'received').length
 
-  // Recent activity (deal_events)
-  const { data: recentEvents } = await supabase
-    .from('deal_events')
-    .select('id, body, created_at, deal_id, deals(customer_name, service_id)')
-    .order('created_at', { ascending: false })
-    .limit(6)
+  // Channel mix for chart
+  const referralDeals  = deals.filter(d => d.channel === 'referral').length
+  const directDeals    = deals.filter(d => d.channel !== 'referral').length
+
+  // Monthly confirmed for last 6 months
+  const monthlyData: { ym: string; label: string; referral: number; direct: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = `${d.getMonth() + 1}月`
+    const monthConfirmed = deals.filter(dd => dd.status === 'confirmed' && dd.fixed_month?.startsWith(key))
+    monthlyData.push({
+      ym: key, label,
+      referral: monthConfirmed.filter(dd => dd.channel === 'referral').length,
+      direct: monthConfirmed.filter(dd => dd.channel !== 'referral').length,
+    })
+  }
+
+  // Upcoming meetings (deals with meeting_at in future)
+  const upcomingMeetings = deals
+    .filter(d => d.meeting_at && new Date(d.meeting_at) >= now)
+    .sort((a, b) => new Date(a.meeting_at!).getTime() - new Date(b.meeting_at!).getTime())
+    .slice(0, 5)
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
 
-      <div style={{ flex: 1, marginLeft: 230 }}>
+      <ConsoleMain>
         {/* Top bar */}
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>ダッシュボード</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <GlobalSearchClient />
             <span style={{ fontSize: '.74rem', fontWeight: 700 }}>{profile?.name}</span>
             <LogoutButton />
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ padding: '28px 28px', maxWidth: 1040, margin: '0 auto' }}>
+        <div style={{ padding: '28px 28px', maxWidth: 1100, margin: '0 auto' }}>
 
           {/* KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 18 }}>
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 18 }}>
             <KpiCard label="今月の成約(確定)" value={monthDeals.length} suffix="件" highlight />
             <KpiCard label="今月の確定報酬" value={`¥${monthGross.toLocaleString()}`} />
             <KpiCard label="稼働パートナー" value={activePartners} suffix="名" />
             <KpiCard label="要対応(受付中)" value={pending} suffix="件" alert={pending > 0} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.15fr .85fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 14, marginBottom: 14 }}>
             {/* Recent activity */}
-            <div>
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
-                  <b style={{ fontSize: '.84rem' }}>最近の動き</b>
-                  <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
-                </div>
-                {(recentEvents ?? []).length === 0 ? (
-                  <p style={{ padding: '14px 16px', fontSize: '.72rem', color: 'var(--muted2)' }}>まだ記録がありません</p>
-                ) : (recentEvents ?? []).map((e: any) => (
-                  <div key={e.id} style={{ display: 'flex', gap: 11, padding: '12px 16px', borderBottom: '1px solid #F2F2F6', fontSize: '.73rem', alignItems: 'center' }}>
-                    <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.6rem', color: 'var(--muted)', paddingTop: 0, width: 40 }}>
-                      {new Date(e.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <b style={{ display: 'block', fontSize: '.74rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {(e as any).deals?.customer_name}
-                      </b>
-                      <small style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {e.body}
-                      </small>
-                    </div>
-                  </div>
-                ))}
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
+                <b style={{ fontSize: '.84rem' }}>最近の動き</b>
+                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
               </div>
+              {(recentEvents ?? []).length === 0 ? (
+                <p style={{ padding: '14px 16px', fontSize: '.72rem', color: 'var(--muted2)' }}>まだ記録がありません</p>
+              ) : (recentEvents ?? []).map((e: any) => (
+                <div key={e.id} style={{ display: 'flex', gap: 11, padding: '12px 16px', borderBottom: '1px solid #F2F2F6', fontSize: '.73rem', alignItems: 'center' }}>
+                  <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.6rem', color: 'var(--muted)', width: 40 }}>
+                    {new Date(e.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <b style={{ display: 'block', fontSize: '.74rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {(e as any).deals?.customer_name}
+                    </b>
+                    <small style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {e.body}
+                    </small>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Quick links */}
-            <div>
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px' }}>
-                <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 12 }}>クイックアクセス</b>
-                {[
-                  { href: '/console/deals', label: '案件ボード', desc: `${deals.length}件の案件` },
-                  { href: '/console/partners', label: 'パートナー一覧', desc: `${new Set(deals.map(d => d.partners?.id).filter(Boolean)).size}名稼働中` },
-                  { href: '/console/services', label: 'サービス・報酬ルール', desc: 'マスタデータ管理' },
-                ].map(item => (
-                  <Link key={item.href} href={item.href} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '11px 0', borderBottom: '1px solid #F2F2F6', textDecoration: 'none',
-                    color: 'var(--txt)', fontSize: '.77rem',
-                  }}>
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{item.label}</div>
-                      <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>{item.desc}</div>
-                    </div>
-                    <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>›</span>
-                  </Link>
-                ))}
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px' }}>
+              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 12 }}>クイックアクセス</b>
+              {[
+                { href: '/console/deals', label: '案件ボード', desc: `${deals.length}件の案件` },
+                { href: '/console/partners', label: 'パートナー一覧', desc: `${new Set(deals.map(d => d.partners?.id).filter(Boolean)).size}名稼働中` },
+                { href: '/console/services', label: 'サービス・報酬ルール', desc: 'マスタデータ管理' },
+                { href: '/console/settings', label: '設定', desc: '支払サイクル・通知・管理者' },
+              ].map(item => (
+                <Link key={item.href} href={item.href} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '11px 0', borderBottom: '1px solid #F2F2F6', textDecoration: 'none',
+                  color: 'var(--txt)', fontSize: '.77rem',
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{item.label}</div>
+                    <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>{item.desc}</div>
+                  </div>
+                  <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>›</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {/* Channel chart */}
+            <ChannelChart monthlyData={monthlyData} referralTotal={referralDeals} directTotal={directDeals} />
+
+            {/* Meetings panel */}
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
+                <b style={{ fontSize: '.84rem' }}>商談スケジュール</b>
+                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>全案件 →</Link>
               </div>
+              {upcomingMeetings.length === 0 ? (
+                <p style={{ padding: '14px 16px', fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.7 }}>
+                  予定されている商談はありません
+                </p>
+              ) : upcomingMeetings.map((d, i) => {
+                const dt = new Date(d.meeting_at!)
+                const isToday = dt.toDateString() === now.toDateString()
+                return (
+                  <Link key={d.id} href={`/console/deals`} style={{
+                    display: 'flex', gap: 12, padding: '12px 16px',
+                    borderBottom: '1px solid #F2F2F6', textDecoration: 'none',
+                    color: 'var(--txt)', alignItems: 'center',
+                  }}>
+                    <div style={{ flexShrink: 0, textAlign: 'center', width: 36 }}>
+                      <div style={{ fontSize: '.58rem', fontFamily: 'Inter', color: isToday ? 'var(--blue)' : 'var(--muted2)', fontWeight: 700 }}>
+                        {dt.toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                      </div>
+                      <div style={{ fontSize: '.6rem', fontFamily: 'Inter', color: 'var(--muted)', marginTop: 1 }}>
+                        {dt.toLocaleTimeString('ja', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {d.customer_name}
+                      </div>
+                      <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>
+                        {d.services?.name}{d.partners?.profiles?.name ? ` · ${d.partners.profiles.name}` : ''}
+                      </div>
+                    </div>
+                    {isToday && (
+                      <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--blue)', flexShrink: 0 }}>TODAY</span>
+                    )}
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </div>
-      </div>
+      </ConsoleMain>
     </div>
   )
 }
@@ -121,7 +190,7 @@ function KpiCard({ label, value, suffix, highlight, alert }: {
   label: string; value: string | number; suffix?: string; highlight?: boolean; alert?: boolean
 }) {
   return (
-    <div style={{
+    <div className="card-hover" style={{
       background: highlight ? 'var(--blue)' : '#fff',
       border: `1px solid ${highlight ? 'var(--blue)' : 'var(--line)'}`,
       borderRadius: 14, padding: 16,
@@ -134,3 +203,4 @@ function KpiCard({ label, value, suffix, highlight, alert }: {
     </div>
   )
 }
+

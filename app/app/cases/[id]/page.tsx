@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId, getDealWithEvents } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 
@@ -17,9 +17,9 @@ export default async function CaseDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCachedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   const partner = await getPartnerByUserId(supabase, user.id)
   if (!partner) redirect('/login')
