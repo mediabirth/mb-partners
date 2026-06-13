@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createNotification } from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,12 +84,13 @@ export async function POST(req: NextRequest) {
 
     // Notification → partner
     if (partner?.profile_id) {
-      await supabase.from('notifications').insert({
-        partner_id: link.partner_id,
-        title: `新しい案件が受付されました`,
-        body: `${customerName} — ${service?.name ?? link.service_id}`,
-        ref: { type: 'deal', id: deal.id },
-      })
+      await createNotification(
+        supabase,
+        link.partner_id,
+        '新しい案件が受付されました',
+        `${customerName} — ${service?.name ?? link.service_id}`,
+        { type: 'deal', id: deal.id },
+      )
     }
 
     // Audit log

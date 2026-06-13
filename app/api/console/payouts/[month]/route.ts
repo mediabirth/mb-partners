@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createNotifications } from '@/lib/notifications'
 
 export async function PATCH(
   req: NextRequest,
@@ -58,14 +59,15 @@ export async function PATCH(
   }
 
   if (partnerIds.length > 0) {
-    // Notify each partner
-    const notifications = partnerIds.map(pid => ({
-      partner_id: pid,
-      title: `${month}月の報酬が振込されました`,
-      body: '報酬タブで明細をご確認ください',
-      ref: { type: 'payout_paid', batch_id: batch.id },
-    }))
-    await serviceSupabase.from('notifications').insert(notifications)
+    await createNotifications(
+      serviceSupabase,
+      partnerIds.map(pid => ({
+        partnerId: pid,
+        title: `${month}月の報酬が振込されました`,
+        body:  '報酬タブで明細をご確認ください',
+        ref:   { type: 'payout_paid' as const, batch_id: batch.id },
+      })),
+    )
   }
 
   // 3. Insert deal_events for audit
