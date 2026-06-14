@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
-import { getPartnerByUserId, getDealsForPartner } from '@/lib/supabase/queries'
+import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -27,10 +27,9 @@ export default async function CasesPage({
   if (!user) redirect('/login')
   const supabase = await createClient()
 
-  const partner = await getPartnerByUserId(supabase, user.id)
-  if (!partner) redirect('/login')
-
-  const deals = await getDealsForPartner(supabase, partner.id)
+  const result = await getPartnerWithDeals(supabase, user.id)
+  if (!result) redirect('/login')
+  const { partner, deals } = result
   const { f = 'all' } = await searchParams
 
   const filtered = deals.filter(d => {

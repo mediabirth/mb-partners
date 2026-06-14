@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
-import { getPartnerByUserId, getDealsForPartner, getRecentDealEvents } from '@/lib/supabase/queries'
+import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -13,11 +13,16 @@ export default async function AppPage() {
   if (!user) redirect('/login')
   const supabase = await createClient()
 
-  const partner = await getPartnerByUserId(supabase, user.id)
-  if (!partner) redirect('/login')
-
-  const deals = await getDealsForPartner(supabase, partner.id)
-  const recentEvents = await getRecentDealEvents(supabase, deals.map(d => d.id))
+  // Single parallel round: partner+deals combined query + events by userId
+  // (avoids needing partner.id before fetching events)
+  const [partnerResult, recentEvents] = await Promise.all([
+    getPartnerWithDeals(supabase, user.id),
+    getRecentEventsByUserId(supabase, user.id),
+  ])
+  // If no partner record, go to root — root page routes admins to /console.
+  // Redirecting to /login here would loop: login→/app→/login for admins.
+  if (!partnerResult) redirect('/')
+  const { partner, deals } = partnerResult
 
   // Stats
   const active = deals.filter(d => ['received', 'in_progress'].includes(d.status))
@@ -51,6 +56,11 @@ export default async function AppPage() {
         background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)',
         borderRadius: 18, padding: '24px 22px 18px', color: '#fff', position: 'relative', overflow: 'hidden',
       }}>
+        {/* Ring decoration */}
+        <div style={{ position: 'absolute', right: -60, top: -60, width: 200, height: 200, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%', animation: 'spin 30s linear infinite' }} />
+          <div style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%', animation: 'spin 20s linear infinite reverse' }} />
+        </div>
         <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>
           Confirmed Balance
         </div>
@@ -59,14 +69,12 @@ export default async function AppPage() {
           {confirmedBalance.toLocaleString()}
         </div>
         <div style={{ display: 'flex', gap: 18, marginTop: 15, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
-          {nextPayLabel ? (
-            <div style={{ fontSize: '.6rem', opacity: .85, whiteSpace: 'nowrap' }}>
-              次回振込
-              <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap', letterSpacing: '-.01em' }}>
-                {nextPayLabel}
-              </b>
-            </div>
-          ) : null}
+          <div style={{ fontSize: '.6rem', opacity: .85, whiteSpace: 'nowrap' }}>
+            次回振込
+            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap', letterSpacing: '-.01em' }}>
+              {nextPayLabel ?? '予定なし'}
+            </b>
+          </div>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>
             今月の確定
             <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>
@@ -162,27 +170,7 @@ export default async function AppPage() {
         </div>
       </div>
 
-      {/* Help link */}
-      <div style={{ padding: '10px 20px 0' }}>
-        <Link href="/app/support" style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-          background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
-          textDecoration: 'none',
-        }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="1.8">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-            </svg>
-          </span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--txt)' }}>お問い合わせ</div>
-            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1 }}>報酬・案件・アカウントのご質問はこちら</div>
-          </div>
-          <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
-        </Link>
-      </div>
-
-      <div style={{ height: 20 }} />
+      <div style={{ height: 12 }} />
     </div>
   )
 }

@@ -38,6 +38,7 @@ export default function DealsPage() {
   const [showAddDeal, setShowAddDeal] = useState(false)
   const [services, setServices]     = useState<Service[]>([])
   const dragItem = useRef<{ id: string; status: string } | null>(null)
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/console/deals').then(r => r.json()).then(d => {
@@ -90,11 +91,19 @@ export default function DealsPage() {
   function onDragStart(deal: Deal) {
     dragItem.current = { id: deal.id, status: deal.status }
   }
-  function onDragOver(e: React.DragEvent) {
+  function onDragOver(e: React.DragEvent, colKey: string) {
     e.preventDefault()
+    setDragOverCol(colKey)
+  }
+  function onDragLeave(e: React.DragEvent) {
+    // only clear if leaving the column entirely (not moving to a child)
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverCol(null)
+    }
   }
   function onDrop(e: React.DragEvent, targetStatus: Status) {
     e.preventDefault()
+    setDragOverCol(null)
     const src = dragItem.current
     if (!src || src.status === targetStatus) return
     const deal = deals.find(d => d.id === src.id)
@@ -152,9 +161,11 @@ export default function DealsPage() {
               return (
                 <div
                   key={col.key}
-                  onDragOver={onDragOver}
+                  className={`col${dragOverCol === col.key ? ' over' : ''}`}
+                  onDragOver={e => onDragOver(e, col.key)}
+                  onDragLeave={onDragLeave}
                   onDrop={e => onDrop(e, col.key)}
-                  style={{ background: '#F4F4F7', borderRadius: 13, padding: 10, minHeight: 140 }}
+                  style={{ background: '#F4F4F7', borderRadius: 13, padding: 10, minHeight: 140, transition: 'background .15s, outline .15s' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px 10px', fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)' }}>
                     {col.label}
@@ -182,7 +193,7 @@ export default function DealsPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.6rem', color: 'var(--muted)' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <span style={{ width: 5, height: 5, borderRadius: '50%', background: d.channel === 'referral' ? 'var(--blue)' : 'var(--txt)', flexShrink: 0 }}/>
-                          {d.channel === 'referral' ? '紹介' : '営業'}
+                          {d.channel === 'referral' ? '紹介' : d.channel === 'direct' ? '直販' : '協力'}
                         </span>
                         {d.amount > 0 && (
                           <span style={{ fontFamily: 'Inter', fontWeight: 700, color: 'var(--txt)', fontSize: '.66rem' }}>
@@ -216,10 +227,10 @@ export default function DealsPage() {
               <b style={{ fontSize: '.9rem' }}>{selected.customer_name}</b>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
+            <div className="cascade" style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
               {[
                 ['サービス', selected.services?.name ?? selected.service_id],
-                ['チャネル', selected.channel === 'referral' ? '紹介' : '営業'],
+                ['チャネル', selected.channel === 'referral' ? '紹介' : selected.channel === 'direct' ? '直販' : '協力'],
                 ['ソース', selected.source],
                 ['ステータス', COLS.find(c => c.key === selected.status)?.label ?? selected.status],
                 ['報酬予定', selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '未確定'],

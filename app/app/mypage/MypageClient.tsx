@@ -11,6 +11,7 @@ type Props = {
   name: string; email: string
   avatarUrl: string | null; avatarColor: string
   partnerCode: string; taxType: string; bank: Bank
+  nickname: string | null
 }
 
 const LOCK = (
@@ -23,9 +24,10 @@ const LOCK = (
   </span>
 )
 
-export default function MypageClient({ name, email, avatarUrl, avatarColor, partnerCode, taxType, bank }: Props) {
+export default function MypageClient({ name, email, avatarUrl, avatarColor, partnerCode, taxType, bank, nickname: initialNickname }: Props) {
   const [editing, setEditing] = useState(false)
   const [avatar, setAvatar] = useState<string | null>(avatarUrl)
+  const [nickname, setNickname] = useState(initialNickname ?? '')
   const [phone, setPhone] = useState(() =>
     typeof localStorage !== 'undefined' ? (localStorage.getItem('mp_phone') ?? '') : '')
   const [address, setAddress] = useState(() =>
@@ -54,10 +56,16 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
     reader.readAsDataURL(file)
   }
 
-  function save() {
+  async function save() {
     localStorage.setItem('mp_phone', phone)
     localStorage.setItem('mp_address', address)
     localStorage.setItem('mp_invoice', invoice)
+    // Save nickname to DB
+    await fetch('/api/mypage', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname }),
+    })
     setEditing(false)
     showToast('保存しました')
   }
@@ -119,6 +127,7 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
         /* View mode */
         <>
           <div style={{ margin: '0 20px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
+            <KV label="ニックネーム(表示名)" value={nickname || '未設定'} muted={!nickname} />
             <KV label={<>お名前 {LOCK}</>} value={name} />
             <KV label="メールアドレス" value={email} />
             <KV label="電話番号" value={phone || '未登録'} muted={!phone} />
@@ -164,6 +173,7 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
           </div>
 
           <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '18px 16px' }}>
+            <FldEditable label="ニックネーム(表示名)" value={nickname} onChange={setNickname} placeholder="チャットや案件一覧に表示される名前" />
             <div style={{ display: 'flex', gap: 9, marginBottom: 12 }}>
               <FldDisabled label="お名前 🔒" value={name} />
             </div>

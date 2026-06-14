@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 const NAV_STYLE = `
   .cnav-link { transition: color .18s, background .18s; }
@@ -46,6 +47,14 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
   const active = (href: string) =>
     href === '/console' ? path === '/console' : path.startsWith(href)
 
+  const [badges, setBadges] = useState({ pendingPartners: 0, openInquiries: 0 })
+  useEffect(() => {
+    fetch('/api/console/badge-counts')
+      .then(r => r.json())
+      .then(d => setBadges({ pendingPartners: d.pendingPartners ?? 0, openInquiries: d.openInquiries ?? 0 }))
+      .catch(() => {})
+  }, [])
+
   return (
     <>
     <style>{NAV_STYLE}</style>
@@ -82,6 +91,26 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
           }}>
           <NavIcon id={item.id} />
           {item.label}
+          {item.id === 'partners' && badges.pendingPartners > 0 && (
+            <span style={{
+              marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
+              background: 'var(--blue)', color: '#fff', fontSize: '.56rem', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+              animation: 'pulseDot 2.8s ease-in-out infinite',
+            }}>
+              {badges.pendingPartners}
+            </span>
+          )}
+          {item.id === 'inquiries' && badges.openInquiries > 0 && (
+            <span style={{
+              marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
+              background: 'var(--amber)', color: '#fff', fontSize: '.56rem', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+              animation: 'pulseDot 2.8s ease-in-out infinite',
+            }}>
+              {badges.openInquiries}
+            </span>
+          )}
         </Link>
       ))}
 

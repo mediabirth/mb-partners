@@ -174,11 +174,11 @@ body {
   transform: translateY(-2px);
 }
 
-/* Link row hover (for list items that are links) */
+/* Link row hover — left accent border */
 .row-hover {
-  transition: background .15s;
+  transition: box-shadow .15s;
 }
-.row-hover:hover { background: var(--bg2) !important; }
+.row-hover:hover { box-shadow: inset 3px 0 0 var(--blue) !important; }
 
 /* ============================================================
    Page transition
@@ -334,6 +334,67 @@ body {
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   Status rail dot pulse
+   ============================================================ */
+@keyframes stnPulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--blue-bg); }
+  50%       { box-shadow: 0 0 0 8px rgba(71,51,230,.12); }
+}
+.stnPulse {
+  animation: stnPulse 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   SVG stroke-draw animation (circle circumference = 2π×45 ≈ 283)
+   ============================================================ */
+@keyframes draw {
+  from { stroke-dashoffset: 283; }
+  to   { stroke-dashoffset: 0; }
+}
+.draw {
+  stroke-dasharray: 283;
+  animation: draw .7s var(--ease-out) both;
+}
+
+/* ============================================================
+   Kanban column drag-over highlight
+   ============================================================ */
+.col.over {
+  background: var(--blue-bg2) !important;
+  outline: 2px dashed rgba(71,51,230,.4);
+  outline-offset: -2px;
+}
+
+/* ============================================================
+   Drawer cascade stagger
+   ============================================================ */
+.cascade > * {
+  animation: pageIn .28s var(--ease-out) both;
+}
+.cascade > *:nth-child(1) { animation-delay:   0ms; }
+.cascade > *:nth-child(2) { animation-delay:  40ms; }
+.cascade > *:nth-child(3) { animation-delay:  75ms; }
+.cascade > *:nth-child(4) { animation-delay: 105ms; }
+.cascade > *:nth-child(5) { animation-delay: 130ms; }
+.cascade > *:nth-child(6) { animation-delay: 150ms; }
+.cascade > *:nth-child(7) { animation-delay: 168ms; }
+.cascade > *:nth-child(8) { animation-delay: 184ms; }
+
+/* ============================================================
+   Accordion smooth expand/collapse
+   ============================================================ */
+.accordion-body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height .32s var(--ease-out), opacity .25s ease;
+}
+.accordion-body.open {
+  max-height: 960px;
+  opacity: 1;
 }
 
 /* Print styles for statement */

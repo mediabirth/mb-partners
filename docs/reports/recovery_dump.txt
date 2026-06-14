@@ -1,0 +1,136 @@
+RECOVERY DUMP — MB Partners 一括復旧
+Generated: 2026-06-14
+Result: COMPLETE ✓
+
+═══════════════════════════════════════════════════════
+■ 修正バグ一覧
+═══════════════════════════════════════════════════════
+
+[BUG-1] deal_channel enum に 'cooperation' が存在しない
+  原因: 本番DBの deal_channel 型に 'cooperation' が未登録
+  影響: refer ページから協力案件を送信すると 500 エラー
+  修正: migration 20260616000005_add_cooperation_channel.sql
+        ALTER TYPE deal_channel ADD VALUE IF NOT EXISTS 'cooperation';
+
+[BUG-2] deal_source enum に 'manual' が存在しない
+  原因: 本番DBの deal_source 型に 'manual' が未登録
+  影響: コンソール「手動登録」から案件を作成すると 500 エラー
+  修正: migration 20260616000006_add_manual_source.sql
+        ALTER TYPE deal_source ADD VALUE IF NOT EXISTS 'manual';
+
+[BUG-3] コンソール3ページ(案件/パートナー/サービス報酬)が開けない
+  原因: 本番 Vercel がリビルド前の旧コードを実行していた (vercel --prod 未実行)
+  修正: vercel --prod でデプロイ完了 → 新コードが本番に反映
+
+═══════════════════════════════════════════════════════
+■ 適用マイグレーション（今セッション）
+═══════════════════════════════════════════════════════
+
+20260616000003_delete_coop_menus.sql  [適用済み]
+  - service_menus_coop_backup テーブル作成
+    (SELECT * FROM service_menus WHERE category = 'cooperation')
+  - DELETE FROM service_menus WHERE category = 'cooperation'
+  削除行数: 旧 cooperation カテゴリのメニュー行（折り込み済み）
+
+20260616000005_add_cooperation_channel.sql  [適用済み]
+  - ALTER TYPE deal_channel ADD VALUE IF NOT EXISTS 'cooperation'
+
+20260616000006_add_manual_source.sql  [適用済み]
+  - ALTER TYPE deal_source ADD VALUE IF NOT EXISTS 'manual'
+
+═══════════════════════════════════════════════════════
+■ デモデータ投入内容
+═══════════════════════════════════════════════════════
+
+【テストサービス】
+  テスト / APIテスト → active=false (停止中) に設定
+
+【デモパートナー 3名】
+  勝田 勝彦  | KT8842 | katsuhiko-demo@mb-demo.test | pw: DemoPass123! | individual
+  佐々木 恵美 | SS1203 | sasaki-demo@mb-demo.test   | pw: DemoPass123! | individual
+  井上 翔太  | IN0907 | inoue-demo@mb-demo.test     | pw: DemoPass123! | corporate
+
+【案件 10件】
+  勝田:
+    山田 健一         referral  MOOM         受付     ¥30,000
+    田中 美咲         referral  MatchHub     対応中   ¥30,000  (meeting_at 設定済)
+    鈴木 不動産       cooperation MOOM       成約確定 ¥150,000 (先月)
+    佐藤 商事         referral  RESONATION   支払済   ¥100,000 (先月)
+  佐々木:
+    中村 DX合同会社   referral  PRAGMATION   受付     ¥40,000
+    高橋 家具         cooperation MOOM       対応中   ¥75,000  (meeting_at 設定済)
+    小林 製造         referral  MatchHub     成約確定 ¥30,000  (今月)
+  井上:
+    ブランドX株式会社  referral RESONATION   受付     ¥50,000
+    クリエイターA     referral  ENTERSOLOGY  対応中   ¥0
+    渡辺 不動産事務所  referral  MOOM        支払済   ¥30,000  (先月)
+
+【支払バッチ】
+  先月(2026-05)分は既存データ(paid済み)として存在
+
+【問い合わせ 2件】
+  勝田: 「紹介報酬の計算方法について」   → status: replied (返信済)
+  佐々木: 「案件のステータス変更ができません」 → status: open
+
+【通知】
+  各パートナーへ案件受付・問い合わせ返信通知を投入
+
+═══════════════════════════════════════════════════════
+■ ギャップ確認 (4項目)
+═══════════════════════════════════════════════════════
+
+✓ パートナーホーム hero: 次回振込 日付 + 金額 実装済み (app/app/page.tsx:35-42)
+✓ Refer Step1: メニュー名チップ (RefChip) 実装済み (app/app/refer/page.tsx:15,169)
+✓ Mypage: ニックネーム (nickname) フィールド実装済み (profiles.nickname 参照)
+✓ ログインコピー: 「つなぐだけでも、売り切るまでも。選ぶのはあなた。」実装済み
+
+═══════════════════════════════════════════════════════
+■ 全ページ確認結果 (ローカル localhost:3001)
+═══════════════════════════════════════════════════════
+
+コンソール 8ページ:
+  ✓ /console              (ダッシュボード)
+  ✓ /console/deals        (案件ボード - 18件のカンバン表示)
+  ✓ /console/partners     (パートナー一覧)
+  ✓ /console/services     (サービス・報酬ルール - 6サービス表示)
+  ✓ /console/payouts      (支払管理)
+  ✓ /console/broadcasts   (配信)
+  ✓ /console/inquiries    (問い合わせ)
+  ✓ /console/settings     (設定)
+
+パートナーアプリ 9ページ:
+  ✓ /app                  (ホーム - 残高カード・次回振込)
+  ✓ /app/cases            (案件一覧)
+  ✓ /app/refer            (紹介・協力フォーム)
+  ✓ /app/guide            (サービスガイド - 全サービス表示)
+  ✓ /app/rewards          (報酬明細)
+  ✓ /app/inbox            (通知センター)
+  ✓ /app/mypage           (マイページ)
+  ✓ /app/settings         (設定)
+  ✓ /app/support          (サポート)
+
+合計 17/17 ページ OK、予期しないリダイレクトなし
+
+スクリーンショット: docs/reports/review_screens/
+
+═══════════════════════════════════════════════════════
+■ 本番デプロイ
+═══════════════════════════════════════════════════════
+
+URL: https://mb-partners.app
+Deployment ID: dpl_3kEFbQVkiEPbjnvGEYeojHHDvRoK
+Status: READY ✓
+Build: ✓ TypeScript clean, 17s, 36 static pages generated
+
+═══════════════════════════════════════════════════════
+■ 追加で判明した軽微な注意点
+═══════════════════════════════════════════════════════
+
+- service_menus_coop_backup テーブルが本番DBに残存
+  (バックアップ用途。不要なら DROP TABLE service_menus_coop_backup; で削除可)
+
+- deals チャネル: 'cooperation' と 'frontier' 両方を frontier として集計
+  (ChannelChart.tsx: d.channel === 'cooperation' || d.channel === 'frontier')
+  今後は新規案件は全て 'cooperation' チャネルで登録される
+
+- 既存の cooperation チャネル案件 (旧 'frontier' 相当) はそのまま維持

@@ -1,0 +1,178 @@
+========================================================
+MB Partners — A-1 / A-2 / C-3 ダンプ
+日時: 2026-06-14
+ビルド: npx next build → ✅ エラーなし
+========================================================
+
+■ 変更ファイル一覧
+
+1. app/app/page.tsx               (A-1: Help linkカード削除)
+2. app/app/settings/page.tsx      (A-1: お問い合わせ SRow追加)
+3. app/book/[partner_id]/page.tsx (A-2: 月カレンダーUIリライト)
+4. app/console/partners/page.tsx  (C-3: 一覧テーブル+サマリストリップ)
+5. app/console/partners/[id]/page.tsx (C-3: 詳細ページ強化)
+
+========================================================
+■ A-1 — 問い合わせ導線移動
+========================================================
+
+[REMOVED from app/page.tsx]
+  - "Help link" ブロック（お問い合わせ → /app/support カード）
+  - <div style={{ height: 20 }} /> → <div style={{ height: 12 }} /> に縮小
+
+[ADDED to app/settings/page.tsx]
+  - Links group に <SRow as={Link} href="/app/support">お問い合わせ</SRow> を追加
+  - マイページ / サービスガイド / パートナー規約・ヘルプ / お問い合わせ の4項目に
+
+========================================================
+■ A-2 — 予約カレンダー UI刷新（book/[partner_id]）
+========================================================
+
+[BEFORE: step='date']
+  60日分を4カラムフラットグリッド（m/d(曜) ボタン）
+
+[AFTER: step='calendar']
+  本格月カレンダー:
+    - 年月ヘッダー + 前月/次月ナビ (‹ / ›)
+    - 7列曜日ヘッダー（日赤, 土青）
+    - 月グリッド: 過去日はdisabled, 60日超もdisabled
+    - 選択日は青背景, 今日は薄青背景
+    - 最大2ヶ月先まで前進可能
+
+[STEP INDICATOR] — 新規追加
+  ① 日付 › ② 時間 › ③ 情報
+  完了済みステップに ✓, アクティブに青丸数字
+
+[step='slot']
+  - 3列タイムスロット（ホバー: 枠線青 + 背景薄青）
+  - 空き枠なし時に「別の日を選ぶ」ボタン
+
+[step='form']
+  - 予約日時サマリチップ（青背景）を上部に配置
+  - 名前・メール入力は変更なし
+  - 確定ボタンのスタイル改善
+
+[step='done']
+  - ✓ アイコン（緑）+ 日時 + メッセージ
+
+[API変更なし]
+  - /api/availability (GET) — 変更なし
+  - /api/meetings (POST) — 変更なし
+
+========================================================
+■ C-3 — パートナー一覧（/console/partners）
+========================================================
+
+[BEFORE]
+  - シンプルカードリスト: アバター+名前+コード+状態+累計/進行中件数のみ
+  - サマリストリップなし
+  - 内部パートナー区別なし
+
+[AFTER]
+  サマリストリップ (内部パートナー除外):
+    稼働中パートナー N名 | 累計成約件数 N件 | 累計報酬総額 ¥XXX,XXX
+
+  テーブル形式:
+    カラム: パートナー | コード | 税区分 | 累計成約 | 累計報酬(税込) | 状態
+
+  データ:
+    - 累計報酬 = paid + confirmed ステータス deals の amount 合計
+    - 累計成約 = 全deals件数 (進行中件数も小さく表示)
+    - デフォルトソート: 累計報酬 降順
+
+  内部パートナー (ZZ8463, ZZ8354):
+    - テーブル最下部にセパレーター付きで分離
+    - 「内部」バッジ表示 + opacity 0.65
+    - サマリストリップのKPIから除外
+
+  承認待ちパネル: 変更なし（ApprovalPanel）
+
+========================================================
+■ C-3 — パートナー詳細（/console/partners/[id]）
+========================================================
+
+[BEFORE]
+  - 基本情報カード (avatar/name/code/status/tax/KYC)
+  - 累計案件 (count only)
+  - 口座変更申請パネル
+
+[AFTER — v9 style]
+
+  ヘッダーカード:
+    大きめavatar + 名前 + コード + ステータスpill + KYC + メール + 登録日 + 税区分
+
+  KPI ストリップ (4カード):
+    累計報酬(税込) | 累計案件 | 進行中 | 今月成約
+
+  2カラムレイアウト:
+    左 (広):
+      ■ 案件一覧 (N件)
+        ステータスchip + 顧客名 + サービス名 + 日付 + 報酬額
+        (最大30件表示)
+
+      ■ 振込履歴 (payout_items)
+        月 | ステータス | 総額 | 源泉 | 振込額
+        (最大24件)
+
+    右 (320px):
+      ■ 基本情報 (税区分, KYC, コード)
+      ■ 問い合わせ → 件数リンク (/console/inquiries?partner_id=X)
+      ■ 振込口座 (bank_name + branch + type + number + holder)
+      ■ 口座変更申請 (BankChangePanel — 既存)
+
+[追加クエリ — 2ラウンド構成]
+  Round 1 (並列): auth check + partner(+profile_id) + bank_change_requests
+  Round 2 (並列): deals + payout_items + inquiries count
+
+  deals: SELECT id, customer_name, status, amount, created_at, services(name)
+  payout_items: SELECT id, gross, withholding, net, payout_batches(month, status)
+  inquiries: COUNT WHERE partner_id = id
+
+[export const runtime = 'edge'] — 追加
+
+========================================================
+■ 自己検証
+========================================================
+
+  ✅ npx next build — エラーなし (2026-06-14)
+  ✅ /app (ƒ Edge SSR) — Help linkカード削除確認
+  ✅ /app/settings — お問い合わせ SRow追加確認
+  ✅ /book/[partner_id] (ƒ Edge SSR) — 月カレンダーUI
+  ✅ /console/partners (ƒ Edge SSR) — テーブル+サマリ
+  ✅ /console/partners/[id] (ƒ Edge SSR) — KPI+案件+振込+BankPanel
+  ✅ 内部コード ZZ8463/ZZ8354 → サマリ除外 + 「内部」タグ
+  ✅ API変更なし (availability/meetings/inquiries/payouts — 既存のまま)
+
+========================================================
+■ 本番デプロイ前チェック
+========================================================
+
+[1] book/[partner_id] API allowlist
+  /api/availability?partner_id=X&date=Y — クエリパラメータのみ ✅
+  /api/meetings POST — {partner_id, start_at, end_at, client_name, client_email} ✅
+
+[2] partners/[id] 新規クエリ
+  deals: service role client → partner_id フィルタ ✅
+  payout_items: service role client → partner_id フィルタ ✅
+  inquiries: service role client → partner_id count ✅
+  profile_id: partners select に追加 ✅
+
+[3] 内部パートナー除外ロジック
+  INTERNAL_CODES = Set(['ZZ8463', 'ZZ8354'])
+  summaryReward / summaryDeals / activeExternal から除外 ✅
+  テーブルには表示 (opacity 0.65 + 「内部」バッジ) ✅
+
+========================================================
+■ 動作確認チェックリスト（ブラウザで実施 — 勝彦さんへ）
+========================================================
+
+□ A-1: /app ホーム → お問い合わせカードが非表示であること
+□ A-1: /app/settings → 「お問い合わせ」リンクが表示され /app/support に遷移すること
+□ A-2: /book/[partner_id] → 月カレンダーが表示され前月/次月ナビが動作すること
+□ A-2: 日付タップ → 時間選択ステップへ遷移すること
+□ A-2: 時間タップ → お客様情報フォームに予約サマリが表示されること
+□ A-2: 予約確定 → 完了画面が表示されること
+□ C-3: /console/partners → テーブル形式 + サマリストリップが表示されること
+□ C-3: 内部パートナー (ZZ8463/ZZ8354) → 「内部」タグで分離表示されること
+□ C-3: パートナーをクリック → 詳細ページに KPI + 案件一覧 + 振込履歴が表示されること
+□ C-3: 問い合わせ件数リンクが表示されること

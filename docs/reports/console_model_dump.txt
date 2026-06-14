@@ -1,0 +1,161 @@
+CONSOLE MODEL DUMP
+Generated: 2026-06-13
+Read-only output — no code changes, no deploy.
+
+═══════════════════════════════════════════════════════
+1. サービス編集ドロワーの実装
+═══════════════════════════════════════════════════════
+
+── ServicesClient.tsx (app/console/services/ServicesClient.tsx) ──
+
+[ServiceForm 型] — サービス本体の編集項目
+  name         string   サービス名
+  subtitle     string   サブタイトル
+  description  string   説明文
+  who          string   こんな方に（対象顧客）
+  url          string   URL（ホームページ等）
+  logo_path    string   ロゴ画像URL（Storage経由でアップロード）
+  active       boolean  公開/停止スイッチ
+
+  ※ icon / color / rail / sort はコンソールUIに入力フィールドなし。
+    新規作成時はDBデフォルト（rail='std', icon='arrows', color='c-green'）が適用。
+    PATCH /api/console/services/[id] では icon/color/rail/sort も allowed に含まれるが、
+    フロントが送信しない。
+
+[MenuForm 型] — メニュー（報酬ルール）の編集項目
+  name            string          メニュー名
+  category        'referral'|'cooperation'  紹介 or 協力
+  ref_type        'fixed'|'rate'  固定額 or 率
+  ref_value       string          金額（円）or 率（%）
+  ref_base        string          基準（率の場合: 売上/粗利/利益/受取収入）
+  ref_trigger     string          報酬発生条件（テキスト）
+  coverage_steps  CoverageStep[]  対応範囲（協力のみ）
+  qualification   string          資格条件（協力のみ、任意）
+
+  ※ ft_enabled / ft_rate / ft_basis / ft_trigger / ft_condition /
+    ref_months / example_ref / example_ft は MenuForm に含まれない。
+    POSTルートは受け付けるが、UIから入力・送信されることはない。
+
+[CoverageStep のデフォルト値]
+  { label: 'つなぐ',             included: true  }  ← 必須・変更不可
+  { label: 'アポイント設定',     included: false }
+  { label: '商談',               included: false }
+  { label: '価格合意',           included: false }
+  { label: 'フォロー・アシスト', included: false }
+
+[LogoUpload]
+  supabase.storage.from('service-logos').upload(`logos/${timestamp}.{ext}`)
+  getPublicUrl → logo_path として保存
+
+── API ルート一覧 ──
+
+POST   /api/console/services
+  送信: name, subtitle, description, who, url, active, logo_path
+  挿入: 上記 + sort=99（icon/color/railはDBデフォルト）
+  権限: role != 'partner'
+
+PATCH  /api/console/services/[id]
+  allowed: name, subtitle, icon, color, description, who, url, active,
+           logo_path, sort, rail, coverage_steps, ft_trigger, ft_condition
+  権限: role != 'partner'
+
+GET    /api/console/services/[id]/menus
+  全メニューを sort 順で返す
+  権限: role != 'partner'
+
+POST   /api/console/services/[id]/menus
+  挿入フィールド: name, category, ref_type, ref_value, ref_base, ref_trigger,
+                  ref_months, example_ref, ft_enabled, ft_rate, ft_basis,
+                  ft_trigger, ft_condition, example_ft, coverage_steps,
+                  qualification, sort（自動採番）
+  権限: role != 'partner'
+
+PATCH  /api/console/services/[id]/menus/[mid]
+  allowed: name, category, ref_type, ref_value, ref_base, ref_trigger,
+           ref_months, example_ref, ft_enabled, ft_rate, ft_basis,
+           ft_trigger, ft_condition, example_ft, coverage_steps, qualification, sort
+  権限: role != 'partner'
+
+DELETE /api/console/services/[id]/menus/[mid]
+  権限: role != 'partner'
+
+
+═══════════════════════════════════════════════════════
+2. テーブルスキーマ（migration ファイルより再構成）
+═══════════════════════════════════════════════════════
+
+── services テーブル ──
+
+カラム名          型        追加migration / 備考
+────────────────────────────────────────────────────────
+id                uuid      20260614000002: gen_random_uuid() デフォルト
+name              text      初期スキーマ
+subtitle          text      初期スキーマ
+description       text      初期スキーマ
+who               text      初期スキーマ
+url               text      初期スキーマ
+active            boolean   初期スキーマ
+logo_path         text      初期スキーマ / 20260614000004でStorage policy追加
+icon              text      初期スキーマ  DEFAULT 'arrows'
+color             text      初期スキーマ  DEFAULT 'c-green'
+sort              int4      初期スキーマ
+rail              text      20260614000003  ← サービス単位のrail（現在UIでは未使用）
+coverage_steps    jsonb     20260614000003  ← サービス単位（現在UIでは未使用・レガシー）
+ft_trigger        text      20260614000003  ← サービス単位（現在UIでは未使用）
+ft_condition      text      20260614000003  ← サービス単位（現在UIでは未使用）
+
+── service_menus テーブル ──
+
+カラム名          型        追加migration / 備考
+────────────────────────────────────────────────────────
+id                uuid      初期スキーマ
+service_id        uuid      初期スキーマ  FK → services.id
+name              text      初期スキーマ
+ref_type          text      初期スキーマ  'fixed' | 'rate'
+ref_value         numeric   初期スキーマ
+ref_trigger       text      初期スキーマ
+ref_months        int4      初期スキーマ
+example_ref       text      初期スキーマ
+ft_enabled        boolean   初期スキーマ
+ft_rate           numeric   初期スキーマ
+ft_trigger        text      初期スキーマ
+ft_condition      text      初期スキーマ
+example_ft        text      初期スキーマ
+sort              int4      20260614000001  DEFAULT 0 NOT NULL
+ref_base          text      20260614000001  率の基準（売上/粗利等）
+ft_basis          text      20260614000001
+category          text      20260614000005  DEFAULT 'referral'  ('referral'|'cooperation')
+coverage_steps    jsonb     20260614000005  対応範囲ステップ配列
+qualification     text      20260614000005  資格条件
+
+── その他関連 ──
+
+profiles:
+  nickname  text  20260615000001  nullable（マイページ表示名）
+
+
+═══════════════════════════════════════════════════════
+3. スキーマ可否コメント
+   「紹介報酬＝メニュー単位 ／ 営業報酬＝サービス単位」
+═══════════════════════════════════════════════════════
+
+【現行スキーマでの可否】
+
+○ 紹介報酬＝メニュー単位: 完全対応
+  service_menus.category='referral' のメニューを複数持てる。
+  ref_type(fixed/rate)・ref_value・ref_trigger で柔軟に定義可能。
+
+△ 営業報酬＝サービス単位: 構造上は「メニュー単位」のまま
+  service_menus.category='cooperation' として協力メニューを追加するモデル。
+  「1サービスに協力メニューは1つのみ」という制約はスキーマに存在しないため、
+  サービス単位の一意性は運用ルールで担保する必要がある。
+
+  services テーブルに rail / coverage_steps / ft_trigger / ft_condition が
+  追加されているが（20260614000003）、現在のUIもAPIもこれらをサービス編集フォームから
+  直接送信しない設計になっており、事実上デッドカラム状態。
+
+【結論】
+  現行スキーマで「紹介報酬＝メニュー単位」は完全実現済み。
+  「営業報酬＝サービス単位」を厳密に実現するには、
+  cooperationメニューをservice単位で持つ制約（UNIQUE(service_id) WHERE category='cooperation'）
+  またはUIレベルでの1件制限が必要。現状は制約なし。

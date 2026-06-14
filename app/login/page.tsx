@@ -28,7 +28,9 @@ export default function LoginPage() {
       setError('メールアドレスまたはパスワードが正しくありません。')
       return
     }
-    router.push('/app')
+    // Redirect to root — root page routes to /app or /console based on role.
+    // This prevents admins (who have no partner record) from looping at /app.
+    router.push('/')
     router.refresh() // flush server component cache
   }
 

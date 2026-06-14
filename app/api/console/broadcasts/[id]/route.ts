@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 
+export const runtime = 'edge'
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

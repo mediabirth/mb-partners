@@ -19,6 +19,7 @@ export default function InviteForm({
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState('')
+  const [done, setDone]                 = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -54,9 +55,9 @@ export default function InviteForm({
       return
     }
 
-    // Step 3: Navigate to partner portal
-    router.push('/app')
-    router.refresh()
+    // Step 3: Show success screen, then navigate
+    setDone(true)
+    setTimeout(() => { router.push('/app'); router.refresh() }, 2200)
   }
 
   return (
@@ -72,7 +73,34 @@ export default function InviteForm({
           background: 'radial-gradient(46% 36% at 72% 18%,#EDEBFC,transparent 70%)',
         }} />
 
-        <div style={{ position: 'relative' }}>
+        {done && (
+          <div style={{ position: 'relative', textAlign: 'center', padding: '32px 0' }}>
+            <style>{`@keyframes drawCheck { from { stroke-dashoffset: 52 } to { stroke-dashoffset: 0 } }`}</style>
+            <svg width="96" height="96" viewBox="0 0 100 100" style={{ margin: '0 auto 20px', display: 'block' }}>
+              <circle
+                cx="50" cy="50" r="45"
+                fill="none" stroke="var(--blue)" strokeWidth="3"
+                className="draw"
+              />
+              <path
+                d="M30 51l14 14 26-26"
+                fill="none" stroke="var(--blue)" strokeWidth="3.5"
+                strokeLinecap="round" strokeLinejoin="round"
+                style={{
+                  strokeDasharray: 52,
+                  strokeDashoffset: 52,
+                  animation: 'drawCheck .4s cubic-bezier(.2,.8,.2,1) .6s both',
+                }}
+              />
+            </svg>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 8 }}>アカウント作成完了！</h2>
+            <p style={{ fontSize: '.75rem', color: 'var(--muted2)', lineHeight: 1.8 }}>
+              パートナーポータルへ移動します…
+            </p>
+          </div>
+        )}
+
+        <div style={{ position: 'relative', display: done ? 'none' : undefined }}>
           {/* Logo */}
           <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 24 }}>
             <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="2.6"/>

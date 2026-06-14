@@ -4,6 +4,10 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
 import PageTransition from '@/components/PageTransition'
 
+// Edge runtime: no cold starts, globally distributed SSR
+// All server components in /app/** use only @supabase/ssr + next/headers (edge-safe)
+export const runtime = 'edge'
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCachedUser()
   if (!user) redirect('/login')

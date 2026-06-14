@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
-import { getPartnerByUserId, getDealsForPartner } from '@/lib/supabase/queries'
+import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import StatementClient from './StatementClient'
 
 export default async function StatementPage() {
@@ -9,13 +9,12 @@ export default async function StatementPage() {
   if (!user) redirect('/login')
   const supabase = await createClient()
 
-  const [partner, profileRes] = await Promise.all([
-    getPartnerByUserId(supabase, user.id),
+  const [result, profileRes] = await Promise.all([
+    getPartnerWithDeals(supabase, user.id),
     supabase.from('profiles').select('name').eq('id', user.id).single(),
   ])
-  if (!partner) redirect('/login')
-
-  const deals = await getDealsForPartner(supabase, partner.id)
+  if (!result) redirect('/login')
+  const { partner, deals } = result
 
   // Build monthly + annual data
   const paidOrConfirmed = deals.filter(d => d.status === 'confirmed' || d.status === 'paid')

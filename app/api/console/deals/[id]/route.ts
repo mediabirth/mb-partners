@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const runtime = 'edge'
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -28,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Audit log
   await supabase.from('deal_events').insert({
     deal_id: id,
-    body: `ステータスを「${status}」に変更しました`,
+    body: `ステータスを「${{ received: '受付', in_progress: '対応中', confirmed: '成約確定', paid: '支払済' }[status as string]}」に変更しました`,
     created_by: user.id,
     visible_to_partner: ['confirmed', 'paid'].includes(status),
   })

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 
+export const runtime = 'edge'
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()

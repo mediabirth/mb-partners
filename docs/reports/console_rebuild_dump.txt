@@ -1,0 +1,182 @@
+CONSOLE REBUILD DUMP — 協力=サービス単位モデル
+Generated: 2026-06-14
+Build: PASS
+
+═══════════════════════════════════════════════════════
+■ 変更サマリー
+═══════════════════════════════════════════════════════
+
+【モデル変更】
+- 旧: 協力報酬 = service_menus.category='cooperation' の行
+- 新: 協力報酬 = services テーブルのサービス単位カラム群
+- 紹介報酬 = service_menus (category='referral') — 変更なし
+
+【用語統一】
+- 「営業」→「協力」に全廃 (UI表示文言・コード内コメント)
+- コンソールの "直販/リファラル/フロンティア" は社内用語、パートナー画面には出さない
+
+═══════════════════════════════════════════════════════
+■ Migrations (supabase/migrations/)
+═══════════════════════════════════════════════════════
+
+20260616000001_coop_service_level.sql  [加算的・安全]
+  ALTER TABLE services ADD COLUMN IF NOT EXISTS coop_enabled BOOLEAN DEFAULT false;
+  ALTER TABLE services ADD COLUMN IF NOT EXISTS coop_rate NUMERIC;
+  ALTER TABLE services ADD COLUMN IF NOT EXISTS coop_base TEXT;
+  ※ coverage_steps / ft_trigger / ft_condition は既存カラムを転用
+
+20260616000002_fold_coop_menus.sql  [加算的・安全]
+  既存 service_menus.category='cooperation' 行 → services に畳み込み UPDATE
+  COALESCE でサービス側に既に値があれば上書きしない
+
+20260616000003_delete_coop_menus.sql  [⚠ 確認必須・行削除]
+  DELETE FROM service_menus WHERE category = 'cooperation';
+  → migration 002 適用後にユーザー確認を取ってから push すること
+
+20260616000004_seed_services.sql  [UPDATE/INSERT・安全]
+  6サービスの初期値を設定 (UPDATE if exists, INSERT if not exists)
+  MOOM / MatchHub / RESONATION / PRAGMATION / EMANATION / ENTERSOLOGY LIVE
+  各サービスの紹介メニューも同様にupsert
+
+═══════════════════════════════════════════════════════
+■ TypeScript 型変更 (lib/supabase/queries.ts)
+═══════════════════════════════════════════════════════
+
+ServiceRow に追加:
+  coop_enabled: boolean
+  coop_rate: number | null
+  coop_base: string | null
+  // coverage_steps / ft_trigger / ft_condition は既存 → 意味を協力設定として明確化
+
+MenuRow: 変更なし (category フィールドは残す、今後は 'referral' のみ使用)
+
+═══════════════════════════════════════════════════════
+■ API 変更
+═══════════════════════════════════════════════════════
+
+POST /api/console/services
+  追加: icon, color, coop_enabled, coop_rate, coop_base, ft_trigger, ft_condition, coverage_steps
+
+PATCH /api/console/services/[id]
+  allowed リストに追加: coop_enabled, coop_rate, coop_base
+  削除: rail (allowed から除外)
+
+/api/console/services/[id]/menus — 変更なし
+  (POST時 category='referral' がデフォルト、cooperation は今後作成されない)
+
+═══════════════════════════════════════════════════════
+■ ServicesClient.tsx (コンソール UI)
+═══════════════════════════════════════════════════════
+
+ServiceForm 型:
+  基本: name / subtitle / description / who / url / logo_path / active
+  新規: icon / color  ← UIに入力欄追加(アイコングリッド + カラースウォッチ)
+  協力: coop_enabled / coop_rate / coop_base / coop_trigger / coop_condition / coop_coverage
+
+MenuForm 型 (簡略化):
+  name / ref_type / ref_value / ref_base / ref_trigger
+  削除: category / coverage_steps / qualification (サービス側へ移動)
+
+サービス一覧カード:
+  紹介メニュー行 (RefChip) + 協力サマリー行 (CoopChip) を1枚に統合表示
+
+編集ドロワー構成:
+  1. 基本情報 (名称/サブタイトル/URL/説明/Who/ロゴ/アイコン/カラー)
+  2. 紹介メニューと報酬 (既存のメニューCRUD、紹介のみ)
+  3. 協力設定（サービス単位）
+     - 協力なし/協力ありトグル
+     - 協力率(%) / 協力基準
+     - 協力の成果地点 (→ ft_trigger)
+     - 協力の資格条件 (→ ft_condition)
+     - 協力の対応範囲チェック (→ coverage_steps)
+  4. 公開設定
+
+ft_* 系 (ft_enabled/ft_rate/ft_basis/ft_trigger/ft_condition) の旧扱い:
+  - ft_enabled/ft_rate/ft_basis は UIに表示しない(DBには残る)
+  - ft_trigger → 協力の成果地点として再利用
+  - ft_condition → 協力の資格条件として再利用
+
+═══════════════════════════════════════════════════════
+■ パートナーアプリ変更
+═══════════════════════════════════════════════════════
+
+refer/page.tsx:
+  - coopMode state を追加 (boolean)
+  - pickService: service.coop_enabled でルーティング分岐
+    * 紹介のみ(1件): auto-select → form
+    * 協力のみ: coopMode=true → form
+    * 複数/混在: menu step へ
+  - Step 2: 紹介メニューカード + 協力カード(service.coop_* から生成)
+  - Step 3: coopMode で表示切替
+  - 送信: fd.set('channel', coopMode ? 'cooperation' : 'referral')
+
+refer/actions.ts:
+  - submitPartnerReferral が channel フォームフィールドを読む
+  - channel: formData.get('channel') || 'referral'
+
+guide/GuideAccordion.tsx:
+  - FeeRow: 紹介メニュー行 (service_menus から)
+  - CoopFeeRow: 協力行 (service.coop_enabled/coop_rate/coverage_steps 等から)
+  - refMenus = service_menus.filter(category !== 'cooperation')
+  - コープ行はサービス単位の1行として描画
+
+═══════════════════════════════════════════════════════
+■ ダッシュボード (ChannelChart.tsx / console/page.tsx)
+═══════════════════════════════════════════════════════
+
+3チャネル:
+  直販     = channel='direct'       色: #0E0E14
+  リファラル = channel='referral'    色: #4733E6 (blue)
+  フロンティア = channel='cooperation' or 'frontier'  色: #1E9E6A
+
+目安配分 (TARGET): 直販50 / リファラル30 / フロンティア20
+  グラフに実績バー + 目安バー(淡色)を並列表示
+
+MonthData 型:
+  { ym, label, direct, referral, frontier }
+
+═══════════════════════════════════════════════════════
+■ 報酬マスター初期値 (migration 004)
+═══════════════════════════════════════════════════════
+
+MOOM        紹介: 賃貸仲介成約 ¥30,000
+            協力: 50% / 粗利 / 共同仲介を担当 / 宅建業免許が必要 / 全5ステップ
+
+MatchHub    紹介: 転職サポート（個人）¥30,000、採用企業の開拓 ¥30,000
+            協力: 10% / 売上 / (成果地点未設定) / 求職者本人への接触は不可
+
+RESONATION  紹介: 撮影¥30k、ロゴ¥50k、サイト制作¥100k、受託開発¥300k
+            協力: 10% / 利益
+
+PRAGMATION  紹介: DX・AI導入 ¥40,000
+            協力: 10% / 利益
+
+EMANATION   紹介: DX・AI導入 ¥40,000
+            協力: 10% / 利益
+
+ENTERSOLOGY LIVE  紹介: 配信クリエイター所属 10% / 受取収入
+                  協力: なし (coop_enabled=false)
+
+═══════════════════════════════════════════════════════
+■ デプロイ手順 (承認待ち)
+═══════════════════════════════════════════════════════
+
+Step 1: supabase db push (migration 001 + 002 + 004) — 安全
+  ※ migration 003 (DELETE coop menus) は除外して先にpush
+
+Step 2: ユーザーに migration 003 の内容を確認
+  DELETE FROM service_menus WHERE category = 'cooperation';
+  承認後に migration 003 を含めた supabase db push を実行
+
+Step 3: vercel --prod — ユーザー承認後に実行
+
+═══════════════════════════════════════════════════════
+■ 既知の制約・注意
+═══════════════════════════════════════════════════════
+
+- service_menus.category カラムは残る (既存データ・FK上安全)
+- ft_enabled / ft_rate / ft_basis / example_ref / example_ft はDBに残るが UIには未表示
+- 協力のコープ報酬は deals テーブルの channel='cooperation' で識別
+- 旧 cooperation メニューの menu_id を参照している deals は menu_id = null になる
+  (deals.menu_id は nullable のため DB エラーにはならない)
+  → migration 003 実行前に該当deals件数を確認することを推奨

@@ -1,24 +1,19 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ConsoleNav from '@/components/ConsoleNav'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type PayCycle = 'monthly_end' | 'monthly_20' | 'bimonthly'
 type AdminUser = { id: string; name: string; email: string; role: 'admin' | 'viewer'; color: string }
+type AuditLog  = { id: string; actor_name: string; category: string; target: string; action: string; created_at: string }
+
+const AUDIT_CATEGORIES = ['', '案件', '支払', '配信', '権限', '問い合わせ'] as const
 
 const PAY_CYCLE_LABELS: Record<PayCycle, string> = {
   monthly_end: '月末締め翌月末払い',
   monthly_20: '月末締め翌月20日払い',
   bimonthly: '隔月末払い',
 }
-
-const AUDIT_LOG_MOCK = [
-  { id: '1', user: '管理者', action: 'パートナー承認', target: 'MB-2401', ts: '2025-06-12T10:23:00Z' },
-  { id: '2', user: '管理者', action: 'ステータス変更', target: '案件 #abc123 → 成約・確定', ts: '2025-06-11T16:45:00Z' },
-  { id: '3', user: '管理者', action: 'サービス更新', target: '不動産 — 報酬メニュー編集', ts: '2025-06-10T09:11:00Z' },
-  { id: '4', user: '管理者', action: '配信送信', target: '全パートナーへお知らせ', ts: '2025-06-09T14:00:00Z' },
-  { id: '5', user: '管理者', action: '支払処理', target: '2025年5月分 ¥280,000', ts: '2025-06-05T11:30:00Z' },
-]
 
 const ADMIN_MOCK: AdminUser[] = [
   { id: '1', name: '運営管理者', email: 'admin@mb-partners.jp', role: 'admin', color: '#4733E6' },
@@ -78,6 +73,35 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail]         = useState('')
   const [inviteRole, setInviteRole]           = useState<'admin' | 'viewer'>('viewer')
   const [toast, setToast]                     = useState('')
+  const [auditLogs, setAuditLogs]             = useState<AuditLog[]>([])
+  const [auditCategory, setAuditCategory]     = useState('')
+  const [auditLoading, setAuditLoading]       = useState(true)
+
+  useEffect(() => {
+    setAuditLoading(true)
+    const url = auditCategory
+      ? `/api/console/audit-logs?category=${encodeURIComponent(auditCategory)}`
+      : '/api/console/audit-logs'
+    fetch(url)
+      .then(r => r.json())
+      .then(d => setAuditLogs(d.logs ?? []))
+      .catch(() => setAuditLogs([]))
+      .finally(() => setAuditLoading(false))
+  }, [auditCategory])
+
+  function exportCsv() {
+    const headers = ['日時', '操作者', 'カテゴリ', '対象', 'アクション']
+    const rows = auditLogs.map(l => [
+      new Date(l.created_at).toLocaleString('ja'),
+      l.actor_name, l.category, l.target, l.action,
+    ])
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'audit_log.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   function showToast(msg: string) {
     setToast(msg)
@@ -203,23 +227,53 @@ export default function SettingsPage() {
 
           {/* 5. 監査ログ */}
           <SectionCard title="監査ログ">
-            <p style={{ fontSize: '.72rem', color: 'var(--muted2)', marginBottom: 14, lineHeight: 1.6 }}>
-              管理操作の履歴です。直近30件を表示しています。
-            </p>
-            <div>
-              {AUDIT_LOG_MOCK.map((log, i) => (
-                <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < AUDIT_LOG_MOCK.length - 1 ? '1px solid #F2F2F6' : undefined, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: 'Inter', flexShrink: 0, paddingTop: 2, minWidth: 54 }}>
-                    {new Date(log.ts).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '.76rem', fontWeight: 700 }}>{log.action}</div>
-                    <div style={{ fontSize: '.63rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.target}</div>
-                  </div>
-                  <span style={{ fontSize: '.6rem', color: 'var(--muted2)', flexShrink: 0 }}>{log.user}</span>
-                </div>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', flex: 1, lineHeight: 1.6, minWidth: 160 }}>
+                管理操作の履歴（直近50件）
+              </p>
+              <select
+                value={auditCategory}
+                onChange={e => setAuditCategory(e.target.value)}
+                style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 11px', fontFamily: 'inherit', fontSize: '.74rem', background: '#fff' }}
+              >
+                <option value="">全カテゴリ</option>
+                {AUDIT_CATEGORIES.filter(Boolean).map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <button
+                onClick={exportCsv}
+                disabled={auditLogs.length === 0}
+                style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}
+              >
+                CSV出力
+              </button>
             </div>
+            {auditLoading ? (
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>読み込み中…</p>
+            ) : auditLogs.length === 0 ? (
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>ログがありません</p>
+            ) : (
+              <div>
+                {auditLogs.map((log, i) => (
+                  <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < auditLogs.length - 1 ? '1px solid #F2F2F6' : undefined, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: 'Inter', flexShrink: 0, paddingTop: 2, minWidth: 54 }}>
+                      {new Date(log.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
+                        <span style={{ fontSize: '.57rem', fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: 'var(--bg2)', color: 'var(--muted2)' }}>
+                          {log.category}
+                        </span>
+                        <span style={{ fontSize: '.76rem', fontWeight: 700 }}>{log.action}</span>
+                      </div>
+                      <div style={{ fontSize: '.63rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.target}</div>
+                    </div>
+                    <span style={{ fontSize: '.6rem', color: 'var(--muted2)', flexShrink: 0 }}>{log.actor_name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </SectionCard>
 
         </div>

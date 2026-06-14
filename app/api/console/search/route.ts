@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const runtime = 'edge'
+
 export async function GET(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,7 +15,7 @@ export async function GET(req: Request) {
   const q = (searchParams.get('q') ?? '').trim()
   if (!q || q.length < 2) return NextResponse.json({ results: [] })
 
-  const [dealsRes, partnersRes] = await Promise.all([
+  const [dealsRes, partnersRes, servicesRes, inquiriesRes] = await Promise.all([
     supabase
       .from('deals')
       .select('id, customer_name, status, services(name)')
@@ -24,6 +26,16 @@ export async function GET(req: Request) {
       .select('id, code, profiles(name, email)')
       .or(`code.ilike.%${q}%`)
       .limit(5),
+    supabase
+      .from('services')
+      .select('id, name, subtitle')
+      .or(`name.ilike.%${q}%,subtitle.ilike.%${q}%`)
+      .limit(3),
+    supabase
+      .from('inquiries')
+      .select('id, subject, category, status')
+      .or(`subject.ilike.%${q}%,category.ilike.%${q}%`)
+      .limit(3),
   ])
 
   // Also search partner profiles by name
@@ -34,7 +46,7 @@ export async function GET(req: Request) {
     .limit(5)
 
   const results: Array<{
-    type: 'deal' | 'partner'; id: string; label: string; sub: string; href: string
+    type: 'deal' | 'partner' | 'service' | 'inquiry'; id: string; label: string; sub: string; href: string
   }> = []
 
   const STATUS: Record<string, string> = {
@@ -82,5 +94,25 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ results: results.slice(0, 8) })
+  for (const s of servicesRes.data ?? []) {
+    results.push({
+      type: 'service',
+      id: s.id,
+      label: s.name,
+      sub: s.subtitle ?? '',
+      href: '/console/services',
+    })
+  }
+
+  for (const inq of inquiriesRes.data ?? []) {
+    results.push({
+      type: 'inquiry',
+      id: inq.id,
+      label: inq.subject ?? '—',
+      sub: `${inq.category ?? ''} · ${inq.status === 'open' ? '未対応' : '解決済み'}`,
+      href: '/console/inquiries',
+    })
+  }
+
+  return NextResponse.json({ results: results.slice(0, 10) })
 }

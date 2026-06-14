@@ -20,6 +20,8 @@ function generatePartnerCode(name: string): string {
   return prefix + Math.floor(1000 + Math.random() * 9000)
 }
 
+export const runtime = 'edge'
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const { token, name, email: clientEmail, password } = body

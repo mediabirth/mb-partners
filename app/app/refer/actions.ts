@@ -2,6 +2,15 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
+export async function getPartnerInfo(): Promise<{ code: string; id: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+  const { data } = await supabase.from('partners').select('id, code').eq('profile_id', user.id).single()
+  if (!data) throw new Error('Partner not found')
+  return { code: data.code, id: data.id }
+}
+
 export async function getOrCreateReferralToken(serviceId: string): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -40,11 +49,12 @@ export async function submitPartnerReferral(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const serviceId = formData.get('serviceId') as string
-  const menuId    = formData.get('menuId') as string
+  const serviceId    = formData.get('serviceId') as string
+  const menuId       = formData.get('menuId') as string
   const customerName = formData.get('customerName') as string
-  const phone     = formData.get('phone') as string
-  const memo      = formData.get('memo') as string
+  const phone        = formData.get('phone') as string
+  const memo         = formData.get('memo') as string
+  const channel      = (formData.get('channel') as string) || 'referral'
 
   if (!customerName) throw new Error('お名前は必須です')
 
@@ -77,7 +87,7 @@ export async function submitPartnerReferral(formData: FormData) {
       service_id: serviceId,
       menu_id: menuId || null,
       customer_name: customerName,
-      channel: 'referral',
+      channel,
       source: 'partner_form',
       status: 'received',
       consent: true,

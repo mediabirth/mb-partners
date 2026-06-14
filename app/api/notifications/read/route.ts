@@ -8,6 +8,8 @@ import { getPartnerByUserId } from '@/lib/supabase/queries'
  *   ids を省略 → 全未読を既読にする
  *   ids を指定 → 指定IDのみ既読にする（自分の通知のみ）
  */
+export const runtime = 'edge'
+
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

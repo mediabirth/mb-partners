@@ -2,9 +2,9 @@
  * Next.js proxy (= middleware) — Supabase SSR cookie refresh + route protection
  *
  * Design goals:
- * - Zero extra HTTP round-trips per request (use getSession() for redirect logic)
+ * - Verified auth check via getUser() — tamper-proof, no JWT spoofing
  * - Cookie refresh on every response (critical for token expiry handling)
- * - Actual security enforcement (getUser) stays in layout server components
+ * - Layout server components deduplicate their own getUser() via React cache()
  * - TOTP AAL2 enforcement stays in console/login page and console layout
  */
 import { createServerClient } from '@supabase/ssr'
@@ -33,14 +33,15 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // getSession() decodes the JWT locally — no Supabase network round-trip.
-  // The act of creating the client + calling getSession() triggers cookie refresh
-  // if the token is close to expiry. Actual user verification (getUser) is in layouts.
-  const { data: { session } } = await supabase.auth.getSession()
+  // getUser() makes a verified round-trip to Supabase Auth — tamper-proof.
+  // Cookie refresh (via setAll above) happens regardless of which method we call.
+  // Layout server components also call getCachedUser() which is deduplicated via
+  // React cache(), so the total per protected page is 2 getUser() calls (proxy + layout).
+  const { data: { user } } = await supabase.auth.getUser()
 
   // ── /app/** — partner portal ────────────────────────────────────────────────
   if (pathname.startsWith('/app')) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
     return response
@@ -48,24 +49,19 @@ export async function proxy(request: NextRequest) {
 
   // ── /console/** — admin console ────────────────────────────────────────────
   if (pathname.startsWith('/console') && !pathname.startsWith('/console/login')) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL('/console/login', request.url))
     }
     return response
   }
 
   // ── Already-logged-in: redirect away from login pages ─────────────────────
-  if (pathname === '/login' && session) {
-    return NextResponse.redirect(new URL('/app', request.url))
+  if (pathname === '/login' && user) {
+    // Send to root — root page reads profile.role and routes to /app or /console.
+    // Redirecting directly to /app here would loop for admins who have no partner record.
+    return NextResponse.redirect(new URL('/', request.url))
   }
-  if (pathname === '/console/login' && session) {
-    // Only redirect if AAL2 is satisfied (check the session aal)
-    // session.aal is present for MFA-enrolled users; if aal2 already met → /console
-    const aal = (session as any).aal as string | undefined
-    if (aal === 'aal2' || !aal) {
-      // Non-MFA session or already at aal2: let the console/login page decide
-      // (it checks mfa.getAuthenticatorAssuranceLevel itself)
-    }
+  if (pathname === '/console/login' && user) {
     // Don't redirect away from /console/login here — the page handles it via
     // router.push after TOTP verify. This prevents redirect loops.
   }

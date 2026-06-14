@@ -36,13 +36,30 @@ export async function getDealWithEvents(supabase: SupabaseClient, dealId: string
   return { deal: dealRes.data, events: eventsRes.data ?? [] }
 }
 
+const TEST_SERVICE_NAMES = new Set(['テスト', 'APIテスト', 'テスト用', 'test', 'Test'])
+
 export async function getServicesWithMenus(supabase: SupabaseClient) {
   const { data } = await supabase
     .from('services')
     .select('*, service_menus(*)')
     .eq('active', true)
     .order('sort')
-  return (data ?? []) as ServiceWithMenus[]
+  return (data ?? []).filter(
+    (s: { name: string }) => !TEST_SERVICE_NAMES.has(s.name)
+  ) as ServiceWithMenus[]
+}
+
+// Admin version: returns all services (including inactive), menus sorted by sort
+export async function getAdminServicesWithMenus(supabase: SupabaseClient) {
+  const { data } = await supabase
+    .from('services')
+    .select('*, service_menus(*)')
+    .order('sort')
+  if (!data) return []
+  return data.map(svc => ({
+    ...svc,
+    service_menus: [...(svc.service_menus ?? [])].sort((a: MenuRow, b: MenuRow) => a.sort - b.sort),
+  })) as ServiceWithMenus[]
 }
 
 export async function getAllDeals(supabase: SupabaseClient) {
@@ -103,6 +120,52 @@ export async function getRecentDealEvents(supabase: SupabaseClient, partnerDealI
   return data ?? []
 }
 
+// Optimized: partner + deals in a single PostgREST embedded select
+export async function getPartnerWithDeals(supabase: SupabaseClient, userId: string) {
+  const { data } = await supabase
+    .from('partners')
+    .select(`
+      id, code, status, tax_type, bank,
+      deals:deals!partner_id(
+        id, customer_name, channel, source, status, amount,
+        fixed_month, consent, meeting_at, created_at, updated_at, service_id,
+        services(id, name, subtitle, icon, color)
+      )
+    `)
+    .eq('profile_id', userId)
+    .single()
+  if (!data) return null
+  const { deals: rawDeals, ...partnerFields } = data as any
+  const deals = ([...(rawDeals ?? [])] as DealRow[]).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+  return { partner: partnerFields as PartnerRow, deals }
+}
+
+// Optimized: events by userId via double inner join (no need for partnerId → enables full parallelism)
+export async function getRecentEventsByUserId(supabase: SupabaseClient, userId: string) {
+  const { data } = await supabase
+    .from('deal_events')
+    .select('id, body, created_at, deal_id, deals!inner(partners!inner(profile_id))')
+    .eq('visible_to_partner', true)
+    .eq('deals.partners.profile_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(8)
+  return (data ?? []).map(({ id, body, created_at, deal_id }: any) => ({ id, body, created_at, deal_id }))
+}
+
+// Optimized: events via inner join on partner_id (avoids needing dealIds first)
+export async function getRecentEventsByPartnerId(supabase: SupabaseClient, partnerId: string) {
+  const { data } = await supabase
+    .from('deal_events')
+    .select('id, body, created_at, deal_id, deals!inner(partner_id)')
+    .eq('visible_to_partner', true)
+    .eq('deals.partner_id', partnerId)
+    .order('created_at', { ascending: false })
+    .limit(8)
+  return (data ?? []).map(({ id, body, created_at, deal_id }: any) => ({ id, body, created_at, deal_id }))
+}
+
 export async function getPayoutItemsForPartner(supabase: SupabaseClient, partnerId: string) {
   const { data } = await supabase
     .from('payout_items')
@@ -117,17 +180,29 @@ export async function getPayoutItemsForPartner(supabase: SupabaseClient, partner
 export type ServiceRow = {
   id: string; name: string; subtitle: string | null; url: string | null
   description: string | null; who: string | null
-  icon: string; color: string; rail: string; active: boolean; sort: number
+  icon: string; color: string; rail: string | null; active: boolean; sort: number
   logo_path: string | null
+  // cooperation (service-level)
+  coop_enabled: boolean
+  coop_rate: number | null
+  coop_base: string | null
+  coverage_steps: { label: string; included: boolean }[] | null  // 協力の対応範囲
+  ft_trigger: string | null   // 協力の成果地点
+  ft_condition: string | null // 協力の資格条件
 }
 
 export type MenuRow = {
   id: string; service_id: string; name: string
+  category: 'referral' | 'cooperation' | null
   ref_type: 'fixed' | 'rate'; ref_value: number
+  ref_base: string | null
   ref_trigger: string | null; ref_months: number
+  example_ref: string | null
   ft_enabled: boolean; ft_rate: number | null; ft_basis: string | null
   ft_trigger: string | null; ft_condition: string | null
-  example_ref: string | null; example_ft: string | null; sort: number
+  example_ft: string | null; sort: number
+  coverage_steps: { label: string; included: boolean }[] | null
+  qualification: string | null
 }
 
 export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }

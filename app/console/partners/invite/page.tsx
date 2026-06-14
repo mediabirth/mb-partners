@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
 import InviteForm from './InviteForm'
 
+export const runtime = 'edge'
+
 export default async function InvitePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -3,11 +3,24 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Result = {
-  type: 'deal' | 'partner'
+  type: 'deal' | 'partner' | 'service' | 'inquiry'
   id: string
   label: string
   sub: string
   href: string
+}
+
+const TYPE_LABEL: Record<Result['type'], string> = {
+  deal:    '案件',
+  partner: 'パートナー',
+  service: 'サービス',
+  inquiry: '問い合わせ',
+}
+const TYPE_COLORS: Record<Result['type'], { bg: string; txt: string }> = {
+  deal:    { bg: 'var(--blue-bg)',   txt: 'var(--blue)'  },
+  partner: { bg: 'var(--green-bg)',  txt: 'var(--green)' },
+  service: { bg: 'var(--amber-bg)',  txt: 'var(--amber)' },
+  inquiry: { bg: 'var(--red-bg)',    txt: 'var(--red)'   },
 }
 
 export default function GlobalSearchClient() {
@@ -43,7 +56,7 @@ export default function GlobalSearchClient() {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', border: '1.5px solid var(--line)', borderRadius: 9, padding: '7px 12px', width: 220 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', border: '1.5px solid var(--line)', borderRadius: 9, padding: '7px 12px', width: 280 }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
@@ -53,7 +66,7 @@ export default function GlobalSearchClient() {
           onChange={e => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="検索（案件・パートナー）"
+          placeholder="検索（案件・パートナー・サービス・問い合わせ）"
           style={{ border: 'none', background: 'none', outline: 'none', fontFamily: 'inherit', fontSize: '.74rem', color: 'var(--txt)', flex: 1 }}
         />
         {loading && (
@@ -76,8 +89,8 @@ export default function GlobalSearchClient() {
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: r.type === 'deal' ? 'var(--blue-bg)' : 'var(--green-bg)', color: r.type === 'deal' ? 'var(--blue)' : 'var(--green)', flexShrink: 0 }}>
-                {r.type === 'deal' ? '案件' : 'パートナー'}
+              <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: TYPE_COLORS[r.type].bg, color: TYPE_COLORS[r.type].txt, flexShrink: 0 }}>
+                {TYPE_LABEL[r.type]}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</div>

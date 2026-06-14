@@ -128,7 +128,15 @@ export default function ConsoleLoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 20,
+      position: 'relative',
+      overflow: 'hidden',
     }}>
+      {/* Orbit rings — top-right corner */}
+      <div style={{ position: 'absolute', right: -110, top: -110, width: 340, height: 340, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, border: '1.5px solid #EDEBFC', borderRadius: '50%', animation: 'spin 50s linear infinite' }} />
+        <div style={{ position: 'absolute', inset: 46, border: '1.5px solid #DCD8FA', borderRadius: '50%', animation: 'spin 34s linear infinite reverse' }} />
+        <div style={{ position: 'absolute', inset: 104, border: '1.5px solid #4733E6', borderRadius: '50%', opacity: .22, animation: 'spin 22s linear infinite' }} />
+      </div>
       <div style={{
         width: 402, maxWidth: '100%',
         background: '#fff',

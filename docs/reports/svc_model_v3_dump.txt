@@ -1,0 +1,106 @@
+================================================================
+SERVICE MODEL v3 — 1メニュー=1カテゴリ モデル確定
+Date: 2026-06-13
+Deployment: dpl_7SzriTeRwqgdXkU3c66XYa9G8Jse
+================================================================
+
+■ 方針
+  メニューは「1メニュー=1カテゴリ（紹介 or 協力）」に一本化。
+  進捗レール廃止。ft_* / services.coverage_steps / rail は残置・読み書きなし。
+  金額表現は ref_type / ref_value / ref_base / ref_trigger で統一。
+
+================================================================
+■ DB MIGRATION APPLIED
+================================================================
+
+--- 20260614000005_menu_category_model.sql ---
+
+  ALTER TABLE service_menus
+    ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'referral'
+    ADD COLUMN IF NOT EXISTS coverage_steps JSONB
+    ADD COLUMN IF NOT EXISTS qualification TEXT
+
+  -- Storage policy 締め直し
+  DROP POLICY "service_logos_auth_insert" ON storage.objects
+  CREATE POLICY "service_logos_admin_insert"
+    INSERT: bucket_id = 'service-logos'
+      AND auth.role() = 'authenticated'
+      AND profiles.role != 'partner'
+
+VERIFY (supabase db query --linked):
+  category      TEXT    DEFAULT 'referral'  ✓
+  coverage_steps JSONB  DEFAULT NULL        ✓
+  qualification  TEXT   DEFAULT NULL        ✓
+
+================================================================
+■ FILES CHANGED (7ファイル)
+================================================================
+
+1. supabase/migrations/20260614000005_menu_category_model.sql  [NEW]
+
+2. lib/supabase/queries.ts  [EDITED]
+   MenuRow type に追加:
+     category: 'referral' | 'cooperation' | null
+     coverage_steps: { label: string; included: boolean }[] | null
+     qualification: string | null
+
+3. app/api/console/services/[id]/menus/route.ts  [EDITED]
+   POST insert に追加: category / coverage_steps / qualification
+
+4. app/api/console/services/[id]/menus/[mid]/route.ts  [EDITED]
+   PATCH ALLOWED に追加: category / coverage_steps / qualification
+
+5. app/console/services/ServicesClient.tsx  [REWRITE]
+   ServiceForm: ft_trigger/ft_condition/rail/coverage_steps 削除
+   MenuEditForm:
+     - カテゴリ選択（紹介/協力）追加
+     - 協力の場合: coverage_steps 5チェックボックス + qualification フィールド表示
+     - ft_rate/ft_basis 削除（ref_type/ref_value/ref_base/ref_trigger で統一）
+   サービス一覧: CatChip（紹介/協力）でメニューを表示
+   保存: 基本情報のみ（menus は独立CRUD）
+
+6. app/app/guide/GuideAccordion.tsx  [REWRITE]
+   - category ベースで紹介/協力チップ表示（ft_enabled 廃止）
+   - 協力メニュー: coverage_steps タグ列 + qualification 警告表示
+   - ヘッダーに紹介/協力チップを事前表示
+
+7. app/app/refer/page.tsx  [EDITED]
+   - fmtAmount() ヘルパー追加
+   - pickService(): メニュー0件→form直行、1件→スキップ、2件以上→Step2
+   - Step2「どのかたちで関わりますか?」に刷新:
+     全メニューをカードで列挙（カテゴリ別色分け）
+     紹介: 青チップ + 金額（青）
+     協力: グレーチップ + 金額（黒）+ coverage_steps タグ + qualification 警告
+     ref_trigger を条件文として表示
+
+8. app/app/cases/[id]/page.tsx  [EDITED]
+   - RAIL_STEPS = ['受付','対応中','成約・確定','支払済'] に統一
+   - menu.ref_trigger を「報酬発生条件:」ラベルとしてレールの下に表示
+
+================================================================
+■ データモデル確定仕様
+================================================================
+
+service_menus:
+  category       TEXT    'referral' | 'cooperation'  ← 新
+  ref_type        TEXT    'fixed' | 'rate'
+  ref_value       NUMERIC  金額(円) or 率(%)
+  ref_base        TEXT    売上 | 粗利 | 利益 | 受取収入  (rate時)
+  ref_trigger     TEXT    報酬発生条件の文言
+  coverage_steps  JSONB   [{label,included}×5]       ← 新 (cooperation時)
+  qualification   TEXT    資格条件                    ← 新 (cooperation時)
+
+不使用(残置): ft_enabled / ft_rate / ft_basis / ft_trigger / ft_condition / example_ft
+不使用(残置): services.coverage_steps / services.ft_trigger / services.ft_condition / services.rail
+
+================================================================
+■ DEPLOY RESULT
+================================================================
+
+  Status:        READY
+  URL:           https://mb-partners.app
+  Deployment ID: dpl_7SzriTeRwqgdXkU3c66XYa9G8Jse
+  Build time:    38s
+  Errors:        0
+
+================================================================

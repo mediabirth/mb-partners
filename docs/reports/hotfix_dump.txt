@@ -1,0 +1,151 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+緊急ホットフィックス 完了レポート
+2026-06-13
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+■ デプロイ情報
+  Production URL  : https://mb-partners.app
+  Deployment ID   : dpl_GLGfZVJrqCiPSybnjRgS1EgPZxtU
+  Inspect URL     : https://vercel.com/mediabirthproject-5009s-projects/mb-partners/GLGfZVJrqCiPSybnjRgS1EgPZxtU
+  Build Time      : 29s
+  Status          : READY (Aliased to mb-partners.app)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 修正1: services.rail NOT NULL 制約違反
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+症状:
+  コンソール画面でサービスを新規追加すると 500 エラー。
+  Supabase から返るエラー:
+    {"error":"null value in column \"rail\" of relation \"services\"
+     violates not-null constraint"}
+
+根本原因:
+  api/console/services/route.ts の POST ハンドラで、
+  body から destructure した rail を `rail: rail || null` として INSERT していた。
+  フロントエンドがフィールドを送らない場合 rail = undefined → undefined || null = null。
+  DB に明示的 null を渡すと NOT NULL + DEFAULT 'std' があっても制約違反になる。
+
+修正内容:
+  app/api/console/services/route.ts
+  - INSERT payload から rail フィールドを完全に除去
+  - DB DEFAULT 'std' に委ねる
+  変更前: .insert({ name, rail: rail || null, ... })
+  変更後: .insert({ name, ... })  // rail は列挙しない
+
+補完 migration:
+  supabase/migrations/20260614000006_rail_default_confirm.sql
+    ALTER TABLE services ALTER COLUMN rail SET DEFAULT 'std';
+  (既に設定済みであることを確認する safety migration)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 修正2: ERR_TOO_MANY_REDIRECTS (mb-partners.app)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+症状:
+  mb-partners.app にアクセスすると ERR_TOO_MANY_REDIRECTS でアプリが開けない。
+  パートナー・管理者どちらでもログイン不可。
+
+根本原因:
+  ループ経路A (手動ログイン):
+    /login → (ログイン成功) router.push('/app')
+    → /app/page.tsx でパートナーレコードなし (admin) → redirect('/login')
+    → proxy.ts: /login + ログイン済み → redirect('/app') → 無限ループ
+
+  ループ経路B (マジックリンク):
+    auth/magic → router.replace('/app') → 同上
+
+  ループ経路C (proxy.ts単独):
+    /login にアクセス + 認証済み → proxy.ts が /app にリダイレクト
+    → /app でパートナーレコードなし → /login → proxy.ts → /app → ...
+
+修正内容 (全5ファイル):
+
+1. proxy.ts
+   - /login + authenticated: /app → / に変更
+   変更前: return NextResponse.redirect(new URL('/app', request.url))
+   変更後: return NextResponse.redirect(new URL('/', request.url))
+   // ルートページがロールを判定して /app または /console へ振り分け
+
+2. app/login/page.tsx
+   - ログイン成功後: router.push('/app') → router.push('/')
+   変更前: router.push('/app')
+   変更後: router.push('/')
+
+3. app/auth/magic/page.tsx
+   - セッション設定後: router.replace('/app') → router.replace('/')
+   変更前: router.replace('/app')
+   変更後: router.replace('/')
+
+4. app/app/page.tsx (パートナーダッシュボード)
+   - パートナーレコードなし: redirect('/login') → redirect('/')
+   変更前: if (!partner) redirect('/login')
+   変更後: if (!partner) redirect('/')
+   // 管理者が /app に来た場合、/login ではなく / に戻して console へ誘導
+
+5. app/page.tsx (ルートページ)
+   - partner role だがパートナーレコードなし (削除済みなど) のエッジケース対応
+   変更前: if (profile?.role === 'partner') redirect('/app')
+   変更後:
+     if (profile?.role === 'partner') {
+       const partner = await getPartnerByUserId(supabase, user.id)
+       if (!partner) redirect('/console/login')  // / → /app → / のループ防止
+       redirect('/app')
+     }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 副次修正: middleware.ts / proxy.ts 競合
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Next.js 16 はミドルウェアを proxy.ts と認識する。
+  作業中に middleware.ts を誤作成したことで以下のビルドエラーが発生:
+    "Both middleware file './middleware.ts' and proxy file './proxy.ts' are
+     detected. Please use './proxy.ts' only."
+  middleware.ts を削除し、proxy.ts に修正を適用して解消。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ 点検: services / service_menus の NOT NULL 列確認
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+services:
+  id          NOT NULL  DEFAULT gen_random_uuid()::text  ✓
+  name        NOT NULL  (必須フィールド、APIで必ず送る)   ✓
+  rail        NOT NULL  DEFAULT 'std'                    ✓ (今回修正)
+  active      NOT NULL  DEFAULT true                     ✓
+  sort        NOT NULL  DEFAULT 99                       ✓ (API で常に 99 送信)
+
+service_menus:
+  id          NOT NULL  DEFAULT uuid_generate_v4()       ✓
+  service_id  NOT NULL  (URL param から必ず付与)          ✓
+  name        NOT NULL  (APIで必ず送る)                   ✓
+  ref_type    NOT NULL  DEFAULT 'fixed'                  ✓
+  ref_months  NOT NULL  DEFAULT 1                        ✓
+  ft_enabled  NOT NULL  DEFAULT false                    ✓
+  sort        NOT NULL  DEFAULT 0                        ✓
+
+→ 現在の API ルートで DEFAULT のない NOT NULL 列は全て明示送信済み。問題なし。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+■ リダイレクトフロー（修正後）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+未ログイン状態:
+  /app/** → proxy.ts → /login
+  /console/** → proxy.ts → /console/login
+
+パートナーログイン後:
+  /login (success) → / → app/page.tsx: role=partner, partner存在 → /app  ✓
+
+管理者がパートナーログインページを使った場合:
+  /login (success) → / → app/page.tsx: role=admin → /console  ✓
+
+パートナーレコードが削除されたパートナーアカウント:
+  /login (success) → / → app/page.tsx: role=partner, !partner → /console/login  ✓
+  (ループにならず console/login に到達)
+
+ログイン済みで /login にアクセス:
+  proxy.ts: authenticated → /  (ルートが再振り分け)  ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

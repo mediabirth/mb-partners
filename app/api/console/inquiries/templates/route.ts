@@ -7,6 +7,8 @@ const TEMPLATES = [
   { id: '3', label: '追加情報のご確認', body: '恐れ入りますが、詳細について追加情報をご提供いただけますでしょうか。' },
 ]
 
+export const runtime = 'edge'
+
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

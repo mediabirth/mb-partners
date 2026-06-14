@@ -1,0 +1,116 @@
+================================================================
+SERVICE EDITOR v2 IMPLEMENTATION DUMP
+Date: 2026-06-13
+================================================================
+
+■ SUMMARY
+  v9 HTML「メニュー型エディタ」に体験ごと合わせたサービス編集画面の作り直し
+
+================================================================
+■ DB MIGRATIONS APPLIED
+================================================================
+
+--- 20260614000003_services_extra_columns.sql ---
+  services.rail          TEXT   (ADD COLUMN IF NOT EXISTS — already existed, skipped)
+  services.coverage_steps JSONB (ADD COLUMN IF NOT EXISTS — NEW)
+  services.ft_trigger    TEXT   (ADD COLUMN IF NOT EXISTS — NEW)
+  services.ft_condition  TEXT   (ADD COLUMN IF NOT EXISTS — NEW)
+
+--- 20260614000004_storage_service_logos.sql ---
+  Storage bucket: service-logos
+    public: true
+    file_size_limit: 5MB
+    allowed_mime_types: png, jpeg, webp, gif, svg+xml
+  RLS Policies:
+    service_logos_public_read   — SELECT (public)
+    service_logos_auth_insert   — INSERT (authenticated)
+    service_logos_auth_update   — UPDATE (authenticated)
+    service_logos_auth_delete   — DELETE (authenticated)
+
+================================================================
+■ REMOTE DB VERIFY (supabase db query --linked)
+================================================================
+
+services table columns:
+  id TEXT, name TEXT, subtitle TEXT, url TEXT, description TEXT,
+  who TEXT, icon TEXT, color TEXT, logo_path TEXT, rail TEXT,
+  active BOOLEAN, sort INTEGER,
+  coverage_steps JSONB,   ← NEW
+  ft_trigger TEXT,         ← NEW
+  ft_condition TEXT        ← NEW
+
+storage.buckets:
+  id=service-logos, public=true, file_size_limit=5242880  ← CONFIRMED
+
+================================================================
+■ FILES CHANGED
+================================================================
+
+1. supabase/migrations/20260614000003_services_extra_columns.sql  [NEW]
+2. supabase/migrations/20260614000004_storage_service_logos.sql   [NEW]
+
+3. lib/supabase/queries.ts  [EDITED]
+   ServiceRow type:
+     rail: string | null       (was: string — now nullable)
+     coverage_steps: { label: string; included: boolean }[] | null  [NEW]
+     ft_trigger: string | null  [NEW]
+     ft_condition: string | null [NEW]
+
+4. app/api/console/services/route.ts  [EDITED]
+   POST handler: added rail, coverage_steps, ft_trigger, ft_condition to INSERT
+
+5. app/api/console/services/[id]/route.ts  [EDITED]
+   PATCH allowed list: added rail, coverage_steps, ft_trigger, ft_condition
+
+6. app/console/services/ServicesClient.tsx  [COMPLETE REWRITE — 653 lines]
+   REMOVED:
+     - アイコン選択 (icon picker)
+     - カラー選択 (color picker)
+     - プレビューパネル (GuidePreview)
+     - logo_path テキスト入力
+   ADDED:
+     A. 基本情報
+        - LogoUpload component: ファイル選択 → Supabase Storage service-logos → 公開URL
+        - description: textarea (3 rows)
+        - rail: select (std / mh)
+     B. メニューと報酬 (editing時のみ)
+        - MenuRowForm: name / ref_type(fixed|rate) / amount or rate%+base / ft_rate / ft_basis
+        - 追加ボタン: dashed border style
+        - 並び替え ↑↓ ボタン
+        - 削除ボタン
+     C. 営業条件（サービス単位）
+        - ft_trigger: text input
+        - ft_condition: text input
+     D. 対応範囲 (coverage_steps)
+        - 5 checkboxes: つなぐ[必須固定ON] / アポイント設定 / 商談 / 価格合意 / フォロー・アシスト
+        - 保存時に JSONB として services.coverage_steps へ格納
+     E. 公開状態
+        - active: select (有効/無効)
+     F. 保存ボタン
+        - "保存してパートナー画面へ反映"
+
+7. app/app/refer/page.tsx  [EDITED]
+   Step 2「どこまで関わりますか?」:
+     - coverage_steps に enabled な step が 2件以上あればそれを選択肢として表示
+       → 各ステップ選択時は service_menus[i] (index対応) でmenuIdを解決
+     - coverage_steps 未設定・1件のみの場合は従来の service_menus 表示にフォールバック
+
+================================================================
+■ STORAGE UPLOAD FLOW (ServicesClient)
+================================================================
+
+  import { createClient } from '@/lib/supabase/client'   // createBrowserClient
+
+  const sb = createClient()
+  const path = `logos/${Date.now()}.${ext}`
+  await sb.storage.from('service-logos').upload(path, file, { upsert: true })
+  const { data } = sb.storage.from('service-logos').getPublicUrl(path)
+  → data.publicUrl → svcForm.logo_path → services.logo_path (PATCH/POST)
+
+================================================================
+■ PENDING BEFORE DEPLOY
+================================================================
+
+  - vercel --prod (awaiting user approval)
+
+================================================================

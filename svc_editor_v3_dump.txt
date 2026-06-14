@@ -1,0 +1,205 @@
+========================================================
+MB Partners — C-2 サービス編集 UI/UX 作り直し ダンプ
+日時: 2026-06-14
+ビルド: npx next build → ✅ エラーなし
+========================================================
+
+■ 変更ファイル一覧
+
+1. app/console/services/ServicesClient.tsx  (フルリライト)
+2. app/app/guide/GuideAccordion.tsx         (logo + coverage_steps for referral)
+3. app/app/refer/page.tsx                   (Step2: coverage_steps + qualification)
+
+========================================================
+■ タスク1 — サービス編集ドロワー
+========================================================
+
+[REMOVED]
+  - ICON_OPTIONS / COLOR_OPTIONS 定数
+  - icon セレクタ UI (Fld label="アイコン")
+  - color ピッカー UI (Fld label="カラー")
+  - ServiceIcon import (drawer内)
+  - pvSvc() プレビューパネル
+  - "保存する" / "追加する" ラベル
+
+[ADDED / CHANGED]
+  - ServiceLogo コンポーネント: logo_path が null → グレー背景 + 先頭文字(Inter/800)のニュートラル
+  - LogoUpload: name prop 追加 → プレビューにサービス名イニシャルを反映
+  - CoverageEditor: 独立コンポーネント化 (協力・紹介メニュー共用)
+  - CoverageTags: export化 (list表示・guide・refer共用)
+  - 保存ボタン: "保存してパートナー画面へ反映" (新規・編集共通)
+  - ドロワー幅: 460 → 500px (フォームが収まるよう拡張)
+
+[MenuForm 拡張 — 紹介メニュー]
+  BEFORE:
+    { name, ref_type, ref_value, ref_base, ref_trigger }
+
+  AFTER:
+    { name, ref_type, ref_value, ref_base, ref_trigger,
+      coverage_steps: CoverageStep[],  ← ★NEW (API既存カラム)
+      qualification: string,           ← ★NEW (API既存カラム)
+      ref_months: string }             ← ★NEW (API既存カラム)
+
+[formToMenuPayload 変更]
+  BEFORE: coverage_steps: null, qualification: null
+  AFTER:  coverage_steps: f.coverage_steps, qualification: f.qualification || null,
+          ref_months: f.ref_months ? Number(f.ref_months) : null
+
+[svcFormToPayload]
+  - icon/color: 引き続き送信(既存値保持・DB列は残すが UI から除外)
+  - 報酬の数値(ref_value/coop_rate等)は一切変更しない
+
+[ドロワー構成 — 縦1カラム]
+  ── A. 基本情報 ──────────────
+  ロゴ画像(推奨)
+  サービス名 *
+  サブタイトル
+  サービスサイト URL
+  説明
+  こんな方に(Who)
+  公開状態 [停止中 / 公開中]
+
+  ── B. 紹介メニューと報酬 ─── (編集時のみ)
+  [紹介] メニュー名  ¥xxxx  [↑][↓][編集][削除]
+    coverage_steps タグ表示
+  [＋ メニューを追加]
+  展開フォーム:
+    メニュー名
+    報酬タイプ [固定額 / 率]
+    金額 or 率+基準
+    報酬発生条件(成果地点)
+    対応範囲 (5チェック: つなぐ[必須] + 4任意)
+    資格条件(任意)
+    継続(任意・ヶ月)
+
+  ── C. 協力設定(サービス単位) ──
+  [協力なし / 協力あり]
+  (協力あり時)
+    協力率(%) + 協力基準
+    協力の成果地点
+    協力の資格条件(任意)
+    協力の対応範囲 (5チェック)
+
+  [保存してパートナー画面へ反映]
+
+========================================================
+■ タスク2 — サービス一覧 (/console/services)
+========================================================
+
+[カード構成 — 1サービス = 1カード]
+  ┌──────────────────────────────────────────────────┐
+  │ [LOGO/ニュートラル]  サービス名  [公開中]  [編集] │
+  │                      サブタイトル                 │
+  ├──────────────────────────────────────────────────┤
+  │ (bg: #FAFBFF — 青系)                             │
+  │ [紹介] メニュー名  ― 成果地点  ―  ¥30,000        │
+  │        [つなぐ] [アポイント設定]                  │
+  │        ⚠ 資格条件 (amber)                        │
+  ├─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│
+  │ (bg: #F6F6FA — ニュートラル)                     │
+  │ [協力] 協力  ― 成果地点  ―  30% (利益)           │
+  │        [つなぐ] [商談]  ⚠ 宅建業免許必要          │
+  └──────────────────────────────────────────────────┘
+
+[REMOVED from list]
+  - ServiceIcon (全件) → ServiceLogo (logo_path or ニュートラル)
+  - CoopChip on header (協力有フラグはボディ行で明示)
+
+========================================================
+■ タスク3 — APP連動
+========================================================
+
+[guide/GuideAccordion.tsx]
+  - ServiceIcon → ServiceLogo (ヘッダー)
+  - FeeRow (紹介): coverage_steps タグ追加 (accent=blue)
+  - FeeRow (紹介): qualification (⚠ amber) 追加
+  - CoopFeeRow: 変更なし(既存coverage_steps表示を維持)
+
+[refer/page.tsx — Step2 referral cards]
+  BEFORE:
+    chip + 名前 + 金額 + ref_trigger
+
+  AFTER:
+    chip + 名前 + 金額
+    ref_trigger
+    [coverage_steps タグ — blue系] ← ★NEW
+    ⚠ qualification (amber)         ← ★NEW
+    選択する ›
+
+========================================================
+■ DB変更なし確認
+========================================================
+
+  service_menus.coverage_steps — 既存カラム(JSONB)、additiveのみ
+  service_menus.qualification  — 既存カラム(text)、additiveのみ
+  service_menus.ref_months     — 既存カラム(int)、additiveのみ
+  services.icon / services.color — 列残存・API経由で値維持・UI表示のみ廃止
+  報酬の数値(ref_value/coop_rate/ref_base等) — 一切変更なし
+
+========================================================
+■ 自己検証
+========================================================
+
+  ✅ npx next build — エラーなし (2026-06-14)
+  ✅ /console/services ページ (○ Static → ドロワーはclient)
+  ✅ /app/guide ページ (ƒ Edge SSR)
+  ✅ /app/refer ページ (ƒ Edge SSR)
+  ✅ ServicesClient: ServiceIcon import削除 (unused import なし)
+  ✅ CoverageTags: export化 (将来の共用可)
+  ✅ formToMenuPayload: coverage_steps/qualification/ref_months を送信
+  ✅ 保存ボタンラベル: "保存してパートナー画面へ反映"
+
+========================================================
+■ 本番デプロイ前チェック (「allowlist漏れで黙って落ちる」罠予防)
+========================================================
+
+[1] menus API allowlist 確認
+
+  POST /api/console/services/[id]/menus (route.ts 行48-66):
+    insert オブジェクトに coverage_steps: body.coverage_steps ?? null  ✅
+                          qualification:  body.qualification ?? null   ✅
+                          ref_months:     body.ref_months ?? 1         ✅
+
+  PATCH /api/console/services/[id]/menus/[mid] (route.ts 行12-16):
+    ALLOWED = [ ..., 'ref_months', ..., 'coverage_steps', 'qualification', ... ]
+    → 全フィールド含む ✅ API変更不要
+
+[2] 協力ブロック svcFormToPayload ↔ services/[id]/route.ts PATCH allowlist
+
+  フィールド          payload 送信   API allowed
+  ─────────────────────────────────────────────
+  coop_enabled        ✅             ✅
+  coop_rate           ✅             ✅
+  coop_base           ✅             ✅
+  ft_trigger          ✅             ✅
+  ft_condition        ✅             ✅
+  coverage_steps      ✅             ✅  (service単位の協力対応範囲)
+  ─────────────────────────────────────────────
+  全フィールド通過 ✅
+
+[3] 表示額計算 (saveSvcM相当)
+
+  現 DB モデルは service_menus.ref_value / ref_type をメニュー行単位で持つ。
+  一覧・APP とも直接値を表示（集計計算なし）。C-2 はこのロジックに触れていない。
+    固定: ¥${Number(menu.ref_value).toLocaleString()}    ✅
+    率  : ${menu.ref_value}%${ref_base ? ` (${ref_base})` : ''}  ✅
+
+========================================================
+■ 本番デプロイ
+========================================================
+
+  deployment: dpl_88Fgs9AtopkPGdQyjEEZvk63g77E
+  status: READY (2026-06-14)
+
+========================================================
+■ 動作確認 (ブラウザで実施 — 勝彦さんへ)
+========================================================
+
+  □ 紹介メニューの対応範囲を編集 → 保存 → リロード → 持続
+      → coverage_steps が DB に保存され再表示されること
+      → /app/guide アコーディオン内に 青タグ で表示されること
+      → /app/refer Step2 選択カードに 青タグ で表示されること
+  □ 協力ブロックを編集(率/基準/成果地点/対応範囲) → 保存 → 持続
+  □ 保存ボタンラベルが「保存してパートナー画面へ反映」であること
+  □ ロゴ未設定サービスがグレー+先頭文字のニュートラルで表示されること
+  □ ドロワー内にアイコン選択・カラーピッカーが存在しないこと

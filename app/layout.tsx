@@ -28,7 +28,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className={`${inter.variable} ${zenKaku.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <script dangerouslySetInnerHTML={{ __html: `
+if ('serviceWorker' in navigator) {
+  var _mbpRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!_mbpRefreshing) { _mbpRefreshing = true; window.location.reload(); }
+  });
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(e) {
+      console.warn('[SW] registration failed:', e);
+    });
+  });
+}
+        ` }} />
+      </body>
     </html>
   )
 }

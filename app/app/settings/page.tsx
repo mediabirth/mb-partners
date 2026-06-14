@@ -29,6 +29,7 @@ export default function SettingsPage() {
         <SRow as={Link} href="/app/mypage">マイページ</SRow>
         <SRow as={Link} href="/app/guide">サービスガイド</SRow>
         <SRow as={Link} href="/app/terms">パートナー規約・ヘルプ</SRow>
+        <SRow as={Link} href="/app/support">お問い合わせ</SRow>
       </div>
 
       {/* Notification toggles */}

@@ -10,7 +10,7 @@ export default async function MypagePage() {
 
   const [partnerData, profileRes] = await Promise.all([
     getPartnerByUserId(supabase, user.id),
-    supabase.from('profiles').select('name, email, color, avatar_url').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, email, color, avatar_url, nickname').eq('id', user.id).single(),
   ])
   if (!partnerData) redirect('/login')
 
@@ -29,6 +29,7 @@ export default async function MypagePage() {
       partnerCode={partnerData.code}
       taxType={partnerData.tax_type ?? 'individual'}
       bank={bank}
+      nickname={profile?.nickname ?? null}
     />
   )
 }

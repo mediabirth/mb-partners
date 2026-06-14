@@ -8,18 +8,21 @@ import ChannelChart from './ChannelChart'
 import GlobalSearchClient from './GlobalSearchClient'
 import ConsoleMain from '@/components/ConsolePageTransition'
 
+export const runtime = 'edge'
+
 export default async function ConsolePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/console/login')
 
-  const [profileRes, deals, recentEventsRes] = await Promise.all([
+  const [profileRes, deals, recentEventsRes, activePartnersRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
     getAllDeals(supabase),
     supabase.from('deal_events')
       .select('id, body, created_at, deal_id, deals(customer_name, service_id)')
       .order('created_at', { ascending: false })
       .limit(6),
+    supabase.from('partners').select('id', { count: 'exact', head: true }).eq('status', 'active'),
   ])
   const profile = profileRes.data
   const recentEvents = recentEventsRes.data
@@ -30,15 +33,16 @@ export default async function ConsolePage() {
 
   const monthDeals     = deals.filter(d => d.fixed_month?.startsWith(ym) && d.status === 'confirmed')
   const monthGross     = monthDeals.reduce((s, d) => s + d.amount, 0)
-  const activePartners = new Set(deals.filter(d => ['received','in_progress'].includes(d.status)).map(d => d.partners?.id)).size
+  const activePartners = activePartnersRes.count ?? 0
   const pending        = deals.filter(d => d.status === 'received').length
 
-  // Channel mix for chart
-  const referralDeals  = deals.filter(d => d.channel === 'referral').length
-  const directDeals    = deals.filter(d => d.channel !== 'referral').length
+  // Channel mix for chart (3ch: 直販 / リファラル / フロンティア)
+  const directTotal   = deals.filter(d => d.channel === 'direct').length
+  const referralTotal = deals.filter(d => d.channel === 'referral').length
+  const frontierTotal = deals.filter(d => d.channel === 'cooperation' || d.channel === 'frontier').length
 
   // Monthly confirmed for last 6 months
-  const monthlyData: { ym: string; label: string; referral: number; direct: number }[] = []
+  const monthlyData: { ym: string; label: string; referral: number; direct: number; frontier: number }[] = []
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -46,8 +50,9 @@ export default async function ConsolePage() {
     const monthConfirmed = deals.filter(dd => dd.status === 'confirmed' && dd.fixed_month?.startsWith(key))
     monthlyData.push({
       ym: key, label,
+      direct:   monthConfirmed.filter(dd => dd.channel === 'direct').length,
       referral: monthConfirmed.filter(dd => dd.channel === 'referral').length,
-      direct: monthConfirmed.filter(dd => dd.channel !== 'referral').length,
+      frontier: monthConfirmed.filter(dd => dd.channel === 'cooperation' || dd.channel === 'frontier').length,
     })
   }
 
@@ -114,7 +119,7 @@ export default async function ConsolePage() {
               <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 12 }}>クイックアクセス</b>
               {[
                 { href: '/console/deals', label: '案件ボード', desc: `${deals.length}件の案件` },
-                { href: '/console/partners', label: 'パートナー一覧', desc: `${new Set(deals.map(d => d.partners?.id).filter(Boolean)).size}名稼働中` },
+                { href: '/console/partners', label: 'パートナー一覧', desc: `${activePartners}名稼働中` },
                 { href: '/console/services', label: 'サービス・報酬ルール', desc: 'マスタデータ管理' },
                 { href: '/console/settings', label: '設定', desc: '支払サイクル・通知・管理者' },
               ].map(item => (
@@ -135,7 +140,7 @@ export default async function ConsolePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             {/* Channel chart */}
-            <ChannelChart monthlyData={monthlyData} referralTotal={referralDeals} directTotal={directDeals} />
+            <ChannelChart monthlyData={monthlyData} directTotal={directTotal} referralTotal={referralTotal} frontierTotal={frontierTotal} />
 
             {/* Meetings panel */}
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14 }}>

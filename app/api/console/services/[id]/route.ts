@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const runtime = 'edge'
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -11,7 +13,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params
   const body = await req.json()
-  const allowed = ['name', 'subtitle', 'icon', 'color', 'description', 'who', 'url', 'active', 'sort']
+  const allowed = ['name', 'subtitle', 'icon', 'color', 'description', 'who', 'url', 'active', 'logo_path', 'sort',
+                   'coop_enabled', 'coop_rate', 'coop_base', 'coverage_steps', 'ft_trigger', 'ft_condition']
   const patch: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) patch[key] = body[key]

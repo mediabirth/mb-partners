@@ -27,7 +27,7 @@ export default function MagicCallbackPage() {
       if (error) {
         router.replace('/login?error=session_failed')
       } else {
-        router.replace('/app')
+        router.replace('/') // root page routes to /app or /console based on role
       }
     })
   }, [router])

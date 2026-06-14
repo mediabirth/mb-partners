@@ -1,0 +1,554 @@
+{
+  "timestamp": "2026-06-14T07:28:16.738Z",
+  "supabase_url": "https://zwnpbqpntiwsacsrrvfk.supabase.co",
+  "services": [
+    {
+      "id": "live",
+      "name": "ENTERSOLOGY LIVE",
+      "subtitle": "配信クリエイター",
+      "url": "entersology.jp",
+      "description": "ライブ配信クリエイターの所属・マネジメント。",
+      "who": "配信で本格的に活動したいクリエイター",
+      "icon": "mic",
+      "color": "#ec4899",
+      "logo_path": null,
+      "rail": "std",
+      "active": true,
+      "sort": 6,
+      "coverage_steps": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "coop_enabled": false,
+      "coop_rate": null,
+      "coop_base": null
+    },
+    {
+      "id": "mh",
+      "name": "MatchHub",
+      "subtitle": "転職 / 採用企業の開拓",
+      "url": "matchhub.jp",
+      "description": "AI Cosearchが求人を探し、専任CAが入社まで伴走する転職支援。",
+      "who": "転職を考えている方 / 採用を拡大したい企業",
+      "icon": "circles",
+      "color": "#1e9e6a",
+      "logo_path": null,
+      "rail": "mh",
+      "active": true,
+      "sort": 2,
+      "coverage_steps": [
+        {
+          "label": "つなぐ",
+          "included": true
+        },
+        {
+          "label": "アポイント設定",
+          "included": false
+        },
+        {
+          "label": "商談",
+          "included": false
+        },
+        {
+          "label": "価格合意",
+          "included": false
+        },
+        {
+          "label": "フォロー・アシスト",
+          "included": false
+        }
+      ],
+      "ft_trigger": null,
+      "ft_condition": "求職者本人への接触は不可",
+      "coop_enabled": true,
+      "coop_rate": 10,
+      "coop_base": "売上"
+    },
+    {
+      "id": "moom",
+      "name": "MOOM",
+      "subtitle": "お部屋探し・引越し",
+      "url": "moom.jp",
+      "description": "住まい探しをテクノロジーで丁寧に。内見から契約までオンラインで完結する不動産仲介。",
+      "who": "引越し・住み替え・転勤で部屋を探している方",
+      "icon": "home",
+      "color": "#4733e6",
+      "logo_path": null,
+      "rail": "std",
+      "active": true,
+      "sort": 1,
+      "coverage_steps": [
+        {
+          "label": "つなぐ",
+          "included": true
+        },
+        {
+          "label": "アポイント設定",
+          "included": true
+        },
+        {
+          "label": "商談",
+          "included": true
+        },
+        {
+          "label": "価格合意",
+          "included": true
+        },
+        {
+          "label": "フォロー・アシスト",
+          "included": true
+        }
+      ],
+      "ft_trigger": "共同仲介を担当",
+      "ft_condition": "宅建業免許が必要",
+      "coop_enabled": true,
+      "coop_rate": 50,
+      "coop_base": "粗利"
+    },
+    {
+      "id": "dx",
+      "name": "PRAGMATION / EMANATION",
+      "subtitle": "DX・AI導入",
+      "url": "pragmation.jp",
+      "description": "業務設計・DX・AI導入を、導入後の継続改善まで顧問型で支援。",
+      "who": "業務効率化・AI活用に悩む中小企業",
+      "icon": "arrows",
+      "color": "#15917E",
+      "logo_path": null,
+      "rail": "std",
+      "active": true,
+      "sort": 3,
+      "coverage_steps": [
+        {
+          "label": "つなぐ",
+          "included": true
+        },
+        {
+          "label": "アポイント設定",
+          "included": false
+        },
+        {
+          "label": "商談",
+          "included": false
+        },
+        {
+          "label": "価格合意",
+          "included": false
+        },
+        {
+          "label": "フォロー・アシスト",
+          "included": false
+        }
+      ],
+      "ft_trigger": null,
+      "ft_condition": null,
+      "coop_enabled": true,
+      "coop_rate": 10,
+      "coop_base": "利益"
+    },
+    {
+      "id": "reso",
+      "name": "RESONATION",
+      "subtitle": "撮影・制作・開発",
+      "url": "resonation.jp",
+      "description": "ブランド戦略・撮影・サイト・開発まで。「伝わる」をつくる制作ブランド。",
+      "who": "撮影 / ロゴ / サイト / 開発を頼みたい会社・店舗",
+      "icon": "aperture",
+      "color": "#8b5cf6",
+      "logo_path": null,
+      "rail": "std",
+      "active": true,
+      "sort": 3,
+      "coverage_steps": [
+        {
+          "label": "つなぐ",
+          "included": true
+        },
+        {
+          "label": "アポイント設定",
+          "included": false
+        },
+        {
+          "label": "商談",
+          "included": false
+        },
+        {
+          "label": "価格合意",
+          "included": false
+        },
+        {
+          "label": "フォロー・アシスト",
+          "included": false
+        }
+      ],
+      "ft_trigger": null,
+      "ft_condition": null,
+      "coop_enabled": true,
+      "coop_rate": 10,
+      "coop_base": "利益"
+    }
+  ],
+  "service_menus": [
+    {
+      "id": "0565bb3f-af04-4de2-a6c9-6b643acbc3ff",
+      "service_id": "dx",
+      "name": "DX・AI導入",
+      "ref_type": "fixed",
+      "ref_value": 40000,
+      "ref_basis": null,
+      "ref_trigger": "受注確定で確定",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": "案件獲得・見積合意まで",
+      "ft_condition": null,
+      "example_ref": "例)AI気になってる社長を紹介し受注 → ¥40,000",
+      "example_ft": null,
+      "sort": 0,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "b50aa754-2e2d-4eeb-96a8-aae8cd50a4ae",
+      "service_id": "live",
+      "name": "配信クリエイター所属",
+      "ref_type": "rate",
+      "ref_value": 10,
+      "ref_basis": null,
+      "ref_trigger": "所属契約締結後・受取収入の10%（12ヶ月間）",
+      "ref_months": 12,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": null,
+      "example_ft": null,
+      "sort": 0,
+      "ref_base": "受取収入",
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "a8880554-667e-4218-996a-352b6149ad2f",
+      "service_id": "mh",
+      "name": "転職サポート（個人）",
+      "ref_type": "fixed",
+      "ref_value": 30000,
+      "ref_basis": null,
+      "ref_trigger": "転職決定で確定",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": null,
+      "example_ft": null,
+      "sort": 0,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "991c8bfa-09aa-427f-a637-6694966afc8a",
+      "service_id": "mh",
+      "name": "採用企業の開拓",
+      "ref_type": "fixed",
+      "ref_value": 30000,
+      "ref_basis": null,
+      "ref_trigger": "採用決定で確定",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": null,
+      "example_ft": null,
+      "sort": 1,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "8952ce49-f4f8-41a7-a30a-cb3affb483b5",
+      "service_id": "moom",
+      "name": "賃貸仲介",
+      "ref_type": "fixed",
+      "ref_value": 30000,
+      "ref_basis": null,
+      "ref_trigger": "賃貸成約で確定",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": null,
+      "example_ft": null,
+      "sort": 0,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "c0000004-0000-0000-0000-000000000000",
+      "service_id": "reso",
+      "name": "撮影",
+      "ref_type": "fixed",
+      "ref_value": 30000,
+      "ref_basis": null,
+      "ref_trigger": "納品後",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": "例)撮影の紹介 → ¥30,000",
+      "example_ft": null,
+      "sort": 0,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "c0000005-0000-0000-0000-000000000000",
+      "service_id": "reso",
+      "name": "ロゴ制作",
+      "ref_type": "fixed",
+      "ref_value": 50000,
+      "ref_basis": null,
+      "ref_trigger": "納品後",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": "例)ロゴ制作の紹介 → ¥50,000",
+      "example_ft": null,
+      "sort": 1,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "c0000006-0000-0000-0000-000000000000",
+      "service_id": "reso",
+      "name": "サイト制作",
+      "ref_type": "fixed",
+      "ref_value": 100000,
+      "ref_basis": null,
+      "ref_trigger": "納品後",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": "例)サイト制作の紹介 → ¥100,000",
+      "example_ft": null,
+      "sort": 2,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    },
+    {
+      "id": "c0000007-0000-0000-0000-000000000000",
+      "service_id": "reso",
+      "name": "受託開発",
+      "ref_type": "fixed",
+      "ref_value": 300000,
+      "ref_basis": null,
+      "ref_trigger": "着手金入金後",
+      "ref_months": 1,
+      "ft_enabled": false,
+      "ft_rate": null,
+      "ft_basis": null,
+      "ft_trigger": null,
+      "ft_condition": null,
+      "example_ref": "例)受託開発の紹介 → ¥300,000",
+      "example_ft": null,
+      "sort": 3,
+      "ref_base": null,
+      "category": "referral",
+      "coverage_steps": null,
+      "qualification": null
+    }
+  ],
+  "deals": [
+    {
+      "id": "3548db0c-bccd-418d-9b33-c5781f9112b4",
+      "customer_name": "山田 健一",
+      "service_id": "moom",
+      "menu_id": null,
+      "status": "received",
+      "channel": "referral"
+    },
+    {
+      "id": "3334fb2a-b09f-4ce4-83f0-58fd10f2c444",
+      "customer_name": "田中 美咲",
+      "service_id": "mh",
+      "menu_id": null,
+      "status": "in_progress",
+      "channel": "referral"
+    },
+    {
+      "id": "7c84ec35-6980-436d-a39f-2c3f746097f9",
+      "customer_name": "クリエイターA",
+      "service_id": "live",
+      "menu_id": null,
+      "status": "in_progress",
+      "channel": "referral"
+    },
+    {
+      "id": "e120bd6b-bba5-4c23-b11d-88af70c50f78",
+      "customer_name": "佐藤 商事",
+      "service_id": "reso",
+      "menu_id": null,
+      "status": "paid",
+      "channel": "referral"
+    },
+    {
+      "id": "e241910a-cf48-47f1-b962-9de0ab3893ab",
+      "customer_name": "小林 製造",
+      "service_id": "mh",
+      "menu_id": null,
+      "status": "confirmed",
+      "channel": "referral"
+    },
+    {
+      "id": "e087d0b6-8234-4ee2-93e1-f8978a477bdc",
+      "customer_name": "渡辺 不動産事務所",
+      "service_id": "moom",
+      "menu_id": null,
+      "status": "paid",
+      "channel": "referral"
+    },
+    {
+      "id": "0bb3c432-2847-4785-bb3d-a46f28c0059a",
+      "customer_name": "鈴木 不動産",
+      "service_id": "moom",
+      "menu_id": null,
+      "status": "confirmed",
+      "channel": "cooperation"
+    },
+    {
+      "id": "f41d56b6-8801-464d-a94c-49cdbc9e3c38",
+      "customer_name": "高橋 家具",
+      "service_id": "moom",
+      "menu_id": null,
+      "status": "in_progress",
+      "channel": "cooperation"
+    },
+    {
+      "id": "e6184fcf-e4af-4ea7-b6bc-67a803c79773",
+      "customer_name": "ブランドX株式会社",
+      "service_id": "reso",
+      "menu_id": null,
+      "status": "in_progress",
+      "channel": "referral"
+    },
+    {
+      "id": "0df09568-b3cf-4cac-bbe1-5de43fa59595",
+      "customer_name": "中村 DX合同会社",
+      "service_id": "dx",
+      "menu_id": null,
+      "status": "received",
+      "channel": "referral"
+    }
+  ],
+  "partners": [
+    {
+      "id": "c211d2da-d8fb-46ac-9b53-1421259789cf",
+      "code": "ZZ8354",
+      "status": "active",
+      "profile_id": "9a973de5-fd42-4640-bd1d-48a2b6243414"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000000",
+      "code": "KT8842",
+      "status": "active",
+      "profile_id": "f72764a8-8f53-4740-911b-ca06245f41a7"
+    },
+    {
+      "id": "44beeb84-d084-4413-b680-439ea3288c5b",
+      "code": "SS1203",
+      "status": "active",
+      "profile_id": "9eba29fc-2e07-42a3-84fb-2efd99d7a799"
+    },
+    {
+      "id": "a240bcf1-f5e4-4db2-a8d1-cfd3fab36631",
+      "code": "IN0907",
+      "status": "active",
+      "profile_id": "e3c7b9b1-e075-48c2-9052-1f4947ca32fa"
+    },
+    {
+      "id": "5dfb9e2b-9b68-4baf-a458-4a9e2fe323b1",
+      "code": "ZZ8463",
+      "status": "active",
+      "profile_id": "39b30d21-61ae-4573-8ea8-2f6b493bf969"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "a0000001-0000-0000-0000-000000000000",
+      "name": "MB Admin",
+      "email": "owner@mb-partners.jp",
+      "role": "owner"
+    },
+    {
+      "id": "a0000002-0000-0000-0000-000000000000",
+      "name": "勝彦",
+      "email": "kthk.kmbr@gmail.com",
+      "role": "partner"
+    },
+    {
+      "id": "653eead3-c0c0-47dd-8f65-96f4b80931d9",
+      "name": "勝彦",
+      "email": "kthk.kmbr@gmail.com",
+      "role": "partner"
+    },
+    {
+      "id": "39b30d21-61ae-4573-8ea8-2f6b493bf969",
+      "name": "MB Admin",
+      "email": "mediabirth.project@gmail.com",
+      "role": "owner"
+    },
+    {
+      "id": "9a973de5-fd42-4640-bd1d-48a2b6243414",
+      "name": "テストパートナー",
+      "email": "kthk.kmbr+partner@gmail.com",
+      "role": "partner"
+    },
+    {
+      "id": "f72764a8-8f53-4740-911b-ca06245f41a7",
+      "name": "勝田 勝彦",
+      "email": "katsuhiko-demo@mb-demo.test",
+      "role": "partner"
+    },
+    {
+      "id": "9eba29fc-2e07-42a3-84fb-2efd99d7a799",
+      "name": "佐々木 恵美",
+      "email": "sasaki-demo@mb-demo.test",
+      "role": "partner"
+    },
+    {
+      "id": "e3c7b9b1-e075-48c2-9052-1f4947ca32fa",
+      "name": "井上 翔太",
+      "email": "inoue-demo@mb-demo.test",
+      "role": "partner"
+    }
+  ]
+}

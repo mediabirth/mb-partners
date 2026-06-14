@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotifications } from '@/lib/notifications'
 
+export const runtime = 'edge'
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ month: string }> }

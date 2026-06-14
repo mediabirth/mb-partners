@@ -1,23 +1,24 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getServicesWithMenus } from '@/lib/supabase/queries'
+import { getAdminServicesWithMenus } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
 import ServicesClient from './ServicesClient'
+
+export const runtime = 'edge'
 
 export default async function ServicesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/console/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, role, color')
-    .eq('id', user.id)
-    .single()
+  // Profile check + services data in parallel
+  const [profileRes, services] = await Promise.all([
+    supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
+    getAdminServicesWithMenus(supabase),
+  ])
+  const profile = profileRes.data
 
   if (profile?.role === 'partner' || !profile) redirect('/console')
-
-  const services = await getServicesWithMenus(supabase)
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
