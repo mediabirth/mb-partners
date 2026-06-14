@@ -2,6 +2,13 @@
 import { useEffect, useState, useTransition, useRef } from 'react'
 import ServiceIcon from '@/components/ServiceIcon'
 import ConsoleNav from '@/components/ConsoleNav'
+import CountUp from '@/components/CountUp'
+
+function channelChip(channel: string) {
+  if (channel === 'referral') return { cls: 'chip chip-referral', label: '紹介' }
+  if (channel === 'direct')   return { cls: 'chip chip-direct',   label: '直販' }
+  return { cls: 'chip chip-cooperation', label: '協力' }
+}
 
 type Deal = {
   id: string; customer_name: string; channel: string; source: string
@@ -154,8 +161,8 @@ export default function DealsPage() {
           </button>
         </div>
 
-        <div style={{ padding: '24px 28px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div style={{ padding: '28px 28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             {COLS.map(col => {
               const colDeals = filteredDeals.filter(d => d.status === col.key)
               return (
@@ -165,11 +172,11 @@ export default function DealsPage() {
                   onDragOver={e => onDragOver(e, col.key)}
                   onDragLeave={onDragLeave}
                   onDrop={e => onDrop(e, col.key)}
-                  style={{ background: '#F4F4F7', borderRadius: 13, padding: 10, minHeight: 140, transition: 'background .15s, outline .15s' }}
+                  style={{ background: '#F4F4F7', borderRadius: 14, padding: 12, minHeight: 140, transition: 'background .15s, outline .15s' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px 10px', fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px 12px', fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)' }}>
                     {col.label}
-                    <span style={{ fontFamily: 'Inter', color: '#B9BAC4' }}>{colDeals.length}</span>
+                    <span className="tnum" style={{ fontFamily: 'Inter', color: '#B9BAC4' }}><CountUp value={colDeals.length} /></span>
                   </div>
                   {colDeals.map(d => (
                     <div
@@ -177,24 +184,22 @@ export default function DealsPage() {
                       draggable
                       onDragStart={() => onDragStart(d)}
                       onClick={() => setSelected(d)}
+                      className="lift"
                       style={{
-                        background: '#fff', border: '1px solid #EDEDF1', borderRadius: 11,
-                        padding: 12, marginBottom: 8, cursor: 'grab',
+                        background: '#fff', border: '1px solid #EDEDF1', borderRadius: 12,
+                        padding: 13, marginBottom: 9, cursor: 'grab',
                         boxShadow: selected?.id === d.id ? '0 0 0 2px var(--blue)' : undefined,
                         userSelect: 'none',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={26} />}
                         <b style={{ fontSize: '.74rem', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {d.customer_name}
                         </b>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.6rem', color: 'var(--muted)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: d.channel === 'referral' ? 'var(--blue)' : 'var(--txt)', flexShrink: 0 }}/>
-                          {d.channel === 'referral' ? '紹介' : d.channel === 'direct' ? '直販' : '協力'}
-                        </span>
+                        <span className={channelChip(d.channel).cls}>{channelChip(d.channel).label}</span>
                         {d.amount > 0 && (
                           <span style={{ fontFamily: 'Inter', fontWeight: 700, color: 'var(--txt)', fontSize: '.66rem' }}>
                             ¥{d.amount.toLocaleString()}

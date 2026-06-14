@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
+import CountUp from '@/components/CountUp'
 import BankChangeSection from './BankChangeSection'
 
 export default async function RewardsPage() {
@@ -46,17 +47,17 @@ export default async function RewardsPage() {
         </div>
         <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.5rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.022em', lineHeight: 1.05 }}>
           <span style={{ fontSize: '1.04rem', fontWeight: 600, opacity: .78, marginRight: 4 }}>¥</span>
-          {totalGross.toLocaleString()}
+          <CountUp value={totalGross} />
         </div>
         <div style={{ display: 'flex', gap: 18, marginTop: 15, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)' }}>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>
-            支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>¥{paidGross.toLocaleString()}</b>
+            支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}><CountUp value={paidGross} format="yen" /></b>
           </div>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>
-            未払(確定)<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>¥{confirmedGross.toLocaleString()}</b>
+            未払(確定)<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}><CountUp value={confirmedGross} format="yen" /></b>
           </div>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>
-            成約数<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{totalDeals}件</b>
+            成約数<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}><CountUp value={totalDeals} />件</b>
           </div>
         </div>
       </div>
@@ -96,13 +97,18 @@ export default async function RewardsPage() {
             net={net}
           >
             {monthDeals.map(d => (
-              <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 6px', borderBottom: '1px solid var(--line)', fontSize: '.73rem', gap: 10 }}>
+              <div key={d.id} className="lift" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 6px', borderBottom: '1px solid var(--line)', fontSize: '.73rem', gap: 10, borderRadius: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={26} />}
                   <div>
-                    <div style={{ fontWeight: 600 }}>{d.customer_name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 600 }}>{d.customer_name}</span>
+                      <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`}>
+                        {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '営業'}
+                      </span>
+                    </div>
                     <div style={{ fontSize: '.59rem', color: 'var(--muted)', marginTop: 1 }}>
-                      {d.services?.name} · {d.channel === 'referral' ? '紹介' : '営業'}
+                      {d.services?.name}
                     </div>
                   </div>
                 </div>

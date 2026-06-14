@@ -35,14 +35,17 @@ export default async function InvitePage() {
         }}>
           <Link
             href="/console/partners"
-            style={{ fontSize: '.72rem', color: 'var(--muted2)', textDecoration: 'none' }}
+            style={{ fontSize: '.72rem', color: 'var(--blue)', textDecoration: 'none' }}
           >
             ← パートナー一覧
           </Link>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>招待を作成</h1>
+          <span style={{ color: 'var(--line)' }}>/</span>
+          <h1 style={{ fontSize: '1rem', fontWeight: 900, margin: 0 }}>招待を作成</h1>
         </div>
 
-        <InviteForm />
+        <div className="page-anim">
+          <InviteForm />
+        </div>
       </div>
     </div>
   )

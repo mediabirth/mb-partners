@@ -79,15 +79,20 @@ export default async function CasesPage({
         ) : filtered.map(d => {
           const step = STATUS_STEP[d.status] ?? 0
           return (
-            <Link key={d.id} href={`/app/cases/${d.id}`} className="row-hover" style={{ display: 'block', textDecoration: 'none', padding: '17px 6px', borderBottom: '1px solid var(--line)', borderRadius: 8, margin: '0 -6px' }}>
+            <Link key={d.id} href={`/app/cases/${d.id}`} className="row-hover lift" style={{ display: 'block', textDecoration: 'none', padding: '17px 6px', borderBottom: '1px solid var(--line)', borderRadius: 8, margin: '0 -6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 11 }}>
                 {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={38} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <b style={{ fontSize: '.86rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--txt)' }}>
-                    {d.customer_name}
-                  </b>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <b style={{ fontSize: '.86rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--txt)' }}>
+                      {d.customer_name}
+                    </b>
+                    <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`}>
+                      {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '営業'}
+                    </span>
+                  </div>
                   <small style={{ fontSize: '.62rem', color: 'var(--muted)' }}>
-                    {d.services?.name} · {d.channel === 'referral' ? '紹介' : '営業'} · {new Date(d.created_at).toLocaleDateString('ja')}
+                    {d.services?.name} · {new Date(d.created_at).toLocaleDateString('ja')}
                   </small>
                 </div>
               </div>

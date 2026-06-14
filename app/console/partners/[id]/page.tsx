@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
 import BankChangePanel from './BankChangePanel'
 import StatusControl from './StatusControl'
+import CountUp from '@/components/CountUp'
 
 export const runtime = 'edge'
 
@@ -140,7 +141,7 @@ export default async function PartnerDetailPage({
         <div style={{ padding: '24px 28px', maxWidth: 900 }}>
 
           {/* Header card */}
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '20px 22px', marginBottom: 20 }}>
+          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '22px 24px', marginBottom: 22 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{
                 width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
@@ -163,6 +164,7 @@ export default async function PartnerDetailPage({
                   {p.kyc_verified_at && (
                     <span style={{ fontSize: '.6rem', fontWeight: 700, color: '#15917E' }}>✓ KYC確認済</span>
                   )}
+                  <span className="chip chip-direct">{p.tax_type === 'individual' ? '個人' : '法人'}</span>
                 </div>
                 <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>
                   {p.profiles?.email}
@@ -176,19 +178,19 @@ export default async function PartnerDetailPage({
           </div>
 
           {/* KPI strip */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
             {[
-              { label: '累計報酬(税込)', value: `¥${cumulativeReward.toLocaleString()}`, color: 'var(--blue)' },
-              { label: '累計案件',       value: `${totalDeals}件`,  color: undefined },
-              { label: '進行中',         value: `${activeDeals}件`, color: activeDeals > 0 ? 'var(--amber)' : undefined },
-              { label: '今月成約',       value: `${monthConfirmed}件`, color: monthConfirmed > 0 ? '#15917E' : undefined },
+              { label: '累計報酬(税込)', value: cumulativeReward, unit: '',   yen: true,  color: 'var(--blue)' },
+              { label: '累計案件',       value: totalDeals,       unit: '件', yen: false, color: undefined },
+              { label: '進行中',         value: activeDeals,      unit: '件', yen: false, color: activeDeals > 0 ? 'var(--amber)' : undefined },
+              { label: '今月成約',       value: monthConfirmed,   unit: '件', yen: false, color: monthConfirmed > 0 ? '#15917E' : undefined },
             ].map(kpi => (
-              <div key={kpi.label} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 16px' }}>
-                <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+              <div key={kpi.label} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>
                   {kpi.label}
                 </div>
-                <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.05rem', fontFeatureSettings: '"tnum"', color: kpi.color ?? 'var(--txt)' }}>
-                  {kpi.value}
+                <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.05rem', color: kpi.color ?? 'var(--txt)' }}>
+                  <CountUp value={kpi.value} format={kpi.yen ? 'yen' : 'number'} />{kpi.unit}
                 </div>
               </div>
             ))}
@@ -199,15 +201,15 @@ export default async function PartnerDetailPage({
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', gap: 24 }}>
               <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', alignSelf: 'center' }}>チャネル内訳</span>
               {[
-                { label: '紹介',   count: referralDeals, color: 'var(--blue)',   bg: 'var(--blue-bg)' },
-                { label: '協力',   count: coopDeals,     color: 'var(--txt)',    bg: '#EBEBF0' },
-                { label: '直接',   count: directDeals,   color: 'var(--muted2)', bg: '#F4F4F7' },
+                { label: '紹介',   count: referralDeals, chip: 'chip chip-referral' },
+                { label: '協力',   count: coopDeals,     chip: 'chip chip-cooperation' },
+                { label: '直接',   count: directDeals,   chip: 'chip chip-direct' },
               ].filter(c => c.count > 0).map(c => (
                 <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: c.bg, color: c.color }}>
+                  <span className={c.chip}>
                     {c.label}
                   </span>
-                  <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}>{c.count}件</span>
+                  <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}><CountUp value={c.count} />件</span>
                 </div>
               ))}
             </div>
@@ -219,7 +221,7 @@ export default async function PartnerDetailPage({
             {/* Left: deals + payouts */}
             <div>
               {/* Deals */}
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
+              <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
                 <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <h2 style={{ fontSize: '.82rem', fontWeight: 700, margin: 0 }}>案件一覧</h2>
                   <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{totalDeals}件</span>
@@ -227,8 +229,8 @@ export default async function PartnerDetailPage({
                 {deals.length === 0 ? (
                   <p style={{ padding: '16px 18px', fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>案件なし</p>
                 ) : deals.slice(0, 30).map((d: any, i: number) => (
-                  <div key={d.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '11px 18px',
+                  <div key={d.id} className="lift" style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px',
                     borderTop: i > 0 ? '1px solid #F2F2F6' : undefined,
                   }}>
                     <span style={{

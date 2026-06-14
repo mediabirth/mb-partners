@@ -60,28 +60,60 @@ export default function BroadcastsPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, zIndex: 30,
         }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信</h1>
-          <Link href="/console/broadcasts/new" style={{
-            fontSize: '.75rem', fontWeight: 700, padding: '7px 14px', borderRadius: 8,
+          <div>
+            <div className="eyebrow">CONSOLE</div>
+            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信</h1>
+          </div>
+          <Link href="/console/broadcasts/new" className="btn btn-p" style={{
+            fontSize: '.75rem', fontWeight: 700, padding: '8px 16px', borderRadius: 9,
             background: 'var(--blue)', color: '#fff', textDecoration: 'none',
           }}>
             + 新規作成
           </Link>
         </div>
 
-        <div style={{ padding: '24px 28px', maxWidth: 860 }}>
-          {loading && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>読み込み中…</p>}
+        <div className="page-anim" style={{ padding: '28px', maxWidth: 860 }}>
+          {loading && (
+            <div className="stagger">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="skeleton" style={{ height: 72, borderRadius: 14, marginBottom: 12 }} />
+              ))}
+            </div>
+          )}
           {!loading && broadcasts.length === 0 && (
-            <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>まだ配信がありません。</p>
+            <div style={{
+              background: '#fff', border: '1px solid var(--line)', borderRadius: 16,
+              padding: '48px 28px', textAlign: 'center',
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 14, margin: '0 auto 16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--blue-bg)', fontSize: '1.5rem',
+              }}>📣</div>
+              <div style={{ fontSize: '.95rem', fontWeight: 800, marginBottom: 6 }}>
+                まだ配信がありません
+              </div>
+              <div style={{ fontSize: '.76rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 20 }}>
+                NEWSやTIPSをパートナーへ届けましょう。<br />
+                最初の配信を作成して、つながりを深めませんか？
+              </div>
+              <Link href="/console/broadcasts/new" className="btn btn-p" style={{
+                fontSize: '.78rem', fontWeight: 700, padding: '10px 22px', borderRadius: 10,
+                background: 'var(--blue)', color: '#fff', textDecoration: 'none', display: 'inline-block',
+              }}>
+                + 新規作成
+              </Link>
+            </div>
           )}
 
+          {!loading && broadcasts.length > 0 && (
+          <div className="stagger">
           {broadcasts.map(b => (
             <Link key={b.id} href={`/console/broadcasts/${b.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{
-                background: '#fff', border: '1px solid var(--line)', borderRadius: 12,
-                padding: '14px 18px', marginBottom: 10, display: 'flex',
+              <div className="card-hover lift" style={{
+                background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
+                padding: '16px 20px', marginBottom: 12, display: 'flex',
                 alignItems: 'center', gap: 14, cursor: 'pointer',
-                transition: 'border-color .15s',
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -101,7 +133,8 @@ export default function BroadcastsPage() {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {b.sent_at ? (
                     <>
-                      <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '2px 8px', borderRadius: 20, marginBottom: 4, display: 'inline-block' }}>
+                      <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 10px', borderRadius: 20, marginBottom: 5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)' }} />
                         配信済
                       </div>
                       <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>
@@ -112,14 +145,17 @@ export default function BroadcastsPage() {
                       </div>
                     </>
                   ) : (
-                    <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
-                      未配信
+                    <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-bg)', padding: '3px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--amber)' }} />
+                      下書き
                     </span>
                   )}
                 </div>
               </div>
             </Link>
           ))}
+          </div>
+          )}
         </div>
       </div>
     </div>

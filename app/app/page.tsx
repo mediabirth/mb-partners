@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
+import CountUp from '@/components/CountUp'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
@@ -66,7 +67,7 @@ export default async function AppPage() {
         </div>
         <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.5rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.022em', lineHeight: 1.05 }}>
           <span style={{ fontSize: '1.04rem', fontWeight: 600, opacity: .78, marginRight: 4 }}>¥</span>
-          {confirmedBalance.toLocaleString()}
+          <CountUp value={confirmedBalance} />
         </div>
         <div style={{ display: 'flex', gap: 18, marginTop: 15, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '.6rem', opacity: .85, whiteSpace: 'nowrap' }}>
@@ -92,9 +93,9 @@ export default async function AppPage() {
 
       {/* Stats */}
       <div className="stagger" style={{ display: 'flex', gap: 10, margin: '14px 20px 0' }}>
-        <StatCard label="進行中の案件" value={`${active.length}`} unit="件" href="/app/cases?f=active" />
-        <StatCard label="見込み報酬" value={`¥${pipeline.toLocaleString()}`} href="/app/cases?f=active" />
-        <StatCard label="今月の成約" value={`${monthConfirmed.length}`} unit="件" href="/app/rewards" />
+        <StatCard label="進行中の案件" countUp={active.length} unit="件" href="/app/cases?f=active" />
+        <StatCard label="見込み報酬" countUp={pipeline} format="yen" href="/app/cases?f=active" />
+        <StatCard label="今月の成約" countUp={monthConfirmed.length} unit="件" href="/app/rewards" />
       </div>
 
       {/* Todos */}
@@ -108,7 +109,7 @@ export default async function AppPage() {
               現在、対応待ちの案件はありません。
             </p>
           ) : todos.map(d => (
-            <Link key={d.id} href={`/app/cases/${d.id}`} className="row-hover" style={{
+            <Link key={d.id} href={`/app/cases/${d.id}`} className="row-hover lift" style={{
               display: 'flex', gap: 11, padding: '13px 14px',
               borderBottom: '1px solid var(--line)', textDecoration: 'none',
               alignItems: 'center',
@@ -147,7 +148,7 @@ export default async function AppPage() {
           ) : recentEvents.slice(0, 5).map(e => {
             const deal = dealMap[e.deal_id]
             return (
-              <Link key={e.id} href={`/app/cases/${e.deal_id}`} className="row-hover" style={{
+              <Link key={e.id} href={`/app/cases/${e.deal_id}`} className="row-hover lift" style={{
                 display: 'flex', gap: 11, padding: '12px 14px',
                 borderBottom: '1px solid var(--line)', textDecoration: 'none',
                 alignItems: 'center',
@@ -175,7 +176,7 @@ export default async function AppPage() {
   )
 }
 
-function StatCard({ label, value, unit, href }: { label: string; value: string; unit?: string; href: string }) {
+function StatCard({ label, countUp, format, unit, href }: { label: string; countUp: number; format?: 'number' | 'yen'; unit?: string; href: string }) {
   return (
     <Link href={href} className="card-hover" style={{
       flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
@@ -183,7 +184,7 @@ function StatCard({ label, value, unit, href }: { label: string; value: string; 
     }}>
       <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700 }}>{label}</div>
       <div style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, marginTop: 3, fontFeatureSettings: '"tnum"', letterSpacing: '-.012em', color: 'var(--txt)' }}>
-        {value}{unit && <small style={{ fontSize: '.6rem', color: 'var(--muted)', fontWeight: 500 }}> {unit}</small>}
+        <CountUp value={countUp} format={format} />{unit && <small style={{ fontSize: '.6rem', color: 'var(--muted)', fontWeight: 500 }}> {unit}</small>}
       </div>
     </Link>
   )

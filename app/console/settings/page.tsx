@@ -44,11 +44,11 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 18, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--line)' }}>
+    <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '15px 22px', borderBottom: '1px solid var(--line)' }}>
         <b style={{ fontSize: '.84rem' }}>{title}</b>
       </div>
-      <div style={{ padding: '16px 20px' }}>{children}</div>
+      <div style={{ padding: '18px 22px' }}>{children}</div>
     </div>
   )
 }
@@ -141,7 +141,7 @@ export default function SettingsPage() {
           <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>設定</h1>
         </div>
 
-        <div style={{ padding: '28px 28px', maxWidth: 720 }}>
+        <div className="stagger" style={{ padding: '30px 28px', maxWidth: 720 }}>
 
           {/* 1. 支払サイクル */}
           <SectionCard title="支払サイクル">

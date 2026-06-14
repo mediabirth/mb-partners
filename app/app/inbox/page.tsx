@@ -256,10 +256,12 @@ export default function InboxPage() {
 
 function NotifRow({ n, onRead }: { n: Notification; onRead: () => void }) {
   return (
-    <button onClick={onRead} style={{
+    <button onClick={onRead} className="lift" style={{
       display: 'flex', gap: 12, padding: '14px 20px', width: '100%', textAlign: 'left',
       background: n.read_at ? 'var(--bg)' : 'var(--blue-bg2)',
-      border: 'none', borderBottom: '1px solid var(--line)',
+      borderLeft: n.read_at ? '3px solid transparent' : '3px solid var(--blue)',
+      borderTop: 'none', borderRight: 'none',
+      borderBottom: '1px solid var(--line)',
       cursor: n.read_at ? 'default' : 'pointer',
     }}>
       <NotifIcon type={n.ref?.type} />
@@ -278,17 +280,16 @@ function NotifRow({ n, onRead }: { n: Notification; onRead: () => void }) {
 function BroadcastRow({ b, onClick }: { b: Broadcast; onClick: () => void }) {
   const hasDetail = !!(b.body)
   return (
-    <div onClick={hasDetail ? onClick : undefined} style={{
+    <div onClick={hasDetail ? onClick : undefined} className="lift" style={{
       display: 'flex', gap: 12, padding: '14px 20px',
       borderBottom: '1px solid var(--line)', alignItems: 'flex-start',
       cursor: hasDetail ? 'pointer' : 'default',
-      transition: 'background .15s',
     }}>
       <BroadcastIcon kind={b.kind} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '.5rem', fontFamily: 'Inter', fontWeight: 600, letterSpacing: '.2em', marginBottom: 3, color: b.kind === 'news' ? 'var(--muted2)' : 'var(--amber)' }}>
-          {b.kind === 'news' ? 'NEWS' : 'TIPS'}
-        </div>
+        <span className="chip" style={{ marginBottom: 4, background: b.kind === 'news' ? 'var(--bg2)' : 'var(--amber-bg)', color: b.kind === 'news' ? 'var(--muted2)' : 'var(--amber)' }}>
+          {b.kind === 'news' ? 'お知らせ' : 'お役立ち'}
+        </span>
         <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2 }}>{b.title}</b>
         {b.body && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.body}</p>}
       </div>

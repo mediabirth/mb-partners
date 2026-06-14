@@ -1,6 +1,7 @@
 'use client'
 import { useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -410,19 +411,11 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
 // ─── Chips ────────────────────────────────────────────────────────────────────
 
 function RefChip() {
-  return (
-    <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: 'var(--blue-bg)', color: 'var(--blue)', flexShrink: 0 }}>
-      紹介
-    </span>
-  )
+  return <span className="chip chip-referral" style={{ flexShrink: 0 }}>紹介</span>
 }
 
 function CoopChip() {
-  return (
-    <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: '#EBEBF0', color: 'var(--txt)', flexShrink: 0 }}>
-      協力
-    </span>
-  )
+  return <span className="chip chip-cooperation" style={{ flexShrink: 0 }}>協力</span>
 }
 
 function Btn2({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
@@ -575,23 +568,23 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       {/* ── Top bar ── */}
       <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
         <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>サービス・報酬ルール</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>{services.length}サービス</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="chip chip-direct" style={{ fontVariantNumeric: 'tabular-nums' }}>{services.length} サービス</span>
           <button onClick={openAdd} className="btn btn-p" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ 追加</button>
         </div>
       </div>
 
       {/* ── Service list ── */}
-      <div style={{ padding: '24px 28px', maxWidth: 860 }}>
+      <div className="page-anim stagger" style={{ padding: '28px', maxWidth: 860 }}>
         {services.length === 0 && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>}
         {services.map(svc => {
           const refMenus = svc.service_menus.filter(m => m.category !== 'cooperation')
           const hasBody  = refMenus.length > 0 || svc.coop_enabled
           return (
-            <div key={svc.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 14, overflow: 'hidden' }}>
+            <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 16, overflow: 'hidden' }}>
 
               {/* Header row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', borderBottom: hasBody ? '1px solid var(--line)' : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px', borderBottom: hasBody ? '1px solid var(--line)' : undefined }}>
                 <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={44} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -614,8 +607,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
               {/* Referral menus — blue tint */}
               {refMenus.map((menu, i) => (
-                <div key={menu.id} style={{
-                  padding: '10px 20px',
+                <div key={menu.id} className="lift" style={{
+                  padding: '12px 22px',
                   borderTop: i > 0 ? '1px solid #EEF0FF' : undefined,
                   background: '#FAFBFF',
                 }}>
@@ -629,7 +622,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     )}
                     <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.88rem', color: 'var(--blue)', flexShrink: 0 }}>
                       {menu.ref_type === 'fixed'
-                        ? `¥${Number(menu.ref_value).toLocaleString()}`
+                        ? <CountUp value={Number(menu.ref_value)} format="yen" />
                         : `${menu.ref_value}%${menu.ref_base ? ` (${menu.ref_base})` : ''}`}
                     </span>
                   </div>
@@ -642,8 +635,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
               {/* Cooperation — neutral dark tint */}
               {svc.coop_enabled && (
-                <div style={{
-                  padding: '10px 20px',
+                <div className="lift" style={{
+                  padding: '12px 22px',
                   borderTop: refMenus.length > 0 ? '1px solid #EBEBEF' : undefined,
                   background: '#F6F6FA',
                 }}>
@@ -684,15 +677,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         zIndex: 50, overflowY: 'auto', transition: 'right .3s cubic-bezier(.4,0,.2,1)',
       }}>
         {drawerOpen && (
-          <form onSubmit={saveService} style={{ padding: '22px 24px 80px' }}>
+          <form key={editing?.id ?? 'new'} onSubmit={saveService} className="cascade" style={{ padding: '24px 26px 88px' }}>
 
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
               <h2 style={{ fontSize: '.92rem', fontWeight: 900 }}>
                 {editing ? 'サービスを編集' : '新しいサービス'}
               </h2>
-              <button type="button" onClick={closeDrawer}
-                style={{ fontSize: '1.1rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted2)', lineHeight: 1 }}>✕</button>
+              <button type="button" onClick={closeDrawer} className="lift"
+                style={{ fontSize: '1rem', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg2)', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--muted2)', lineHeight: 1, flexShrink: 0 }}>✕</button>
             </div>
 
             {/* ── A. 基本情報 ── */}

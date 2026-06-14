@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getPartnersWithProfiles, getAllDeals } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
 import ApprovalPanel from './ApprovalPanel'
+import CountUp from '@/components/CountUp'
 
 export const runtime = 'edge'
 
@@ -79,16 +80,16 @@ export default async function PartnersPage() {
           {pendingPartners.length > 0 && <ApprovalPanel partners={pendingPartners} />}
 
           {/* Summary strip */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
             {[
-              { label: '稼働中パートナー', value: `${activeExternal.length}`, unit: '名' },
-              { label: '累計成約件数',     value: summaryDeals.toLocaleString(), unit: '件' },
-              { label: '累計報酬総額',     value: `¥${summaryReward.toLocaleString()}`, unit: '' },
+              { label: '稼働中パートナー', value: activeExternal.length, unit: '名', yen: false },
+              { label: '累計成約件数',     value: summaryDeals,           unit: '件', yen: false },
+              { label: '累計報酬総額',     value: summaryReward,          unit: '',   yen: true },
             ].map(s => (
-              <div key={s.label} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 18px' }}>
-                <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</div>
-                <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', fontFeatureSettings: '"tnum"' }}>
-                  {s.value}<span style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', marginLeft: 2 }}>{s.unit}</span>
+              <div key={s.label} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
+                <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</div>
+                <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem' }}>
+                  <CountUp value={s.value} format={s.yen ? 'yen' : 'number'} /><span style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', marginLeft: 2 }}>{s.unit}</span>
                 </div>
               </div>
             ))}
@@ -114,10 +115,10 @@ export default async function PartnersPage() {
                   <Link
                     key={p.id}
                     href={`/console/partners/${p.id}`}
-                    className="row-hover"
+                    className="row-hover lift"
                     style={{
                       display: 'grid', gridTemplateColumns: '2.2fr .8fr .7fr .65fr 1.1fr .85fr',
-                      padding: '13px 20px', borderTop: i > 0 ? '1px solid #F2F2F6' : undefined,
+                      padding: '14px 20px', borderTop: i > 0 ? '1px solid #F2F2F6' : undefined,
                       alignItems: 'center', textDecoration: 'none', color: 'inherit',
                     }}
                   >
@@ -141,7 +142,9 @@ export default async function PartnersPage() {
                       </div>
                     </div>
                     <span style={{ fontFamily: 'Inter', fontSize: '.7rem', color: 'var(--muted2)' }}>{p.code}</span>
-                    <span style={{ fontSize: '.72rem' }}>{p.tax_type === 'individual' ? '個人' : '法人'}</span>
+                    <span>
+                      <span className="chip chip-direct">{p.tax_type === 'individual' ? '個人' : '法人'}</span>
+                    </span>
                     <div>
                       <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}>{dealCount(p.id)}</span>
                       <span style={{ fontSize: '.6rem', color: 'var(--muted2)', marginLeft: 3 }}>件</span>
@@ -180,10 +183,10 @@ export default async function PartnersPage() {
                     <Link
                       key={p.id}
                       href={`/console/partners/${p.id}`}
-                      className="row-hover"
+                      className="row-hover lift"
                       style={{
                         display: 'grid', gridTemplateColumns: '2.2fr .8fr .7fr .65fr 1.1fr .85fr',
-                        padding: '11px 20px', borderTop: '1px solid #F2F2F6',
+                        padding: '12px 20px', borderTop: '1px solid #F2F2F6',
                         alignItems: 'center', textDecoration: 'none', color: 'inherit', opacity: 0.65,
                       }}
                     >
@@ -205,7 +208,9 @@ export default async function PartnersPage() {
                         </div>
                       </div>
                       <span style={{ fontFamily: 'Inter', fontSize: '.7rem', color: 'var(--muted2)' }}>{p.code}</span>
-                      <span style={{ fontSize: '.72rem' }}>{p.tax_type === 'individual' ? '個人' : '法人'}</span>
+                      <span>
+                        <span className="chip chip-direct">{p.tax_type === 'individual' ? '個人' : '法人'}</span>
+                      </span>
                       <div>
                         <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}>{dealCount(p.id)}</span>
                         <span style={{ fontSize: '.6rem', color: 'var(--muted2)', marginLeft: 3 }}>件</span>

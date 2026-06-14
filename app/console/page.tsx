@@ -98,10 +98,6 @@ export default async function ConsolePage() {
                 稼働パートナー {activePartners}名 · 進行中の案件 {deals.length}件
               </div>
             </div>
-            <svg aria-hidden width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" strokeWidth="1.4" style={{ flexShrink: 0 }}>
-              <path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5 10.1 10.9 5.5 9l4.6-1.4L12 3z" />
-              <path d="M19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z" />
-            </svg>
           </div>
 
           {/* KPIs */}

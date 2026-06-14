@@ -42,9 +42,14 @@ export default async function CaseDetailPage({
       <div style={{ padding: '8px 20px 16px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 13, alignItems: 'center' }}>
         {svc && <ServiceIcon icon={svc.icon} color={svc.color} size={46} />}
         <div>
-          <h1 style={{ fontSize: '1.18rem', fontWeight: 900, letterSpacing: '-.01em' }}>{deal.customer_name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: '1.18rem', fontWeight: 900, letterSpacing: '-.01em' }}>{deal.customer_name}</h1>
+            <span className={`chip ${deal.channel === 'cooperation' ? 'chip-cooperation' : deal.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`}>
+              {deal.channel === 'referral' ? '紹介' : deal.channel === 'cooperation' ? '協力' : '営業'}
+            </span>
+          </div>
           <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>
-            {svc?.name} · {deal.channel === 'referral' ? '紹介' : '営業'} · {new Date(deal.created_at).toLocaleDateString('ja')}
+            {svc?.name} · {new Date(deal.created_at).toLocaleDateString('ja')}
           </div>
         </div>
       </div>

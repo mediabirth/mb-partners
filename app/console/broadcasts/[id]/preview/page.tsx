@@ -75,15 +75,19 @@ export default function BroadcastPreviewPage() {
             <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.8rem', color: 'var(--muted2)' }}>
               ← 戻る
             </button>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>プレビュー</h1>
+            <div>
+              <div className="eyebrow">配信</div>
+              <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>プレビュー</h1>
+            </div>
           </div>
 
           {broadcast && !broadcast.sent_at && (
             <button
               onClick={handleSend}
               disabled={pending}
+              className={pending ? '' : 'btn btn-p'}
               style={{
-                padding: '8px 20px', borderRadius: 8, fontSize: '.78rem', fontWeight: 700,
+                padding: '8px 20px', borderRadius: 9, fontSize: '.78rem', fontWeight: 700,
                 background: pending ? 'var(--muted)' : 'var(--blue)',
                 color: '#fff', border: 'none', cursor: pending ? 'not-allowed' : 'pointer',
               }}
@@ -101,18 +105,19 @@ export default function BroadcastPreviewPage() {
         {loading && <p style={{ padding: '28px', fontSize: '.8rem', color: 'var(--muted2)' }}>読み込み中…</p>}
 
         {broadcast && (
-          <div style={{ padding: '28px', maxWidth: 720 }}>
+          <div className="page-anim" style={{ padding: '28px', maxWidth: 720 }}>
             {/* Meta info */}
-            <div style={{ background: 'var(--amber-bg)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: '.7rem', color: 'var(--amber)' }}>
-              プレビュー — 配信対象: {segmentLabel(broadcast.segment)}
+            <div style={{ background: 'var(--amber-bg)', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 16px', marginBottom: 20, fontSize: '.7rem', fontWeight: 600, color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />
+              プレビュー表示 — 配信対象: {segmentLabel(broadcast.segment)}
             </div>
 
             {/* Article card (partner view) */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.04)' }}>
               {heroUrl && (
                 <img src={heroUrl} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover' }} />
               )}
-              <div style={{ padding: '24px' }}>
+              <div style={{ padding: '32px 36px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <span style={{
                     fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,

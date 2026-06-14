@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ConsoleNav from '@/components/ConsoleNav'
+import CountUp from '@/components/CountUp'
 
 type Broadcast = {
   id: string
@@ -71,7 +72,10 @@ export default function BroadcastDetailPage() {
             <Link href="/console/broadcasts" style={{ fontSize: '.8rem', color: 'var(--muted2)', textDecoration: 'none' }}>
               ← 一覧へ
             </Link>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信詳細</h1>
+            <div>
+              <div className="eyebrow">配信</div>
+              <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信詳細</h1>
+            </div>
           </div>
           {broadcast && !broadcast.sent_at && (
             <div style={{ display: 'flex', gap: 8 }}>
@@ -97,35 +101,35 @@ export default function BroadcastDetailPage() {
         {loading && <p style={{ padding: '28px', fontSize: '.8rem', color: 'var(--muted2)' }}>読み込み中…</p>}
 
         {broadcast && (
-          <div style={{ padding: '28px', maxWidth: 720 }}>
+          <div className="page-anim" style={{ padding: '28px', maxWidth: 720 }}>
             {/* Stats card */}
             {broadcast.sent_at && (
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 20px', marginBottom: 18, display: 'flex', gap: 24 }}>
+              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 18, display: 'flex', gap: 32 }}>
                 <div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 3 }}>配信日時</div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>配信日時</div>
                   <div style={{ fontSize: '.82rem', fontWeight: 700 }}>
                     {new Date(broadcast.sent_at).toLocaleString('ja')}
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 3 }}>開封数</div>
-                  <div style={{ fontSize: '.82rem', fontWeight: 700, fontFamily: 'Inter' }}>
-                    {broadcast.read_count} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>/ {broadcast.total_partners}名</span>
+                <div style={{ borderLeft: '1px solid var(--line)', paddingLeft: 32 }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>開封数</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 900, fontFamily: 'Inter', lineHeight: 1 }}>
+                    <CountUp value={broadcast.read_count} /> <span style={{ color: 'var(--muted2)', fontWeight: 400, fontSize: '.72rem' }}>/ {broadcast.total_partners}名</span>
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 3 }}>配信対象</div>
+                <div style={{ borderLeft: '1px solid var(--line)', paddingLeft: 32 }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>配信対象</div>
                   <div style={{ fontSize: '.82rem', fontWeight: 700 }}>{segmentLabel(broadcast.segment)}</div>
                 </div>
               </div>
             )}
 
             {/* Article */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.04)' }}>
               {heroUrl && (
                 <img src={heroUrl} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover' }} />
               )}
-              <div style={{ padding: '24px' }}>
+              <div style={{ padding: '32px 36px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <span style={{
                     fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,

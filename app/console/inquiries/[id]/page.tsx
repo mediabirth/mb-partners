@@ -31,6 +31,12 @@ const CATEGORY_LABEL: Record<string, string> = {
 const STATUS_LABEL: Record<string, string> = {
   open: '未返信', replied: '返信済', closed: 'クローズ',
 }
+const CATEGORY_COLOR: Record<string, { color: string; bg: string }> = {
+  reward:  { color: 'var(--green)', bg: 'var(--green-bg)' },
+  deal:    { color: 'var(--blue)',  bg: 'var(--blue-bg2)' },
+  account: { color: 'var(--amber)', bg: 'var(--amber-bg)' },
+  other:   { color: 'var(--muted2)', bg: 'var(--bg2)' },
+}
 
 export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -96,7 +102,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#4733E6'} />
-      <main style={{ marginLeft: 230, flex: 1, padding: '32px 32px', minWidth: 0, maxWidth: 860 }}>
+      <main className="page-anim" style={{ marginLeft: 230, flex: 1, padding: '32px 32px', minWidth: 0, maxWidth: 860 }}>
         <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.74rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 20 }}>
           ← 問い合わせ一覧に戻る
         </Link>
@@ -108,16 +114,37 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
         ) : (
           <>
             {/* Header */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '18px 20px', marginBottom: 20 }}>
+            <div style={{
+              background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
+              borderLeft: inquiry.status === 'open' ? '3px solid var(--amber)' : '3px solid transparent',
+              padding: '18px 20px', marginBottom: 20,
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div>
-                  <h1 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 6 }}>{inquiry.subject}</h1>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>
-                      カテゴリ: {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
+                <div style={{ minWidth: 0 }}>
+                  <h1 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 10 }}>{inquiry.subject}</h1>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+                    <span style={{
+                      fontSize: '.64rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                      color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color,
+                      background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg,
+                    }}>
+                      {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
                     </span>
-                    <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>
-                      パートナー: {inquiry.partners?.profiles?.name ?? '-'} ({inquiry.partners?.code})
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.66rem', color: 'var(--muted2)' }}>
+                      {inquiry.partners?.profiles && (
+                        <span style={{
+                          width: 20, height: 20, borderRadius: '50%',
+                          background: inquiry.partners.profiles.color, color: '#fff',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '.56rem', fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {inquiry.partners.profiles.name[0]}
+                        </span>
+                      )}
+                      <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{inquiry.partners?.profiles?.name ?? '-'}</span>
+                      <span style={{ opacity: .6 }}>({inquiry.partners?.code})</span>
                     </span>
                     <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>
                       受付: {new Date(inquiry.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -125,34 +152,55 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                   </div>
                 </div>
                 <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
                   fontSize: '.66rem', fontWeight: 700, padding: '4px 12px', borderRadius: 20,
                   color: inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--blue)' : 'var(--muted2)',
                   background: inquiry.status === 'open' ? 'var(--amber-bg)' : inquiry.status === 'replied' ? 'var(--blue-bg2)' : 'var(--bg2)',
                   flexShrink: 0,
                 }}>
+                  <span className="status-dot" style={{
+                    background: inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--blue)' : 'var(--muted2)',
+                  }} />
                   {STATUS_LABEL[inquiry.status] ?? inquiry.status}
                 </span>
               </div>
             </div>
 
             {/* Messages */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+            <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
               {inquiry.inquiry_messages.map(msg => {
                 const isOwner = msg.sender_role === 'owner'
+                const senderName = isOwner ? '管理者' : inquiry.partners?.profiles?.name ?? 'パートナー'
                 return (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isOwner ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 5,
+                      flexDirection: isOwner ? 'row-reverse' : 'row',
+                    }}>
+                      <span style={{
+                        width: 18, height: 18, borderRadius: '50%',
+                        background: isOwner ? 'var(--blue)' : (inquiry.partners?.profiles?.color ?? 'var(--muted2)'),
+                        color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '.5rem', fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {senderName[0]}
+                      </span>
+                      <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{senderName}</span>
+                    </div>
                     <div style={{
                       maxWidth: '75%', padding: '12px 16px',
                       borderRadius: isOwner ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
                       background: isOwner ? 'var(--blue)' : '#fff',
                       color: isOwner ? '#fff' : 'var(--txt)',
                       border: isOwner ? 'none' : '1px solid var(--line)',
-                      fontSize: '.8rem', lineHeight: 1.65, wordBreak: 'break-word',
+                      boxShadow: isOwner ? '0 1px 2px rgba(46,91,255,.18)' : '0 1px 2px rgba(14,14,20,.04)',
+                      fontSize: '.8rem', lineHeight: 1.65, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
                     }}>
                       {msg.body}
                     </div>
                     <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 5 }}>
-                      {isOwner ? '管理者' : inquiry.partners?.profiles?.name ?? 'パートナー'} · {new Date(msg.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(msg.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 )
@@ -172,11 +220,12 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                       <button
                         key={t.id}
                         type="button"
+                        className="chip lift"
                         onClick={() => setReplyBody(t.body)}
                         style={{
-                          padding: '6px 12px', borderRadius: 8, border: '1px solid var(--line)',
-                          background: 'var(--bg2)', fontSize: '.68rem', color: 'var(--muted2)',
-                          cursor: 'pointer', fontFamily: 'inherit',
+                          padding: '6px 12px', borderRadius: 20, border: '1px solid var(--line)',
+                          background: 'var(--bg2)', fontSize: '.68rem', color: 'var(--muted)',
+                          cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
                         }}
                       >
                         {t.label}

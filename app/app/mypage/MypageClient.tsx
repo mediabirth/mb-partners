@@ -117,8 +117,10 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatar} />
         <div>
           <b style={{ fontSize: '.95rem' }}>{name}</b>
-          <div style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: 'Inter', letterSpacing: '.1em', marginTop: 2 }}>
-            Partner Code — {partnerCode}
+          <div style={{ marginTop: 4 }}>
+            <span className="chip chip-referral" style={{ fontFamily: 'Inter', letterSpacing: '.08em' }}>
+              {partnerCode}
+            </span>
           </div>
         </div>
       </div>

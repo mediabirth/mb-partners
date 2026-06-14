@@ -13,27 +13,11 @@ function fmtRefAmount(m: MenuRow) {
 }
 
 function RefChip({ name }: { name: string }) {
-  return (
-    <span style={{
-      display: 'inline-flex', fontSize: '.55rem', fontWeight: 700,
-      padding: '3px 8px', borderRadius: 10, whiteSpace: 'nowrap',
-      background: 'var(--blue-bg)', color: 'var(--blue)',
-    }}>
-      {name}
-    </span>
-  )
+  return <span className="chip chip-referral">{name}</span>
 }
 
 function CoopBadge() {
-  return (
-    <span style={{
-      display: 'inline-flex', fontSize: '.55rem', fontWeight: 700,
-      padding: '3px 8px', borderRadius: 10, whiteSpace: 'nowrap',
-      background: '#EBEBF0', color: 'var(--txt)',
-    }}>
-      協力
-    </span>
-  )
+  return <span className="chip chip-cooperation">協力</span>
 }
 
 export default function ReferPage() {
@@ -193,11 +177,11 @@ export default function ReferPage() {
             {selSvc.service_menus.map(m => {
               const covSteps = (m.coverage_steps ?? []).filter((s: { label: string; included: boolean }) => s.included)
               return (
-                <button key={m.id} onClick={() => pickMenu(m)}
+                <button key={m.id} onClick={() => pickMenu(m)} className="card-hover"
                   style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid var(--line)', borderRadius: 15, padding: '16px 17px', marginBottom: 12, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '3px 9px', borderRadius: 12, background: 'var(--blue-bg)', color: 'var(--blue)' }}>紹介</span>
+                      <span className="chip chip-referral">紹介</span>
                       <span style={{ fontSize: '.9rem', fontWeight: 900 }}>{m.name}</span>
                     </div>
                     <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', color: 'var(--blue)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>
@@ -231,11 +215,11 @@ export default function ReferPage() {
                 ? `${selSvc.coop_rate}%${selSvc.coop_base ? ` (${selSvc.coop_base})` : ''}`
                 : '-'
               return (
-                <button onClick={pickCoop}
+                <button onClick={pickCoop} className="card-hover"
                   style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid var(--line)', borderRadius: 15, padding: '16px 17px', marginBottom: 12, cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '3px 9px', borderRadius: 12, background: '#EBEBF0', color: 'var(--txt)' }}>協力</span>
+                      <span className="chip chip-cooperation">協力</span>
                       <span style={{ fontSize: '.9rem', fontWeight: 900 }}>協力パートナー</span>
                     </div>
                     <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', color: 'var(--txt)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>

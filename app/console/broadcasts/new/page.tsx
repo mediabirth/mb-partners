@@ -59,7 +59,7 @@ export default function NewBroadcastPage() {
     border: '1px solid var(--line)', fontSize: '.82rem',
     fontFamily: 'inherit', outline: 'none',
   }
-  const fieldStyle = { marginBottom: 18 }
+  const fieldStyle = { marginBottom: 22 }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
@@ -76,11 +76,14 @@ export default function NewBroadcastPage() {
           <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.8rem', color: 'var(--muted2)' }}>
             ← 戻る
           </button>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>新規配信作成</h1>
+          <div>
+            <div className="eyebrow">配信</div>
+            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>新規配信作成</h1>
+          </div>
         </div>
 
-        <div style={{ padding: '28px', maxWidth: 640 }}>
-          <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '24px' }}>
+        <div className="page-anim" style={{ padding: '28px', maxWidth: 640 }}>
+          <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '28px' }}>
 
             {/* Kind */}
             <div style={fieldStyle}>
@@ -169,8 +172,9 @@ export default function NewBroadcastPage() {
             <button
               type="submit"
               disabled={pending}
+              className={pending ? '' : 'btn btn-p'}
               style={{
-                width: '100%', padding: '12px', borderRadius: 8,
+                width: '100%', padding: '13px', borderRadius: 10,
                 background: pending ? 'var(--muted)' : 'var(--blue)',
                 color: '#fff', fontWeight: 700, fontSize: '.85rem',
                 border: 'none', cursor: pending ? 'not-allowed' : 'pointer',

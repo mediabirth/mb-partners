@@ -5,12 +5,7 @@ import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 function CatChip({ cat }: { cat: 'referral' | 'cooperation' }) {
   const isRef = cat === 'referral'
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', fontSize: '.58rem', fontWeight: 700,
-      padding: '3px 8px', borderRadius: 12, whiteSpace: 'nowrap', flexShrink: 0,
-      background: isRef ? 'var(--blue-bg)' : '#EBEBF0',
-      color: isRef ? 'var(--blue)' : 'var(--txt)',
-    }}>
+    <span className={`chip ${isRef ? 'chip-referral' : 'chip-cooperation'}`} style={{ flexShrink: 0 }}>
       {isRef ? '紹介' : '協力'}
     </span>
   )

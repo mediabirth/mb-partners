@@ -1,0 +1,73 @@
+========================================================
+MB Partners — UI/UX 美化バッチB2（2修正 → ③ → ⑦全展開）ダンプ
+日時: 2026-06-14
+正本: 要件定義書 (Notion 37c1d8f5...) ＋ B1 デザイン言語
+種別: 見た目と動きのみ。データ/数値/ロジック不変。スキーマ変更なし。
+ビルド: npx next build → ✅ exit 0（parse/compile エラーなし）
+検証: ローカル認証スクショ ＋ 全15ページ(コンソール8/APP7) 200・サーバーエラーなし
+       ＋ アカウントフラッシュ無し（30ms間隔サンプリング）＋ reduced-motion 停止確認
+実装: 基盤(①②⑦土台)=メイン、③/⑦各ページ=サブエージェント6体並列(互いに素なファイル)
+========================================================
+
+■ ① ハイライトのスパークル削除（app/console/page.tsx）
+  ヒーロー右の sparkle SVG を撤去。グラデ・コピー・shine は維持。
+
+■ ② アカウントのフラッシュ解消（遷移時の黒"管理者"チラつき）
+  原因: ConsoleNav が各ページ再マウント時に /api/console/me を毎回フェッチ→解決前に旧値を描画。
+  対応:
+   - 新規 components/ConsoleSession.tsx: コンソールセッション(identity＋badges)を
+     module-levelキャッシュ＋Context で一度だけ解決・共有(inflight dedupe)。
+   - app/console/layout.tsx: 上記 Provider で children を包む（layoutは遷移で再マウントしない→1回解決）。
+   - components/ConsoleNav.tsx: 自前フェッチ撤去→useConsoleSession() 参照。
+     未解決時は .skeleton 表示（旧"管理者"(黒)プレースホルダは撤去）。badges も Context 共有。
+  確認: dashboard→案件→パートナー→支払→配信→問い合わせ→設定→dashboard を
+        クライアント遷移、30ms×8サンプル/遷移で常に "MB Admin / mediabirth.project@gmail.com"。
+        "管理者"/空/—/黒 のフラッシュは一度も検出されず。
+
+■ ③ 支払管理・配信・問い合わせ（B1デザイン言語）
+  ・支払管理(payouts): バッチを .card-hover カード化。合計→源泉→手取 を CountUp(yen)＋
+    緑(手取)/赤(源泉)の比率バーで可視化。状態 chip(支払済=緑/締め済=amber)＋status-dot。
+    パートナー別内訳は展開で .lift 行表示。CSV出力=.btn-g。数値・計算は不変。
+  ・配信(broadcasts): 空状態を誘導的に(アイコン＋コピー＋"+新規作成"CTA)。一覧は .card-hover/.lift＋
+    状態chip(配信済=緑/下書き=amber)。作成UI/プレビューの余白・ボタン整え。開封数=CountUp。
+  ・問い合わせ(inquiries): カード化。カテゴリ=システムカラーchip、状態chip＋dot、
+    未返信/未対応を amber左アクセント＋dot＋"未返信"chip で強調(SLA超過は赤＋.flash-highlight)。
+    最終更新を読みやすく。詳細スレッドは送信者別バブル＋定型文 .chip。実名は維持。
+
+■ ⑦ 全コンソール＋APP 一貫適用（B1デザイン言語）
+  コンソール:
+   ・案件(deals): チャネルchip(紹介/協力/直販)＋.lift カード、列カウント CountUp、余白。
+     ※ドラッグ&ドロップ(refs/handlers)は一切不変、視覚クラスのみ。
+   ・サービス・報酬(services/ServicesClient): .card-hover カード、紹介/協力 を共通chip化、
+     固定額 CountUp(yen)、ドロワー .cascade、余白。エディタのstate/handler/upload/APIは不変。
+   ・パートナー一覧/詳細(partners,[id],invite): サマリ/KPI CountUp、行 .lift、税区分/状態/チャネル chip。
+   ・設定(settings): SectionCard を .card-hover＋余白。管理者リスト/"あなた"/ログアウトは維持。
+  パートナーAPP(モバイル, 既存のページ遷移/ナビ演出は温存して軽量追加):
+   ・ホーム/報酬: ヒーロー数値・統計 CountUp(yen含む)、.lift カード。源泉/手取の数値は厳密維持。
+   ・案件(一覧/詳細): チャネル/状態 chip、.lift 行。
+   ・紹介(refer): 共有リンク/QRロジック不変、紹介/協力を共通chip化＋card-hover。
+   ・通知(inbox): .lift 行、未読強調(左ボーダー)、種別 chip。
+   ・マイページ/ガイド: chip化・余白(アコーディオン開閉ロジックは不変)。
+   ※ actions.ts/route.ts/サーバーは未編集。statement は Client 子コンポーネント外のため対象外。
+
+■ デザイン言語(B1で導入済・globals.cssは本バッチ未変更)
+  .lift / .chip(.chip-referral/.cooperation/.direct) / .card-hover / .feed-dot / .bar-grow /
+  .shine / .flash-highlight / .celebrate-pop / .stagger / .page-anim / .skeleton ＋ CountUp。
+  すべて transform/opacity 中心。@media(prefers-reduced-motion: reduce) の全停止ルールで自動無効化。
+
+■ 受け入れ確認
+  ・①スパークル消滅 ✅ / ②遷移フラッシュ消滅 ✅(サンプリング検証)
+  ・③3ページ 美麗化 ✅ / ⑦ 全コンソール＋APP 一貫適用 ✅
+  ・データ/数値/ロジック不変 ✅(新規クエリ・ハンドラ変更なし、源泉/手取等の数値は厳密維持)
+  ・スキーマ変更なし ✅(DB確認不要)
+  ・速度: 新規サーバーラウンドトリップ無し、重いJS無し → TTFB据え置き
+  ・reduced-motion: 演出停止・最終値即時表示 ✅(payouts等で確認)
+  ・全15ページ 200・サーバーエラーなし ✅ / build exit 0
+
+■ 主な変更ファイル
+  app/console/page.tsx(①), components/ConsoleSession.tsx(新規,②),
+  app/console/layout.tsx(②), components/ConsoleNav.tsx(②),
+  app/console/payouts/page.tsx(③), app/console/broadcasts/*(③×4),
+  app/console/inquiries/{page,[id]}(③),
+  app/console/deals/page.tsx, services/{page,ServicesClient}, partners/{page,[id],invite}, settings(⑦),
+  app/app/{page,cases,cases/[id],rewards,refer,inbox,mypage(MypageClient),guide/GuideAccordion}(⑦APP)
