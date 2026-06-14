@@ -32,7 +32,7 @@ export default function ChannelChart({
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14 }}>
+    <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14 }}>
       {/* Header */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <b style={{ fontSize: '.84rem' }}>チャネル別成約</b>
@@ -81,14 +81,14 @@ export default function ChannelChart({
       {/* Monthly bars */}
       <div style={{ padding: '8px 16px 16px' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 80 }}>
-          {monthlyData.map(m => {
+          {monthlyData.map((m, i) => {
             const colTotal = m.direct + m.referral + m.frontier
             const dirH = maxVal > 0 ? Math.round((m.direct   / maxVal) * 72) : 0
             const refH = maxVal > 0 ? Math.round((m.referral / maxVal) * 72) : 0
             const froH = maxVal > 0 ? Math.round((m.frontier / maxVal) * 72) : 0
             return (
               <div key={m.ym} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column-reverse', width: '100%', gap: 1 }}>
+                <div className="bar-grow" style={{ display: 'flex', flexDirection: 'column-reverse', width: '100%', gap: 1, animationDelay: `${i * 60}ms` }}>
                   {dirH > 0 && <div style={{ height: dirH, background: '#0E0E14', borderRadius: (refH + froH) > 0 ? '0 0 3px 3px' : '3px', width: '100%' }} />}
                   {refH > 0 && <div style={{ height: refH, background: '#4733E6', width: '100%' }} />}
                   {froH > 0 && <div style={{ height: froH, background: '#1E9E6A', borderRadius: '3px 3px 0 0', width: '100%' }} />}
