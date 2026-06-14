@@ -7,6 +7,8 @@ const NAV_STYLE = `
   .cnav-link { transition: color .18s, background .18s; }
   .cnav-link:hover:not(.cnav-active) { background: var(--bg2) !important; color: var(--txt) !important; }
   .cnav-active { background: var(--blue-bg2) !important; color: var(--blue) !important; font-weight: 700 !important; }
+  .cnav-acct { transition: background .18s; }
+  .cnav-acct:hover { background: var(--bg2) !important; }
 `
 
 const ITEMS = [
@@ -42,18 +44,29 @@ function NavIcon({ id }: { id: string }) {
   }
 }
 
-export default function ConsoleNav({ profileName, profileColor }: { profileName: string; profileColor: string }) {
+export default function ConsoleNav({ profileName, profileColor }: { profileName?: string; profileColor?: string } = {}) {
   const path = usePathname()
   const active = (href: string) =>
     href === '/console' ? path === '/console' : path.startsWith(href)
 
   const [badges, setBadges] = useState({ pendingPartners: 0, openInquiries: 0 })
+  // Current logged-in admin — single source of truth for the account display.
+  const [me, setMe] = useState<{ name: string; email: string; color: string } | null>(null)
   useEffect(() => {
     fetch('/api/console/badge-counts')
       .then(r => r.json())
       .then(d => setBadges({ pendingPartners: d.pendingPartners ?? 0, openInquiries: d.openInquiries ?? 0 }))
       .catch(() => {})
+    fetch('/api/console/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.name) setMe({ name: d.name, email: d.email ?? '', color: d.color ?? '#0E0E14' }) })
+      .catch(() => {})
   }, [])
+
+  // Prefer the live session account; fall back to props (SSR initial paint).
+  const acctName  = me?.name  ?? profileName  ?? ''
+  const acctColor = me?.color ?? profileColor ?? '#0E0E14'
+  const acctEmail = me?.email ?? ''
 
   return (
     <>
@@ -89,7 +102,7 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
             background: active(item.href) ? 'var(--blue-bg2)' : 'transparent',
             textDecoration: 'none', minHeight: 42,
           }}>
-          <NavIcon id={item.id} />
+          <NavIcon id={item.icon} />
           {item.label}
           {item.id === 'partners' && badges.pendingPartners > 0 && (
             <span style={{
@@ -114,14 +127,19 @@ export default function ConsoleNav({ profileName, profileColor }: { profileName:
         </Link>
       ))}
 
-      <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', fontSize: '.72rem', color: 'var(--muted2)' }}>
-          <span style={{ width: 24, height: 24, borderRadius: '50%', background: profileColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.6rem', fontWeight: 700, flexShrink: 0 }}>
-            {profileName[0]}
+      <Link href="/console/settings" className="cnav-acct" style={{ marginTop: 'auto', textDecoration: 'none', borderRadius: 9 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', fontSize: '.72rem', color: 'var(--muted2)', borderRadius: 9 }}>
+          <span style={{ width: 28, height: 28, borderRadius: '50%', background: acctColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.66rem', fontWeight: 700, flexShrink: 0 }}>
+            {acctName ? acctName[0] : ''}
           </span>
-          <span>{profileName}</span>
+          <span style={{ minWidth: 0, flex: 1 }}>
+            <span style={{ display: 'block', fontSize: '.74rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctName || '—'}</span>
+            {acctEmail && (
+              <span style={{ display: 'block', fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctEmail}</span>
+            )}
+          </span>
         </div>
-      </div>
+      </Link>
     </aside>
     </>
   )

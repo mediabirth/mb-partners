@@ -57,7 +57,7 @@ export default function BroadcastDetailPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav profileName="管理者" profileColor="#0E0E14" />
+      <ConsoleNav />
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}

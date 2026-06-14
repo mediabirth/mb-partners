@@ -1,0 +1,68 @@
+========================================================
+MB Partners — コンソールUI整合・修正バッチA ダンプ
+日時: 2026-06-14
+正本: 要件定義書 (Notion page 37c1d8f5-5d31-817a-a16d-f331ce914b32)
+種別: 表示/UIのみ・データ不変
+ビルド: npx next build → ✅ エラーなし
+ローカル認証スクショ検証: ✅ ①④⑤⑥ すべて確認済
+========================================================
+
+■ 変更ファイル一覧
+1. app/api/console/me/route.ts            (新規) — ログイン中の実プロフィール返却(読取専用)
+2. components/ConsoleNav.tsx              (④⑤) — アイコンID修正・左下を実アカウント化+設定リンク
+3. app/console/page.tsx                   (①)  — 右上「名前+ログアウト」クラスタ撤去
+4. app/console/settings/page.tsx          (①⑤⑥)— ADMIN_MOCK撤去・実アカウント+「あなた」・最下部ログアウト
+5. app/console/broadcasts/new/page.tsx    (⑤)  — ConsoleNav "管理者"プレースホルダ撤去
+6. app/console/broadcasts/[id]/page.tsx   (⑤)  — 同上
+7. app/console/broadcasts/[id]/preview/page.tsx (⑤) — 同上
+8. app/console/deals/page.tsx             (⑤)  — loading分岐の "管理者"プレースホルダ撤去
+
+========================================================
+■ ① ログアウト移動
+========================================================
+[BEFORE] ダッシュボード右上に <GlobalSearchClient/> + {profile.name} + <LogoutButton/>
+[AFTER]
+  - 右上クラスタから 名前span と LogoutButton を撤去 (検索のみ残す)
+  - app/console/page.tsx: LogoutButton import も削除
+  - 設定画面の一番下に <LogoutButton/> を中央配置 (監査ログカードの直後)
+  ※コンソールでLogoutButtonが置かれていたのはダッシュボードのみ。他ページは元から右上に無し。
+
+========================================================
+■ ④ サイドバーのアイコン (案件/パートナー)
+========================================================
+[根本原因] ConsoleNav の <NavIcon id={item.id} /> が item.id を渡していた。
+  NavIcon の switch は icon名 ('list'/'users') で分岐するが、
+  deals(id='deals', icon='list') と partners(id='partners', icon='users') は id≠icon のため
+  default→null となりアイコン未描画。他項目は偶然 id===icon のため描画されていた。
+[修正] <NavIcon id={item.id} /> → <NavIcon id={item.icon} />
+[検証] フレッシュビルドのローカル認証スクショで全8項目 svg=1 を確認(案件=リスト, パートナー=人物)。
+  ※当初疑った「Vercelビルドキャッシュ」ではなく実コードのバグだった(ローカル再現で確定)。
+
+========================================================
+■ ⑤ アカウント表示の整合 (サイドバー左下)
+========================================================
+[新規API] GET /api/console/me → セッションの profiles(id,name,email,color,role) を返却(読取専用)。
+[ConsoleNav]
+  - 自身で /api/console/me を取得し、左下を実アカウント表示に統一(全ページ共通)。
+  - 表示: アバター(color+頭文字) + 実名 + メール。
+  - 左下ブロックを <Link href="/console/settings"> 化(クリックで設定へ)。hover背景。
+  - props(profileName/profileColor)は任意化し、取得前のSSR初期描画フォールバックに格下げ。
+  - 純粋ハードコード "管理者" を渡していた4ページは <ConsoleNav /> に変更(プレースホルダ撤去)。
+    実プロフィールを渡していた他ページはそのまま(meが上書きするため不整合解消)。
+[結果] ダッシュボード/設定/全コンソールページで左下が「MB Admin / mediabirth.project@gmail.com」に統一。
+
+========================================================
+■ ⑥ 管理者管理の整合 (設定)
+========================================================
+[BEFORE] ADMIN_MOCK = [{name:'運営管理者', email:'admin@mb-partners.jp', role:'admin'}] のプレースホルダ。
+[AFTER]
+  - ADMIN_MOCK を撤去。/api/console/me から取得した実アカウントを一覧表示。
+  - ログイン中の自分の行に「あなた」チップ(青)を表示。
+  - ロールラベル: owner→オーナー / manager→マネージャー / staff→スタッフ / admin→管理者 / viewer→閲覧者。
+    owner/manager/admin は青バッジ、それ以外はグレー。
+  - 実アカウント: MB Admin / mediabirth.project@gmail.com / オーナー で表示確認。
+
+========================================================
+■ データ変更: なし (表示/UIのみ)
+   追加したのは読取専用GET API 1本のみ。DB・本番データへの書込なし。
+========================================================

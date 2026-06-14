@@ -118,7 +118,7 @@ export default function DealsPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav profileName="管理者" profileColor="#0E0E14" />
+      <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ color: 'var(--muted2)', fontSize: '.8rem' }}>読み込み中…</p>
       </div>

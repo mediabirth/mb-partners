@@ -1,10 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 import ConsoleNav from '@/components/ConsoleNav'
+import LogoutButton from '@/components/LogoutButton'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type PayCycle = 'monthly_end' | 'monthly_20' | 'bimonthly'
-type AdminUser = { id: string; name: string; email: string; role: 'admin' | 'viewer'; color: string }
+type AdminUser = { id: string; name: string; email: string; role: string; color: string }
 type AuditLog  = { id: string; actor_name: string; category: string; target: string; action: string; created_at: string }
 
 const AUDIT_CATEGORIES = ['', '案件', '支払', '配信', '権限', '問い合わせ'] as const
@@ -15,9 +16,11 @@ const PAY_CYCLE_LABELS: Record<PayCycle, string> = {
   bimonthly: '隔月末払い',
 }
 
-const ADMIN_MOCK: AdminUser[] = [
-  { id: '1', name: '運営管理者', email: 'admin@mb-partners.jp', role: 'admin', color: '#4733E6' },
-]
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'オーナー', manager: 'マネージャー', staff: 'スタッフ',
+  admin: '管理者', viewer: '閲覧者',
+}
+const PRIVILEGED_ROLES = ['owner', 'manager', 'admin']
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -69,13 +72,23 @@ export default function SettingsPage() {
   const [notifEmail, setNotifEmail]           = useState(true)
   const [notifSlack, setNotifSlack]           = useState(false)
   const [slackWebhook, setSlackWebhook]       = useState('')
-  const [admins]                              = useState<AdminUser[]>(ADMIN_MOCK)
+  const [me, setMe]                           = useState<AdminUser | null>(null)
   const [inviteEmail, setInviteEmail]         = useState('')
   const [inviteRole, setInviteRole]           = useState<'admin' | 'viewer'>('viewer')
   const [toast, setToast]                     = useState('')
   const [auditLogs, setAuditLogs]             = useState<AuditLog[]>([])
   const [auditCategory, setAuditCategory]     = useState('')
   const [auditLoading, setAuditLoading]       = useState(true)
+
+  // Current logged-in admin — replaces the old ADMIN_MOCK placeholder.
+  useEffect(() => {
+    fetch('/api/console/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.id) setMe({ id: d.id, name: d.name ?? '', email: d.email ?? '', role: d.role ?? '', color: d.color ?? '#4733E6' }) })
+      .catch(() => {})
+  }, [])
+
+  const admins: AdminUser[] = me ? [me] : []
 
   useEffect(() => {
     setAuditLoading(true)
@@ -120,7 +133,7 @@ export default function SettingsPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav profileName="管理者" profileColor="#0E0E14" />
+      <ConsoleNav />
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
@@ -151,18 +164,29 @@ export default function SettingsPage() {
           {/* 2. 管理者管理 */}
           <SectionCard title="管理者管理">
             <div style={{ marginBottom: 16 }}>
-              {admins.map((a, i) => (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < admins.length - 1 ? '1px solid #F2F2F6' : undefined }}>
-                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: a.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700 }}>{a.name[0]}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '.78rem', fontWeight: 700 }}>{a.name}</div>
-                    <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{a.email}</div>
+              {admins.length === 0 ? (
+                <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>読み込み中…</p>
+              ) : admins.map((a, i) => {
+                const privileged = PRIVILEGED_ROLES.includes(a.role)
+                const isMe = me?.id === a.id
+                return (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < admins.length - 1 ? '1px solid #F2F2F6' : undefined }}>
+                    <span style={{ width: 32, height: 32, borderRadius: '50%', background: a.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, flexShrink: 0 }}>{a.name ? a.name[0] : ''}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {a.name}
+                        {isMe && (
+                          <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, background: 'var(--blue-bg2)', color: 'var(--blue)' }}>あなた</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{a.email}</div>
+                    </div>
+                    <span style={{ fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: privileged ? 'var(--blue-bg)' : 'var(--bg2)', color: privileged ? 'var(--blue)' : 'var(--muted2)' }}>
+                      {ROLE_LABELS[a.role] ?? a.role}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: a.role === 'admin' ? 'var(--blue-bg)' : 'var(--bg2)', color: a.role === 'admin' ? 'var(--blue)' : 'var(--muted2)' }}>
-                    {a.role === 'admin' ? '管理者' : '閲覧者'}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <form onSubmit={inviteAdmin} style={{ display: 'flex', gap: 8 }}>
               <input
@@ -275,6 +299,11 @@ export default function SettingsPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* ログアウト（設定画面の一番下） */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 48px' }}>
+            <LogoutButton />
+          </div>
 
         </div>
       </div>

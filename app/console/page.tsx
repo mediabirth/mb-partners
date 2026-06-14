@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getAllDeals } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
-import LogoutButton from '@/components/LogoutButton'
 import ChannelChart from './ChannelChart'
 import GlobalSearchClient from './GlobalSearchClient'
 import ConsoleMain from '@/components/ConsolePageTransition'
@@ -72,8 +71,6 @@ export default async function ConsolePage() {
           <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>ダッシュボード</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <GlobalSearchClient />
-            <span style={{ fontSize: '.74rem', fontWeight: 700 }}>{profile?.name}</span>
-            <LogoutButton />
           </div>
         </div>
 
