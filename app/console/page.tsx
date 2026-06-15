@@ -5,15 +5,17 @@ import { getAllDeals } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
 import ChannelChart from './ChannelChart'
 import GlobalSearchClient from './GlobalSearchClient'
+import MonthSelector from './MonthSelector'
 import ConsoleMain from '@/components/ConsolePageTransition'
 import CountUp from '@/components/CountUp'
 
 export const runtime = 'edge'
 
-export default async function ConsolePage() {
+export default async function ConsolePage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/console/login')
+  const { m: mParam } = await searchParams
 
   const [profileRes, deals, recentEventsRes, activePartnersRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
@@ -31,11 +33,28 @@ export default async function ConsolePage() {
   const now = new Date()
   const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
+  // 月セレクタ用の選択肢 = 「データのある月」＋直近12か月（当月以前・降順）
+  const economicsDeals = deals.filter(d => d.status === 'confirmed' || d.status === 'paid')
+  const monthSet = new Set<string>([ym])
+  for (const d of economicsDeals) {
+    const k = d.fixed_month?.slice(0, 7)
+    if (k) monthSet.add(k)
+  }
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    monthSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  const monthOptions = [...monthSet].filter(m => m <= ym).sort().reverse()
+  // 選択月（既定=当月）。不正値は当月にフォールバック。
+  const selectedYm = mParam && monthOptions.includes(mParam) ? mParam : ym
+  const selMonthLabel = `${Number(selectedYm.slice(5, 7))}月`
+  const isCurrentMonth = selectedYm === ym
+
   const activePartners = activePartnersRes.count ?? 0
   const pending        = deals.filter(d => d.status === 'received').length
 
-  // ③ Operator economics for this month (confirmed + paid, attributed by fixed_month)
-  const monthScope   = deals.filter(d => d.fixed_month?.startsWith(ym) && (d.status === 'confirmed' || d.status === 'paid'))
+  // ③ Operator economics for the selected month (confirmed + paid, attributed by fixed_month)
+  const monthScope   = deals.filter(d => d.fixed_month?.startsWith(selectedYm) && (d.status === 'confirmed' || d.status === 'paid'))
   const coopScope    = monthScope.filter(d => d.channel === 'cooperation' || d.channel === 'frontier')
   const refScope     = monthScope.filter(d => d.channel === 'referral')
   const partnerCount = monthScope.filter(d => d.channel !== 'direct').length
@@ -77,7 +96,10 @@ export default async function ConsolePage() {
       <ConsoleMain>
         {/* Top bar */}
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>ダッシュボード</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>ダッシュボード</h1>
+            <MonthSelector months={monthOptions} selected={selectedYm} current={ym} />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <GlobalSearchClient />
           </div>
@@ -93,7 +115,7 @@ export default async function ConsolePage() {
             color: '#fff', overflow: 'hidden', boxShadow: '0 10px 30px rgba(71,51,230,.22)',
           }}>
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>今月の運営の取り分（協力）</div>
+              <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>{isCurrentMonth ? '今月' : selMonthLabel}の運営の取り分（協力）</div>
               <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.1rem', letterSpacing: '-.02em', marginTop: 6, lineHeight: 1.05 }}>
                 <span style={{ fontSize: '1.1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span>
                 <CountUp value={opMargin} />
@@ -103,7 +125,7 @@ export default async function ConsolePage() {
                 {referralPay > 0 && <> ／ 紹介手数料 <b className="tnum">¥{referralPay.toLocaleString()}</b>（コスト）</>}
               </div>
               <div style={{ fontSize: '.66rem', color: 'rgba(255,255,255,.78)', marginTop: 6 }}>
-                今月パートナー経由で {partnerCount} 件成約・協力で ¥{coopBase.toLocaleString()} の売上/粗利が発生しました。
+                {isCurrentMonth ? '今月' : selMonthLabel}パートナー経由で {partnerCount} 件成約・協力で ¥{coopBase.toLocaleString()} の売上/粗利が発生しました。
               </div>
             </div>
           </div>
