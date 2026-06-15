@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { sendInviteEmail } from '@/lib/email'
 
 export const runtime = 'edge'
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       name:       name?.trim() || null,
       created_by: user.id,
     })
-    .select('token')
+    .select('token, email, name, expires_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -45,7 +46,16 @@ export async function POST(req: NextRequest) {
     : new URL(req.url).origin
   const invite_url = `${origin}/invite/${invite.token}`
 
-  return NextResponse.json({ invite_url, token: invite.token }, { status: 201 })
+  // Send the branded invite email (no-op if RESEND_API_KEY is unset — the
+  // invite_url is still returned so it can be shared manually).
+  const mail = await sendInviteEmail({
+    to: invite.email,
+    name: invite.name,
+    url: invite_url,
+    expiresAt: invite.expires_at,
+  })
+
+  return NextResponse.json({ invite_url, token: invite.token, emailed: mail.sent }, { status: 201 })
 }
 
 export async function GET(req: NextRequest) {

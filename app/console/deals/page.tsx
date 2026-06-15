@@ -11,12 +11,28 @@ function channelChip(channel: string) {
 
 type Deal = {
   id: string; customer_name: string; channel: string; source: string
-  status: string; amount: number; created_at: string; service_id: string
-  services: { name: string; icon: string; color: string } | null
+  status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
+  reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string } | null
+  services: { name: string; icon: string; color: string; coop_rate?: number | null; coop_base?: string | null } | null
   partners: { code: string; profiles: { name: string; color: string } | null } | null
 }
 
 type Service = { id: string; name: string; icon: string; color: string }
+
+// ② Determine whether a deal's reward is %-based, and the base label/rate.
+function rateInfo(d: Deal): { isRate: boolean; rate: number | null; baseLabel: string } {
+  if (d.channel === 'cooperation') {
+    const r = d.services?.coop_rate ?? null
+    return { isRate: r != null, rate: r, baseLabel: d.services?.coop_base ?? '売上' }
+  }
+  if (d.reward_snapshot?.ref_type === 'rate') {
+    return { isRate: true, rate: Number(d.reward_snapshot.ref_value), baseLabel: d.reward_snapshot.ref_base ?? '売上' }
+  }
+  return { isRate: false, rate: null, baseLabel: '売上' }
+}
+function needsBase(d: Deal): boolean {
+  return rateInfo(d).isRate && (d.base_amount == null)
+}
 
 const COLS = [
   { key: 'received',    label: '受付',       accent: 'var(--amber)', accentBg: 'var(--amber-bg)' },
@@ -44,6 +60,9 @@ export default function DealsPage() {
   const [services, setServices]     = useState<Service[]>([])
   const dragItem = useRef<{ id: string; status: string } | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
+  // ② base-amount entry on confirming a rate-based deal
+  const [baseModal, setBaseModal] = useState<{ deal: Deal; rate: number; baseLabel: string } | null>(null)
+  const [baseInput, setBaseInput] = useState('')
 
   useEffect(() => {
     fetch('/api/console/deals').then(r => r.json()).then(d => {
@@ -66,16 +85,54 @@ export default function DealsPage() {
   }
 
   function updateStatus(deal: Deal, newStatus: Status) {
+    // ② Confirming a rate-based deal without a recorded base → ask for the actual amount first.
+    if (newStatus === 'confirmed' && needsBase(deal)) {
+      const ri = rateInfo(deal)
+      setBaseInput('')
+      setBaseModal({ deal, rate: ri.rate as number, baseLabel: ri.baseLabel })
+      return
+    }
     startTransition(async () => {
       const res = await fetch(`/api/console/deals/${deal.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
         setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: newStatus } : d))
         if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: newStatus } : d)
         showToast(`ステータスを「${COLS.find(c => c.key === newStatus)?.label}」に変更しました`)
+      } else if (data?.needsBase) {
+        // Fallback: server says base required (e.g. stale client data)
+        setBaseInput('')
+        setBaseModal({ deal, rate: Number(data.rate), baseLabel: data.baseLabel ?? '売上' })
+      } else {
+        showToast(data?.error ?? '更新に失敗しました')
+      }
+    })
+  }
+
+  function confirmWithBase() {
+    if (!baseModal) return
+    const base = Number(baseInput.replace(/[,，\s]/g, ''))
+    if (!base || Number.isNaN(base) || base <= 0) { showToast('実額を正しく入力してください'); return }
+    const { deal, rate } = baseModal
+    startTransition(async () => {
+      const res = await fetch(`/api/console/deals/${deal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'confirmed', base_amount: base }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        const computed = Math.round(base * rate / 100)
+        setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: 'confirmed', base_amount: base, amount: computed } : d))
+        if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: 'confirmed', base_amount: base, amount: computed } : d)
+        setBaseModal(null)
+        showToast(`成約確定：報酬 ¥${computed.toLocaleString()}`)
+      } else {
+        showToast(data?.error ?? '確定に失敗しました')
       }
     })
   }
@@ -132,7 +189,7 @@ export default function DealsPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
+      <ConsoleNav />
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
@@ -228,14 +285,16 @@ export default function DealsPage() {
                         </div>
                       </div>
 
-                      {/* Channel + amount */}
+                      {/* Channel + amount / base-needed hint */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <span className={channelChip(d.channel).cls}>{channelChip(d.channel).label}</span>
-                        {d.amount > 0 && (
+                        {needsBase(d) ? (
+                          <span className="chip" style={{ background: 'var(--amber-bg)', color: 'var(--amber)' }}>要・実額入力</span>
+                        ) : d.amount > 0 ? (
                           <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, color: 'var(--txt)', fontSize: '.72rem' }}>
                             ¥{d.amount.toLocaleString()}
                           </span>
-                        )}
+                        ) : null}
                       </div>
 
                       {/* Partner */}
@@ -309,6 +368,41 @@ export default function DealsPage() {
           </div>
         </>
       )}
+
+      {/* ② Base-amount entry modal (rate-based confirmation) */}
+      {baseModal && (() => {
+        const base = Number(baseInput.replace(/[,，\s]/g, ''))
+        const preview = base && !Number.isNaN(base) && base > 0 ? Math.round(base * baseModal.rate / 100) : null
+        return (
+          <>
+            <div onClick={() => setBaseModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
+            <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 380, maxWidth: '92vw', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+              <b style={{ fontSize: '.92rem', display: 'block' }}>成約確定 — 実額の入力</b>
+              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
+                {baseModal.deal.customer_name}（報酬 {baseModal.rate}% × {baseModal.baseLabel}）。{baseModal.baseLabel}の実額を入力してください。
+              </p>
+              <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', margin: '16px 0 6px' }}>{baseModal.baseLabel}（円）</label>
+              <input
+                autoFocus
+                inputMode="numeric"
+                value={baseInput}
+                onChange={e => setBaseInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') confirmWithBase() }}
+                placeholder="例: 300000"
+                style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'Inter', fontSize: '.9rem' }}
+              />
+              <div style={{ marginTop: 12, padding: '11px 14px', background: 'var(--blue-bg2)', borderRadius: 10, fontSize: '.74rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--muted2)' }}>確定報酬（{baseModal.rate}%）</span>
+                <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--blue)', fontSize: '.95rem' }}>{preview != null ? `¥${preview.toLocaleString()}` : '—'}</b>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
+                <button onClick={() => setBaseModal(null)} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+                <button onClick={confirmWithBase} disabled={pending || preview == null} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px' }}>成約確定する</button>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {toast && (
         <div style={{

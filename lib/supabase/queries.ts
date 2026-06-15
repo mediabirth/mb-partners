@@ -66,10 +66,10 @@ export async function getAllDeals(supabase: SupabaseClient) {
   const { data } = await supabase
     .from('deals')
     .select(`
-      id, customer_name, channel, source, status, amount,
+      id, customer_name, channel, source, status, amount, base_amount,
       fixed_month, consent, meeting_at, created_at, updated_at,
-      service_id, internal_memo,
-      services(id, name, subtitle, icon, color),
+      service_id, internal_memo, reward_snapshot,
+      services(id, name, subtitle, icon, color, coop_rate, coop_base),
       partners(id, code, profiles(name, color))
     `)
     .order('created_at', { ascending: false })
@@ -218,6 +218,9 @@ export type DealRow = {
 
 export type AdminDealRow = DealRow & {
   internal_memo: string | null
+  base_amount: number | null
+  reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; [k: string]: unknown } | null
+  services: { id: string; name: string; subtitle: string | null; icon: string; color: string; coop_rate: number | null; coop_base: string | null } | null
   partners: { id: string; code: string; profiles: { name: string; color: string } | null } | null
 }
 

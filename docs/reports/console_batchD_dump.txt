@@ -1,0 +1,59 @@
+========================================================
+MB Partners — コンソール修正バッチD（②売上根拠＋③運営ダッシュボード＋⑩認証メール）ダンプ
+日時: 2026-06-15
+正本: 要件定義書 (Notion 37c1d8f5...)。Batch C の後に実行。
+種別: データ/数値/ロジック原則不変（機能追加は②確定フロー・⑩メール）。
+スキーマ: deals.base_amount を本番に追加済（ALTER TABLE ... ADD COLUMN IF NOT EXISTS／オーナー実行）。
+ビルド: npx next build → ✅ exit 0。全ページ200。
+========================================================
+
+■ ② ％報酬の根拠（base_amount）
+  スキーマ: deals.base_amount numeric nullable（加算的）。本番に追加済。
+  デモbase投入: 鈴木不動産 amount150,000(50%粗利)→base300,000 / 高橋家具 amount75,000→base150,000。
+  確定フロー（server: app/api/console/deals/[id] PATCH）:
+   - 率ベース判定: channel='cooperation'(services.coop_rate/coop_base) または reward_snapshot.ref_type='rate'。
+   - status→confirmed かつ 率ベース かつ base未指定 → 400 {needsBase, baseLabel, rate}。
+   - base指定時: 確定報酬 = round(base × rate/100) を amount に保存、base_amount 保存、
+     reward_snapshot に {base_amount, base_label, rate, computed} を保存。
+   - 固定額(紹介fixed)は従来どおり base不要。
+  ボードUI（app/console/deals/page.tsx）:
+   - 率案件で base未入力 → カードに「要・実額入力」(amber)バッジ。
+   - 成約・確定へ移動(D&D/詳細ボタン)時、base未入力なら実額入力モーダル（ラベル=粗利/売上/利益/受取収入、
+     確定報酬プレビュー）。確定で PATCH→amount再計算。D&D/ステータスロジックは温存。
+  E2E検証: 高橋でbadge→モーダル(50%×粗利)→150,000入力→プレビュー¥75,000→確定で
+   DB: status=confirmed, amount=75,000, base_amount=150,000, reward_snapshot={rate:50,computed:75000,base_label:粗利} ✓
+  合計整合: payouts/報酬は amount を集計。率案件の amount は base×率 で実額化されるため合計は正しい。
+   既存協力(鈴木150k/高橋75k)も実額。getAllDeals に base_amount/reward_snapshot/coop_rate/coop_base を追加。
+
+■ ③ ダッシュボードを運営目線に（console/page.tsx）
+  - "確定報酬🎉"を廃止し運営経済に再構成（CountUp等の高揚モーションは維持）。
+  - ヘッダー(最大): 今月の運営の取り分（協力）= coopBase − coopPay。
+  - KPI: パートナー経由成約(件) / 協力経由の発生(売上/粗利)=coopBase[緑+] /
+    協力パートナー支払(コスト)=coopPay[中立] / 紹介手数料(コスト)=referralPay[中立]。
+  - 紹介(固定手数料)は実売上を持たないため「紹介手数料(コスト)」扱い。協力の取り分＋紹介手数料コストで構成。
+  - リアルDB値＋②base使用。今月(2026-06)は協力確定が無い(鈴木は2026-05確定/高橋はin_progress)ため
+    coop取り分=¥0・紹介手数料¥30,000(6月確定の紹介案件)。※5月ビューでは鈴木の取り分¥150,000が計上される。
+    数値は実データに忠実（fixed_month基準・改変なし）。
+
+■ ⑩ パートナー認証メールのブランド化
+  現状方式（確認結果）: メール送信は一切無し。招待は invites レコード作成→invite_url(/invite/{token})を
+   手動共有。パートナーは /invite/{token} で氏名+パスワード設定(admin.createUser)。ログインはemail+password。
+   ＝Supabase Auth既定SMTPも独自送信も未使用（"認証メール"自体が存在しない）。
+  実装: lib/email.ts sendInviteEmail()（Resend HTTP API・edge互換・例外握り潰し・RESEND_API_KEY未設定ならno-op）。
+   送信元「MB Partners <noreply@mb-partners.app>」。本文テンプレ反映：
+   件名【MB Partners】アカウント登録のご案内／{パートナー名}／パスワード設定リンク{設定リンク}／有効期限{有効期限}／
+   お問い合わせ(support@mb-partners.app)。HTML+text。
+   POST /api/console/invites で招待作成後に送信（invite_url は従来どおり返却＝未設定でも手動共有可、emailed フラグ返却）。
+  ⚠ 有効化に必要な作業（報告・設定可否は別途判断）:
+   1) Resend(等)アカウント＋送信ドメイン mb-partners.app のドメイン認証（SPF TXT / DKIM CNAME / DMARC）。
+   2) Vercel本番環境変数 RESEND_API_KEY 追加。
+   ※未設定でもデプロイ無害（no-op）。設定後に自動でブランドメール送信開始。
+
+■ 環境変数(任意・未設定でも無害)
+  - RESEND_API_KEY（⑩有効化）／ SLACK_WEBHOOK_URL（Batch C ⑥有効化）。いずれも本番env追加で有効化。
+
+■ 受け入れ
+  ② base で率報酬が実額確定・合計正しい ✓(E2E) / ③ 運営目線(利益ヘッダー＋支払コスト) ✓ /
+  ⑩ 送信元・本文MB Partners実装＋現状方式と必要設定を報告 ✓ /
+  スキーマは本番実体確認後 ADD COLUMN IF NOT EXISTS（適用済）/ build exit0・全ページ200 /
+  データ/数値/ロジック不変（②確定フロー・⑩メールの機能追加を除く）。

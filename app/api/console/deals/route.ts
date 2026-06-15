@@ -54,9 +54,9 @@ export async function GET() {
   const { data: deals } = await supabase
     .from('deals')
     .select(`
-      id, customer_name, channel, source, status, amount,
-      fixed_month, created_at, service_id,
-      services(name, icon, color),
+      id, customer_name, channel, source, status, amount, base_amount,
+      fixed_month, created_at, service_id, reward_snapshot,
+      services(name, icon, color, coop_rate, coop_base),
       partners(code, profiles(name, color))
     `)
     .order('created_at', { ascending: false })

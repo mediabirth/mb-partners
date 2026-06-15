@@ -31,10 +31,18 @@ export default async function ConsolePage() {
   const now = new Date()
   const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  const monthDeals     = deals.filter(d => d.fixed_month?.startsWith(ym) && d.status === 'confirmed')
-  const monthGross     = monthDeals.reduce((s, d) => s + d.amount, 0)
   const activePartners = activePartnersRes.count ?? 0
   const pending        = deals.filter(d => d.status === 'received').length
+
+  // ③ Operator economics for this month (confirmed + paid, attributed by fixed_month)
+  const monthScope   = deals.filter(d => d.fixed_month?.startsWith(ym) && (d.status === 'confirmed' || d.status === 'paid'))
+  const coopScope    = monthScope.filter(d => d.channel === 'cooperation' || d.channel === 'frontier')
+  const refScope     = monthScope.filter(d => d.channel === 'referral')
+  const partnerCount = monthScope.filter(d => d.channel !== 'direct').length
+  const coopBase     = coopScope.reduce((s, d) => s + (d.base_amount ?? 0), 0) // 協力の売上/粗利 発生
+  const coopPay      = coopScope.reduce((s, d) => s + d.amount, 0)             // 協力のパートナー支払(コスト)
+  const referralPay  = refScope.reduce((s, d) => s + d.amount, 0)             // 紹介手数料(コスト)
+  const opMargin     = coopBase - coopPay                                      // 運営の取り分(協力)
 
   // Channel mix for chart (3ch: 直販 / リファラル / フロンティア)
   const directTotal   = deals.filter(d => d.channel === 'direct').length
@@ -64,7 +72,7 @@ export default async function ConsolePage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
+      <ConsoleNav />
 
       <ConsoleMain>
         {/* Top bar */}
@@ -78,34 +86,34 @@ export default async function ConsolePage() {
         {/* Content */}
         <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
 
-          {/* 今月のハイライト — hero */}
+          {/* 今月の運営サマリー — hero (operator: profit headline, payments shown as cost) */}
           <div className="page-anim shine card-hover" style={{
-            position: 'relative', borderRadius: 16, padding: '20px 24px', marginBottom: 20,
+            position: 'relative', borderRadius: 16, padding: '22px 26px', marginBottom: 20,
             background: 'linear-gradient(120deg, var(--blue) 0%, var(--blue-dk) 100%)',
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 16, overflow: 'hidden', boxShadow: '0 10px 30px rgba(71,51,230,.22)',
+            color: '#fff', overflow: 'hidden', boxShadow: '0 10px 30px rgba(71,51,230,.22)',
           }}>
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>今月のハイライト</div>
-              <div style={{ fontSize: '1.18rem', fontWeight: 800, marginTop: 7, letterSpacing: '-.01em', lineHeight: 1.45 }}>
-                {monthDeals.length > 0 ? (
-                  <>今月は <span className="tnum">{monthDeals.length}</span> 件成約・<span className="tnum">¥{monthGross.toLocaleString()}</span> 確定 🎉</>
-                ) : (
-                  <>今月の成約はこれから。紹介・協力で動かしていきましょう</>
-                )}
+              <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>今月の運営の取り分（協力）</div>
+              <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.1rem', letterSpacing: '-.02em', marginTop: 6, lineHeight: 1.05 }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span>
+                <CountUp value={opMargin} />
               </div>
-              <div style={{ fontSize: '.66rem', color: 'rgba(255,255,255,.8)', marginTop: 7 }}>
-                稼働パートナー {activePartners}名 · 進行中の案件 {deals.length}件
+              <div style={{ fontSize: '.7rem', color: 'rgba(255,255,255,.85)', marginTop: 10, lineHeight: 1.7 }}>
+                協力の売上/粗利 <b className="tnum">¥{coopBase.toLocaleString()}</b> − パートナー支払 <b className="tnum">¥{coopPay.toLocaleString()}</b>（コスト）
+                {referralPay > 0 && <> ／ 紹介手数料 <b className="tnum">¥{referralPay.toLocaleString()}</b>（コスト）</>}
+              </div>
+              <div style={{ fontSize: '.66rem', color: 'rgba(255,255,255,.78)', marginTop: 6 }}>
+                今月パートナー経由で {partnerCount} 件成約・協力で ¥{coopBase.toLocaleString()} の売上/粗利が発生しました。
               </div>
             </div>
           </div>
 
-          {/* KPIs */}
+          {/* KPIs — operator view (revenue positive, payments neutral cost) */}
           <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
-            <KpiCard label="今月の成約(確定)" value={monthDeals.length} suffix="件" icon="deal" accent="var(--blue)" />
-            <KpiCard label="今月の確定報酬" value={monthGross} format="yen" icon="yen" accent="var(--green)" />
-            <KpiCard label="稼働パートナー" value={activePartners} suffix="名" icon="users" accent="var(--blue)" />
-            <KpiCard label="要対応(受付中)" value={pending} suffix="件" icon="alert" accent="var(--amber)" alert={pending > 0} />
+            <KpiCard label="パートナー経由 成約" value={partnerCount} suffix="件" icon="deal" accent="var(--blue)" />
+            <KpiCard label="協力経由の発生（売上/粗利）" value={coopBase} format="yen" icon="yen" accent="var(--green)" />
+            <KpiCard label="協力パートナー支払（コスト）" value={coopPay} format="yen" icon="cost" accent="var(--muted2)" />
+            <KpiCard label="紹介手数料（コスト）" value={referralPay} format="yen" icon="cost" accent="var(--muted2)" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18, marginBottom: 18 }}>
@@ -240,6 +248,7 @@ function KpiIcon({ id }: { id: string }) {
     case 'yen':   return <svg {...p}><path d="M12 4l-4 7h8l-4-7zM12 11v9M8 14h8M8 17h8" /></svg>
     case 'users': return <svg {...p}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
     case 'alert': return <svg {...p}><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" /></svg>
+    case 'cost':  return <svg {...p}><path d="M12 2v20M17 7H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
     default:      return null
   }
 }
@@ -250,6 +259,7 @@ function KpiCard({ label, value, suffix, format, icon, accent, alert }: {
 }) {
   const TINT: Record<string, string> = {
     'var(--blue)': 'var(--blue-bg)', 'var(--green)': 'var(--green-bg)', 'var(--amber)': 'var(--amber-bg)',
+    'var(--muted2)': 'var(--bg2)',
   }
   const numColor = alert ? 'var(--red)' : 'var(--txt)'
   const badgeColor = alert ? 'var(--red)' : accent

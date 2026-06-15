@@ -16,16 +16,45 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { status } = body
+  const { status, base_amount } = body
 
   const valid = ['received', 'in_progress', 'confirmed', 'paid']
   if (!valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
+  // ② % reward needs a real-amount base. Determine if this deal is rate-based.
+  const { data: ctx } = await supabase
+    .from('deals')
+    .select('channel, amount, base_amount, reward_snapshot, services(coop_rate, coop_base)')
+    .eq('id', id)
+    .single()
+
+  const svc = (ctx?.services ?? null) as { coop_rate: number | null; coop_base: string | null } | null
+  const snap = (ctx?.reward_snapshot ?? null) as { ref_type?: string; ref_value?: number; ref_base?: string } | null
+  let rate: number | null = null
+  let baseLabel = '売上'
+  if (ctx?.channel === 'cooperation') { rate = svc?.coop_rate ?? null; baseLabel = svc?.coop_base ?? '売上' }
+  else if (snap?.ref_type === 'rate') { rate = Number(snap.ref_value); baseLabel = snap.ref_base ?? '売上' }
+  const isRate = rate != null && !Number.isNaN(rate)
+
+  const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+
+  // On 成約確定 of a rate-based deal, require/compute the actual reward = base × rate.
+  if (status === 'confirmed' && isRate) {
+    const base = base_amount != null ? Number(base_amount) : (ctx?.base_amount ?? null)
+    if (base == null || Number.isNaN(base) || base <= 0) {
+      return NextResponse.json({ error: 'base_amount required', needsBase: true, baseLabel, rate }, { status: 400 })
+    }
+    const computed = Math.round(base * (rate as number) / 100)
+    update.base_amount = base
+    update.amount = computed
+    update.reward_snapshot = { ...(snap ?? {}), base_amount: base, base_label: baseLabel, rate, computed }
+  }
+
   const { data: deal, error } = await supabase
     .from('deals')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(update)
     .eq('id', id)
-    .select('id, customer_name, status')
+    .select('id, customer_name, status, amount, base_amount')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
