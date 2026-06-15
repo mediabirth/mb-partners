@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, Zen_Kaku_Gothic_New } from 'next/font/google'
 import './globals.css'
 
@@ -19,6 +19,10 @@ const zenKaku = Zen_Kaku_Gothic_New({
 export const metadata: Metadata = {
   title: 'MB Partners',
   description: 'Media Birth Partner Program',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#4733E6',
 }
 
 export default function RootLayout({

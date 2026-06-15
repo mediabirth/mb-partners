@@ -4,6 +4,8 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import StatementClient from './StatementClient'
 
+export const runtime = 'edge'
+
 export default async function StatementPage() {
   const user = await getCachedUser()
   if (!user) redirect('/login')

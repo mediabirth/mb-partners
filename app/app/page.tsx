@@ -9,6 +9,8 @@ const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
 }
 
+export const runtime = 'edge'
+
 export default async function AppPage() {
   const user = await getCachedUser()
   if (!user) redirect('/login')

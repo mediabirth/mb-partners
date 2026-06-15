@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { notifySlack } from '@/lib/slack'
 
 export const runtime = 'edge'
+
+const STATUS_LABEL: Record<string, string> = { received: '受付', in_progress: '対応中', confirmed: '成約確定', paid: '支払済' }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -30,10 +33,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Audit log
   await supabase.from('deal_events').insert({
     deal_id: id,
-    body: `ステータスを「${{ received: '受付', in_progress: '対応中', confirmed: '成約確定', paid: '支払済' }[status as string]}」に変更しました`,
+    body: `ステータスを「${STATUS_LABEL[status as string]}」に変更しました`,
     created_by: user.id,
     visible_to_partner: ['confirmed', 'paid'].includes(status),
   })
+
+  await notifySlack(`📋 案件ステータス変更: ${deal?.customer_name ?? id} → ${STATUS_LABEL[status as string]}`)
 
   return NextResponse.json({ deal })
 }

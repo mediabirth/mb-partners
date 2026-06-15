@@ -4,17 +4,10 @@ import ConsoleNav from '@/components/ConsoleNav'
 import LogoutButton from '@/components/LogoutButton'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type PayCycle = 'monthly_end' | 'monthly_20' | 'bimonthly'
 type AdminUser = { id: string; name: string; email: string; role: string; color: string }
 type AuditLog  = { id: string; actor_name: string; category: string; target: string; action: string; created_at: string }
 
 const AUDIT_CATEGORIES = ['', '案件', '支払', '配信', '権限', '問い合わせ'] as const
-
-const PAY_CYCLE_LABELS: Record<PayCycle, string> = {
-  monthly_end: '月末締め翌月末払い',
-  monthly_20: '月末締め翌月20日払い',
-  bimonthly: '隔月末払い',
-}
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'オーナー', manager: 'マネージャー', staff: 'スタッフ',
@@ -66,7 +59,6 @@ function RowItem({ label, desc, children }: { label: string; desc?: string; chil
 }
 
 export default function SettingsPage() {
-  const [payCycle, setPayCycle]               = useState<PayCycle>('monthly_end')
   const [calEnabled, setCalEnabled]           = useState(false)
   const [calUrl, setCalUrl]                   = useState('')
   const [notifEmail, setNotifEmail]           = useState(true)
@@ -121,7 +113,6 @@ export default function SettingsPage() {
     setTimeout(() => setToast(''), 2200)
   }
 
-  function savePayCycle() { showToast('支払サイクルを保存しました') }
   function saveCal() { showToast(calEnabled ? 'カレンダー連携を保存しました' : 'カレンダー連携を無効にしました') }
   function saveNotif() { showToast('通知設定を保存しました') }
   function inviteAdmin(e: React.FormEvent) {
@@ -143,25 +134,9 @@ export default function SettingsPage() {
 
         <div className="stagger" style={{ padding: '30px 28px', maxWidth: 720 }}>
 
-          {/* 1. 支払サイクル */}
-          <SectionCard title="支払サイクル">
-            <p style={{ fontSize: '.72rem', color: 'var(--muted2)', marginBottom: 14, lineHeight: 1.6 }}>
-              パートナーへの報酬支払いサイクルを設定します。変更は翌月分から適用されます。
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-              {(Object.keys(PAY_CYCLE_LABELS) as PayCycle[]).map(k => (
-                <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 14px', borderRadius: 9, border: `1.5px solid ${payCycle === k ? 'var(--blue)' : 'var(--line)'}`, background: payCycle === k ? 'var(--blue-bg2)' : '#fff' }}>
-                  <input type="radio" name="payCycle" checked={payCycle === k} onChange={() => setPayCycle(k)} style={{ accentColor: 'var(--blue)' }} />
-                  <div>
-                    <div style={{ fontSize: '.78rem', fontWeight: payCycle === k ? 700 : 500, color: payCycle === k ? 'var(--blue)' : 'var(--txt)' }}>{PAY_CYCLE_LABELS[k]}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-            <button onClick={savePayCycle} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px' }}>保存する</button>
-          </SectionCard>
+          {/* 支払サイクルは「月末締め翌月末払い」固定（UIは撤去） */}
 
-          {/* 2. 管理者管理 */}
+          {/* 管理者管理 */}
           <SectionCard title="管理者管理">
             <div style={{ marginBottom: 16 }}>
               {admins.length === 0 ? (

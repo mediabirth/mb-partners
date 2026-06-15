@@ -1,7 +1,6 @@
 'use client'
 import { useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -622,7 +621,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     )}
                     <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.88rem', color: 'var(--blue)', flexShrink: 0 }}>
                       {menu.ref_type === 'fixed'
-                        ? <CountUp value={Number(menu.ref_value)} format="yen" />
+                        ? `¥${Number(menu.ref_value).toLocaleString()}`
                         : `${menu.ref_value}%${menu.ref_base ? ` (${menu.ref_base})` : ''}`}
                     </span>
                   </div>

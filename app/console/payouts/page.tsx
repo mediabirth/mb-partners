@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState, useTransition } from 'react'
 import ConsoleNav from '@/components/ConsoleNav'
-import CountUp from '@/components/CountUp'
 
 type PayoutItem = {
   partner_id: string
@@ -43,7 +42,6 @@ function statusBadge(status: string) {
 
 export default function PayoutsPage() {
   const [batches, setBatches]   = useState<Batch[]>([])
-  const [profile, setProfile]   = useState<{ name: string; color: string } | null>(null)
   const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [toast, setToast]       = useState('')
@@ -55,13 +53,12 @@ export default function PayoutsPage() {
   }
 
   useEffect(() => {
+    // Only the payout batches are needed here; the account display comes from the
+    // shared ConsoleSession provider, so we avoid the heavy /api/console/deals call.
     fetch('/api/console/payouts')
       .then(r => r.json())
       .then(d => { setBatches(d.batches ?? []) })
       .finally(() => setLoading(false))
-    fetch('/api/console/deals')
-      .then(r => r.json())
-      .then(d => setProfile(d.profile))
   }, [])
 
   function markPaid(month: string) {
@@ -89,7 +86,7 @@ export default function PayoutsPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
+      <ConsoleNav />
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
@@ -136,21 +133,21 @@ export default function PayoutsPage() {
                       <div>
                         <div className="eyebrow" style={{ fontSize: '.56rem', color: 'var(--muted2)', letterSpacing: '.04em' }}>合計</div>
                         <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter' }}>
-                          <CountUp value={gross} format="yen" />
+                          ¥{gross.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: '.75rem' }}>−</div>
                       <div>
                         <div className="eyebrow" style={{ fontSize: '.56rem', color: 'var(--muted2)', letterSpacing: '.04em' }}>源泉</div>
                         <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--red)' }}>
-                          <CountUp value={wh} format="yen" />
+                          ¥{wh.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: '.75rem' }}>=</div>
                       <div>
                         <div className="eyebrow" style={{ fontSize: '.56rem', color: 'var(--muted2)', letterSpacing: '.04em' }}>手取</div>
                         <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--green)' }}>
-                          <CountUp value={net} format="yen" />
+                          ¥{net.toLocaleString()}
                         </div>
                       </div>
                     </div>

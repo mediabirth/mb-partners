@@ -3,6 +3,8 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId } from '@/lib/supabase/queries'
 import MypageClient from './MypageClient'
 
+export const runtime = 'edge'
+
 export default async function MypagePage() {
   const user = await getCachedUser()
   if (!user) redirect('/login')

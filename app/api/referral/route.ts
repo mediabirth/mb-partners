@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
+import { notifySlack } from '@/lib/slack'
 
 export const runtime = 'edge'
 
@@ -94,6 +95,8 @@ export async function POST(req: NextRequest) {
         { type: 'deal', id: deal.id },
       )
     }
+
+    await notifySlack(`🆕 新規案件（紹介）: ${customerName} — ${service?.name ?? link.service_id}（${partner?.code ?? ''}）`)
 
     // Audit log
     await supabase.from('audit_logs').insert({

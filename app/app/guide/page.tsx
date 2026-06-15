@@ -5,6 +5,8 @@ import { getServicesWithMenus } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 import GuideAccordion from './GuideAccordion'
 
+export const runtime = 'edge'
+
 export default async function GuidePage() {
   const user = await getCachedUser()
   if (!user) redirect('/login')

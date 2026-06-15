@@ -1,0 +1,70 @@
+========================================================
+MB Partners — コンソール修正バッチC（①④⑤⑥⑦⑧⑨）ダンプ
+日時: 2026-06-15
+正本: 要件定義書 (Notion 37c1d8f5...) ＋ B1/B2 デザイン言語
+種別: データ/数値/ロジック原則不変（機能追加は⑥のみ）。スキーマ変更なし。
+ビルド: npx next build → ✅ exit 0
+検証: ローカル認証スクショ＋全対象ページ200・エラーなし。①はprodでbefore/after計測予定。
+========================================================
+
+■ ①【perf】APP報酬の異常な遅さ（8秒）
+  原因特定（prod実測）: /app/rewards の初回 = 11,338ms（cold start）、warm ~650ms。
+   → Node サーバーレスの cold start が主因（重いクエリ/N+1ではない。rewardsは getPartnerWithDeals の
+     単一埋め込みクエリ。payouts API は既に edge＋単一クエリ）。
+  対応:
+   - サーバーComponent の APP ページ7本を edge 化（cold start ほぼ0）:
+     app/page, cases, cases/[id], rewards, rewards/statement, mypage, guide に
+     `export const runtime = 'edge'` 追加（dashboard と同じ edge 互換パターン）。
+   - 支払管理ページ: 不要だった /api/console/deals（全件取得・重い）フェッチを撤去
+     （profile プロップは ConsoleSession 共有で不要に）。payout バッチ取得のみに。
+  → prodデプロイ後に rewards TTFB を再計測して before/after 報告。
+
+■ ④ モーション削除（サービス・報酬 と 支払管理 の数字）
+  - 支払管理: 合計/源泉/手取 の <CountUp> を撤去し ¥即時表示（CountUp import も削除）。
+  - サービス・報酬(ServicesClient): 固定額の <CountUp> を ¥即時表示に（import削除）。
+  - ダッシュボード/APP報酬ヒーロー等の高揚モーションは維持（指定どおり対象2ページのみ）。
+
+■ ⑤ 支払サイクル
+  - 設定から「支払サイクル」セクションUIを撤去（type/labels/state/保存関数も削除）。
+  - 裏側: 支払サイクルを消費するロジックは元々存在せず（UIモックのみ）。実バッチは月末締め
+    （fixed_month 基準）で動作 → 実質「月末締め翌月末払い」固定。変更不可・非表示。
+
+■ ⑥【機能】Slack通知 — 実体確認＋実装
+  実体確認: Slack は完全モックだった（settings の Webhook 入力＋トグルは showToast のみ。
+   送信コード・SLACK 環境変数・なし）。
+  実装: lib/slack.ts に notifySlack(text) を新設（edge互換 fetch・例外を握り潰し本処理を壊さない・
+   SLACK_WEBHOOK_URL 未設定なら no-op）。以下5箇所に実送信を配線:
+   1) 新規案件（紹介）  app/api/referral/route.ts
+   2) 新規案件（紹介/協力・パートナー登録） app/app/refer/actions.ts
+   3) 新規案件（手動）  app/api/console/deals/route.ts
+   4) ステータス変更    app/api/console/deals/[id]/route.ts
+   5) 支払完了          app/api/console/payouts/[month]/route.ts
+  ⚠ 有効化に必要な作業（報告）:
+   - Vercel 本番環境変数に SLACK_WEBHOOK_URL（Incoming Webhook URL）を追加すれば即送信開始。
+     ＝本番環境変数変更につき、こちらでは設定せず承認/実施をお願いする。未設定でも安全（no-op）。
+   - settings 画面の Webhook 入力欄は現状「保存されない（cosmetic）」。UIからURLを永続化して
+     使う構成にするには settings テーブル（スキーマ追加）が必要 → 任意の次段作業として報告。
+
+■ ⑦ 案件ボードUI（deals/page.tsx・サブエージェント実施）
+  - 4列（受付/対応中/成約・確定/支払済）に状態アクセント（上部カラーボーダー＋ドット）＋件数バッジ＋
+    フロー矢印(→)。カードは サービス(アイコン/名)・パートナー・金額(¥即時)・チャネルchip を一目表示。
+    .card-hover/.lift・余白。D&D・ステータス更新ロジックは完全温存。
+
+■ ⑧ 手動登録の削除（deals/page.tsx）
+  - 「＋手動登録」ボタン・AddDealDrawer（フォーム/POST /api/console/deals 呼び出し）・専用 state を撤去。
+    フィルタ等の共有stateは維持。/api/console/deals POST ルートは残置（UI導線のみ撤去）。
+
+■ ⑨ ファビコン / PWAアイコン
+  - app/icon.svg（4分割マーク・SVGファビコン）。
+  - app/apple-icon.png（180, 白地）。
+  - public/icon-192.png, icon-512.png, icon-maskable.png（512, 白地/セーフゾーン）, favicon-32/16.png。
+    ※ロゴSVGを Playwright でラスタライズ生成。
+  - app/manifest.ts（name/short_name/standalone/theme #4733E6/icons 各サイズ＋maskable）。
+  - layout.tsx に viewport.themeColor=#4733E6。/icon.svg・/manifest.webmanifest・/apple-icon.png・
+    /icon-192.png はいずれも 200。
+
+■ 受け入れ
+  - ④⑤⑦⑧⑨: ローカルスクショ確認済（手動登録消滅・サイクル撤去・ボード改善・アイコン200）。
+  - ①: prod で before(11.3s)→after を計測予定。
+  - ⑥: 実装済・配線済。SLACK_WEBHOOK_URL 設定で有効化（要・本番環境変数承認）。
+  - データ/数値/ロジック不変（⑥除く）・スキーマ変更なし・build exit 0・対象ページ200。

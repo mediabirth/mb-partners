@@ -12,6 +12,8 @@ const STATUS_STEP: Record<string, number> = {
 }
 const RAIL_STEPS = ['受付', '対応中', '成約・確定', '支払済']
 
+export const runtime = 'edge'
+
 export default async function CaseDetailPage({
   params,
 }: {

@@ -2,7 +2,6 @@
 import { useEffect, useState, useTransition, useRef } from 'react'
 import ServiceIcon from '@/components/ServiceIcon'
 import ConsoleNav from '@/components/ConsoleNav'
-import CountUp from '@/components/CountUp'
 
 function channelChip(channel: string) {
   if (channel === 'referral') return { cls: 'chip chip-referral', label: '紹介' }
@@ -20,10 +19,10 @@ type Deal = {
 type Service = { id: string; name: string; icon: string; color: string }
 
 const COLS = [
-  { key: 'received',    label: '受付' },
-  { key: 'in_progress', label: '対応中' },
-  { key: 'confirmed',   label: '成約・確定' },
-  { key: 'paid',        label: '支払済' },
+  { key: 'received',    label: '受付',       accent: 'var(--amber)', accentBg: 'var(--amber-bg)' },
+  { key: 'in_progress', label: '対応中',     accent: 'var(--blue)',  accentBg: 'var(--blue-bg)' },
+  { key: 'confirmed',   label: '成約・確定', accent: 'var(--green)', accentBg: 'var(--green-bg)' },
+  { key: 'paid',        label: '支払済',     accent: 'var(--muted2)', accentBg: 'var(--bg2)' },
 ] as const
 
 type Status = typeof COLS[number]['key']
@@ -42,7 +41,6 @@ export default function DealsPage() {
   const [pending, startTransition]  = useTransition()
   const [toast, setToast]           = useState('')
   const [filterSvc, setFilterSvc]   = useState('all')
-  const [showAddDeal, setShowAddDeal] = useState(false)
   const [services, setServices]     = useState<Service[]>([])
   const dragItem = useRef<{ id: string; status: string } | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
@@ -139,7 +137,10 @@ export default function DealsPage() {
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, flex: 1 }}>案件ボード</h1>
+          <div style={{ flex: 1 }}>
+            <p className="eyebrow" style={{ marginBottom: 2 }}>案件管理</p>
+            <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>案件ボード</h1>
+          </div>
 
           {/* Service filter */}
           <select
@@ -152,18 +153,11 @@ export default function DealsPage() {
               <option key={s.id} value={s.id}>{s.name} ({deals.filter(d => d.service_id === s.id).length}件)</option>
             ))}
           </select>
-
-          <button
-            onClick={() => setShowAddDeal(true)}
-            className="btn btn-p" style={{ fontSize: '.76rem', padding: '8px 16px' }}
-          >
-            + 手動登録
-          </button>
         </div>
 
-        <div style={{ padding: '28px 28px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            {COLS.map(col => {
+        <div style={{ padding: '28px 32px' }}>
+          <div className="page-anim" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 22, alignItems: 'start' }}>
+            {COLS.map((col, ci) => {
               const colDeals = filteredDeals.filter(d => d.status === col.key)
               return (
                 <div
@@ -172,46 +166,85 @@ export default function DealsPage() {
                   onDragOver={e => onDragOver(e, col.key)}
                   onDragLeave={onDragLeave}
                   onDrop={e => onDrop(e, col.key)}
-                  style={{ background: '#F4F4F7', borderRadius: 14, padding: 12, minHeight: 140, transition: 'background .15s, outline .15s' }}
+                  style={{
+                    background: '#F4F4F7', borderRadius: 16, padding: 14, minHeight: 200,
+                    borderTop: `3px solid ${col.accent}`,
+                    transition: 'background .15s, outline .15s',
+                  }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 6px 12px', fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)' }}>
-                    {col.label}
-                    <span className="tnum" style={{ fontFamily: 'Inter', color: '#B9BAC4' }}><CountUp value={colDeals.length} /></span>
+                  {/* Column header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '5px 4px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.accent, flexShrink: 0 }} />
+                      <span style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{col.label}</span>
+                      {ci < COLS.length - 1 && (
+                        <span aria-hidden style={{ color: 'var(--muted)', fontSize: '.7rem', marginLeft: 2 }}>→</span>
+                      )}
+                    </div>
+                    <span
+                      className="tnum"
+                      style={{
+                        fontFamily: 'Inter', fontSize: '.66rem', fontWeight: 800,
+                        color: col.accent, background: col.accentBg,
+                        borderRadius: 999, padding: '2px 9px', minWidth: 24, textAlign: 'center', flexShrink: 0,
+                      }}
+                    >
+                      {colDeals.length}
+                    </span>
                   </div>
+
+                  {colDeals.length === 0 && (
+                    <div style={{ padding: '22px 8px', textAlign: 'center', fontSize: '.62rem', color: 'var(--muted)', border: '1.5px dashed var(--line)', borderRadius: 12, background: '#fff' }}>
+                      案件なし
+                    </div>
+                  )}
+
                   {colDeals.map(d => (
                     <div
                       key={d.id}
                       draggable
                       onDragStart={() => onDragStart(d)}
                       onClick={() => setSelected(d)}
-                      className="lift"
+                      className="card-hover"
                       style={{
-                        background: '#fff', border: '1px solid #EDEDF1', borderRadius: 12,
-                        padding: 13, marginBottom: 9, cursor: 'grab',
+                        background: '#fff', border: '1px solid #EDEDF1', borderRadius: 13,
+                        padding: 14, marginBottom: 10, cursor: 'grab',
                         boxShadow: selected?.id === d.id ? '0 0 0 2px var(--blue)' : undefined,
                         userSelect: 'none',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={26} />}
-                        <b style={{ fontSize: '.74rem', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {d.customer_name}
-                        </b>
+                      {/* Service + customer */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+                        {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={28} />}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <b style={{ display: 'block', fontSize: '.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {d.customer_name}
+                          </b>
+                          {d.services && (
+                            <span style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {d.services.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.6rem', color: 'var(--muted)' }}>
+
+                      {/* Channel + amount */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <span className={channelChip(d.channel).cls}>{channelChip(d.channel).label}</span>
                         {d.amount > 0 && (
-                          <span style={{ fontFamily: 'Inter', fontWeight: 700, color: 'var(--txt)', fontSize: '.66rem' }}>
+                          <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, color: 'var(--txt)', fontSize: '.72rem' }}>
                             ¥{d.amount.toLocaleString()}
                           </span>
                         )}
                       </div>
+
+                      {/* Partner */}
                       {d.partners?.profiles && (
-                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span style={{ width: 17, height: 17, borderRadius: '50%', background: d.partners.profiles.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.5rem', fontWeight: 700 }}>
+                        <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ width: 18, height: 18, borderRadius: '50%', background: d.partners.profiles.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.52rem', fontWeight: 700, flexShrink: 0 }}>
                             {d.partners.profiles.name[0]}
                           </span>
-                          <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>{d.partners.profiles.name}</span>
+                          <span style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.partners.profiles.name}</span>
                         </div>
                       )}
                     </div>
@@ -277,19 +310,6 @@ export default function DealsPage() {
         </>
       )}
 
-      {/* Manual deal drawer */}
-      {showAddDeal && (
-        <AddDealDrawer
-          services={services}
-          onClose={() => setShowAddDeal(false)}
-          onAdded={(deal) => {
-            setDeals(prev => [deal, ...prev])
-            setShowAddDeal(false)
-            showToast('案件を登録しました')
-          }}
-        />
-      )}
-
       {toast && (
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
@@ -300,101 +320,5 @@ export default function DealsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function AddDealDrawer({ services, onClose, onAdded }: {
-  services: Service[]
-  onClose: () => void
-  onAdded: (deal: Deal) => void
-}) {
-  const [customerName, setCustomerName] = useState('')
-  const [serviceId, setServiceId]       = useState(services[0]?.id ?? '')
-  const [channel, setChannel]           = useState<'referral' | 'direct'>('direct')
-  const [amount, setAmount]             = useState('')
-  const [memo, setMemo]                 = useState('')
-  const [submitting, setSubmitting]     = useState(false)
-  const [error, setError]               = useState('')
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!customerName) { setError('お名前を入力してください'); return }
-    if (!serviceId) { setError('サービスを選択してください'); return }
-    setError('')
-    setSubmitting(true)
-    try {
-      const res = await fetch('/api/console/deals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_name: customerName,
-          service_id: serviceId,
-          channel,
-          source: 'manual',
-          status: 'received',
-          amount: amount ? Number(amount) : 0,
-          internal_memo: memo,
-        }),
-      })
-      if (!res.ok) throw new Error(await res.text())
-      const data = await res.json()
-      onAdded(data.deal)
-    } catch (err: any) {
-      setError(err.message ?? '登録に失敗しました')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.25)', zIndex: 70 }} />
-      <div style={{ position: 'fixed', top: 0, right: 0, width: 460, maxWidth: '96vw', height: '100%', background: '#fff', borderLeft: '1px solid var(--line)', zIndex: 80, display: 'flex', flexDirection: 'column', boxShadow: '-18px 0 48px rgba(14,14,20,.1)', animation: 'slideIn .22s ease' }}>
-        <style>{`@keyframes slideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }`}</style>
-        <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <b style={{ fontSize: '.9rem' }}>案件を手動登録</b>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-        </div>
-        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <div className="fld">
-            <label>顧客名 *</label>
-            <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" required />
-          </div>
-          <div className="fld">
-            <label>サービス *</label>
-            <select
-              value={serviceId}
-              onChange={e => setServiceId(e.target.value)}
-              style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.9rem', background: '#fff' }}
-            >
-              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div className="fld">
-            <label>チャネル</label>
-            <select
-              value={channel}
-              onChange={e => setChannel(e.target.value as 'referral' | 'direct')}
-              style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.9rem', background: '#fff' }}
-            >
-              <option value="direct">営業（直接）</option>
-              <option value="referral">紹介</option>
-            </select>
-          </div>
-          <div className="fld">
-            <label>報酬額（任意）</label>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="50000" />
-          </div>
-          <div className="fld">
-            <label>内部メモ（任意）</label>
-            <input value={memo} onChange={e => setMemo(e.target.value)} placeholder="管理者のみ閲覧可能" />
-          </div>
-          {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-          <button type="submit" disabled={submitting} className="btn btn-p" style={{ width: '100%', marginTop: 8 }}>
-            {submitting ? '登録中...' : '案件を登録する'}
-          </button>
-        </form>
-      </div>
-    </>
   )
 }

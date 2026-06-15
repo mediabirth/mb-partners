@@ -18,6 +18,8 @@ const STATUS_STEP: Record<string, number> = {
   received: 0, in_progress: 1, confirmed: 2, paid: 3,
 }
 
+export const runtime = 'edge'
+
 export default async function CasesPage({
   searchParams,
 }: {

@@ -6,6 +6,8 @@ import ServiceIcon from '@/components/ServiceIcon'
 import CountUp from '@/components/CountUp'
 import BankChangeSection from './BankChangeSection'
 
+export const runtime = 'edge'
+
 export default async function RewardsPage() {
   const user = await getCachedUser()
   if (!user) redirect('/login')
