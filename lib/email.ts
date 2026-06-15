@@ -44,7 +44,8 @@ ${params.url}
   const html =
 `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
   <div style="padding:24px 0;text-align:center">
-    <span style="font-weight:800;font-size:18px">MB <span style="color:#4733E6">Partners</span></span>
+    <img src="https://mb-partners.app/icon-192.png" alt="MB Partners" width="44" height="44" style="display:inline-block;vertical-align:middle;border-radius:10px" />
+    <span style="font-weight:800;font-size:18px;vertical-align:middle;margin-left:10px">MB <span style="color:#4733E6">Partners</span></span>
   </div>
   <div style="background:#F6F6F8;border-radius:14px;padding:28px 24px">
     <p style="margin:0 0 14px">${name} 様</p>

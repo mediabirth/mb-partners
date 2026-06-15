@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
-import ServiceIcon from '@/components/ServiceIcon'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
 import BankChangeSection from './BankChangeSection'
 import { withholdingTax } from '@/lib/payout'
@@ -103,7 +103,7 @@ export default async function RewardsPage() {
             {monthDeals.map(d => (
               <div key={d.id} className="lift" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 6px', borderBottom: '1px solid var(--line)', fontSize: '.73rem', gap: 10, borderRadius: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={26} />}
+                  {d.services && <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={26} />}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontWeight: 600 }}>{d.customer_name}</span>

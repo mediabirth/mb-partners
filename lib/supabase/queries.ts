@@ -80,7 +80,7 @@ export async function getAllDealsWithEvents(supabase: SupabaseClient, dealId: st
   const [dealRes, eventsRes] = await Promise.all([
     supabase
       .from('deals')
-      .select('*, services(id, name, subtitle, icon, color), service_menus(*), partners(id, code, profiles(name, color, email))')
+      .select('*, services(id, name, subtitle, icon, color, logo_path), service_menus(*), partners(id, code, profiles(name, color, email))')
       .eq('id', dealId)
       .single(),
     supabase
@@ -129,7 +129,7 @@ export async function getPartnerWithDeals(supabase: SupabaseClient, userId: stri
       deals:deals!partner_id(
         id, customer_name, channel, source, status, amount,
         fixed_month, consent, meeting_at, created_at, updated_at, service_id,
-        services(id, name, subtitle, icon, color)
+        services(id, name, subtitle, icon, color, logo_path)
       )
     `)
     .eq('profile_id', userId)
@@ -204,14 +204,14 @@ export type DealRow = {
   amount: number; fixed_month: string | null
   consent: boolean; meeting_at: string | null
   created_at: string; updated_at: string; service_id: string
-  services: { id: string; name: string; subtitle: string | null; icon: string; color: string } | null
+  services: { id: string; name: string; subtitle: string | null; icon: string; color: string; logo_path: string | null } | null
 }
 
 export type AdminDealRow = DealRow & {
   internal_memo: string | null
   base_amount: number | null
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; [k: string]: unknown } | null
-  services: { id: string; name: string; subtitle: string | null; icon: string; color: string } | null
+  services: { id: string; name: string; subtitle: string | null; icon: string; color: string; logo_path: string | null } | null
   partners: { id: string; code: string; profiles: { name: string; color: string } | null } | null
 }
 

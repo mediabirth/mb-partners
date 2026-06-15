@@ -18,7 +18,12 @@ export async function notifySlack(text: string): Promise<void> {
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      // ブランド表示: 送信者名 + MBマークアイコン
+      body: JSON.stringify({
+        text,
+        username: 'MB Partners',
+        icon_url: 'https://mb-partners.app/icon-192.png',
+      }),
     })
   } catch {
     // swallow — notifications are best-effort
