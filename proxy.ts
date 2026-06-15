@@ -1,21 +1,39 @@
 /**
- * Next.js proxy (= middleware) — Supabase SSR cookie refresh + route protection
+ * Next.js proxy (= middleware) — host separation + Supabase SSR cookie refresh + route protection
  *
- * Design goals:
- * - Verified auth check via getUser() — tamper-proof, no JWT spoofing
- * - Cookie refresh on every response (critical for token expiry handling)
- * - Layout server components deduplicate their own getUser() via React cache()
- * - TOTP AAL2 enforcement stays in console/login page and console layout
+ * Host separation:
+ *   console.mb-partners.app → 管理コンソール (console only; dedicated /console/login)
+ *   mb-partners.app         → パートナーAPP (app only)
+ * Combined with role すみ分け: owner/管理 → console, partner → app.
+ * Preview/other hosts (*.vercel.app, localhost) fall back to combined single-host behaviour.
  */
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
+const APP_HOST = 'mb-partners.app'
+const CONSOLE_HOST = 'console.mb-partners.app'
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const host = (request.headers.get('host') || '').toLowerCase()
+  const isConsoleHost = host === CONSOLE_HOST
+  const isAppHost = host === APP_HOST || host === `www.${APP_HOST}`
+
+  const xConsole = (p: string) => NextResponse.redirect(`https://${CONSOLE_HOST}${p}`)
+  const xApp = (p: string) => NextResponse.redirect(`https://${APP_HOST}${p}`)
+
+  // ── Host containment (production hosts only) ────────────────────────────────
+  if (isConsoleHost) {
+    if (pathname === '/') return NextResponse.redirect(new URL('/console', request.url))
+    if (pathname === '/login') return NextResponse.redirect(new URL('/console/login', request.url))
+    if (pathname.startsWith('/app')) return xApp(pathname)   // app belongs to the apex host
+  }
+  if (isAppHost) {
+    if (pathname.startsWith('/console')) return xConsole(pathname) // console belongs to the subdomain
+  }
 
   // Build a passthrough response; setAll will recreate it with refreshed cookies
   let response = NextResponse.next({ request })
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,37 +51,38 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // getUser() makes a verified round-trip to Supabase Auth — tamper-proof.
-  // Cookie refresh (via setAll above) happens regardless of which method we call.
-  // Layout server components also call getCachedUser() which is deduplicated via
-  // React cache(), so the total per protected page is 2 getUser() calls (proxy + layout).
   const { data: { user } } = await supabase.auth.getUser()
+  async function roleOf(): Promise<string | null> {
+    if (!user) return null
+    const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    return data?.role ?? null
+  }
 
   // ── /app/** — partner portal ────────────────────────────────────────────────
   if (pathname.startsWith('/app')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url))
+    if (!user) return NextResponse.redirect(new URL('/login', request.url))
+    const role = await roleOf()
+    if (role && role !== 'partner') {
+      // owner/管理 → console (subdomain on prod, same host elsewhere)
+      return isAppHost ? xConsole('/console') : NextResponse.redirect(new URL('/console', request.url))
     }
     return response
   }
 
   // ── /console/** — admin console ────────────────────────────────────────────
   if (pathname.startsWith('/console') && !pathname.startsWith('/console/login')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/console/login', request.url))
+    if (!user) return NextResponse.redirect(new URL('/console/login', request.url))
+    const role = await roleOf()
+    if (role === 'partner') {
+      // partner → app (apex on prod, same host elsewhere)
+      return isConsoleHost ? xApp('/app') : NextResponse.redirect(new URL('/app', request.url))
     }
     return response
   }
 
   // ── Already-logged-in: redirect away from login pages ─────────────────────
   if (pathname === '/login' && user) {
-    // Send to root — root page reads profile.role and routes to /app or /console.
-    // Redirecting directly to /app here would loop for admins who have no partner record.
     return NextResponse.redirect(new URL('/', request.url))
-  }
-  if (pathname === '/console/login' && user) {
-    // Don't redirect away from /console/login here — the page handles it via
-    // router.push after TOTP verify. This prevents redirect loops.
   }
 
   return response
@@ -71,6 +90,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     '/app/:path*',
     '/console/:path*',
     '/login',

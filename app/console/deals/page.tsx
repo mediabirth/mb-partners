@@ -13,15 +13,22 @@ type Deal = {
   id: string; customer_name: string; channel: string; source: string
   status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string } | null
+  service_menus: { coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
   services: { name: string; icon: string; color: string; coop_rate?: number | null; coop_base?: string | null } | null
   partners: { code: string; profiles: { name: string; color: string } | null } | null
 }
 
 type Service = { id: string; name: string; icon: string; color: string }
 
-// ② Determine whether a deal's reward is %-based, and the base label/rate.
+// ⑧ Determine whether a deal's reward is %-based (needs a real-amount base).
+// cooperation → selected menu's coop_* (fixed = no base); fallback to services.coop_* (互換).
 function rateInfo(d: Deal): { isRate: boolean; rate: number | null; baseLabel: string } {
   if (d.channel === 'cooperation') {
+    const m = d.service_menus
+    if (m?.coop_enabled) {
+      if (m.coop_type === 'fixed') return { isRate: false, rate: null, baseLabel: m.coop_base ?? '売上' }
+      return { isRate: true, rate: Number(m.coop_value ?? 0), baseLabel: m.coop_base ?? '売上' }
+    }
     const r = d.services?.coop_rate ?? null
     return { isRate: r != null, rate: r, baseLabel: d.services?.coop_base ?? '売上' }
   }

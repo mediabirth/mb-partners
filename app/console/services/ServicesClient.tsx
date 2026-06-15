@@ -41,6 +41,7 @@ const defaultServiceForm: ServiceForm = {
 
 type MenuForm = {
   name: string
+  ref_enabled: boolean
   ref_type: 'fixed' | 'rate'
   ref_value: string
   ref_base: string
@@ -48,18 +49,38 @@ type MenuForm = {
   coverage_steps: CoverageStep[]
   qualification: string
   ref_months: string
+  // ── 協力（per-menu cooperation） ──
+  coop_enabled: boolean
+  coop_type: 'fixed' | 'rate'
+  coop_value: string
+  coop_base: string
+  coop_coverage: CoverageStep[]
+  coop_condition: string
 }
 
 const defaultMenuForm: MenuForm = {
-  name: '', ref_type: 'fixed', ref_value: '', ref_base: '', ref_trigger: '',
+  name: '', ref_enabled: true, ref_type: 'fixed', ref_value: '', ref_base: '', ref_trigger: '',
   coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })),
   qualification: '',
   ref_months: '',
+  coop_enabled: false, coop_type: 'rate', coop_value: '', coop_base: '',
+  coop_coverage: COVERAGE_DEFAULTS.map(s => ({ ...s })),
+  coop_condition: '',
 }
 
 function menuToForm(m: MenuRow): MenuForm {
+  const mm = m as MenuRow & {
+    ref_enabled?: boolean | null
+    coop_enabled?: boolean | null
+    coop_type?: 'fixed' | 'rate' | null
+    coop_value?: number | null
+    coop_base?: string | null
+    coop_coverage?: CoverageStep[] | null
+    coop_condition?: string | null
+  }
   return {
     name:           m.name,
+    ref_enabled:    mm.ref_enabled ?? true,
     ref_type:       m.ref_type,
     ref_value:      String(m.ref_value ?? ''),
     ref_base:       m.ref_base ?? '',
@@ -69,6 +90,14 @@ function menuToForm(m: MenuRow): MenuForm {
                     : COVERAGE_DEFAULTS.map(s => ({ ...s })),
     qualification:  m.qualification ?? '',
     ref_months:     m.ref_months && m.ref_months > 1 ? String(m.ref_months) : '',
+    coop_enabled:   mm.coop_enabled ?? false,
+    coop_type:      mm.coop_type ?? 'rate',
+    coop_value:     mm.coop_value != null ? String(mm.coop_value) : '',
+    coop_base:      mm.coop_base ?? '',
+    coop_coverage:  Array.isArray(mm.coop_coverage) && mm.coop_coverage.length === 5
+                    ? mm.coop_coverage
+                    : COVERAGE_DEFAULTS.map(s => ({ ...s })),
+    coop_condition: mm.coop_condition ?? '',
   }
 }
 
@@ -76,6 +105,7 @@ function formToMenuPayload(f: MenuForm) {
   return {
     name:           f.name,
     category:       'referral',
+    ref_enabled:    f.ref_enabled,
     ref_type:       f.ref_type,
     ref_value:      f.ref_value ? Number(f.ref_value) : 0,
     ref_base:       f.ref_type === 'rate' ? (f.ref_base || null) : null,
@@ -83,6 +113,13 @@ function formToMenuPayload(f: MenuForm) {
     coverage_steps: f.coverage_steps,
     qualification:  f.qualification || null,
     ref_months:     f.ref_months ? Number(f.ref_months) : null,
+    // ── 協力（per-menu cooperation） ──
+    coop_enabled:   f.coop_enabled,
+    coop_type:      f.coop_enabled ? f.coop_type : null,
+    coop_value:     f.coop_enabled && f.coop_value ? Number(f.coop_value) : null,
+    coop_base:      f.coop_enabled ? (f.coop_base || null) : null,
+    coop_coverage:  f.coop_enabled ? f.coop_coverage : null,
+    coop_condition: f.coop_enabled ? (f.coop_condition || null) : null,
   }
 }
 
@@ -340,56 +377,133 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
         <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例: 賃貸成約時" />
       </Fld>
 
-      <Fld label="報酬タイプ">
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['fixed', 'rate'] as const).map(t => (
-            <button key={t} type="button" onClick={() => set({ ref_type: t })}
-              style={{
-                flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
-                border: `1.5px solid ${f.ref_type === t ? 'var(--blue)' : 'var(--line)'}`,
-                background: f.ref_type === t ? 'var(--blue-bg2)' : '#fff',
-                color: f.ref_type === t ? 'var(--blue)' : 'var(--muted2)',
-              }}>
-              {t === 'fixed' ? '固定額（円）' : '率（%）'}
-            </button>
-          ))}
-        </div>
-      </Fld>
+      {/* ── 紹介（referral） ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
+        <RefChip />
+        <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 700, color: 'var(--txt)' }}>紹介報酬</span>
+        <Toggle2
+          val={f.ref_enabled}
+          onA={() => set({ ref_enabled: false })}
+          onB={() => set({ ref_enabled: true })}
+          labelA="なし"
+          labelB="あり"
+        />
+      </div>
 
-      {f.ref_type === 'fixed' ? (
-        <Fld label="金額（円）">
-          <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="30000" type="number" />
-        </Fld>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Fld label="率（%）">
-            <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="10" type="number" />
+      {f.ref_enabled && (
+        <div style={{ borderLeft: '2px solid #DDE2FF', paddingLeft: 12, marginBottom: 10 }}>
+          <Fld label="報酬タイプ">
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['fixed', 'rate'] as const).map(t => (
+                <button key={t} type="button" onClick={() => set({ ref_type: t })}
+                  style={{
+                    flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
+                    border: `1.5px solid ${f.ref_type === t ? 'var(--blue)' : 'var(--line)'}`,
+                    background: f.ref_type === t ? 'var(--blue-bg2)' : '#fff',
+                    color: f.ref_type === t ? 'var(--blue)' : 'var(--muted2)',
+                  }}>
+                  {t === 'fixed' ? '固定額（円）' : '率（%）'}
+                </button>
+              ))}
+            </div>
           </Fld>
-          <Fld label="基準">
-            <FSelect value={f.ref_base} onChange={v => set({ ref_base: v })}
-              options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+
+          {f.ref_type === 'fixed' ? (
+            <Fld label="金額（円）">
+              <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="30000" type="number" />
+            </Fld>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Fld label="率（%）">
+                <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="10" type="number" />
+              </Fld>
+              <Fld label="基準">
+                <FSelect value={f.ref_base} onChange={v => set({ ref_base: v })}
+                  options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+              </Fld>
+            </div>
+          )}
+
+          <Fld label="報酬発生条件（成果地点）">
+            <FInput value={f.ref_trigger} onChange={v => set({ ref_trigger: v })} placeholder="例: 賃貸成約で確定" />
+          </Fld>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
+              対応範囲
+            </label>
+            <CoverageEditor steps={f.coverage_steps} onChange={steps => set({ coverage_steps: steps })} />
+          </div>
+
+          <Fld label="資格条件（任意）">
+            <FInput value={f.qualification} onChange={v => set({ qualification: v })} placeholder="例: 宅建業免許が必要" />
+          </Fld>
+
+          <Fld label="継続（任意・ヶ月）">
+            <FInput value={f.ref_months} onChange={v => set({ ref_months: v })} placeholder="例: 12" type="number" />
           </Fld>
         </div>
       )}
 
-      <Fld label="報酬発生条件（成果地点）">
-        <FInput value={f.ref_trigger} onChange={v => set({ ref_trigger: v })} placeholder="例: 賃貸成約で確定" />
-      </Fld>
-
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
-          対応範囲
-        </label>
-        <CoverageEditor steps={f.coverage_steps} onChange={steps => set({ coverage_steps: steps })} />
+      {/* ── 協力（per-menu cooperation） ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px', paddingTop: 10, borderTop: '1px solid var(--line)' }}>
+        <CoopChip />
+        <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 700, color: 'var(--txt)' }}>協力報酬</span>
+        <Toggle2
+          val={f.coop_enabled}
+          onA={() => set({ coop_enabled: false })}
+          onB={() => set({ coop_enabled: true })}
+          labelA="なし"
+          labelB="あり"
+        />
       </div>
 
-      <Fld label="資格条件（任意）">
-        <FInput value={f.qualification} onChange={v => set({ qualification: v })} placeholder="例: 宅建業免許が必要" />
-      </Fld>
+      {f.coop_enabled && (
+        <div style={{ borderLeft: '2px solid #D8D8E0', paddingLeft: 12, marginBottom: 10 }}>
+          <Fld label="協力タイプ">
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['fixed', 'rate'] as const).map(t => (
+                <button key={t} type="button" onClick={() => set({ coop_type: t })}
+                  style={{
+                    flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
+                    border: `1.5px solid ${f.coop_type === t ? 'var(--txt)' : 'var(--line)'}`,
+                    background: f.coop_type === t ? '#F0F0F4' : '#fff',
+                    color: f.coop_type === t ? 'var(--txt)' : 'var(--muted2)',
+                  }}>
+                  {t === 'fixed' ? '固定額（円）' : '料率（%）'}
+                </button>
+              ))}
+            </div>
+          </Fld>
 
-      <Fld label="継続（任意・ヶ月）">
-        <FInput value={f.ref_months} onChange={v => set({ ref_months: v })} placeholder="例: 12" type="number" />
-      </Fld>
+          {f.coop_type === 'fixed' ? (
+            <Fld label="金額（円）">
+              <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50000" type="number" />
+            </Fld>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Fld label="料率（%）">
+                <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50" type="number" />
+              </Fld>
+              <Fld label="基準">
+                <FSelect value={f.coop_base} onChange={v => set({ coop_base: v })}
+                  options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+              </Fld>
+            </div>
+          )}
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
+              対応範囲
+            </label>
+            <CoverageEditor steps={f.coop_coverage} onChange={steps => set({ coop_coverage: steps })} />
+          </div>
+
+          <Fld label="資格条件（任意）">
+            <FInput value={f.coop_condition} onChange={v => set({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
+          </Fld>
+        </div>
+      )}
 
       {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '6px 0 4px' }}>{error}</p>}
 
@@ -508,10 +622,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
   async function saveMenu() {
     if (!menuForm.name) { setMenuError('メニュー名を入力してください'); return }
-    if (menuForm.ref_type === 'rate') {
+    if (!menuForm.ref_enabled && !menuForm.coop_enabled) {
+      setMenuError('紹介・協力のいずれかを有効にしてください'); return
+    }
+    if (menuForm.ref_enabled && menuForm.ref_type === 'rate') {
       const v = Number(menuForm.ref_value)
       if (!v || v <= 0 || v > 100) { setMenuError('率は 0〜100% の範囲で入力してください'); return }
       if (!menuForm.ref_base) { setMenuError('率タイプでは基準を選択してください'); return }
+    }
+    if (menuForm.coop_enabled && menuForm.coop_type === 'rate') {
+      const v = Number(menuForm.coop_value)
+      if (!v || v <= 0 || v > 100) { setMenuError('協力の料率は 0〜100% の範囲で入力してください'); return }
+      if (!menuForm.coop_base) { setMenuError('協力（料率）では基準を選択してください'); return }
     }
     if (!editing) return
     setMenuSaving(true); setMenuError('')

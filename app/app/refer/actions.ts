@@ -79,7 +79,13 @@ export async function submitPartnerReferral(formData: FormData) {
     .eq('id', menuId)
     .single()
 
-  const amount = menu?.ref_type === 'fixed' ? Number(menu.ref_value) : 0
+  // ⑧ cooperation→メニューcoop_*（固定=即額／料率=確定時にbase）、紹介→ref_*
+  let amount = 0
+  if (channel === 'cooperation') {
+    amount = (menu?.coop_enabled && menu.coop_type === 'fixed') ? Number(menu.coop_value ?? 0) : 0
+  } else {
+    amount = menu?.ref_type === 'fixed' ? Number(menu.ref_value) : 0
+  }
 
   const { data: deal, error } = await supabase
     .from('deals')

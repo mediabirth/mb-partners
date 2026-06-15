@@ -64,6 +64,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     coverage_steps: body.coverage_steps ?? null,
     qualification:  body.qualification ?? null,
     sort:           nextSort,
+    // ⑧ per-menu engagement flags
+    ref_enabled:    body.ref_enabled ?? true,
+    coop_enabled:   body.coop_enabled ?? false,
+    coop_type:      body.coop_type ?? null,
+    coop_value:     body.coop_value ?? null,
+    coop_base:      body.coop_base ?? null,
+    coop_coverage:  body.coop_coverage ?? null,
+    coop_condition: body.coop_condition ?? null,
   }
 
   const { data: menu, error } = await supabase

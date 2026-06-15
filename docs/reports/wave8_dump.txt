@@ -1,0 +1,46 @@
+========================================================
+MB Partners — ⑧ 協力のメニュー単位化 本実装 ダンプ
+日時: 2026-06-15  (SQL適用済み前提: service_menus に ref_enabled/coop_enabled/coop_type/coop_value/coop_base/coop_coverage/coop_condition)
+種別: data/logic変更あり(協力計算をservice→menuへ)。ft_*/categoryは不変。
+ビルド: npx next build → ✅ exit 0
+========================================================
+
+■ 1) コンソール サービス編集（per-menu 協力 ＋ ref_enabled）— ServicesClient.tsx
+  - メニュー編集フォームに 紹介(ref_enabled トグル) と 協力セクションを追加：
+    coop_enabled トグル／coop_type(固定·料率)／coop_value／coop_base(売上·粗利·利益·受取収入)／
+    coop_coverage(対応範囲・既存CoverageEditor流用)／coop_condition(資格条件)。
+  - メニュー保存(POST/PATCH /api/console/services/[id]/menus[/mid])で7フィールドを送信・永続化。
+  - サービス単位の coop_*(section C)は互換fallbackとして保持（編集UIも残置）。
+  - サービス一覧は per-menu の 紹介/協力 と報酬を表示。ft_*/category 不変。
+
+■ 2) 案件計算（協力＝メニューcoop_*）
+  - 共通: cooperation の報酬解決を services.coop_* → 選択メニューの coop_* に変更。
+    固定 → 報酬=coop_value（実額入力不要）／料率 → 報酬=base_amount×coop_value/100、base_label=coop_base。
+    reward_snapshot に {rate/coop_type, base_label, base_amount, computed} を記録（Batch Dロジック流用）。
+  - deals/[id] PATCH: ctx に menu_id・service_menus(coop_*)・services(coop_*) を読み、上記解決。
+    確定時 固定→amount=値（needsBaseなし）、料率→base必須(未指定なら要求)。①詳細の実額編集も料率で機能。
+  - refer/actions(協力作成): 固定→amount=coop_value 即時、料率→amount=0(確定時にbase)。menu_id を必ず記録。
+  - 案件ボード(/api/console/deals GET + deals/page.tsx rateInfo): per-menu coop_type を反映
+    （固定協力＝base不要・バッジ/モーダル出ない／料率協力＝base必要）。
+  - 新規案件は menu_id を必ず記録（referフローの協力もメニュー選択式に＝下記4）。
+
+■ 3) 互換
+  - menu の coop_* が無い/協力無効の協力dealは services.coop_* に当面フォールバック（検証後に撤去可）。
+  - 既存deal（menu_id無の鈴木/高橋等）は frozen amount のまま再計算しない。
+
+■ 4) APP（⑨）— refer/page.tsx・guide/GuideAccordion.tsx
+  - refer 関わり方: 協力を「メニュー単位」で提示（coop_enabled メニュー毎に 協力カード：報酬(固定¥/料率%×基準)＋
+    対応範囲chip＋資格条件）。協力選択で selMenu=該当メニュー＋coopMode=true → submitで menu_id 記録・channel=cooperation。
+    紹介は ref_enabled メニューを表示。
+  - guide: メニュー単位で 紹介/協力 条件を表示。
+
+■ 検証（ローカルbuild × 本番DB）
+  - 料率協力(賃貸仲介 50%粗利)：確定 base40万 → amount=20万、snapshot{rate:50,base_label:粗利,computed:200000}、menu_id記録 ✓
+  - 固定協力(受託開発 固定¥50,000)：確定 base不要 → amount=50,000、snapshot{coop_type:fixed,computed:50000}、menu_id記録 ✓
+  - 互換: menu_id無の既存協力dealは services.coop_* fallback・frozen維持 ✓
+  - refer 関わり方 にメニュー単位の協力（賃貸仲介 50%粗利＋対応範囲＋資格条件）表示 ✓
+  - editor に per-menu 協力セクション ✓ / build exit0
+  ※検証用テストdealは作成→確認→削除済。デモ用に一部メニューへ coop を投入（賃貸=料率50%/粗利、受託=固定¥50,000 等）。
+
+■ デプロイ
+  - 検証後デプロイ（vercel --prod・app/ から）＝承認後。完了後 本番E2E（協力作成→menu_id→計算）を確認予定。

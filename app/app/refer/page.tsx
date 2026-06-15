@@ -12,6 +12,12 @@ function fmtRefAmount(m: MenuRow) {
   return `${m.ref_value}%${m.ref_base ? ` (${m.ref_base})` : ''}`
 }
 
+function fmtCoopAmount(m: MenuRow) {
+  if (m.coop_type === 'fixed') return `¥${Number(m.coop_value ?? 0).toLocaleString()}`
+  if (m.coop_type === 'rate')  return `${m.coop_value ?? 0}%${m.coop_base ? ` (${m.coop_base})` : ''}`
+  return '-'
+}
+
 function RefChip({ name }: { name: string }) {
   return <span className="chip chip-referral">{name}</span>
 }
@@ -51,15 +57,17 @@ export default function ReferPage() {
     setSelSvc(svc)
     setSelMenu(null)
     setCoopMode(false)
-    const refMenus = svc.service_menus // all are referral now
-    const hasCoop  = svc.coop_enabled
+    const refMenus  = svc.service_menus.filter(m => m.ref_enabled !== false)
+    const coopMenus = svc.service_menus.filter(m => m.coop_enabled === true)
+    const total     = refMenus.length + coopMenus.length
 
-    if (refMenus.length === 0 && !hasCoop) {
+    if (total === 0) {
+      // no per-menu engagement options — server falls back to service-level
       loadToken(svc.id); setStep('form')
-    } else if (refMenus.length === 0 && hasCoop) {
-      setCoopMode(true); setStep('form')
-    } else if (refMenus.length === 1 && !hasCoop) {
+    } else if (total === 1 && refMenus.length === 1) {
       setSelMenu(refMenus[0]); loadToken(svc.id); setStep('form')
+    } else if (total === 1 && coopMenus.length === 1) {
+      pickCoop(coopMenus[0])
     } else {
       setStep('menu')
     }
@@ -69,8 +77,10 @@ export default function ReferPage() {
     setSelMenu(m); setCoopMode(false); loadToken(selSvc!.id); setStep('form')
   }
 
-  function pickCoop() {
-    setSelMenu(null); setCoopMode(true); setStep('form')
+  // 協力 is per-menu now: selecting a 協力 option must set selMenu (so deal records menu_id)
+  // AND coopMode=true (so channel='cooperation'). Do NOT change handleSubmit.
+  function pickCoop(m: MenuRow) {
+    setSelMenu(m); setCoopMode(true); setStep('form')
   }
 
   function loadToken(serviceId: string) {
@@ -216,8 +226,8 @@ export default function ReferPage() {
             </p>
           </div>
           <div className="stagger" style={{ padding: '0 20px 20px' }}>
-            {/* Referral menu cards — 紹介 = 青 */}
-            {selSvc.service_menus.map(m => {
+            {/* Referral menu cards — 紹介 = 青 (per-menu ref_enabled) */}
+            {selSvc.service_menus.filter(m => m.ref_enabled !== false).map(m => {
               const covSteps = (m.coverage_steps ?? []).filter((s: { label: string; included: boolean }) => s.included)
               return (
                 <button key={m.id} onClick={() => pickMenu(m)} className="card-hover"
@@ -259,33 +269,27 @@ export default function ReferPage() {
               )
             })}
 
-            {/* Cooperation card (service-level) — 協力 = 濃色 */}
-            {selSvc.coop_enabled && (() => {
-              const covSteps = (selSvc.coverage_steps ?? []).filter(s => s.included)
-              const coopAmt = selSvc.coop_rate
-                ? `${selSvc.coop_rate}%${selSvc.coop_base ? ` (${selSvc.coop_base})` : ''}`
-                : '-'
+            {/* Cooperation menu cards (per-menu coop_enabled) — 協力 = 濃色 */}
+            {selSvc.service_menus.filter(m => m.coop_enabled === true).map(m => {
+              const covSteps = (m.coop_coverage ?? []).filter((s: { label: string; included: boolean }) => s.included)
               return (
-                <button onClick={pickCoop} className="card-hover"
+                <button key={`coop-${m.id}`} onClick={() => pickCoop(m)} className="card-hover"
                   style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid #E7E4F7', borderRadius: 16, padding: 0, marginBottom: 13, cursor: 'pointer', overflow: 'hidden' }}>
                   {/* Reward banner */}
                   <div style={{ background: '#F4F3FA', borderBottom: '1px solid #E7E4F7', padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
                       <span className="chip chip-cooperation">協力</span>
-                      <div style={{ fontSize: '.92rem', fontWeight: 900, marginTop: 7, letterSpacing: '-.01em' }}>協力パートナー</div>
+                      <div style={{ fontSize: '.92rem', fontWeight: 900, marginTop: 7, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--blue-dk)', opacity: .7, letterSpacing: '.06em' }}>REWARD</div>
                       <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.42rem', color: 'var(--blue-dk)', lineHeight: 1.05, whiteSpace: 'nowrap' }}>
-                        {coopAmt}
+                        {fmtCoopAmount(m)}
                       </div>
                     </div>
                   </div>
                   {/* Body */}
                   <div style={{ padding: '13px 16px 14px' }}>
-                    {selSvc.ft_trigger && (
-                      <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.6 }}>{selSvc.ft_trigger}</p>
-                    )}
                     {covSteps.length > 0 && (
                       <>
                         <div style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', marginBottom: 5 }}>対応範囲</div>
@@ -296,17 +300,17 @@ export default function ReferPage() {
                         </div>
                       </>
                     )}
-                    {selSvc.ft_condition && (
-                      <p style={{ fontSize: '.64rem', color: 'var(--amber)', margin: '0 0 8px', lineHeight: 1.5 }}>⚠ {selSvc.ft_condition}</p>
+                    {m.coop_condition && (
+                      <p style={{ fontSize: '.64rem', color: 'var(--amber)', margin: '0 0 8px', lineHeight: 1.5 }}>⚠ {m.coop_condition}</p>
                     )}
                     <div style={{ fontSize: '.74rem', fontWeight: 800, color: 'var(--blue-dk)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-                      <span>協力として関わる</span>
+                      <span>このかたちで協力する</span>
                       <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#ECE9F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</span>
                     </div>
                   </div>
                 </button>
               )
-            })()}
+            })}
           </div>
         </div>
       )}
@@ -315,8 +319,9 @@ export default function ReferPage() {
       {step === 'form' && selSvc && (
         <div>
           <button onClick={() => {
-            const hasMultiple = selSvc.service_menus.length > 1 || (selSvc.service_menus.length > 0 && selSvc.coop_enabled)
-            setStep(hasMultiple ? 'menu' : 'service')
+            const optionCount = selSvc.service_menus.filter(m => m.ref_enabled !== false).length
+              + selSvc.service_menus.filter(m => m.coop_enabled === true).length
+            setStep(optionCount > 1 ? 'menu' : 'service')
           }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.7rem', color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             ← 戻る

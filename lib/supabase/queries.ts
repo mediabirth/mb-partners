@@ -203,6 +203,14 @@ export type MenuRow = {
   example_ft: string | null; sort: number
   coverage_steps: { label: string; included: boolean }[] | null
   qualification: string | null
+  // ⑧ per-menu engagement
+  ref_enabled: boolean
+  coop_enabled: boolean
+  coop_type: 'fixed' | 'rate' | null
+  coop_value: number | null
+  coop_base: string | null
+  coop_coverage: { label: string; included: boolean }[] | null
+  coop_condition: string | null
 }
 
 export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }

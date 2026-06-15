@@ -25,25 +25,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const valid = ['received', 'in_progress', 'confirmed', 'paid']
   if (hasStatus && !valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
-  // ② % reward needs a real-amount base. Determine if this deal is rate-based.
+  // ⑧ Reward resolution. cooperation → 選択メニューの coop_*（無ければ services.coop_* 互換fallback）。
   const { data: ctx } = await supabase
     .from('deals')
-    .select('channel, amount, base_amount, reward_snapshot, services(coop_rate, coop_base)')
+    .select('channel, amount, base_amount, reward_snapshot, menu_id, service_menus(coop_enabled, coop_type, coop_value, coop_base), services(coop_rate, coop_base, coop_enabled)')
     .eq('id', id)
     .single()
 
-  const svc = (ctx?.services ?? null) as { coop_rate: number | null; coop_base: string | null } | null
+  const svc = (ctx?.services ?? null) as { coop_rate: number | null; coop_base: string | null; coop_enabled: boolean | null } | null
+  const menu = (ctx?.service_menus ?? null) as { coop_enabled: boolean | null; coop_type: string | null; coop_value: number | null; coop_base: string | null } | null
   const snap = (ctx?.reward_snapshot ?? null) as { ref_type?: string; ref_value?: number; ref_base?: string } | null
-  let rate: number | null = null
+
+  let rate: number | null = null        // 料率(%)案件 → base 必要
+  let fixedCoop: number | null = null   // 協力・固定 → amount=固定額
   let baseLabel = '売上'
-  if (ctx?.channel === 'cooperation') { rate = svc?.coop_rate ?? null; baseLabel = svc?.coop_base ?? '売上' }
-  else if (snap?.ref_type === 'rate') { rate = Number(snap.ref_value); baseLabel = snap.ref_base ?? '売上' }
+  if (ctx?.channel === 'cooperation') {
+    const c = menu?.coop_enabled
+      ? { type: menu.coop_type ?? 'rate', value: Number(menu.coop_value ?? 0), base: menu.coop_base ?? '売上' }
+      : (svc ? { type: 'rate', value: Number(svc.coop_rate ?? 0), base: svc.coop_base ?? '売上' } : null) // 互換fallback
+    if (c) {
+      baseLabel = c.base
+      if (c.type === 'fixed') fixedCoop = c.value
+      else rate = c.value
+    }
+  } else if (snap?.ref_type === 'rate') {
+    rate = Number(snap.ref_value); baseLabel = snap.ref_base ?? '売上'
+  }
   const isRate = rate != null && !Number.isNaN(rate)
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (hasStatus) update.status = status
 
-  // ① Set/edit the actual amount (base) at ANY status → reward = base × rate, recomputed & saved.
+  // ① 料率案件：実額(base)入力で 報酬=base×率 を即時計算・保存（どのステータスでも可）
   if (isRate && hasBase) {
     const base = Number(base_amount)
     if (Number.isNaN(base) || base <= 0) return NextResponse.json({ error: 'invalid base_amount' }, { status: 400 })
@@ -51,14 +64,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     update.base_amount = base
     update.amount = computed
     update.reward_snapshot = { ...(snap ?? {}), base_amount: base, base_label: baseLabel, rate, computed }
-  } else if (hasStatus && status === 'confirmed' && isRate) {
-    // Confirming a rate deal with no base provided → require it (unless already stored).
-    const existing = ctx?.base_amount ?? null
-    if (existing == null) {
-      return NextResponse.json({ error: 'base_amount required', needsBase: true, baseLabel, rate }, { status: 400 })
+  } else if (hasStatus && status === 'confirmed') {
+    if (fixedCoop != null) {
+      // 協力・固定：実額不要、報酬=固定額
+      update.amount = fixedCoop
+      update.reward_snapshot = { ...(snap ?? {}), coop_type: 'fixed', base_label: baseLabel, computed: fixedCoop }
+    } else if (isRate) {
+      // 料率：base 必須（未指定なら保存済みを使用、無ければ要求）
+      const existing = ctx?.base_amount ?? null
+      if (existing == null) {
+        return NextResponse.json({ error: 'base_amount required', needsBase: true, baseLabel, rate }, { status: 400 })
+      }
+      update.amount = Math.round(Number(existing) * (rate as number) / 100)
+      update.reward_snapshot = { ...(snap ?? {}), base_amount: Number(existing), base_label: baseLabel, rate, computed: update.amount }
     }
-    update.amount = Math.round(Number(existing) * (rate as number) / 100)
-    update.reward_snapshot = { ...(snap ?? {}), base_amount: Number(existing), base_label: baseLabel, rate, computed: update.amount }
+    // 固定（紹介）はamount既定のまま
   }
 
   const { data: deal, error } = await supabase

@@ -16,6 +16,12 @@ function fmtFee(m: MenuRow) {
   return `${m.ref_value}%${m.ref_base ? ` (${m.ref_base})` : ''}`
 }
 
+function fmtCoopFee(m: MenuRow) {
+  if (m.coop_type === 'fixed') return `¥${Number(m.coop_value ?? 0).toLocaleString()}`
+  if (m.coop_type === 'rate')  return `${m.coop_value ?? 0}%${m.coop_base ? ` (${m.coop_base})` : ''}`
+  return '-'
+}
+
 function CoverageTags({ steps, accent = false }: {
   steps: { label: string; included: boolean }[] | null
   accent?: boolean
@@ -85,37 +91,34 @@ function FeeRow({ m }: { m: MenuRow }) {
   )
 }
 
-function CoopFeeRow({ svc }: { svc: ServiceWithMenus }) {
-  const steps = (svc.coverage_steps ?? []).filter(s => s.included)
-  const coopFee = svc.coop_rate
-    ? `${svc.coop_rate}%${svc.coop_base ? ` (${svc.coop_base})` : ''}`
-    : '-'
+function CoopFeeRow({ m }: { m: MenuRow }) {
+  const steps = (m.coop_coverage ?? []).filter(s => s.included)
   return (
     <div style={{ padding: '10px 0', borderTop: '1px solid #F2F2F6' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '8px 10px', alignItems: 'start' }}>
         <CatChip cat="cooperation" />
         <div style={{ minWidth: 0 }}>
-          <b style={{ fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>協力</b>
-          {svc.ft_trigger && (
-            <span style={{ fontSize: '.6rem', color: 'var(--muted2)', display: 'block', marginTop: 2 }}>{svc.ft_trigger}</span>
-          )}
+          <b style={{ fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</b>
           {steps.length > 0 && (
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
-              {steps.map(s => (
-                <span key={s.label} style={{ fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#EBEBF0', color: 'var(--txt)' }}>
-                  {s.label}
-                </span>
-              ))}
-            </div>
+            <>
+              <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>対応範囲</span>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                {steps.map(s => (
+                  <span key={s.label} style={{ fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>
+                    {s.label}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
-          {svc.ft_condition && (
+          {m.coop_condition && (
             <small style={{ fontSize: '.6rem', color: 'var(--amber)', display: 'block', marginTop: 4 }}>
-              ⚠ {svc.ft_condition}
+              ⚠ {m.coop_condition}
             </small>
           )}
         </div>
-        <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.9rem', whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"', color: 'var(--txt)', paddingTop: 1 }}>
-          {coopFee}
+        <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.9rem', whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"', color: 'var(--blue-dk)', paddingTop: 1 }}>
+          {fmtCoopFee(m)}
         </span>
       </div>
     </div>
@@ -125,8 +128,9 @@ function CoopFeeRow({ svc }: { svc: ServiceWithMenus }) {
 export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
   const [open, setOpen] = useState(false)
 
-  const refMenus = svc.service_menus.filter(m => m.category !== 'cooperation')
-  const hasRows  = refMenus.length > 0 || svc.coop_enabled
+  const refMenus  = svc.service_menus.filter(m => m.ref_enabled !== false)
+  const coopMenus = svc.service_menus.filter(m => m.coop_enabled === true)
+  const hasRows   = refMenus.length > 0 || coopMenus.length > 0
 
   return (
     <div style={{
@@ -144,8 +148,8 @@ export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
           <h3 style={{ fontSize: '.86rem', fontWeight: 700 }}>{svc.name}</h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {refMenus.length > 0  && <CatChip cat="referral" />}
-          {svc.coop_enabled     && <CatChip cat="cooperation" />}
+          {refMenus.length > 0   && <CatChip cat="referral" />}
+          {coopMenus.length > 0  && <CatChip cat="cooperation" />}
           <span style={{ color: 'var(--muted)', fontSize: '.85rem', transition: 'transform .25s', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block', marginLeft: 4 }}>›</span>
         </div>
       </div>
@@ -170,7 +174,7 @@ export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
                 <span style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em', textAlign: 'right' }}>報酬</span>
               </div>
               {refMenus.map(m => <FeeRow key={m.id} m={m} />)}
-              {svc.coop_enabled && <CoopFeeRow svc={svc} />}
+              {coopMenus.map(m => <CoopFeeRow key={`coop-${m.id}`} m={m} />)}
             </div>
           )}
         </div>

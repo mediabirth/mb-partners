@@ -55,7 +55,8 @@ export async function GET() {
     .from('deals')
     .select(`
       id, customer_name, channel, source, status, amount, base_amount,
-      fixed_month, created_at, service_id, reward_snapshot,
+      fixed_month, created_at, service_id, menu_id, reward_snapshot,
+      service_menus(coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, coop_rate, coop_base),
       partners(code, profiles(name, color))
     `)

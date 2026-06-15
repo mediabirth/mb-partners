@@ -1,0 +1,237 @@
+{
+ "ts": "2026-06-15",
+ "profiles": [
+  {
+   "id": "a0000001-0000-0000-0000-000000000000",
+   "role": "owner",
+   "name": "MB Admin",
+   "email": "owner@mb-partners.jp",
+   "avatar_url": null,
+   "color": "#4733E6",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-12T10:41:09.360698+00:00",
+   "nickname": null
+  },
+  {
+   "id": "a0000002-0000-0000-0000-000000000000",
+   "role": "partner",
+   "name": "勝彦",
+   "email": "kthk.kmbr@gmail.com",
+   "avatar_url": null,
+   "color": "#7A48D6",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-12T10:41:09.360698+00:00",
+   "nickname": null
+  },
+  {
+   "id": "653eead3-c0c0-47dd-8f65-96f4b80931d9",
+   "role": "partner",
+   "name": "勝彦",
+   "email": "kthk.kmbr@gmail.com",
+   "avatar_url": null,
+   "color": "#7A48D6",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-13T03:53:30.622779+00:00",
+   "nickname": null
+  },
+  {
+   "id": "39b30d21-61ae-4573-8ea8-2f6b493bf969",
+   "role": "owner",
+   "name": "MB Admin",
+   "email": "mediabirth.project@gmail.com",
+   "avatar_url": null,
+   "color": "#4733E6",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-13T05:12:52.184683+00:00",
+   "nickname": null
+  },
+  {
+   "id": "9a973de5-fd42-4640-bd1d-48a2b6243414",
+   "role": "partner",
+   "name": "テストパートナー",
+   "email": "kthk.kmbr+partner@gmail.com",
+   "avatar_url": null,
+   "color": "#E64733",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-13T05:56:47.67883+00:00",
+   "nickname": null
+  },
+  {
+   "id": "f72764a8-8f53-4740-911b-ca06245f41a7",
+   "role": "partner",
+   "name": "勝田 勝彦",
+   "email": "katsuhiko-demo@mb-demo.test",
+   "avatar_url": null,
+   "color": "#4733E6",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-14T01:17:42.144187+00:00",
+   "nickname": null
+  },
+  {
+   "id": "9eba29fc-2e07-42a3-84fb-2efd99d7a799",
+   "role": "partner",
+   "name": "佐々木 恵美",
+   "email": "sasaki-demo@mb-demo.test",
+   "avatar_url": null,
+   "color": "#1E9E6A",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-14T01:17:59.976417+00:00",
+   "nickname": null
+  },
+  {
+   "id": "e3c7b9b1-e075-48c2-9052-1f4947ca32fa",
+   "role": "partner",
+   "name": "井上 翔太",
+   "email": "inoue-demo@mb-demo.test",
+   "avatar_url": null,
+   "color": "#C07A12",
+   "perms": {
+    "inq": true,
+    "ptn": false,
+    "cast": true,
+    "deals": true
+   },
+   "totp_enrolled": false,
+   "last_login_at": null,
+   "created_at": "2026-06-14T01:18:00.226771+00:00",
+   "nickname": null
+  }
+ ],
+ "partners": [
+  {
+   "id": "c211d2da-d8fb-46ac-9b53-1421259789cf",
+   "profile_id": "9a973de5-fd42-4640-bd1d-48a2b6243414",
+   "code": "ZZ8354",
+   "tax_type": "individual",
+   "status": "active",
+   "kyc_verified_at": null,
+   "bank": null,
+   "memo": null,
+   "created_at": "2026-06-13T05:56:48.352325+00:00",
+   "phone": null,
+   "address": null,
+   "invoice_number": null,
+   "terms_agreed_at": null,
+   "privacy_agreed_at": null
+  },
+  {
+   "id": "b0000001-0000-0000-0000-000000000000",
+   "profile_id": "f72764a8-8f53-4740-911b-ca06245f41a7",
+   "code": "KT8842",
+   "tax_type": "individual",
+   "status": "active",
+   "kyc_verified_at": null,
+   "bank": null,
+   "memo": null,
+   "created_at": "2026-06-12T10:41:09.360698+00:00",
+   "phone": null,
+   "address": null,
+   "invoice_number": null,
+   "terms_agreed_at": null,
+   "privacy_agreed_at": null
+  },
+  {
+   "id": "44beeb84-d084-4413-b680-439ea3288c5b",
+   "profile_id": "9eba29fc-2e07-42a3-84fb-2efd99d7a799",
+   "code": "SS1203",
+   "tax_type": "individual",
+   "status": "active",
+   "kyc_verified_at": null,
+   "bank": null,
+   "memo": null,
+   "created_at": "2026-06-14T01:18:00.07297+00:00",
+   "phone": null,
+   "address": null,
+   "invoice_number": null,
+   "terms_agreed_at": null,
+   "privacy_agreed_at": null
+  },
+  {
+   "id": "a240bcf1-f5e4-4db2-a8d1-cfd3fab36631",
+   "profile_id": "e3c7b9b1-e075-48c2-9052-1f4947ca32fa",
+   "code": "IN0907",
+   "tax_type": "corporate",
+   "status": "active",
+   "kyc_verified_at": null,
+   "bank": null,
+   "memo": null,
+   "created_at": "2026-06-14T01:18:00.323887+00:00",
+   "phone": null,
+   "address": null,
+   "invoice_number": null,
+   "terms_agreed_at": null,
+   "privacy_agreed_at": null
+  },
+  {
+   "id": "5dfb9e2b-9b68-4baf-a458-4a9e2fe323b1",
+   "profile_id": "39b30d21-61ae-4573-8ea8-2f6b493bf969",
+   "code": "ZZ8463",
+   "tax_type": "individual",
+   "status": "active",
+   "kyc_verified_at": null,
+   "bank": null,
+   "memo": null,
+   "created_at": "2026-06-14T05:30:45.970678+00:00",
+   "phone": null,
+   "address": null,
+   "invoice_number": null,
+   "terms_agreed_at": null,
+   "privacy_agreed_at": null
+  }
+ ],
+ "auth_targets": [
+  {
+   "id": "9a973de5-fd42-4640-bd1d-48a2b6243414",
+   "email": "kthk.kmbr+partner@gmail.com"
+  }
+ ]
+}
