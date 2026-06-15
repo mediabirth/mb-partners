@@ -99,122 +99,142 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
     }
   }
 
+  const statusColor = inquiry
+    ? (inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--blue)' : 'var(--muted2)')
+    : 'var(--muted2)'
+  const statusBg = inquiry
+    ? (inquiry.status === 'open' ? 'var(--amber-bg)' : inquiry.status === 'replied' ? 'var(--blue-bg2)' : 'var(--bg2)')
+    : 'var(--bg2)'
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#4733E6'} />
-      <main className="page-anim" style={{ marginLeft: 230, flex: 1, padding: '32px 32px', minWidth: 0, maxWidth: 860 }}>
-        <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.74rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 20 }}>
-          ← 問い合わせ一覧に戻る
-        </Link>
-
+      <main className="page-anim" style={{ marginLeft: 230, flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh' }}>
         {loading ? (
-          <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中...</p>
+          <div style={{ padding: '32px' }}>
+            <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中...</p>
+          </div>
         ) : !inquiry ? (
-          <p style={{ color: 'var(--red)', fontSize: '.82rem' }}>問い合わせが見つかりません。</p>
+          <div style={{ padding: '32px' }}>
+            <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.74rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 20 }}>
+              ← 問い合わせ一覧に戻る
+            </Link>
+            <p style={{ color: 'var(--red)', fontSize: '.82rem' }}>問い合わせが見つかりません。</p>
+          </div>
         ) : (
           <>
-            {/* Header */}
-            <div style={{
-              background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
-              padding: '18px 20px', marginBottom: 20,
+            {/* Chat header */}
+            <header style={{
+              flexShrink: 0, background: '#fff', borderBottom: '1px solid var(--line)',
+              padding: '14px 28px',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <h1 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: 10 }}>{inquiry.subject}</h1>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+              <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.72rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 10 }}>
+                ← 問い合わせ一覧に戻る
+              </Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {inquiry.partners?.profiles && (
+                  <span style={{
+                    width: 34, height: 34, borderRadius: '50%',
+                    background: inquiry.partners.profiles.color, color: '#fff',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '.78rem', fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {inquiry.partners.profiles.name[0]}
+                  </span>
+                )}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '.92rem', fontWeight: 700, color: 'var(--txt)' }}>
+                      {inquiry.partners?.profiles?.name ?? '-'}
+                    </span>
+                    <span style={{ fontSize: '.64rem', color: 'var(--muted2)', opacity: .8 }}>({inquiry.partners?.code})</span>
                     <span style={{
-                      fontSize: '.64rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+                      fontSize: '.62rem', fontWeight: 700, padding: '2px 9px', borderRadius: 20,
                       color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color,
                       background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg,
                     }}>
                       {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
                     </span>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      fontSize: '.62rem', fontWeight: 700, padding: '2px 9px', borderRadius: 20,
+                      color: statusColor, background: statusBg,
+                    }}>
+                      <span className="status-dot" style={{ background: statusColor }} />
+                      {STATUS_LABEL[inquiry.status] ?? inquiry.status}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.66rem', color: 'var(--muted2)' }}>
-                      {inquiry.partners?.profiles && (
-                        <span style={{
-                          width: 20, height: 20, borderRadius: '50%',
-                          background: inquiry.partners.profiles.color, color: '#fff',
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '.56rem', fontWeight: 700, flexShrink: 0,
-                        }}>
-                          {inquiry.partners.profiles.name[0]}
-                        </span>
-                      )}
-                      <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{inquiry.partners?.profiles?.name ?? '-'}</span>
-                      <span style={{ opacity: .6 }}>({inquiry.partners?.code})</span>
-                    </span>
-                    <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>
-                      受付: {new Date(inquiry.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {inquiry.subject}
                   </div>
                 </div>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: '.66rem', fontWeight: 700, padding: '4px 12px', borderRadius: 20,
-                  color: inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--blue)' : 'var(--muted2)',
-                  background: inquiry.status === 'open' ? 'var(--amber-bg)' : inquiry.status === 'replied' ? 'var(--blue-bg2)' : 'var(--bg2)',
-                  flexShrink: 0,
-                }}>
-                  <span className="status-dot" style={{
-                    background: inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--blue)' : 'var(--muted2)',
-                  }} />
-                  {STATUS_LABEL[inquiry.status] ?? inquiry.status}
-                </span>
+              </div>
+            </header>
+
+            {/* Messages (scrollable) */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', background: 'var(--bg2)' }}>
+              <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720, margin: '0 auto' }}>
+                {/* Opening message: the inquiry subject (partner side) — always shown so the thread is never empty */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{inquiry.partners?.profiles?.name ?? 'パートナー'}</span>
+                    <span style={{ opacity: .8 }}>
+                      {new Date(inquiry.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color, background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg }}>
+                      {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
+                    </span>
+                  </div>
+                  <div style={{
+                    maxWidth: '78%', padding: '10px 14px', borderRadius: '16px 16px 16px 3px',
+                    background: '#fff', color: 'var(--txt)', border: '1px solid var(--line)',
+                    boxShadow: '0 1px 2px rgba(14,14,20,.04)',
+                    fontSize: '.8rem', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontWeight: 600,
+                  }}>
+                    {inquiry.subject}
+                  </div>
+                </div>
+                {inquiry.inquiry_messages.map(msg => {
+                  const isOwner = msg.sender_role === 'owner'
+                  const senderName = isOwner ? '管理者' : inquiry.partners?.profiles?.name ?? 'パートナー'
+                  return (
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isOwner ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 4,
+                        flexDirection: isOwner ? 'row-reverse' : 'row',
+                      }}>
+                        <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{senderName}</span>
+                        <span style={{ opacity: .8 }}>
+                          {new Date(msg.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div style={{
+                        maxWidth: '78%', padding: '10px 14px',
+                        borderRadius: isOwner ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
+                        background: isOwner ? 'var(--blue)' : '#fff',
+                        color: isOwner ? '#fff' : 'var(--txt)',
+                        border: isOwner ? 'none' : '1px solid var(--line)',
+                        boxShadow: isOwner ? '0 1px 2px rgba(46,91,255,.18)' : '0 1px 2px rgba(14,14,20,.04)',
+                        fontSize: '.8rem', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+                      }}>
+                        {msg.body}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-              {inquiry.inquiry_messages.map(msg => {
-                const isOwner = msg.sender_role === 'owner'
-                const senderName = isOwner ? '管理者' : inquiry.partners?.profiles?.name ?? 'パートナー'
-                return (
-                  <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isOwner ? 'flex-end' : 'flex-start' }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 5,
-                      flexDirection: isOwner ? 'row-reverse' : 'row',
-                    }}>
-                      <span style={{
-                        width: 18, height: 18, borderRadius: '50%',
-                        background: isOwner ? 'var(--blue)' : (inquiry.partners?.profiles?.color ?? 'var(--muted2)'),
-                        color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '.5rem', fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {senderName[0]}
-                      </span>
-                      <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{senderName}</span>
-                    </div>
-                    <div style={{
-                      maxWidth: '75%', padding: '12px 16px',
-                      borderRadius: isOwner ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                      background: isOwner ? 'var(--blue)' : '#fff',
-                      color: isOwner ? '#fff' : 'var(--txt)',
-                      border: isOwner ? 'none' : '1px solid var(--line)',
-                      boxShadow: isOwner ? '0 1px 2px rgba(46,91,255,.18)' : '0 1px 2px rgba(14,14,20,.04)',
-                      fontSize: '.8rem', lineHeight: 1.65, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
-                    }}>
-                      {msg.body}
-                    </div>
-                    <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 5 }}>
-                      {new Date(msg.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Reply form */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '18px 20px' }}>
-              <h3 style={{ fontSize: '.82rem', fontWeight: 700, marginBottom: 12, color: 'var(--txt)' }}>返信する</h3>
-
-              {/* Template buttons */}
-              {templates.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 8 }}>定型文:</p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* Sticky composer */}
+            <div style={{
+              flexShrink: 0, background: '#fff', borderTop: '1px solid var(--line)',
+              padding: '12px 28px 16px',
+            }}>
+              <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                {/* Template chips */}
+                {templates.length > 0 && (
+                  <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
                     {templates.map(t => (
                       <button
                         key={t.id}
@@ -222,8 +242,8 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                         className="chip lift"
                         onClick={() => setReplyBody(t.body)}
                         style={{
-                          padding: '6px 12px', borderRadius: 20, border: '1px solid var(--line)',
-                          background: 'var(--bg2)', fontSize: '.68rem', color: 'var(--muted)',
+                          padding: '4px 11px', borderRadius: 20, border: '1px solid var(--line)',
+                          background: 'var(--bg2)', fontSize: '.66rem', color: 'var(--muted)',
                           cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
                         }}
                       >
@@ -231,36 +251,38 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              <form onSubmit={handleReply}>
-                <textarea
-                  value={replyBody}
-                  onChange={e => setReplyBody(e.target.value)}
-                  placeholder="返信内容を入力..."
-                  rows={4}
-                  style={{
-                    width: '100%', padding: '10px 12px', borderRadius: 8,
-                    border: '1px solid var(--line)', fontSize: '.8rem',
-                    color: 'var(--txt)', outline: 'none', resize: 'vertical',
-                    fontFamily: 'inherit', marginBottom: 12,
-                  }}
-                />
-                {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-                <button
-                  type="submit"
-                  disabled={sending || !replyBody.trim()}
-                  style={{
-                    padding: '10px 24px', borderRadius: 8, border: 'none',
-                    background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--blue)',
-                    color: '#fff', fontSize: '.8rem', fontWeight: 700,
-                    cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {sending ? '送信中...' : '返信を送信する'}
-                </button>
-              </form>
+                {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 8 }}>{error}</p>}
+
+                <form onSubmit={handleReply} style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+                  <textarea
+                    value={replyBody}
+                    onChange={e => setReplyBody(e.target.value)}
+                    placeholder="返信内容を入力..."
+                    rows={2}
+                    style={{
+                      flex: 1, padding: '10px 14px', borderRadius: 22,
+                      border: '1px solid var(--line)', fontSize: '.8rem',
+                      color: 'var(--txt)', outline: 'none', resize: 'none',
+                      fontFamily: 'inherit', lineHeight: 1.5, maxHeight: 140,
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-p"
+                    disabled={sending || !replyBody.trim()}
+                    style={{
+                      padding: '10px 22px', borderRadius: 22, border: 'none',
+                      background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--blue)',
+                      color: '#fff', fontSize: '.8rem', fontWeight: 700, flexShrink: 0,
+                      cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {sending ? '送信中...' : '送信'}
+                  </button>
+                </form>
+              </div>
             </div>
           </>
         )}

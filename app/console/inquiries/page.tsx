@@ -86,7 +86,7 @@ export default function ConsoleInquiriesPage() {
             問い合わせはありません。
           </div>
         ) : (
-          <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 880 }}>
             {inquiries.map((inq) => {
               const overSLA = isOverSLA(inq)
               const isUnanswered = inq.status === 'open'
@@ -98,93 +98,87 @@ export default function ConsoleInquiriesPage() {
                   href={`/console/inquiries/${inq.id}`}
                   className="card-hover lift"
                   style={{
-                    display: 'block', textDecoration: 'none',
-                    background: '#fff', borderRadius: 13,
+                    display: 'flex', alignItems: 'center', gap: 13, textDecoration: 'none',
+                    background: '#fff', borderRadius: 12,
                     border: '1px solid var(--line)',
-                    padding: '16px 20px',
+                    padding: '13px 18px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    {/* Partner avatar */}
-                    {inq.partners?.profiles && (
-                      <span style={{
-                        width: 36, height: 36, borderRadius: '50%',
-                        background: inq.partners.profiles.color, color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '.78rem', fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {inq.partners.profiles.name[0]}
-                      </span>
-                    )}
+                  {/* Partner avatar */}
+                  {inq.partners?.profiles && (
+                    <span style={{
+                      width: 38, height: 38, borderRadius: '50%',
+                      background: inq.partners.profiles.color, color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '.8rem', fontWeight: 700, flexShrink: 0,
+                    }}>
+                      {inq.partners.profiles.name[0]}
+                    </span>
+                  )}
 
-                    {/* Main */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                        {isUnanswered && (
-                          <span className="status-dot" style={{
-                            background: overSLA ? 'var(--red)' : 'var(--amber)', flexShrink: 0,
-                          }} />
-                        )}
-                        <span style={{
-                          fontSize: '.82rem', color: 'var(--txt)', fontWeight: 700,
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>
-                          {inq.subject}
-                        </span>
-                        {overSLA && (
-                          <span style={{
-                            fontSize: '.6rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20,
-                            color: 'var(--red)', background: 'var(--red-bg)', flexShrink: 0,
-                          }}>
-                            SLA超過
-                          </span>
-                        )}
-                      </div>
-                      <div style={{
-                        fontSize: '.68rem', color: 'var(--muted2)',
-                        display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
+                  {/* Main */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      {isUnanswered && (
+                        <span className="status-dot" style={{
+                          background: overSLA ? 'var(--red)' : 'var(--amber)', flexShrink: 0,
+                        }} />
+                      )}
+                      <span style={{
+                        fontSize: '.82rem', color: 'var(--txt)', fontWeight: 700, flexShrink: 0,
                       }}>
-                        <span style={{ fontWeight: 600, color: 'var(--muted)' }}>
-                          {inq.partners?.profiles?.name ?? '-'}
-                        </span>
-                        <span style={{ opacity: .6 }}>{inq.partners?.code}</span>
-                      </div>
-                      {inq.latest_message && (
-                        <div style={{
-                          fontSize: '.66rem', color: 'var(--muted2)', marginTop: 4,
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 480,
+                        {inq.partners?.profiles?.name ?? '-'}
+                      </span>
+                      <span style={{
+                        fontSize: '.74rem', color: 'var(--muted)', fontWeight: 500,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+                      }}>
+                        {inq.subject}
+                      </span>
+                      {overSLA && (
+                        <span style={{
+                          fontSize: '.58rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20,
+                          color: 'var(--red)', background: 'var(--red-bg)', flexShrink: 0,
                         }}>
-                          {inq.latest_message.body}
-                        </div>
+                          SLA超過
+                        </span>
                       )}
                     </div>
-
-                    {/* Category chip */}
-                    <span style={{
-                      fontSize: '.64rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                      color: cc.color, background: cc.bg, flexShrink: 0,
-                    }}>
-                      {CATEGORY_LABEL[inq.category] ?? inq.category}
-                    </span>
-
-                    {/* Status chip */}
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      fontSize: '.64rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                      color: sc.color, background: sc.bg, flexShrink: 0,
-                    }}>
-                      <span className="status-dot" style={{ background: sc.dot }} />
-                      {STATUS_LABEL[inq.status] ?? inq.status}
-                    </span>
-
-                    {/* Last updated */}
-                    <span style={{
-                      fontSize: '.66rem', color: 'var(--muted2)', flexShrink: 0,
-                      minWidth: 78, textAlign: 'right',
-                    }}>
-                      {new Date(inq.updated_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    {inq.latest_message && (
+                      <div style={{
+                        fontSize: '.66rem', color: 'var(--muted2)',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {inq.latest_message.body}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Category chip */}
+                  <span style={{
+                    fontSize: '.62rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                    color: cc.color, background: cc.bg, flexShrink: 0,
+                  }}>
+                    {CATEGORY_LABEL[inq.category] ?? inq.category}
+                  </span>
+
+                  {/* Status chip */}
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    fontSize: '.62rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                    color: sc.color, background: sc.bg, flexShrink: 0,
+                  }}>
+                    <span className="status-dot" style={{ background: sc.dot }} />
+                    {STATUS_LABEL[inq.status] ?? inq.status}
+                  </span>
+
+                  {/* Last updated */}
+                  <span style={{
+                    fontSize: '.64rem', color: 'var(--muted2)', flexShrink: 0,
+                    minWidth: 74, textAlign: 'right',
+                  }}>
+                    {new Date(inq.updated_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </Link>
               )
             })}
