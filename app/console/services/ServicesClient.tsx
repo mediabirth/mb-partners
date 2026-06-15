@@ -1,6 +1,7 @@
 'use client'
 import { useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -238,26 +239,11 @@ function Toggle2({ val, onA, onB, labelA, labelB }: {
 
 // ─── Service Logo (neutral placeholder when no logo) ──────────────────────────
 
-function ServiceLogo({ logoPath, name, size = 44 }: { logoPath: string | null; name: string; size?: number }) {
-  const r = Math.round(size / 4)
-  if (logoPath) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={logoPath} alt={name} width={size} height={size}
-        style={{ borderRadius: r, objectFit: 'cover', border: '1px solid var(--line)', flexShrink: 0 }}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-    )
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: r,
-      background: '#EBEBF0', color: '#999', flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.38, fontWeight: 800, fontFamily: 'Inter',
-    }}>
-      {(name || '?').charAt(0).toUpperCase()}
-    </div>
-  )
+// ロゴがあればロゴ、無ければ従来の色付きアイコンへフォールバック（共通 ServiceAvatar 経由）
+function ServiceLogo({ logoPath, name, size = 44, icon = 'arrows', color = '#4733e6' }: {
+  logoPath: string | null; name: string; size?: number; icon?: string; color?: string
+}) {
+  return <ServiceAvatar logoPath={logoPath} icon={icon} color={color} name={name} size={size} />
 }
 
 // ─── Logo Upload ──────────────────────────────────────────────────────────────
@@ -728,7 +714,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={44} />
+                <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={44} icon={svc.icon} color={svc.color} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <b style={{ fontSize: '.9rem' }}>{svc.name}</b>

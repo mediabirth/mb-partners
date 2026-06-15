@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 
 function CatChip({ cat }: { cat: 'referral' | 'cooperation' }) {
@@ -42,26 +43,11 @@ function CoverageTags({ steps, accent = false }: {
   )
 }
 
-function ServiceLogo({ logoPath, name, size = 38 }: { logoPath: string | null; name: string; size?: number }) {
-  const r = Math.round(size / 4)
-  if (logoPath) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={logoPath} alt={name} width={size} height={size}
-        style={{ borderRadius: r, objectFit: 'cover', border: '1px solid var(--line)', flexShrink: 0 }}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-    )
-  }
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: r,
-      background: '#EBEBF0', color: '#999', flexShrink: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.38, fontWeight: 800, fontFamily: 'Inter',
-    }}>
-      {(name || '?').charAt(0).toUpperCase()}
-    </div>
-  )
+// ロゴがあればロゴ、無ければ従来の色付きアイコンへフォールバック（共通 ServiceAvatar 経由）
+function ServiceLogo({ logoPath, name, size = 38, icon = 'arrows', color = '#4733e6' }: {
+  logoPath: string | null; name: string; size?: number; icon?: string; color?: string
+}) {
+  return <ServiceAvatar logoPath={logoPath} icon={icon} color={color} name={name} size={size} />
 }
 
 function FeeRow({ m }: { m: MenuRow }) {
@@ -140,7 +126,7 @@ export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
       {/* Header */}
       <div onClick={() => setOpen(v => !v)}
         style={{ padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-        <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={38} />
+        <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={38} icon={svc.icon} color={svc.color} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '.5rem', fontFamily: 'Inter', fontWeight: 600, color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>
             {svc.url ?? svc.subtitle}

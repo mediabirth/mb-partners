@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ServiceIcon from '@/components/ServiceIcon'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
@@ -165,7 +166,7 @@ export default function ReferPage() {
                   style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '15px 16px 14px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
                   {/* Header: icon + name + chevron */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-                    <ServiceIcon icon={svc.icon} color={svc.color} size={42} />
+                    <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={42} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '.92rem', fontWeight: 900, letterSpacing: '-.01em' }}>{svc.name}</div>
                       {svc.subtitle && (
