@@ -363,6 +363,55 @@ export function CoverageTags({ steps, accent = false }: {
 
 // ─── Referral menu inline edit form ──────────────────────────────────────────
 
+// Header for a reward block (紹介 / 協力) with chip + enable toggle.
+function RewardBlockHead({ chip, title, val, onToggle }: {
+  chip: React.ReactNode; title: string; val: boolean; onToggle: (v: boolean) => void
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {chip}
+      <span style={{ flex: 1, fontSize: '.74rem', fontWeight: 800, color: 'var(--txt)' }}>{title}</span>
+      <div style={{ width: 132, marginBottom: -12 }}>
+        <Toggle2 val={val} onA={() => onToggle(false)} onB={() => onToggle(true)} labelA="なし" labelB="あり" />
+      </div>
+    </div>
+  )
+}
+
+// Segmented type selector (固定額 / 率) — accent: blue for 紹介, dark for 協力.
+function TypeSeg({ value, onChange, accent }: {
+  value: 'fixed' | 'rate'; onChange: (t: 'fixed' | 'rate') => void; accent: 'blue' | 'dark'
+}) {
+  const on  = accent === 'blue' ? 'var(--blue)' : 'var(--txt)'
+  const bg  = accent === 'blue' ? 'var(--blue-bg2)' : '#F0F0F4'
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      {(['fixed', 'rate'] as const).map(t => (
+        <button key={t} type="button" onClick={() => onChange(t)}
+          style={{
+            flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
+            border: `1.5px solid ${value === t ? on : 'var(--line)'}`,
+            background: value === t ? bg : '#fff',
+            color: value === t ? on : 'var(--muted2)',
+          }}>
+          {t === 'fixed' ? '固定額（円）' : '率（%）'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function CoverageField({ steps, onChange }: { steps: CoverageStep[]; onChange: (s: CoverageStep[]) => void }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
+        対応範囲
+      </label>
+      <CoverageEditor steps={steps} onChange={onChange} />
+    </div>
+  )
+}
+
 function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
   form: MenuForm; onChange: (f: MenuForm) => void
   onSave: () => void; onCancel: () => void; saving: boolean; error: string
@@ -371,143 +420,94 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
   const set = (patch: Partial<MenuForm>) => onChange({ ...f, ...patch })
 
   return (
-    <div style={{ background: '#F5F5FA', border: '1.5px solid var(--blue)', borderRadius: 10, padding: '14px 14px 10px', marginBottom: 8 }}>
+    <div style={{ background: '#fff', border: '1.5px solid var(--blue)', borderRadius: 12, padding: 16, marginBottom: 8, boxShadow: '0 4px 16px rgba(71,51,230,.08)' }}>
 
       <Fld label="メニュー名 *">
         <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例: 賃貸成約時" />
       </Fld>
 
-      {/* ── 紹介（referral） ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
-        <RefChip />
-        <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 700, color: 'var(--txt)' }}>紹介報酬</span>
-        <Toggle2
-          val={f.ref_enabled}
-          onA={() => set({ ref_enabled: false })}
-          onB={() => set({ ref_enabled: true })}
-          labelA="なし"
-          labelB="あり"
-        />
+      {/* ── 紹介（referral） — 青 ── */}
+      <div style={{ background: 'var(--blue-bg)', border: '1px solid #DDE2FF', borderRadius: 10, padding: 13, marginTop: 12 }}>
+        <RewardBlockHead chip={<RefChip />} title="紹介報酬" val={f.ref_enabled} onToggle={v => set({ ref_enabled: v })} />
+
+        {f.ref_enabled && (
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid #DDE2FF' }}>
+            <Fld label="報酬タイプ">
+              <TypeSeg value={f.ref_type} onChange={t => set({ ref_type: t })} accent="blue" />
+            </Fld>
+
+            {f.ref_type === 'fixed' ? (
+              <Fld label="金額（円）">
+                <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="30000" type="number" />
+              </Fld>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <Fld label="率（%）">
+                  <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="10" type="number" />
+                </Fld>
+                <Fld label="基準">
+                  <FSelect value={f.ref_base} onChange={v => set({ ref_base: v })}
+                    options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+                </Fld>
+              </div>
+            )}
+
+            <Fld label="報酬発生条件（成果地点）">
+              <FInput value={f.ref_trigger} onChange={v => set({ ref_trigger: v })} placeholder="例: 賃貸成約で確定" />
+            </Fld>
+
+            <CoverageField steps={f.coverage_steps} onChange={steps => set({ coverage_steps: steps })} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Fld label="資格条件（任意）">
+                <FInput value={f.qualification} onChange={v => set({ qualification: v })} placeholder="例: 宅建業免許" />
+              </Fld>
+              <Fld label="継続（任意・ヶ月）">
+                <FInput value={f.ref_months} onChange={v => set({ ref_months: v })} placeholder="例: 12" type="number" />
+              </Fld>
+            </div>
+          </div>
+        )}
       </div>
 
-      {f.ref_enabled && (
-        <div style={{ borderLeft: '2px solid #DDE2FF', paddingLeft: 12, marginBottom: 10 }}>
-          <Fld label="報酬タイプ">
-            <div style={{ display: 'flex', gap: 8 }}>
-              {(['fixed', 'rate'] as const).map(t => (
-                <button key={t} type="button" onClick={() => set({ ref_type: t })}
-                  style={{
-                    flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
-                    border: `1.5px solid ${f.ref_type === t ? 'var(--blue)' : 'var(--line)'}`,
-                    background: f.ref_type === t ? 'var(--blue-bg2)' : '#fff',
-                    color: f.ref_type === t ? 'var(--blue)' : 'var(--muted2)',
-                  }}>
-                  {t === 'fixed' ? '固定額（円）' : '率（%）'}
-                </button>
-              ))}
-            </div>
-          </Fld>
+      {/* ── 協力（per-menu cooperation） — 濃色 ── */}
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13, marginTop: 10 }}>
+        <RewardBlockHead chip={<CoopChip />} title="協力報酬" val={f.coop_enabled} onToggle={v => set({ coop_enabled: v })} />
 
-          {f.ref_type === 'fixed' ? (
-            <Fld label="金額（円）">
-              <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="30000" type="number" />
+        {f.coop_enabled && (
+          <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid var(--line)' }}>
+            <Fld label="協力タイプ">
+              <TypeSeg value={f.coop_type} onChange={t => set({ coop_type: t })} accent="dark" />
             </Fld>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <Fld label="率（%）">
-                <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="10" type="number" />
-              </Fld>
-              <Fld label="基準">
-                <FSelect value={f.ref_base} onChange={v => set({ ref_base: v })}
-                  options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
-              </Fld>
-            </div>
-          )}
 
-          <Fld label="報酬発生条件（成果地点）">
-            <FInput value={f.ref_trigger} onChange={v => set({ ref_trigger: v })} placeholder="例: 賃貸成約で確定" />
-          </Fld>
+            {f.coop_type === 'fixed' ? (
+              <Fld label="金額（円）">
+                <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50000" type="number" />
+              </Fld>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <Fld label="料率（%）">
+                  <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50" type="number" />
+                </Fld>
+                <Fld label="基準">
+                  <FSelect value={f.coop_base} onChange={v => set({ coop_base: v })}
+                    options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+                </Fld>
+              </div>
+            )}
 
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
-              対応範囲
-            </label>
-            <CoverageEditor steps={f.coverage_steps} onChange={steps => set({ coverage_steps: steps })} />
+            <CoverageField steps={f.coop_coverage} onChange={steps => set({ coop_coverage: steps })} />
+
+            <Fld label="資格条件（任意）">
+              <FInput value={f.coop_condition} onChange={v => set({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
+            </Fld>
           </div>
-
-          <Fld label="資格条件（任意）">
-            <FInput value={f.qualification} onChange={v => set({ qualification: v })} placeholder="例: 宅建業免許が必要" />
-          </Fld>
-
-          <Fld label="継続（任意・ヶ月）">
-            <FInput value={f.ref_months} onChange={v => set({ ref_months: v })} placeholder="例: 12" type="number" />
-          </Fld>
-        </div>
-      )}
-
-      {/* ── 協力（per-menu cooperation） ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px', paddingTop: 10, borderTop: '1px solid var(--line)' }}>
-        <CoopChip />
-        <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 700, color: 'var(--txt)' }}>協力報酬</span>
-        <Toggle2
-          val={f.coop_enabled}
-          onA={() => set({ coop_enabled: false })}
-          onB={() => set({ coop_enabled: true })}
-          labelA="なし"
-          labelB="あり"
-        />
+        )}
       </div>
 
-      {f.coop_enabled && (
-        <div style={{ borderLeft: '2px solid #D8D8E0', paddingLeft: 12, marginBottom: 10 }}>
-          <Fld label="協力タイプ">
-            <div style={{ display: 'flex', gap: 8 }}>
-              {(['fixed', 'rate'] as const).map(t => (
-                <button key={t} type="button" onClick={() => set({ coop_type: t })}
-                  style={{
-                    flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
-                    border: `1.5px solid ${f.coop_type === t ? 'var(--txt)' : 'var(--line)'}`,
-                    background: f.coop_type === t ? '#F0F0F4' : '#fff',
-                    color: f.coop_type === t ? 'var(--txt)' : 'var(--muted2)',
-                  }}>
-                  {t === 'fixed' ? '固定額（円）' : '料率（%）'}
-                </button>
-              ))}
-            </div>
-          </Fld>
+      {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '10px 0 0' }}>{error}</p>}
 
-          {f.coop_type === 'fixed' ? (
-            <Fld label="金額（円）">
-              <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50000" type="number" />
-            </Fld>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <Fld label="料率（%）">
-                <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50" type="number" />
-              </Fld>
-              <Fld label="基準">
-                <FSelect value={f.coop_base} onChange={v => set({ coop_base: v })}
-                  options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
-              </Fld>
-            </div>
-          )}
-
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
-              対応範囲
-            </label>
-            <CoverageEditor steps={f.coop_coverage} onChange={steps => set({ coop_coverage: steps })} />
-          </div>
-
-          <Fld label="資格条件（任意）">
-            <FInput value={f.coop_condition} onChange={v => set({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
-          </Fld>
-        </div>
-      )}
-
-      {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '6px 0 4px' }}>{error}</p>}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <button type="button" onClick={onCancel}
           style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           キャンセル
@@ -529,6 +529,29 @@ function RefChip() {
 
 function CoopChip() {
   return <span className="chip chip-cooperation" style={{ flexShrink: 0 }}>協力</span>
+}
+
+// Compact reward chip for the service list summary (紹介=青 / 協力=濃色).
+function RewardChip({ kind, text }: { kind: 'ref' | 'coop'; text: string }) {
+  const ref = kind === 'ref'
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+      fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums',
+      background: ref ? 'var(--blue-bg)' : '#EBEBF0',
+      color: ref ? 'var(--blue)' : 'var(--txt)',
+    }}>
+      <span style={{ fontWeight: 800, opacity: .7, fontFamily: 'inherit' }}>{ref ? '紹介' : '協力'}</span>
+      {text}
+    </span>
+  )
+}
+
+function fmtRef(menu: MenuRow) {
+  return menu.ref_type === 'fixed'
+    ? `¥${Number(menu.ref_value).toLocaleString()}`
+    : `${menu.ref_value}%${menu.ref_base ? `・${menu.ref_base}` : ''}`
 }
 
 function Btn2({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
@@ -700,25 +723,24 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         {services.length === 0 && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>}
         {services.map(svc => {
           const refMenus = svc.service_menus.filter(m => m.category !== 'cooperation')
-          const hasBody  = refMenus.length > 0 || svc.coop_enabled
           return (
-            <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 16, overflow: 'hidden' }}>
+            <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
               {/* Header row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px', borderBottom: hasBody ? '1px solid var(--line)' : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={44} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <b style={{ fontSize: '.9rem' }}>{svc.name}</b>
                     <span onClick={() => toggleActive(svc)} style={{
-                      fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, cursor: 'pointer',
-                      background: svc.active ? '#E5F3F1' : '#F4F4F7',
-                      color: svc.active ? '#15917E' : 'var(--muted2)',
+                      fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
+                      background: svc.active ? 'var(--green-bg)' : 'var(--bg2)',
+                      color: svc.active ? 'var(--green)' : 'var(--muted2)',
                     }}>
                       {svc.active ? '公開中' : '停止中'}
                     </span>
                   </div>
-                  {svc.subtitle && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>{svc.subtitle}</div>}
+                  {svc.subtitle && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.subtitle}</div>}
                 </div>
                 <button onClick={() => openEdit(svc)}
                   style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, flexShrink: 0 }}>
@@ -726,58 +748,32 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </button>
               </div>
 
-              {/* Referral menus — blue tint */}
-              {refMenus.map((menu, i) => (
-                <div key={menu.id} className="lift" style={{
-                  padding: '12px 22px',
-                  borderTop: i > 0 ? '1px solid #EEF0FF' : undefined,
-                  background: '#FAFBFF',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <RefChip />
-                    <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
-                    {menu.ref_trigger && (
-                      <span style={{ fontSize: '.62rem', color: 'var(--muted2)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {menu.ref_trigger}
-                      </span>
-                    )}
-                    <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.88rem', color: 'var(--blue)', flexShrink: 0 }}>
-                      {menu.ref_type === 'fixed'
-                        ? `¥${Number(menu.ref_value).toLocaleString()}`
-                        : `${menu.ref_value}%${menu.ref_base ? ` (${menu.ref_base})` : ''}`}
-                    </span>
-                  </div>
-                  <CoverageTags steps={menu.coverage_steps} accent />
-                  {menu.qualification && (
-                    <div style={{ fontSize: '.58rem', color: 'var(--amber)', marginTop: 4 }}>⚠ {menu.qualification}</div>
-                  )}
-                </div>
-              ))}
-
-              {/* Cooperation — neutral dark tint */}
-              {svc.coop_enabled && (
-                <div className="lift" style={{
-                  padding: '12px 22px',
-                  borderTop: refMenus.length > 0 ? '1px solid #EBEBEF' : undefined,
-                  background: '#F6F6FA',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <CoopChip />
-                    <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 600, minWidth: 0 }}>
-                      協力
-                      {svc.ft_trigger && (
-                        <span style={{ fontSize: '.62rem', fontWeight: 400, color: 'var(--muted2)', marginLeft: 6 }}>{svc.ft_trigger}</span>
-                      )}
-                    </span>
-                    {svc.ft_condition && (
-                      <span style={{ fontSize: '.6rem', color: 'var(--amber)', flexShrink: 0 }}>⚠ {svc.ft_condition}</span>
-                    )}
-                    <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.88rem', color: 'var(--txt)', flexShrink: 0 }}>
-                      {svc.coop_rate ? `${svc.coop_rate}%` : '-'}
-                      {svc.coop_base ? ` (${svc.coop_base})` : ''}
-                    </span>
-                  </div>
-                  <CoverageTags steps={svc.coverage_steps} />
+              {/* Per-menu summary */}
+              {refMenus.length > 0 && (
+                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {refMenus.map(menu => {
+                    const mm = menu as MenuRow & {
+                      ref_enabled?: boolean | null
+                      coop_enabled?: boolean | null; coop_type?: 'fixed' | 'rate' | null
+                      coop_value?: number | null; coop_base?: string | null
+                    }
+                    const showRef  = (mm.ref_enabled ?? true)
+                    const showCoop = mm.coop_enabled && mm.coop_value != null
+                    const coopText = mm.coop_type === 'fixed'
+                      ? `¥${Number(mm.coop_value).toLocaleString()}`
+                      : `${mm.coop_value}%${mm.coop_base ? `・${mm.coop_base}` : ''}`
+                    return (
+                      <div key={menu.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <span style={{ flex: 1, fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {menu.name}
+                        </span>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          {showRef && <RewardChip kind="ref" text={fmtRef(menu)} />}
+                          {showCoop && <RewardChip kind="coop" text={coopText} />}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -860,13 +856,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         saving={menuSaving} error={menuError}
                       />
                     ) : (
-                      <div style={{ background: '#F8F9FF', border: '1px solid #DDE2FF', borderRadius: 9, marginBottom: 6, overflow: 'hidden' }}>
+                      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, marginBottom: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px' }}>
-                          <RefChip />
-                          <span style={{ flex: 1, fontSize: '.8rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
-                          <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.82rem', color: 'var(--blue)', flexShrink: 0 }}>
-                            {menu.ref_type === 'fixed' ? `¥${Number(menu.ref_value).toLocaleString()}` : `${menu.ref_value}%`}
-                          </span>
+                          <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
                           <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                             {i > 0 && <Btn2 label="↑" onClick={() => moveMenu(menu.id, -1)} />}
                             {i < arr.length - 1 && <Btn2 label="↓" onClick={() => moveMenu(menu.id, 1)} />}
@@ -874,11 +866,24 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                             <Btn2 label="削除" onClick={() => deleteMenu(menu.id)} danger />
                           </div>
                         </div>
-                        {menu.coverage_steps && (
-                          <div style={{ padding: '0 12px 8px' }}>
-                            <CoverageTags steps={menu.coverage_steps} accent />
-                          </div>
-                        )}
+                        {(() => {
+                          const mm = menu as MenuRow & {
+                            ref_enabled?: boolean | null
+                            coop_enabled?: boolean | null; coop_type?: 'fixed' | 'rate' | null
+                            coop_value?: number | null; coop_base?: string | null
+                          }
+                          const showRef  = (mm.ref_enabled ?? true)
+                          const showCoop = mm.coop_enabled && mm.coop_value != null
+                          const coopText = mm.coop_type === 'fixed'
+                            ? `¥${Number(mm.coop_value).toLocaleString()}`
+                            : `${mm.coop_value}%${mm.coop_base ? `・${mm.coop_base}` : ''}`
+                          return (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 12px 10px' }}>
+                              {showRef && <RewardChip kind="ref" text={fmtRef(menu)} />}
+                              {showCoop && <RewardChip kind="coop" text={coopText} />}
+                            </div>
+                          )
+                        })()}
                       </div>
                     )}
                   </div>
@@ -899,48 +904,52 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               </>
             )}
 
-            {/* ── C. 協力設定 ── */}
-            <SectionLabel>C. 協力設定（サービス単位）</SectionLabel>
+            {/* ── C. 協力設定（サービス既定・フォールバック） ── */}
+            <div style={{ paddingTop: 16, borderTop: '1px solid var(--line)', marginTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                <CoopChip />
+                <span style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
+                  C. サービス既定（フォールバック）
+                </span>
+              </div>
+              <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                メニューごとに協力報酬が未設定の場合に適用される既定値です。
+              </p>
 
-            <Toggle2
-              val={svcForm.coop_enabled}
-              onA={() => setF({ coop_enabled: false })}
-              onB={() => setF({ coop_enabled: true })}
-              labelA="協力なし（紹介のみ）"
-              labelB="協力あり"
-            />
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13 }}>
+                <Toggle2
+                  val={svcForm.coop_enabled}
+                  onA={() => setF({ coop_enabled: false })}
+                  onB={() => setF({ coop_enabled: true })}
+                  labelA="既定なし"
+                  labelB="既定あり"
+                />
 
-            {svcForm.coop_enabled && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Fld label="協力率（%）">
-                    <FInput value={svcForm.coop_rate} onChange={v => setF({ coop_rate: v })} placeholder="50" type="number" />
-                  </Fld>
-                  <Fld label="協力基準">
-                    <FSelect value={svcForm.coop_base} onChange={v => setF({ coop_base: v })}
-                      options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
-                  </Fld>
-                </div>
+                {svcForm.coop_enabled && (
+                  <div style={{ paddingTop: 4 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <Fld label="協力率（%）">
+                        <FInput value={svcForm.coop_rate} onChange={v => setF({ coop_rate: v })} placeholder="50" type="number" />
+                      </Fld>
+                      <Fld label="協力基準">
+                        <FSelect value={svcForm.coop_base} onChange={v => setF({ coop_base: v })}
+                          options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+                      </Fld>
+                    </div>
 
-                <Fld label="協力の成果地点">
-                  <FInput value={svcForm.coop_trigger} onChange={v => setF({ coop_trigger: v })} placeholder="共同仲介を担当" />
-                </Fld>
+                    <Fld label="協力の成果地点">
+                      <FInput value={svcForm.coop_trigger} onChange={v => setF({ coop_trigger: v })} placeholder="共同仲介を担当" />
+                    </Fld>
 
-                <Fld label="協力の資格条件（任意）">
-                  <FInput value={svcForm.coop_condition} onChange={v => setF({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
-                </Fld>
+                    <Fld label="協力の資格条件（任意）">
+                      <FInput value={svcForm.coop_condition} onChange={v => setF({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
+                    </Fld>
 
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
-                    協力の対応範囲
-                  </label>
-                  <CoverageEditor
-                    steps={svcForm.coop_coverage}
-                    onChange={steps => setF({ coop_coverage: steps })}
-                  />
-                </div>
-              </>
-            )}
+                    <CoverageField steps={svcForm.coop_coverage} onChange={steps => setF({ coop_coverage: steps })} />
+                  </div>
+                )}
+              </div>
+            </div>
 
             {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{svcError}</p>}
 
