@@ -166,15 +166,6 @@ export async function getRecentEventsByPartnerId(supabase: SupabaseClient, partn
   return (data ?? []).map(({ id, body, created_at, deal_id }: any) => ({ id, body, created_at, deal_id }))
 }
 
-export async function getPayoutItemsForPartner(supabase: SupabaseClient, partnerId: string) {
-  const { data } = await supabase
-    .from('payout_items')
-    .select('id, gross, withholding, net, batch_id, payout_batches(month, status)')
-    .eq('partner_id', partnerId)
-    .order('created_at', { ascending: false })
-  return data ?? []
-}
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ServiceRow = {

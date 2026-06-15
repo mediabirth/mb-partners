@@ -5,6 +5,7 @@ import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 import CountUp from '@/components/CountUp'
 import BankChangeSection from './BankChangeSection'
+import { withholdingTax } from '@/lib/payout'
 
 export const runtime = 'edge'
 
@@ -32,8 +33,9 @@ export default async function RewardsPage() {
   const confirmedGross = deals.filter(d => d.status === 'confirmed').reduce((s, d) => s + d.amount, 0)
   const totalDeals = Object.values(byMonth).flat().length
 
+  // 源泉計算は lib/payout の単一ソースを使用（コンソール close_month_batch と完全一致）
   function withholding(gross: number) {
-    return partner?.tax_type === 'individual' ? Math.round(gross * 0.1021) : 0
+    return withholdingTax(gross, partner?.tax_type)
   }
 
   return (

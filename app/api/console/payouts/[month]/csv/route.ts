@@ -35,25 +35,32 @@ export async function GET(
   if (!items) return NextResponse.json({ error: 'No items' }, { status: 404 })
 
   // ── 全銀フォーマット風 CSV ────────────────────────────────────
+  // CSV フィールドのエスケープ（氏名にカンマ/引用符/改行が含まれても壊さない）
+  const esc = (v: string | number) => {
+    const s = String(v ?? '')
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const line = (cells: (string | number)[]) => cells.map(esc).join(',')
+
   const rows: string[] = [
-    // Header
-    ['パートナーコード', '氏名', '報酬総額', '源泉所得税', '振込金額(手取)'].join(','),
+    line(['パートナーコード', '氏名', '報酬総額', '源泉所得税', '振込金額(手取)']),
   ]
 
   for (const item of items) {
     const partner = item.partners as any
     const code = partner?.code ?? ''
     const name = (partner?.profiles as any)?.name ?? ''
-    rows.push([code, name, item.gross, item.withholding, item.net].join(','))
+    rows.push(line([code, name, item.gross, item.withholding, item.net]))
   }
 
   // Totals row
   const totalGross = items.reduce((s, i) => s + i.gross, 0)
   const totalWh    = items.reduce((s, i) => s + i.withholding, 0)
   const totalNet   = items.reduce((s, i) => s + i.net, 0)
-  rows.push(['', '合計', totalGross, totalWh, totalNet].join(','))
+  rows.push(line(['', '合計', totalGross, totalWh, totalNet]))
 
-  const csv = rows.join('\r\n')
+  // Excel(Windows) で日本語が文字化けしないよう UTF-8 BOM を付与
+  const csv = '﻿' + rows.join('\r\n')
   const filename = `payout_${month}.csv`
 
   return new NextResponse(csv, {

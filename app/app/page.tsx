@@ -4,6 +4,7 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/queries'
 import ServiceIcon from '@/components/ServiceIcon'
 import CountUp from '@/components/CountUp'
+import { nextPayoutDate } from '@/lib/payout'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
@@ -36,11 +37,10 @@ export default async function AppPage() {
   const monthAmount = monthConfirmed.reduce((s, d) => s + (d.amount || 0), 0)
   const confirmedBalance = deals.filter(d => d.status === 'confirmed').reduce((s, d) => s + d.amount, 0)
 
-  // 次回振込 = confirmed deals → next month-end payout
+  // 次回振込 = confirmed deals → next month-end payout（締め/振込日は lib/payout の単一ソース）
   const nextPayoutDeals = deals.filter(d => d.status === 'confirmed')
   const nextPayoutAmt = nextPayoutDeals.reduce((s, d) => s + d.amount, 0)
-  // next month-end date: last day of next month
-  const nextPayDate = new Date(now.getFullYear(), now.getMonth() + 1 + 1, 0) // last day of next month
+  const nextPayDate = nextPayoutDate(now) // 翌月末（月末締め・翌月末払い）
   const nextPayLabel = nextPayoutAmt > 0
     ? `${nextPayDate.getMonth() + 1}/${nextPayDate.getDate()} — ¥${nextPayoutAmt.toLocaleString()}`
     : null

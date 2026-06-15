@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
+import { withholdingTax } from '@/lib/payout'
 import StatementClient from './StatementClient'
 
 export const runtime = 'edge'
@@ -31,8 +32,9 @@ export default async function StatementPage() {
   const now = new Date()
   const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
+  // 源泉計算は lib/payout の単一ソース（コンソール close_month_batch と完全一致）
   function withholding(gross: number) {
-    return partner!.tax_type === 'individual' ? Math.round(gross * 0.1021) : 0
+    return withholdingTax(gross, partner!.tax_type)
   }
 
   const monthlyData = months.map(ym => {
