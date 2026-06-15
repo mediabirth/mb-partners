@@ -1,0 +1,53 @@
+========================================================
+MB Partners — APP Pass2（④登録フロー再追加 ＋ ①②案件まわりUI/UXパイロット）ダンプ
+日時: 2026-06-15
+正本: 要件定義書(37c1d8f5...) ＋ 添付HTML(MB_Partners_アカウント作成_v2_final.html) ＋ B1/B2デザイン言語
+種別: data/logic不変（④の登録データ追加は除く）。④はスキーマ追加が必要(DDL=勝彦)。
+ビルド: npx next build → ✅ exit 0。実装はサブエージェント2並列(①②)＋本体(④)。
+========================================================
+
+■ ④ パートナー登録フロー（4ステップ＋完了）— 添付HTML準拠
+  画面: app/invite/[token]/InviteForm.tsx を4ステップ・ウィザードに再構築（プログレスバー＋ステップ遷移）。
+   STEP1 アカウント: メール(招待値・読取専用)＋パスワード＋確認（認証は現行パスワード方式を維持）
+   STEP2 基本情報: 姓*・名*・ニックネーム(任意)・電話*・住所*
+   STEP3 報酬受取: 税区分*(個人/法人)・銀行*・支店*・種別*(普通/当座)・口座番号*・口座名義カナ*・インボイス(任意)
+   STEP4 確認と同意: 入力サマリ＋パートナー規約/プライバシー同意（両チェックで「登録を完了する」活性）
+   完了: パートナーコード表示→「ダッシュボードへ」。
+  保存: POST /api/invite/accept を拡張。
+   - profiles: name(姓 名), nickname を保存/更新。
+   - partners: tax_type, bank(jsonb: bank_name/branch_name/account_type/account_number/account_holder),
+     phone, address, invoice_number, terms_agreed_at, privacy_agreed_at（同意は取得日時）を保存。
+   - 既存の招待発行/メール送信(Resend)・使用済みマークは維持。完了時に code を返却。
+  ★スキーマ追加が必要（本番未作成→勝彦が SQL Editor で実行・IF NOT EXISTS・加算的）:
+     supabase/migrations/20260619000001_partner_registration_fields.sql
+       alter table partners add column if not exists phone text;
+       alter table partners add column if not exists address text;
+       alter table partners add column if not exists invoice_number text;
+       alter table partners add column if not exists terms_agreed_at timestamptz;
+       alter table partners add column if not exists privacy_agreed_at timestamptz;
+     ※未作成だと STEP4 送信時に partners 更新が失敗。デプロイ前に作成必須。
+  検証(ローカル・テスト招待): STEP1→2→3→4 を遷移、確認サマリ表示、同意未チェックで完了ボタン不活性を確認。
+   （送信＝DB保存は本番DDL後に検証）
+
+■ ① サービス一覧／関わり方（紹介・協力）UI/UX — app/app/refer/page.tsx（サブエージェント）
+  - サービス一覧: 各サービスを魅力的カード化。関わり方(紹介/協力)と報酬ヘッドラインを一目表示
+    （紹介=青chip＋最大報酬¥を大きく、協力=濃色chip＋coop_rate%×coop_base）。card-hover/stagger。
+  - 関わり方ステップ: 「どのかたちで関わりますか？」紹介(各メニュー報酬)と協力(率×基準・対応範囲chip・資格条件)を
+    2枚の明快なタップ式カードに。報酬を大きく、紹介=青/協力=濃色。
+  - ロジック(actions/トークン/QR/コピー/フォーム/coopMode/consent)は完全温存（restyleのみ）。
+
+■ ② 案件一覧 視認性改善 — app/app/cases/page.tsx（サブエージェント）
+  - 1件=1カードに整理: 顧客名＋状態chip(受付/対応中/成約・確定/支払済 システムカラー＋dot)＋金額¥(即時)＋
+    サービス(アイコン/名)＋チャネルchip(紹介/協力)＋細い進捗バー。4段レール撤去。余白・階層・stagger。
+  - フィルタ(すべて/進行中/完了)維持。データ/ロジック不変(getPartnerWithDeals/filter f)。
+
+■ 検証スクショ（ローカル・実データKT8842／docs/reports/review_screens/pass2/）
+  - wizard_s1〜s4（④ 4ステップ・確認サマリ・同意で活性）
+  - cases.png（② スキャンしやすい案件一覧）
+  - refer_service.png / refer_kakawari.png（① サービス一覧・関わり方）
+
+■ 受け入れ／次アクション
+  - ④: 4ステップで動作・確認サマリ・同意ゲート・完了コード表示 ✓（DB保存は本番DDL後に最終確認）
+  - ①②: パイロット2画面のスクショ提出（本レポート）→ レビュー → 他画面へ展開。
+  - data/logic不変（④登録保存を除く）・build exit0。
+  - 本番手順: ① partners DDL(上記)実行 → ② デプロイ承認 → ③ 本番で ④登録E2E(招待→送信→DB) と ①②本番スクショ確認。

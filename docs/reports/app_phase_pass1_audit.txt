@@ -1,0 +1,77 @@
+========================================================
+MB Partners — APPフェーズ Pass1（現状監査＋テストデータ投入）報告
+日時: 2026-06-15
+範囲: 監査＋デモデータ投入のみ（コード変更なし＝デプロイなし）。
+本番DB書込はデモパートナー(KT8842/SS1203/IN0907)限定・追加のみ・破壊操作なし。実データ未接触。
+========================================================
+
+■ ① 通知の実態監査（プッシュ／LINE／メール）
+[プッシュ通知＝Web Push] 未実装（UIモックのみ）
+  - VAPID鍵なし／PushManager.subscribe なし／購読保存テーブル(push_subscriptions等)なし。
+  - public/sw.js はキャッシュ専用（static cache-first / それ以外 network-only）。push・notificationclick・
+    showNotification ハンドラなし。
+  - APP設定(/app/settings)の「プッシュ通知」トグルは useState のローカル値のみ（保存も送信もなし）。
+  - 実装規模概算（中規模・約2〜4日）: VAPID鍵生成 → sw.js に push/notificationclick 追加 →
+    クライアント購読(PushManager.subscribe) → 購読をDB保存（新テーブル＝DDL要） → 送信基盤
+    （web-push 等でサーバ/Edge FunctionからVAPID送信）→ 既存 createNotification と連動。
+    ※iOS Safari は PWAホーム追加(A2HS)必須等の制約あり。
+[LINE通知] 未実装
+  - LINE API への接続コード皆無。
+  - 実装には LINE公式アカウント(Messaging API) ＋ ユーザーのLINE連携(友だち追加＋UID紐付け/OAuth) ＋
+    送信基盤。LINE側のチャネル/公式アカウント開設も必要（外部前提）。中規模＋外部設定。
+[メール通知（APP設定トグル）] APP側はモック。
+  - ただし招待メールはResendで実装済(⑩)。イベント連動メール(新規案件等のパートナー向け)は未実装。
+[実稼働している通知チャネル]
+  - アプリ内通知（notifications テーブル → /app/inbox）のみ稼働（createNotification 経由で各イベントが書込）。
+  - 管理側Slackは稼働（⑤・notifySlackEvent＋トグル）。
+
+■ ② APP↔コンソール 整合監査
+[共通ソース＝二重定義なし]
+  - deals / notifications / broadcasts / profiles / partners は APP・コンソール双方が同一Supabaseテーブル参照。
+  - 案件・ステータス・金額: APP=getPartnerWithDeals / console=getAllDeals（ともに deals）。同一。
+    率案件の確定額も deals.amount（base×率）で一致（Batch D/E）。
+  - 通知: notifications（APP=inbox読取／各API=書込）。同一。
+[構造差・不整合リスク（ハードな矛盾ではないが要Pass2検討）]
+  1) 報酬/源泉/手取の集計が「2系統」:
+     - APP報酬・明細 = deals 直集計（gross=Σamount／源泉=round(月次gross×10.21%)(個人)／手取=gross−源泉）。
+       payout_items/payout_batches は未参照（getPayoutItemsForPartner は定義のみ・未使用）。
+     - コンソール支払管理 = payout_batches/payout_items（close_month_batch RPC が締め時に算出）。
+     → 同一 deals 由来で整合するはずだが、源泉の丸め単位（APP=月次合計／batch=明細単位）で1円差の可能性。
+       「支払済/未払」も APP=deals.status基準・console=batch.status基準（mark_paidで両更新＝通常同期）。
+  2) 「次回振込」: APP独自計算（confirmed合計＋翌月末日）。締め日/支払サイクルのソーステーブルは無し。
+  3) 「見込み報酬」: APP独自（received+in_progress の amount 合計）。コンソールに同概念なし。
+  → Pass2候補: APP報酬の確定月を payout_items ベースに寄せる／源泉の丸め統一／次回振込・締め日のソース化。
+
+■ ③ 投入したテストデータ一覧（追加のみ・デモ3社）
+[deals 12件 追加]  ※既存は温存
+  KT8842（勝田 勝彦/個人）— 追加8件（合計12件）:
+   1 paid  紹介 MOOM 賃貸仲介 ¥30,000 (2026-04)
+   2 paid  協力 MOOM 50%×粗利 base¥500,000→¥250,000 (2026-04)
+   3 paid  紹介 RESONATION サイト制作 ¥100,000 (2026-05)
+   4 confirmed 紹介 MatchHub 転職 ¥30,000 (2026-06)
+   5 confirmed 協力 RESONATION 10%×利益 base¥1,200,000→¥120,000 (2026-06)
+   6 in_progress 紹介 RESONATION サイト ¥100,000（見込み・商談6/18）
+   7 in_progress 協力 PRAGMATION/EMANATION（base未入力＝見込み未確定）
+   8 received 紹介 PRAGMATION/EMANATION DX ¥40,000
+   → 合計: paid4/confirmed3/in_progress3/received2、紹介8/協力4、確定¥300,000/支払済¥480,000/見込み¥200,000
+  SS1203（佐々木 恵美/個人）— 追加2件（合計5件）:
+   - confirmed 協力 MatchHub 10%×売上 base¥600,000→¥60,000 (2026-06)
+   - paid 紹介 MOOM 賃貸仲介 ¥30,000 (2026-05)
+  IN0907（井上 翔太/法人）— 追加2件（合計5件）:
+   - confirmed 紹介 RESONATION ロゴ ¥50,000 (2026-06)
+   - paid 協力 PRAGMATION/EMANATION 10%×利益 base¥900,000→¥90,000 (2026-05)  ※法人＝源泉なし
+[notifications 5件 追加]  KT8842×3（新規案件/報酬確定/4月振込）, SS1203×1, IN0907×1
+[deal_events 6件 追加]  KT8842（最近の動きフィード用・visible_to_partner=true）
+[スキーマ変更] なし（既存テーブルへの追加のみ／DDL不要）
+
+■ 検証（KT8842 を実ログインでスクショ：docs/reports/review_screens/app_kt/）
+  - home: 残高¥300,000・次回振込7/31¥300,000・今月確定¥150,000・累計¥780,000・見込み¥200,000・
+    やること2件・通知未読ドット。
+  - rewards: 2026 TOTAL¥780,000・支払済¥480,000・未払¥300,000・成約7件、月次明細(04/05/06)に
+    紹介/協力chip・源泉(−¥)・両チャネル・複数サービス。
+  - cases / inbox も200・データ表示。
+
+■ Pass2 設計インプット（提案）
+  ④ UI/UX刷新（APP全画面）
+  ① 通知方針: Web Push基盤を作るか／当面はアプリ内通知に集約し push・LINEトグルを実態に合わせる(または非表示)。
+  ② 整合修正: 報酬集計の一本化（確定月=payout_items）／源泉丸め統一／次回振込・締め日のソース化。

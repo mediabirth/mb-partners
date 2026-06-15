@@ -24,12 +24,33 @@ export const runtime = 'edge'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
-  const { token, name, email: clientEmail, password } = body
+  const {
+    token, email: clientEmail, password,
+    lastName, firstName, nickname, phone, address,
+    taxType, bankName, branchName, accountType, accountNumber, accountHolder, invoiceNumber,
+    agreeTerms, agreePrivacy,
+    name: legacyName,
+  } = body
 
-  if (!token)        return NextResponse.json({ error: 'token は必須です' }, { status: 400 })
-  if (!name?.trim()) return NextResponse.json({ error: 'name は必須です' }, { status: 400 })
+  const name = (lastName || firstName)
+    ? `${(lastName ?? '').trim()} ${(firstName ?? '').trim()}`.trim()
+    : (legacyName ?? '').trim()
+
+  if (!token)  return NextResponse.json({ error: 'token は必須です' }, { status: 400 })
+  if (!name)   return NextResponse.json({ error: 'お名前を入力してください' }, { status: 400 })
   if (!password || password.length < 8) {
     return NextResponse.json({ error: 'パスワードは8文字以上で設定してください' }, { status: 400 })
+  }
+
+  // Full 4-step registration requires reward-receipt info + consent.
+  const fullRegistration = lastName !== undefined || taxType !== undefined
+  if (fullRegistration) {
+    if (!phone?.trim() || !address?.trim()) return NextResponse.json({ error: '電話番号と住所を入力してください' }, { status: 400 })
+    if (!['individual', 'corporate'].includes(taxType)) return NextResponse.json({ error: '税区分を選択してください' }, { status: 400 })
+    if (!bankName?.trim() || !branchName?.trim() || !accountType?.trim() || !accountNumber?.trim() || !accountHolder?.trim()) {
+      return NextResponse.json({ error: '振込先口座をすべて入力してください' }, { status: 400 })
+    }
+    if (!agreeTerms || !agreePrivacy) return NextResponse.json({ error: '規約・プライバシーへの同意が必要です' }, { status: 400 })
   }
 
   const service = await createServiceRoleClient()
@@ -148,43 +169,66 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── profiles 作成（未作成の場合のみ）──────────────────────────────────────
+  // ── profiles 作成/更新 ────────────────────────────────────────────────────
+  const nick = (nickname ?? '').trim() || null
   const { data: existingProfile } = await service
     .from('profiles').select('id').eq('id', userId).maybeSingle()
 
   if (!existingProfile) {
     const color = PARTNER_COLORS[Math.floor(Math.random() * PARTNER_COLORS.length)]
     const { error: profErr } = await service.from('profiles').insert({
-      id:    userId,
-      name:  name.trim(),
-      role,
-      email,
-      color,
+      id: userId, name, role, email, color, nickname: nick,
     })
     if (profErr) {
       return NextResponse.json({ error: profErr.message, detail: 'profiles insert failed' }, { status: 500 })
     }
+  } else {
+    await service.from('profiles').update({ name, nickname: nick }).eq('id', userId)
   }
 
-  // ── partners 作成（role=partner かつ未作成の場合）──────────────────────────
+  // ── partners 作成/更新（role=partner）──────────────────────────────────────
+  let partnerCode: string | null = null
   if (role === 'partner') {
+    const bank = fullRegistration ? {
+      bank_name: (bankName ?? '').trim(),
+      branch_name: (branchName ?? '').trim(),
+      account_type: (accountType ?? '').trim(),
+      account_number: (accountNumber ?? '').trim(),
+      account_holder: (accountHolder ?? '').trim(),
+    } : null
+    const nowIso = new Date().toISOString()
+    const partnerFields = fullRegistration ? {
+      tax_type: taxType,
+      bank,
+      phone: (phone ?? '').trim() || null,
+      address: (address ?? '').trim() || null,
+      invoice_number: (invoiceNumber ?? '').trim() || null,
+      terms_agreed_at: agreeTerms ? nowIso : null,
+      privacy_agreed_at: agreePrivacy ? nowIso : null,
+    } : {}
+
     const { data: existingPartner } = await service
-      .from('partners').select('id').eq('profile_id', userId).maybeSingle()
+      .from('partners').select('id, code').eq('profile_id', userId).maybeSingle()
 
     if (!existingPartner) {
-      let code = generatePartnerCode(name.trim())
+      let code = generatePartnerCode(name)
       const { data: conflict } = await service
         .from('partners').select('id').eq('code', code).maybeSingle()
-      if (conflict) code = generatePartnerCode(name.trim())
+      if (conflict) code = generatePartnerCode(name)
+      partnerCode = code
 
       const { error: partnerErr } = await service.from('partners').insert({
-        profile_id: userId,
-        code,
-        status:     'active',
-        tax_type:   'individual',
+        profile_id: userId, code, status: 'active',
+        tax_type: 'individual',
+        ...partnerFields,
       })
       if (partnerErr) {
         return NextResponse.json({ error: partnerErr.message, detail: 'partners insert failed' }, { status: 500 })
+      }
+    } else {
+      partnerCode = existingPartner.code
+      if (fullRegistration) {
+        await service.from('partners').update(partnerFields).eq('id', existingPartner.id)
       }
     }
   }
@@ -192,8 +236,8 @@ export async function POST(req: NextRequest) {
   // ── 招待を使用済みにマーク ────────────────────────────────────────────────
   await service
     .from('invites')
-    .update({ used_at: new Date().toISOString(), name: name.trim() })
+    .update({ used_at: new Date().toISOString(), name })
     .eq('token', token)
 
-  return NextResponse.json({ ok: true }, { status: 200 })
+  return NextResponse.json({ ok: true, code: partnerCode }, { status: 200 })
 }

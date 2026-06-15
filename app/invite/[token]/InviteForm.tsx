@@ -4,191 +4,224 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function InviteForm({
-  email,
-  defaultName,
-  token,
-}: {
-  email: string
-  defaultName: string
-  token: string
-}) {
+type Step = 1 | 2 | 3 | 4
+const STEP_LABELS = ['アカウント', '基本情報', '報酬受取', '確認と同意']
+
+const card: React.CSSProperties = { width: '100%', maxWidth: 430, background: '#fff', minHeight: '100vh', boxShadow: '0 0 48px rgba(14,14,20,.10)', display: 'flex', flexDirection: 'column' }
+const input: React.CSSProperties = { width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', color: 'var(--txt)', background: '#fff' }
+const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }
+
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return <div style={{ marginBottom: 13 }}><span style={lbl}>{label}</span>{children}</div>
+}
+
+export default function InviteForm({ email, defaultName, token }: { email: string; defaultName: string; token: string }) {
   const router = useRouter()
-  const [name, setName]                 = useState(defaultName)
-  const [password, setPassword]         = useState('')
+  const [step, setStep] = useState<Step>(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+  const [code, setCode] = useState<string | null>(null)
+
+  // STEP1
+  const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [loading, setLoading]           = useState(false)
-  const [error, setError]               = useState('')
-  const [done, setDone]                 = useState(false)
+  // STEP2
+  const [lastName, setLastName] = useState(defaultName?.split(' ')[0] ?? '')
+  const [firstName, setFirstName] = useState('')
+  const [nickname, setNickname] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  // STEP3
+  const [taxType, setTaxType] = useState<'individual' | 'corporate'>('individual')
+  const [bankName, setBankName] = useState('')
+  const [branchName, setBranchName] = useState('')
+  const [accountType, setAccountType] = useState('普通')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [accountHolder, setAccountHolder] = useState('')
+  const [invoiceNumber, setInvoiceNumber] = useState('')
+  // STEP4
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [agreePrivacy, setAgreePrivacy] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const step1ok = password.length >= 8 && password === passwordConfirm
+  const step2ok = !!lastName.trim() && !!firstName.trim() && !!phone.trim() && !!address.trim()
+  const step3ok = !!bankName.trim() && !!branchName.trim() && !!accountNumber.trim() && !!accountHolder.trim()
+  const step4ok = agreeTerms && agreePrivacy
+
+  function next() {
     setError('')
+    if (step === 1 && !step1ok) { setError(password.length < 8 ? 'パスワードは8文字以上で設定してください' : 'パスワードが一致しません'); return }
+    if (step === 2 && !step2ok) { setError('必須項目を入力してください'); return }
+    if (step === 3 && !step3ok) { setError('振込先口座をすべて入力してください'); return }
+    setStep((s) => Math.min(4, s + 1) as Step)
+  }
+  function back() { setError(''); setStep((s) => Math.max(1, s - 1) as Step) }
 
-    if (!name.trim())    { setError('お名前を入力してください'); return }
-    if (password.length < 8) { setError('パスワードは8文字以上で設定してください'); return }
-    if (password !== passwordConfirm) { setError('パスワードが一致しません'); return }
-
-    setLoading(true)
-
-    // Step 1: Server creates the user account + partner record
+  async function submit() {
+    if (!step4ok) return
+    setLoading(true); setError('')
     const res = await fetch('/api/invite/accept', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ token, name: name.trim(), email, password }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token, email, password,
+        lastName: lastName.trim(), firstName: firstName.trim(), nickname: nickname.trim(),
+        phone: phone.trim(), address: address.trim(),
+        taxType, bankName: bankName.trim(), branchName: branchName.trim(), accountType,
+        accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim(), invoiceNumber: invoiceNumber.trim(),
+        agreeTerms, agreePrivacy,
+      }),
     })
-    const data = await res.json()
-
-    if (!res.ok) {
-      setError(data.error || 'アカウント作成に失敗しました')
-      setLoading(false)
-      return
-    }
-
-    // Step 2: Client signs in with the new credentials (password path — no magic link)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { setError(data.error || 'アカウント作成に失敗しました'); setLoading(false); return }
     const supabase = createClient()
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (signInErr) {
-      setError('アカウントは作成されましたが、ログインに失敗しました。ログインページからサインインしてください。')
-      setLoading(false)
-      return
-    }
-
-    // Step 3: Show success screen, then navigate
+    if (signInErr) { setError('アカウントは作成されましたが、ログインに失敗しました。ログインページからお試しください。'); setLoading(false); return }
+    setCode(data.code ?? null)
     setDone(true)
-    setTimeout(() => { router.push('/app'); router.refresh() }, 2200)
   }
 
+  // ── Completion ──────────────────────────────────────────────────────────────
+  if (done) {
+    return (
+      <div style={{ background: '#E9E9ED', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ ...card, justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '40px 28px' }}>
+          <div className="celebrate-pop" style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.4"><path d="M20 6L9 17l-5-5" /></svg>
+          </div>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>登録が完了しました</h1>
+          <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 22 }}>MB Partners へようこそ。<br />あなたのパートナーコードはこちらです。</p>
+          {code && (
+            <div style={{ background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '16px 28px', marginBottom: 26 }}>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>Partner Code</div>
+              <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '.08em', color: 'var(--blue)' }}>{code}</div>
+            </div>
+          )}
+          <button onClick={() => { router.push('/app'); router.refresh() }} className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }}>ダッシュボードへ</button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Wizard ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ background: '#E9E9ED', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
-      <div style={{
-        width: '100%', maxWidth: 430, background: '#fff', minHeight: '100vh',
-        boxShadow: '0 0 48px rgba(14,14,20,.12)', display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '40px 28px', position: 'relative', overflow: 'hidden',
-      }}>
-        {/* Background gradient */}
-        <div style={{
-          position: 'absolute', inset: '-30%', pointerEvents: 'none',
-          background: 'radial-gradient(46% 36% at 72% 18%,#EDEBFC,transparent 70%)',
-        }} />
-
-        {done && (
-          <div style={{ position: 'relative', textAlign: 'center', padding: '32px 0' }}>
-            <style>{`@keyframes drawCheck { from { stroke-dashoffset: 52 } to { stroke-dashoffset: 0 } }`}</style>
-            <svg width="96" height="96" viewBox="0 0 100 100" style={{ margin: '0 auto 20px', display: 'block' }}>
-              <circle
-                cx="50" cy="50" r="45"
-                fill="none" stroke="var(--blue)" strokeWidth="3"
-                className="draw"
-              />
-              <path
-                d="M30 51l14 14 26-26"
-                fill="none" stroke="var(--blue)" strokeWidth="3.5"
-                strokeLinecap="round" strokeLinejoin="round"
-                style={{
-                  strokeDasharray: 52,
-                  strokeDashoffset: 52,
-                  animation: 'drawCheck .4s cubic-bezier(.2,.8,.2,1) .6s both',
-                }}
-              />
-            </svg>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 8 }}>アカウント作成完了！</h2>
-            <p style={{ fontSize: '.75rem', color: 'var(--muted2)', lineHeight: 1.8 }}>
-              パートナーポータルへ移動します…
-            </p>
-          </div>
-        )}
-
-        <div style={{ position: 'relative', display: done ? 'none' : undefined }}>
-          {/* Logo */}
-          <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 24 }}>
-            <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="2.6"/>
-            <rect x="28" y="6"  width="14" height="14" rx="7"  stroke="#4733E6" strokeWidth="2.6"/>
-            <rect x="6"  y="28" width="14" height="14" rx="7"  stroke="#0E0E14" strokeWidth="2.6"/>
-            <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
+      <div style={card}>
+        {/* Header + progress */}
+        <div style={{ padding: '28px 26px 16px' }}>
+          <svg width="38" height="38" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 14 }}>
+            <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="2.6" />
+            <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="2.6" />
+            <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="2.6" />
+            <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
           </svg>
+          <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em' }}>パートナー登録</h1>
+          <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>STEP {step} / 4 — {STEP_LABELS[step - 1]}</p>
+          <div style={{ display: 'flex', gap: 5, marginTop: 12 }}>
+            {[1, 2, 3, 4].map((s) => (
+              <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? 'var(--blue)' : 'var(--line)', transition: 'background .3s var(--ease-out)' }} />
+            ))}
+          </div>
+        </div>
 
-          <div className="eyebrow">Media Birth Partner Program</div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 900, lineHeight: 1.45, margin: '10px 0 8px' }}>
-            招待を受け取りました
-          </h1>
-          <p style={{ fontSize: '.75rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 28 }}>
-            パスワードを設定してアカウントを作成します。
-          </p>
+        {/* Body */}
+        <div className="page-anim" key={step} style={{ flex: 1, overflowY: 'auto', padding: '6px 26px 10px' }}>
+          {step === 1 && (
+            <>
+              <Field label="メールアドレス（ログインに使用）">
+                <input value={email} readOnly style={{ ...input, background: 'var(--bg2)', color: 'var(--muted2)' }} />
+              </Field>
+              <Field label="パスワード（8文字以上）*">
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••••" autoComplete="new-password" style={input} />
+              </Field>
+              <Field label="パスワード（確認）*">
+                <input type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="••••••••••" autoComplete="new-password" style={input} />
+              </Field>
+            </>
+          )}
 
-          <form onSubmit={handleSubmit}>
-            {/* Email — readonly prefill */}
-            <div className="fld" style={{ marginBottom: 14 }}>
-              <label>メールアドレス</label>
-              <input
-                type="email"
-                value={email}
-                readOnly
-                style={{ background: 'var(--bg2)', color: 'var(--muted2)', cursor: 'default' }}
-              />
-            </div>
+          {step === 2 && (
+            <>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}><Field label="姓 *"><input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="山田" style={input} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="名 *"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="太郎" style={input} /></Field></div>
+              </div>
+              <Field label="ニックネーム（表示名・後から変更可）"><input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="未入力ならお名前を表示" style={input} /></Field>
+              <Field label="電話番号 *"><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" inputMode="tel" style={input} /></Field>
+              <Field label="住所 *"><input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="大阪府〇〇市〇〇 1-2-3" style={input} /></Field>
+            </>
+          )}
 
-            {/* Name */}
-            <div className="fld" style={{ marginBottom: 14 }}>
-              <label htmlFor="invite-name">お名前 <span style={{ color: 'var(--red)' }}>*</span></label>
-              <input
-                id="invite-name"
-                type="text"
-                placeholder="例: 山田 太郎"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-                autoFocus={!defaultName}
-              />
-            </div>
+          {step === 3 && (
+            <>
+              <Field label="税区分 *">
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
+                    <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 700, fontSize: '.8rem', cursor: 'pointer' }}>{l}</button>
+                  ))}
+                </div>
+              </Field>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}><Field label="銀行 *"><input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="〇〇銀行" style={input} /></Field></div>
+                <div style={{ flex: 1 }}><Field label="支店 *"><input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="〇〇支店" style={input} /></Field></div>
+              </div>
+              <Field label="種別 *">
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {['普通', '当座'].map((v) => (
+                    <button key={v} type="button" onClick={() => setAccountType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${accountType === v ? 'var(--blue)' : 'var(--line)'}`, background: accountType === v ? 'var(--blue-bg2)' : '#fff', color: accountType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 700, fontSize: '.8rem', cursor: 'pointer' }}>{v}</button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="口座番号 *"><input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="1234567" inputMode="numeric" style={input} /></Field>
+              <Field label="口座名義（カナ）*"><input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="ヤマダ タロウ" style={input} /></Field>
+              <Field label="インボイス登録番号（任意・後から追加可）"><input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="T0000000000000" style={input} /></Field>
+            </>
+          )}
 
-            {/* Password */}
-            <div className="fld" style={{ marginBottom: 14 }}>
-              <label htmlFor="invite-pw">パスワード <span style={{ color: 'var(--red)' }}>*</span></label>
-              <input
-                id="invite-pw"
-                type="password"
-                placeholder="8文字以上"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                autoFocus={!!defaultName}
-              />
-            </div>
+          {step === 4 && (
+            <>
+              <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                {[
+                  ['お名前', `${lastName} ${firstName}`],
+                  ['ニックネーム', nickname || '（お名前を表示）'],
+                  ['メール', email],
+                  ['電話番号', phone],
+                  ['住所', address],
+                  ['税区分', taxType === 'individual' ? '個人' : '法人'],
+                  ['振込先', `${bankName} ${branchName} ${accountType} ${accountNumber}`],
+                  ['口座名義', accountHolder],
+                  ['インボイス', invoiceNumber || '未登録'],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: '.72rem' }}>
+                    <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{k}</span>
+                    <span style={{ fontWeight: 600, textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
+                <span><a href="/app/terms" target="_blank" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>パートナー規約</a>に同意します</span>
+              </label>
+              <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
+                <span><a href="/app/terms" target="_blank" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>プライバシーポリシー</a>に同意します</span>
+              </label>
+            </>
+          )}
 
-            {/* Password confirm */}
-            <div className="fld" style={{ marginBottom: 20 }}>
-              <label htmlFor="invite-pw2">パスワード（確認） <span style={{ color: 'var(--red)' }}>*</span></label>
-              <input
-                id="invite-pw2"
-                type="password"
-                placeholder="もう一度入力"
-                value={passwordConfirm}
-                onChange={e => setPasswordConfirm(e.target.value)}
-                required
-                autoComplete="new-password"
-              />
-            </div>
+          {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
+        </div>
 
-            {error && (
-              <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>
-            )}
-
-            <button
-              type="submit"
-              className="btn btn-p"
-              style={{ width: '100%', justifyContent: 'center' }}
-              disabled={loading || !name.trim() || password.length < 8 || password !== passwordConfirm}
-            >
-              {loading ? 'アカウント作成中…' : 'アカウントを作成してログイン'}
+        {/* Footer nav */}
+        <div style={{ display: 'flex', gap: 10, padding: '12px 26px 26px', borderTop: '1px solid var(--line)' }}>
+          {step > 1 && <button onClick={back} className="btn btn-g" style={{ flex: '0 0 96px', justifyContent: 'center' }} disabled={loading}>戻る</button>}
+          {step < 4 ? (
+            <button onClick={next} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>次へ</button>
+          ) : (
+            <button onClick={submit} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }} disabled={!step4ok || loading}>
+              {loading ? '登録中…' : '登録を完了する'}
             </button>
-          </form>
-
-          <p style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 16, textAlign: 'center' }}>
-            すでにアカウントをお持ちの方は<a href="/login" style={{ color: 'var(--blue)' }}>ログイン</a>へ
-          </p>
+          )}
         </div>
       </div>
     </div>

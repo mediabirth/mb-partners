@@ -132,83 +132,134 @@ export default function ReferPage() {
     <div>
       {/* ── Step 1: Service ─────────────────────────────────── */}
       {step === 'service' && (
-        <div>
-          <div style={{ padding: '22px 20px 6px' }}>
+        <div className="page-anim">
+          <div style={{ padding: '22px 20px 10px' }}>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Step 1 / 2</div>
-            <h2 style={{ fontSize: '.9rem', fontWeight: 700 }}>どのサービスの案件ですか?</h2>
+            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのサービスの案件ですか?</h2>
+            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
+              関われるかたちと報酬がひと目でわかります。
+            </p>
           </div>
           <div className="stagger" style={{ padding: '0 20px' }}>
-            {services.map(svc => (
-              <button key={svc.id} onClick={() => pickService(svc)} className="card-hover"
-                style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px', marginBottom: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 13, textAlign: 'left', fontFamily: 'inherit' }}>
-                <ServiceIcon icon={svc.icon} color={svc.color} size={38} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.86rem', fontWeight: 700 }}>{svc.name}</div>
-                  {svc.subtitle && (
-                    <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1 }}>{svc.subtitle}</div>
-                  )}
-                  {/* 紹介メニュー名チップ + 協力バッジ */}
-                  {(svc.service_menus.length > 0 || svc.coop_enabled) && (
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 6 }}>
-                      {svc.service_menus.map(m => <RefChip key={m.id} name={m.name} />)}
-                      {svc.coop_enabled && <CoopBadge />}
+            {services.map(svc => {
+              // 紹介報酬のヘッドライン: メニューの最大報酬を代表値として表示
+              const refMenus = svc.service_menus
+              const topMenu = refMenus.length
+                ? [...refMenus].sort((a, b) => Number(b.ref_value) - Number(a.ref_value))[0]
+                : null
+              const coopAmt = svc.coop_enabled && svc.coop_rate
+                ? `${svc.coop_rate}%${svc.coop_base ? ` (${svc.coop_base})` : ''}`
+                : null
+              return (
+                <button key={svc.id} onClick={() => pickService(svc)} className="card-hover"
+                  style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '15px 16px 14px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
+                  {/* Header: icon + name + chevron */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                    <ServiceIcon icon={svc.icon} color={svc.color} size={42} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '.92rem', fontWeight: 900, letterSpacing: '-.01em' }}>{svc.name}</div>
+                      {svc.subtitle && (
+                        <div style={{ fontSize: '.63rem', color: 'var(--muted2)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.subtitle}</div>
+                      )}
+                    </div>
+                    <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--bg2)', color: 'var(--muted)', fontSize: '.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</span>
+                  </div>
+
+                  {/* 関わり方 × 報酬: ひと目でわかる reward rail */}
+                  {(topMenu || coopAmt) && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 13, flexWrap: 'wrap' }}>
+                      {topMenu && (
+                        <div style={{ flex: '1 1 130px', minWidth: 120, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 11, padding: '9px 11px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                            <span className="chip chip-referral">紹介</span>
+                            {refMenus.length > 1 && (
+                              <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--blue)', opacity: .8 }}>{refMenus.length}メニュー</span>
+                            )}
+                          </div>
+                          <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.18rem', color: 'var(--blue)', marginTop: 6, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                            {refMenus.length > 1 && <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', marginRight: 3 }}>最大</span>}
+                            {fmtRefAmount(topMenu)}
+                          </div>
+                        </div>
+                      )}
+                      {coopAmt && (
+                        <div style={{ flex: '1 1 130px', minWidth: 120, background: '#F4F3FA', border: '1px solid #E7E4F7', borderRadius: 11, padding: '9px 11px' }}>
+                          <span className="chip chip-cooperation">協力</span>
+                          <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.18rem', color: 'var(--blue-dk)', marginTop: 6, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                            {coopAmt}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-                <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>›</span>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
 
       {/* ── Step 2: Menu / Coop selection ───────────────────── */}
       {step === 'menu' && selSvc && (
-        <div>
+        <div className="page-anim">
           <button onClick={() => setStep('service')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.7rem', color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             ← サービス選択
           </button>
-          <div style={{ padding: '10px 20px 6px' }}>
-            <div className="eyebrow" style={{ marginBottom: 8 }}>{selSvc.name}</div>
-            <h2 style={{ fontSize: '.9rem', fontWeight: 700 }}>どのかたちで関わりますか?</h2>
+          <div style={{ padding: '10px 20px 8px' }}>
+            <div className="eyebrow" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+              <ServiceIcon icon={selSvc.icon} color={selSvc.color} size={20} />
+              {selSvc.name}
+            </div>
+            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのかたちで関わりますか?</h2>
+            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
+              関わり方によって報酬と役割が変わります。
+            </p>
           </div>
-          <div style={{ padding: '0 20px 20px' }}>
-            {/* Referral menu cards */}
+          <div className="stagger" style={{ padding: '0 20px 20px' }}>
+            {/* Referral menu cards — 紹介 = 青 */}
             {selSvc.service_menus.map(m => {
               const covSteps = (m.coverage_steps ?? []).filter((s: { label: string; included: boolean }) => s.included)
               return (
                 <button key={m.id} onClick={() => pickMenu(m)} className="card-hover"
-                  style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid var(--line)', borderRadius: 15, padding: '16px 17px', marginBottom: 12, cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid var(--blue-bg)', borderRadius: 16, padding: 0, marginBottom: 13, cursor: 'pointer', overflow: 'hidden' }}>
+                  {/* Reward banner */}
+                  <div style={{ background: 'var(--blue-bg2)', borderBottom: '1px solid var(--blue-bg)', padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
                       <span className="chip chip-referral">紹介</span>
-                      <span style={{ fontSize: '.9rem', fontWeight: 900 }}>{m.name}</span>
+                      <div style={{ fontSize: '.92rem', fontWeight: 900, marginTop: 7, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
                     </div>
-                    <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', color: 'var(--blue)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>
-                      {fmtRefAmount(m)}
-                    </span>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--blue)', opacity: .75, letterSpacing: '.06em' }}>REWARD</div>
+                      <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.42rem', color: 'var(--blue)', lineHeight: 1.05, whiteSpace: 'nowrap' }}>
+                        {fmtRefAmount(m)}
+                      </div>
+                    </div>
                   </div>
-                  {m.ref_trigger && (
-                    <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '0 0 6px', lineHeight: 1.6 }}>{m.ref_trigger}</p>
-                  )}
-                  {covSteps.length > 0 && (
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 6 }}>
-                      {covSteps.map((s: { label: string }) => (
-                        <span key={s.label} style={{ fontSize: '.58rem', fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue)' }}>{s.label}</span>
-                      ))}
+                  {/* Body */}
+                  <div style={{ padding: '13px 16px 14px' }}>
+                    {m.ref_trigger && (
+                      <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.6 }}>{m.ref_trigger}</p>
+                    )}
+                    {covSteps.length > 0 && (
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
+                        {covSteps.map((s: { label: string }) => (
+                          <span key={s.label} style={{ fontSize: '.58rem', fontWeight: 600, padding: '3px 9px', borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue)' }}>{s.label}</span>
+                        ))}
+                      </div>
+                    )}
+                    {m.qualification && (
+                      <p style={{ fontSize: '.64rem', color: 'var(--amber)', margin: '0 0 8px', lineHeight: 1.5 }}>⚠ {m.qualification}</p>
+                    )}
+                    <div style={{ fontSize: '.74rem', fontWeight: 800, color: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                      <span>このかたちで紹介する</span>
+                      <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</span>
                     </div>
-                  )}
-                  {m.qualification && (
-                    <p style={{ fontSize: '.64rem', color: 'var(--amber)', margin: '0 0 6px', lineHeight: 1.5 }}>⚠ {m.qualification}</p>
-                  )}
-                  <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                    選択する <span>›</span>
                   </div>
                 </button>
               )
             })}
 
-            {/* Cooperation card (service-level) */}
+            {/* Cooperation card (service-level) — 協力 = 濃色 */}
             {selSvc.coop_enabled && (() => {
               const covSteps = (selSvc.coverage_steps ?? []).filter(s => s.included)
               const coopAmt = selSvc.coop_rate
@@ -216,31 +267,42 @@ export default function ReferPage() {
                 : '-'
               return (
                 <button onClick={pickCoop} className="card-hover"
-                  style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid var(--line)', borderRadius: 15, padding: '16px 17px', marginBottom: 12, cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1.5px solid #E7E4F7', borderRadius: 16, padding: 0, marginBottom: 13, cursor: 'pointer', overflow: 'hidden' }}>
+                  {/* Reward banner */}
+                  <div style={{ background: '#F4F3FA', borderBottom: '1px solid #E7E4F7', padding: '13px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
                       <span className="chip chip-cooperation">協力</span>
-                      <span style={{ fontSize: '.9rem', fontWeight: 900 }}>協力パートナー</span>
+                      <div style={{ fontSize: '.92rem', fontWeight: 900, marginTop: 7, letterSpacing: '-.01em' }}>協力パートナー</div>
                     </div>
-                    <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', color: 'var(--txt)', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>
-                      {coopAmt}
-                    </span>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--blue-dk)', opacity: .7, letterSpacing: '.06em' }}>REWARD</div>
+                      <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.42rem', color: 'var(--blue-dk)', lineHeight: 1.05, whiteSpace: 'nowrap' }}>
+                        {coopAmt}
+                      </div>
+                    </div>
                   </div>
-                  {selSvc.ft_trigger && (
-                    <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.6 }}>{selSvc.ft_trigger}</p>
-                  )}
-                  {covSteps.length > 0 && (
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
-                      {covSteps.map((s: { label: string }) => (
-                        <span key={s.label} style={{ fontSize: '.58rem', fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: '#F0F0F4', color: 'var(--txt)' }}>{s.label}</span>
-                      ))}
+                  {/* Body */}
+                  <div style={{ padding: '13px 16px 14px' }}>
+                    {selSvc.ft_trigger && (
+                      <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.6 }}>{selSvc.ft_trigger}</p>
+                    )}
+                    {covSteps.length > 0 && (
+                      <>
+                        <div style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', marginBottom: 5 }}>対応範囲</div>
+                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
+                          {covSteps.map((s: { label: string }) => (
+                            <span key={s.label} style={{ fontSize: '.58rem', fontWeight: 600, padding: '3px 9px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>{s.label}</span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {selSvc.ft_condition && (
+                      <p style={{ fontSize: '.64rem', color: 'var(--amber)', margin: '0 0 8px', lineHeight: 1.5 }}>⚠ {selSvc.ft_condition}</p>
+                    )}
+                    <div style={{ fontSize: '.74rem', fontWeight: 800, color: 'var(--blue-dk)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                      <span>協力として関わる</span>
+                      <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#ECE9F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</span>
                     </div>
-                  )}
-                  {selSvc.ft_condition && (
-                    <p style={{ fontSize: '.64rem', color: 'var(--amber)', margin: '0 0 8px', lineHeight: 1.5 }}>⚠ {selSvc.ft_condition}</p>
-                  )}
-                  <div style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--txt)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                    選択する <span>›</span>
                   </div>
                 </button>
               )
