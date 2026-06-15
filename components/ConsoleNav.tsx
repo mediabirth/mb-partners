@@ -15,7 +15,7 @@ const ITEMS = [
   { href: '/console',           id: 'dash',     label: 'ダッシュボード', icon: 'dash' },
   { href: '/console/deals',     id: 'deals',    label: '案件',           icon: 'list' },
   { href: '/console/partners',  id: 'partners', label: 'パートナー',     icon: 'users' },
-  { href: '/console/services',  id: 'svcs',     label: 'サービス・報酬', icon: 'svcs' },
+  { href: '/console/services',  id: 'svcs',     label: 'サービス', icon: 'svcs' },
   { href: '/console/payouts',     id: 'payouts',     label: '支払管理',       icon: 'payouts' },
   { href: '/console/broadcasts', id: 'broadcasts', label: '配信',           icon: 'broadcasts' },
   { href: '/console/inquiries', id: 'inquiries',  label: '問い合わせ',     icon: 'inquiries' },

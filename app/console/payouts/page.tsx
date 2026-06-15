@@ -111,8 +111,6 @@ export default function PayoutsPage() {
             const gross = totalGross(batch.payout_items)
             const wh = totalWh(batch.payout_items)
             const net = totalNet(batch.payout_items)
-            const whPct = gross > 0 ? (wh / gross) * 100 : 0
-            const netPct = gross > 0 ? (net / gross) * 100 : 0
 
             return (
               <div key={batch.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
@@ -128,34 +126,28 @@ export default function PayoutsPage() {
                       <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{batch.payout_items.length}名</span>
                     </div>
 
-                    {/* Money flow: 合計 → 源泉 → 手取 */}
+                    {/* Money flow: 合計 / 源泉 / 手取 — neutral labeled figures */}
                     <div style={{ marginTop: 14, display: 'flex', gap: 22, flexWrap: 'wrap' }}>
                       <div>
                         <div className="eyebrow" style={{ fontSize: '.56rem', color: 'var(--muted2)', letterSpacing: '.04em' }}>合計</div>
-                        <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter' }}>
+                        <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--txt)' }}>
                           ¥{gross.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: '.75rem' }}>−</div>
                       <div>
                         <div className="eyebrow" style={{ fontSize: '.56rem', color: 'var(--muted2)', letterSpacing: '.04em' }}>源泉</div>
-                        <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--red)' }}>
-                          ¥{wh.toLocaleString()}
+                        <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--muted2)' }}>
+                          −¥{wh.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: '.75rem' }}>=</div>
                       <div>
                         <div className="eyebrow" style={{ fontSize: '.56rem', color: 'var(--muted2)', letterSpacing: '.04em' }}>手取</div>
-                        <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--green)' }}>
+                        <div className="tnum" style={{ fontSize: '.92rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--txt)' }}>
                           ¥{net.toLocaleString()}
                         </div>
                       </div>
-                    </div>
-
-                    {/* Proportion bar: net (green) + withholding (red) = total */}
-                    <div style={{ marginTop: 12, display: 'flex', height: 7, borderRadius: 20, overflow: 'hidden', background: 'var(--bg2)', maxWidth: 420 }}>
-                      <div className="bar-grow" style={{ width: `${netPct}%`, background: 'var(--green)' }} />
-                      <div className="bar-grow" style={{ width: `${whPct}%`, background: 'var(--red)' }} />
                     </div>
                   </div>
 
@@ -218,11 +210,11 @@ export default function PayoutsPage() {
                               </span>
                             </div>
                             <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>
-                              {item.statement?.deal_count ?? '?'}件 · 源泉 <span style={{ color: 'var(--red)' }}>¥{item.withholding.toLocaleString()}</span>
+                              {item.statement?.deal_count ?? '?'}件 · 源泉 <span style={{ color: 'var(--muted2)' }}>−¥{item.withholding.toLocaleString()}</span>
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div className="tnum" style={{ fontSize: '.82rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--green)' }}>
+                            <div className="tnum" style={{ fontSize: '.82rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--txt)' }}>
                               ¥{item.net.toLocaleString()}
                             </div>
                             <div style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>
@@ -236,10 +228,10 @@ export default function PayoutsPage() {
                     {batch.payout_items.length > 0 && (
                       <div style={{ padding: '13px 22px', borderTop: '1px solid var(--line)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 22 }}>
                         <div style={{ fontSize: '.68rem', color: 'var(--muted2)', textAlign: 'right' }}>
-                          源泉合計 <b className="tnum" style={{ color: 'var(--red)' }}>−¥{totalWh(batch.payout_items).toLocaleString()}</b>
+                          源泉合計 <b className="tnum" style={{ color: 'var(--muted2)' }}>−¥{totalWh(batch.payout_items).toLocaleString()}</b>
                         </div>
                         <div className="tnum" style={{ fontSize: '.82rem', fontWeight: 800, fontFamily: 'Inter' }}>
-                          振込合計 <span style={{ color: 'var(--green)' }}>¥{totalNet(batch.payout_items).toLocaleString()}</span>
+                          振込合計 <span style={{ color: 'var(--txt)' }}>¥{totalNet(batch.payout_items).toLocaleString()}</span>
                         </div>
                       </div>
                     )}

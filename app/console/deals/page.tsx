@@ -63,6 +63,9 @@ export default function DealsPage() {
   // ② base-amount entry on confirming a rate-based deal
   const [baseModal, setBaseModal] = useState<{ deal: Deal; rate: number; baseLabel: string } | null>(null)
   const [baseInput, setBaseInput] = useState('')
+  // ① edit 実績金額 from the detail panel (any status)
+  const [editingBase, setEditingBase] = useState(false)
+  const [baseEdit, setBaseEdit] = useState('')
 
   useEffect(() => {
     fetch('/api/console/deals').then(r => r.json()).then(d => {
@@ -133,6 +136,31 @@ export default function DealsPage() {
         showToast(`成約確定：報酬 ¥${computed.toLocaleString()}`)
       } else {
         showToast(data?.error ?? '確定に失敗しました')
+      }
+    })
+  }
+
+  // ① Save/edit the actual amount (base) from the detail panel — reward recomputes.
+  function saveBase() {
+    if (!selected) return
+    const ri = rateInfo(selected)
+    const base = Number(baseEdit.replace(/[,，\s]/g, ''))
+    if (!base || Number.isNaN(base) || base <= 0) { showToast('実額を正しく入力してください'); return }
+    startTransition(async () => {
+      const res = await fetch(`/api/console/deals/${selected.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base_amount: base }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        const computed = Math.round(base * (ri.rate as number) / 100)
+        setDeals(prev => prev.map(d => d.id === selected.id ? { ...d, base_amount: base, amount: computed } : d))
+        setSelected(s => s ? { ...s, base_amount: base, amount: computed } : s)
+        setEditingBase(false)
+        showToast(`実績金額を保存：報酬 ¥${computed.toLocaleString()}`)
+      } else {
+        showToast(data?.error ?? '保存に失敗しました')
       }
     })
   }
@@ -224,15 +252,14 @@ export default function DealsPage() {
                   onDragLeave={onDragLeave}
                   onDrop={e => onDrop(e, col.key)}
                   style={{
-                    background: '#F4F4F7', borderRadius: 16, padding: 14, minHeight: 200,
-                    borderTop: `3px solid ${col.accent}`,
+                    background: 'var(--bg2)', borderRadius: 16, padding: 14, minHeight: 200,
+                    border: '1px solid var(--line)',
                     transition: 'background .15s, outline .15s',
                   }}
                 >
-                  {/* Column header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '5px 4px 14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.accent, flexShrink: 0 }} />
+                  {/* Column header — neutral (no colored accent border/dot) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '4px 4px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                       <span style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{col.label}</span>
                       {ci < COLS.length - 1 && (
                         <span aria-hidden style={{ color: 'var(--muted)', fontSize: '.7rem', marginLeft: 2 }}>→</span>
@@ -242,7 +269,7 @@ export default function DealsPage() {
                       className="tnum"
                       style={{
                         fontFamily: 'Inter', fontSize: '.66rem', fontWeight: 800,
-                        color: col.accent, background: col.accentBg,
+                        color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)',
                         borderRadius: 999, padding: '2px 9px', minWidth: 24, textAlign: 'center', flexShrink: 0,
                       }}
                     >
@@ -339,6 +366,52 @@ export default function DealsPage() {
                   <span style={{ fontWeight: 700, textAlign: 'right' }}>{v}</span>
                 </div>
               ))}
+
+              {/* ① 実績金額（率案件）— 常時表示・編集 */}
+              {rateInfo(selected).isRate && (
+                <div style={{ marginTop: 18, padding: '14px 16px', background: 'var(--bg2)', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>実績金額（{rateInfo(selected).baseLabel}）</p>
+                      <p style={{ fontSize: '.88rem', fontWeight: 800, fontFamily: 'Inter', marginTop: 3 }}>
+                        {selected.base_amount != null
+                          ? `¥${selected.base_amount.toLocaleString()}`
+                          : <span style={{ color: 'var(--amber)', fontSize: '.74rem' }}>未入力</span>}
+                      </p>
+                      <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 3 }}>
+                        × {rateInfo(selected).rate}% = 報酬 {selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '—'}
+                      </p>
+                    </div>
+                    {!editingBase && (
+                      <button onClick={() => { setEditingBase(true); setBaseEdit(selected.base_amount?.toString() ?? '') }} className="btn btn-g" style={{ fontSize: '.7rem', padding: '7px 12px', flexShrink: 0 }}>
+                        {selected.base_amount != null ? '金額を編集' : '金額を入力'}
+                      </button>
+                    )}
+                  </div>
+                  {editingBase && (
+                    <div style={{ marginTop: 12 }}>
+                      <input
+                        autoFocus inputMode="numeric"
+                        value={baseEdit}
+                        onChange={e => setBaseEdit(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveBase() }}
+                        placeholder={`${rateInfo(selected).baseLabel}の実額（例: 300000）`}
+                        style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'Inter', fontSize: '.85rem' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
+                        <span style={{ color: 'var(--muted2)' }}>確定報酬（{rateInfo(selected).rate}%）</span>
+                        <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--blue)' }}>
+                          {(() => { const bv = Number(baseEdit.replace(/[,，\s]/g, '')); return bv > 0 ? `¥${Math.round(bv * (rateInfo(selected).rate as number) / 100).toLocaleString()}` : '—' })()}
+                        </b>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button onClick={() => setEditingBase(false)} className="btn btn-g" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
+                        <button onClick={saveBase} disabled={pending} className="btn btn-p" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ marginTop: 18 }}>
                 <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 8 }}>ステータス変更</p>

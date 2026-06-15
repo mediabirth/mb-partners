@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { notifySlack } from '@/lib/slack'
+import { notifySlackEvent } from '@/lib/slack'
 
 export const runtime = 'edge'
 
@@ -17,9 +17,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json()
   const { status, base_amount } = body
+  const hasStatus = typeof status === 'string'
+  const hasBase = base_amount != null && base_amount !== ''
+
+  if (!hasStatus && !hasBase) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
   const valid = ['received', 'in_progress', 'confirmed', 'paid']
-  if (!valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
+  if (hasStatus && !valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
   // ② % reward needs a real-amount base. Determine if this deal is rate-based.
   const { data: ctx } = await supabase
@@ -36,18 +40,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   else if (snap?.ref_type === 'rate') { rate = Number(snap.ref_value); baseLabel = snap.ref_base ?? '売上' }
   const isRate = rate != null && !Number.isNaN(rate)
 
-  const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (hasStatus) update.status = status
 
-  // On 成約確定 of a rate-based deal, require/compute the actual reward = base × rate.
-  if (status === 'confirmed' && isRate) {
-    const base = base_amount != null ? Number(base_amount) : (ctx?.base_amount ?? null)
-    if (base == null || Number.isNaN(base) || base <= 0) {
-      return NextResponse.json({ error: 'base_amount required', needsBase: true, baseLabel, rate }, { status: 400 })
-    }
+  // ① Set/edit the actual amount (base) at ANY status → reward = base × rate, recomputed & saved.
+  if (isRate && hasBase) {
+    const base = Number(base_amount)
+    if (Number.isNaN(base) || base <= 0) return NextResponse.json({ error: 'invalid base_amount' }, { status: 400 })
     const computed = Math.round(base * (rate as number) / 100)
     update.base_amount = base
     update.amount = computed
     update.reward_snapshot = { ...(snap ?? {}), base_amount: base, base_label: baseLabel, rate, computed }
+  } else if (hasStatus && status === 'confirmed' && isRate) {
+    // Confirming a rate deal with no base provided → require it (unless already stored).
+    const existing = ctx?.base_amount ?? null
+    if (existing == null) {
+      return NextResponse.json({ error: 'base_amount required', needsBase: true, baseLabel, rate }, { status: 400 })
+    }
+    update.amount = Math.round(Number(existing) * (rate as number) / 100)
+    update.reward_snapshot = { ...(snap ?? {}), base_amount: Number(existing), base_label: baseLabel, rate, computed: update.amount }
   }
 
   const { data: deal, error } = await supabase
@@ -59,15 +70,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Audit log
-  await supabase.from('deal_events').insert({
-    deal_id: id,
-    body: `ステータスを「${STATUS_LABEL[status as string]}」に変更しました`,
-    created_by: user.id,
-    visible_to_partner: ['confirmed', 'paid'].includes(status),
-  })
-
-  await notifySlack(`📋 案件ステータス変更: ${deal?.customer_name ?? id} → ${STATUS_LABEL[status as string]}`)
+  // Audit log + Slack only when status actually changed
+  if (hasStatus) {
+    await supabase.from('deal_events').insert({
+      deal_id: id,
+      body: `ステータスを「${STATUS_LABEL[status as string]}」に変更しました`,
+      created_by: user.id,
+      visible_to_partner: ['confirmed', 'paid'].includes(status),
+    })
+    await notifySlackEvent('status_change', `📋 案件ステータス変更: ${deal?.customer_name ?? id} → ${STATUS_LABEL[status as string]}`)
+  }
 
   return NextResponse.json({ deal })
 }

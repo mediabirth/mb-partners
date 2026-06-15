@@ -79,7 +79,6 @@ export default function InviteForm() {
               style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: '.8rem', background: '#fff' }}
             >
               <option value="partner">パートナー</option>
-              <option value="owner">オーナー</option>
             </select>
           </div>
 

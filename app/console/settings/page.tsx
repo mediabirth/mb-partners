@@ -63,7 +63,10 @@ export default function SettingsPage() {
   const [calUrl, setCalUrl]                   = useState('')
   const [notifEmail, setNotifEmail]           = useState(true)
   const [notifSlack, setNotifSlack]           = useState(false)
-  const [slackWebhook, setSlackWebhook]       = useState('')
+  const [evtNewDeal, setEvtNewDeal]           = useState(true)
+  const [evtStatus, setEvtStatus]             = useState(true)
+  const [evtPayout, setEvtPayout]             = useState(true)
+  const [notifSaving, setNotifSaving]         = useState(false)
   const [me, setMe]                           = useState<AdminUser | null>(null)
   const [inviteEmail, setInviteEmail]         = useState('')
   const [inviteRole, setInviteRole]           = useState<'admin' | 'viewer'>('viewer')
@@ -81,6 +84,22 @@ export default function SettingsPage() {
   }, [])
 
   const admins: AdminUser[] = me ? [me] : []
+
+  // ⑤ Load persisted notification settings (Slack ON/OFF + per-event).
+  useEffect(() => {
+    fetch('/api/console/settings/notifications')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        const s = d?.settings
+        if (!s) return
+        setNotifEmail(s.email_enabled ?? true)
+        setNotifSlack(s.slack_enabled ?? false)
+        setEvtNewDeal(s.notify_new_deal ?? true)
+        setEvtStatus(s.notify_status_change ?? true)
+        setEvtPayout(s.notify_payout ?? true)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     setAuditLoading(true)
@@ -114,7 +133,27 @@ export default function SettingsPage() {
   }
 
   function saveCal() { showToast(calEnabled ? 'カレンダー連携を保存しました' : 'カレンダー連携を無効にしました') }
-  function saveNotif() { showToast('通知設定を保存しました') }
+  async function saveNotif() {
+    setNotifSaving(true)
+    try {
+      const res = await fetch('/api/console/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email_enabled: notifEmail,
+          slack_enabled: notifSlack,
+          notify_new_deal: evtNewDeal,
+          notify_status_change: evtStatus,
+          notify_payout: evtPayout,
+        }),
+      })
+      showToast(res.ok ? '通知設定を保存しました' : '保存に失敗しました')
+    } catch {
+      showToast('保存に失敗しました')
+    } finally {
+      setNotifSaving(false)
+    }
+  }
   function inviteAdmin(e: React.FormEvent) {
     e.preventDefault()
     if (!inviteEmail) return
@@ -207,21 +246,21 @@ export default function SettingsPage() {
             <RowItem label="メール通知" desc="新規案件・ステータス変更・支払完了時にメールを受信">
               <Toggle on={notifEmail} onChange={setNotifEmail} />
             </RowItem>
-            <RowItem label="Slack 通知" desc="Webhook URL を設定して Slack に通知を送信">
+            <RowItem label="Slack 通知" desc="Slack に通知を送信（Webhook はサーバー側に設定）">
               <Toggle on={notifSlack} onChange={setNotifSlack} />
             </RowItem>
             {notifSlack && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>Slack Webhook URL</label>
-                <input
-                  value={slackWebhook}
-                  onChange={e => setSlackWebhook(e.target.value)}
-                  placeholder="https://hooks.slack.com/services/..."
-                  style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 13px', fontFamily: 'monospace', fontSize: '.8rem' }}
-                />
+              <div style={{ margin: '0 0 14px', padding: '12px 14px', background: 'var(--bg2)', borderRadius: 10 }}>
+                <div style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>通知するイベント</div>
+                <RowItem label="新規案件"><Toggle on={evtNewDeal} onChange={setEvtNewDeal} /></RowItem>
+                <RowItem label="ステータス変更"><Toggle on={evtStatus} onChange={setEvtStatus} /></RowItem>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '.8rem', fontWeight: 600 }}>支払完了</div>
+                  <Toggle on={evtPayout} onChange={setEvtPayout} />
+                </div>
               </div>
             )}
-            <button onClick={saveNotif} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 18px' }}>保存する</button>
+            <button onClick={saveNotif} disabled={notifSaving} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
           </SectionCard>
 
           {/* 5. 監査ログ */}

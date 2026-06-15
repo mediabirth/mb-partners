@@ -566,7 +566,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     <>
       {/* ── Top bar ── */}
       <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-        <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>サービス・報酬ルール</h1>
+        <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>サービス</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="chip chip-direct" style={{ fontVariantNumeric: 'tabular-nums' }}>{services.length} サービス</span>
           <button onClick={openAdd} className="btn btn-p" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ 追加</button>

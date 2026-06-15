@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { notifySlack } from '@/lib/slack'
+import { notifySlackEvent } from '@/lib/slack'
 
 export const runtime = 'edge'
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await notifySlack(`🆕 新規案件（手動登録）: ${customer_name}`)
+  await notifySlackEvent('new_deal', `🆕 新規案件（手動登録）: ${customer_name}`)
 
   return NextResponse.json({ deal })
 }

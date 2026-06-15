@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { email, role = 'partner', name } = body
+  const { email, role: rawRole = 'partner', name } = body
+  // ④ Owners are never invited via this flow — clamp anything but 'partner'.
+  const role = rawRole === 'owner' ? 'partner' : rawRole
   if (!email?.trim()) return NextResponse.json({ error: 'email は必須です' }, { status: 400 })
 
   const service = await createServiceRoleClient()

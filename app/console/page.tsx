@@ -159,7 +159,7 @@ export default async function ConsolePage() {
               {[
                 { href: '/console/deals', label: '案件ボード', desc: `${deals.length}件の案件` },
                 { href: '/console/partners', label: 'パートナー一覧', desc: `${activePartners}名稼働中` },
-                { href: '/console/services', label: 'サービス・報酬ルール', desc: 'マスタデータ管理' },
+                { href: '/console/services', label: 'サービス', desc: 'マスタデータ管理' },
                 { href: '/console/settings', label: '設定', desc: '支払サイクル・通知・管理者' },
               ].map(item => (
                 <Link key={item.href} href={item.href} className="lift" style={{

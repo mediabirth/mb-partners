@@ -88,8 +88,14 @@ export default function BroadcastsPage() {
               <div style={{
                 width: 52, height: 52, borderRadius: 14, margin: '0 auto 16px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--blue-bg)', fontSize: '1.5rem',
-              }}>📣</div>
+                background: 'var(--blue-bg)', color: 'var(--blue)',
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 11v3a1 1 0 0 0 1 1h2.5L11 19V5L6.5 9H4a1 1 0 0 0-1 1Z" />
+                  <path d="M15.5 8.5a4 4 0 0 1 0 7" />
+                  <path d="M18.5 6a7 7 0 0 1 0 12" />
+                </svg>
+              </div>
               <div style={{ fontSize: '.95rem', fontWeight: 800, marginBottom: 6 }}>
                 まだ配信がありません
               </div>

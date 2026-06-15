@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotifications } from '@/lib/notifications'
-import { notifySlack } from '@/lib/slack'
+import { notifySlackEvent } from '@/lib/slack'
 
 export const runtime = 'edge'
 
@@ -83,7 +83,7 @@ export async function PATCH(
     })
   } catch { /* deal_events may require deal_id — ignore */ }
 
-  await notifySlack(`💰 支払完了: ${month} バッチ（対象パートナー ${partnerIds.length}名）`)
+  await notifySlackEvent('payout', `💰 支払完了: ${month} バッチ（対象パートナー ${partnerIds.length}名）`)
 
   return NextResponse.json({ ok: true, partner_count: partnerIds.length })
 }

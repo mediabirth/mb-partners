@@ -96,15 +96,12 @@ export default function ConsoleInquiriesPage() {
                 <Link
                   key={inq.id}
                   href={`/console/inquiries/${inq.id}`}
-                  className={`card-hover lift${overSLA ? ' flash-highlight' : ''}`}
+                  className="card-hover lift"
                   style={{
                     display: 'block', textDecoration: 'none',
                     background: '#fff', borderRadius: 13,
                     border: '1px solid var(--line)',
-                    borderLeft: isUnanswered
-                      ? `3px solid ${overSLA ? 'var(--red)' : 'var(--amber)'}`
-                      : '3px solid transparent',
-                    padding: '14px 18px',
+                    padding: '16px 20px',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

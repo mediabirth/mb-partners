@@ -116,7 +116,6 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
             {/* Header */}
             <div style={{
               background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
-              borderLeft: inquiry.status === 'open' ? '3px solid var(--amber)' : '3px solid transparent',
               padding: '18px 20px', marginBottom: 20,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>

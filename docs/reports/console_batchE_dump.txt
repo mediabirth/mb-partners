@@ -1,0 +1,63 @@
+========================================================
+MB Partners — コンソール修正バッチE（①②③④⑤⑦⑧）ダンプ
+日時: 2026-06-15
+正本: 要件定義書 (Notion 37c1d8f5...) ＋ B1/B2 デザイン言語
+種別: データ/数値/ロジック原則不変（②認証・⑤通知ゲートの挙動変更を除く）。
+スキーマ: ⑤に notification_settings 追加が必要（本番未作成→勝彦がSQL実行）。
+ビルド: npx next build → ✅ exit 0。全コンソール9ページ200。実装はサブエージェント3並列＋本体。
+========================================================
+
+■ ① 実績金額の入力をわかりやすく（deals）
+  - 案件詳細パネルに、率案件用「実績金額（売上/粗利/利益/受取収入＝coop_base/ref_base対応）」を常時表示。
+  - 「金額を入力／編集」ボタン→インライン入力＋確定報酬プレビュー（金額×率）→保存。確定前でも入力/修正可。
+  - サーバ: PATCH /api/console/deals/[id] を拡張。status無し・base_amountのみでも更新可。率案件は
+    amount=round(base×率) を即時再計算し reward_snapshot 更新（status変更時のみ監査/ Slack）。
+  - カードの「要・実額入力」バッジ（base未入力の率案件）から詳細の当欄へ誘導。
+  - 検証: 高橋(対応中)詳細で ¥150,000×50%=¥75,000 表示→¥200,000編集→プレビュー¥100,000→保存で
+    DB amount=100,000/base=200,000（その後デモ¥150,000/¥75,000へ復元）。
+
+■ ② コンソール2FA(TOTP)撤去
+  - console/login を メール＋パスワードのみに簡素化（mfa.enroll/challenge/verify・totp/enroll ステップを全撤去）。
+  - proxy/console layout に aal2 強制は無し→ロックアウトなし（signInWithPassword で aal1 セッションのままログイン）。
+  - 「次へ（2段階認証）」→「ログイン」。検証: ログイン画面に「2段階」文言なし。
+
+■ ③ 「サービス・報酬」→「サービス」改称
+  - ConsoleNav ラベル / ダッシュボードのクイックリンク / サービスページ見出し(h1) を「サービス」に統一。
+    （エディタ内の「報酬タイプ」等の項目ラベルは報酬設定の項目名なので維持）
+
+■ ④ パートナー招待からオーナー除外
+  - InviteForm のロール選択から「オーナー」option を削除（パートナーのみ）。
+  - サーバ防御: POST /api/console/invites で role==='owner' は 'partner' にクランプ。
+
+■ ⑤【バグ】Slack通知トグルがゲートしていない → 永続化＋送信前チェック
+  - 新規テーブル notification_settings（単一行・RLS有効・service_roleのみ）:
+    slack_enabled / notify_new_deal / notify_status_change / notify_payout / email_enabled。
+    ★本番未作成 → 勝彦が SQL Editor で実行（IF NOT EXISTS／加算的）:
+      supabase/migrations/20260618000001_notification_settings.sql 参照。
+  - lib/slack.ts: notifySlackEvent(event,text) を新設。SLACK_WEBHOOK_URL ありかつ slack_enabled かつ
+    当該イベントtrue のときのみ送信。設定未取得/未作成時は fail-closed（送らない）。
+  - 5箇所を notifySlack→notifySlackEvent('new_deal'|'status_change'|'payout') に置換
+    （referral / refer.actions / console.deals POST / deals/[id] PATCH / payouts/[month] PATCH）。
+  - API /api/console/settings/notifications（GET/PUT・service_role）。
+  - 設定UI: Slackトグル＋各イベントトグル（新規案件/ステータス変更/支払完了）を永続値で初期化し PUT 保存。
+    → UIトグル＝実挙動一致。OFFで送信停止（要・本番でテーブル作成後に確認）。
+
+■ ⑦ 色使いを一貫・上品に（サブエージェント＋本体）
+  - 案件ボード: 列の色付き上ボーダー/色ドット/色付き件数バッジを撤去→ニュートラル列(白カウント)＋chip＋余白。
+  - 問い合わせ: カード左の色アクセントバー/ flash-highlight 撤去→ニュートラルカード＋status-dot＋chip。
+  - 支払管理: 赤+緑の比率バーを撤去。合計/源泉/手取はラベル＋ニュートラル表記（源泉は muted の −¥表記、
+    手取は緑をやめ通常ink、支払済chipの緑のみ単独アクセント）。赤は警告/マイナス時のみ。
+  - 速度・reduced-motion 維持（既存ユーティリティのみ／globals.css 不変）。
+
+■ ⑧ 空状態の絵文字撤去
+  - 配信の空状態 📣 を撤去→インラインSVG（メガホン）に置換。コピー/CTAは維持。
+  - 他コンソール空状態に絵文字なし（✓✕⚠ 等の記号はアイコン扱いで保持）。
+
+■ 受け入れ
+  ①常時入力/編集＆即時計算 ✓ / ②2FAなしでログイン ✓ / ③改称 ✓ / ④オーナー出ない ✓ /
+  ⑤永続化＋ゲート実装（テーブル作成後に ON/OFF一致を確認）/ ⑦色一貫・赤緑解消 ✓ / ⑧絵文字撤去 ✓ /
+  build exit0・全ページ200・データ不変（②⑤除く）。
+
+■ 本番側 要対応
+  1) notification_settings テーブル作成（⑤・上記SQL）。
+  2) SLACK_WEBHOOK_URL を本番env追加（Slack送信／デプロイ後テスト用）。RESEND_API_KEY は設定済(⑩有効化)。

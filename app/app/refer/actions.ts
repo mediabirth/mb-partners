@@ -1,7 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { notifySlack } from '@/lib/slack'
+import { notifySlackEvent } from '@/lib/slack'
 
 export async function getPartnerInfo(): Promise<{ code: string; id: string }> {
   const supabase = await createClient()
@@ -110,7 +110,7 @@ export async function submitPartnerReferral(formData: FormData) {
     created_by: user.id,
   })
 
-  await notifySlack(`🆕 新規案件（${channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
+  await notifySlackEvent('new_deal', `🆕 新規案件（${channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
 
   // Audit log
   await supabase.from('audit_logs').insert({
