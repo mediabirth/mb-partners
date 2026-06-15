@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
+import BookingDrawer from '@/components/BookingDrawer'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
@@ -56,6 +57,9 @@ export default function ReferPage() {
   const [showQR, setShowQR]               = useState(false)
   const [pending, startTransition]        = useTransition()
   const [done, setDone]                   = useState(false)
+  const [dealId, setDealId]               = useState<string | null>(null)
+  const [showBooking, setShowBooking]     = useState(false)
+  const [bookedAt, setBookedAt]           = useState<string | null>(null)
   const [error, setError]                 = useState('')
 
   useEffect(() => {
@@ -127,7 +131,8 @@ export default function ReferPage() {
     fd.set('channel', coopMode ? 'cooperation' : 'referral')
     startTransition(async () => {
       try {
-        await submitPartnerReferral(fd)
+        const res = await submitPartnerReferral(fd)
+        if (res?.dealId) setDealId(res.dealId)
         setDone(true)
       } catch (err: any) { setError(err.message ?? '登録に失敗しました') }
     })
@@ -137,7 +142,7 @@ export default function ReferPage() {
     setDone(false); setStep('service')
     setSelSvc(null); setSelMenu(null); setCoopMode(false)
     setCustomerName(''); setPhone(''); setMemo(''); setConsent(false); setError('')
-    setToken(null); setShowQR(false)
+    setToken(null); setShowQR(false); setDealId(null); setShowBooking(false); setBookedAt(null)
   }
 
   const linkUrl    = token       ? `${location.origin}/r/${token}` : ''
@@ -164,14 +169,26 @@ export default function ReferPage() {
           </div>
         )}
 
+        {bookedAt && (
+          <p style={{ fontSize: '.7rem', color: 'var(--green)', fontWeight: 700, marginBottom: 12 }}>
+            ✓ 商談 {new Date(bookedAt).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
+          </p>
+        )}
+
         {/* 次の一歩 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
           <button onClick={resetForNext} className="btn btn-p lift" style={{ width: '100%' }}>続けて紹介する</button>
-          <button onClick={() => router.push('/app/calendar')} className="btn btn-g lift" style={{ width: '100%' }}>商談を設定する</button>
+          {dealId && !bookedAt && (
+            <button onClick={() => setShowBooking(true)} className="btn btn-g lift" style={{ width: '100%' }}>商談を設定する（任意）</button>
+          )}
           <button onClick={() => router.push('/app/cases')} style={{ width: '100%', background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 600, padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit' }}>
             案件一覧を見る →
           </button>
         </div>
+
+        {showBooking && dealId && (
+          <BookingDrawer dealId={dealId} onClose={() => setShowBooking(false)} onConfirmed={(at) => setBookedAt(at)} />
+        )}
       </div>
     )
   }
