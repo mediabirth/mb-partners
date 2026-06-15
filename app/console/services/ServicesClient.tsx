@@ -20,24 +20,16 @@ const COVERAGE_DEFAULTS = [
 
 type CoverageStep = { label: string; included: boolean }
 
+// 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
 type ServiceForm = {
   name: string; subtitle: string; description: string; who: string; url: string
   logo_path: string; active: boolean
   icon: string; color: string  // kept for backward compat, not shown in UI
-  coop_enabled: boolean
-  coop_rate: string
-  coop_base: string
-  coop_trigger: string
-  coop_condition: string
-  coop_coverage: CoverageStep[]
 }
 
 const defaultServiceForm: ServiceForm = {
   name: '', subtitle: '', description: '', who: '', url: '', logo_path: '',
   active: true, icon: 'arrows', color: '#4733e6',
-  coop_enabled: false, coop_rate: '', coop_base: '',
-  coop_trigger: '', coop_condition: '',
-  coop_coverage: COVERAGE_DEFAULTS.map(s => ({ ...s })),
 }
 
 type MenuForm = {
@@ -105,7 +97,6 @@ function menuToForm(m: MenuRow): MenuForm {
 function formToMenuPayload(f: MenuForm) {
   return {
     name:           f.name,
-    category:       'referral',
     ref_enabled:    f.ref_enabled,
     ref_type:       f.ref_type,
     ref_value:      f.ref_value ? Number(f.ref_value) : 0,
@@ -135,19 +126,10 @@ function svcFormToPayload(f: ServiceForm) {
     active:         f.active,
     icon:           f.icon,
     color:          f.color,
-    coop_enabled:   f.coop_enabled,
-    coop_rate:      f.coop_enabled && f.coop_rate ? Number(f.coop_rate) : null,
-    coop_base:      f.coop_enabled ? (f.coop_base || null) : null,
-    ft_trigger:     f.coop_enabled ? (f.coop_trigger || null) : null,
-    ft_condition:   f.coop_enabled ? (f.coop_condition || null) : null,
-    coverage_steps: f.coop_enabled ? f.coop_coverage : null,
   }
 }
 
 function svcToForm(svc: ServiceWithMenus): ServiceForm {
-  const rawCov = Array.isArray(svc.coverage_steps) && svc.coverage_steps.length === 5
-    ? svc.coverage_steps
-    : COVERAGE_DEFAULTS.map(s => ({ ...s }))
   return {
     name:           svc.name,
     subtitle:       svc.subtitle    ?? '',
@@ -158,12 +140,6 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
     active:         svc.active,
     icon:           svc.icon        || 'arrows',
     color:          svc.color       || '#4733e6',
-    coop_enabled:   svc.coop_enabled ?? false,
-    coop_rate:      svc.coop_rate   ? String(svc.coop_rate) : '',
-    coop_base:      svc.coop_base   ?? '',
-    coop_trigger:   svc.ft_trigger  ?? '',
-    coop_condition: svc.ft_condition ?? '',
-    coop_coverage:  rawCov,
   }
 }
 
@@ -577,7 +553,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   }
 
   function openAdd() {
-    setSvcForm({ ...defaultServiceForm, coop_coverage: COVERAGE_DEFAULTS.map(s => ({ ...s })) })
+    setSvcForm({ ...defaultServiceForm })
     setEditing(null); setShowAdd(true)
     setLiveMenus([]); setMenuEditId(null); setSvcError('')
   }
@@ -708,7 +684,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       <div className="page-anim stagger" style={{ padding: '28px', maxWidth: 860 }}>
         {services.length === 0 && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>}
         {services.map(svc => {
-          const refMenus = svc.service_menus.filter(m => m.category !== 'cooperation')
+          // 全メニューを表示（各行で ref_enabled/coop_enabled に応じて 紹介/協力 chip。category は廃止）
+          const refMenus = svc.service_menus.filter(m => (m.ref_enabled ?? true) || m.coop_enabled === true)
           return (
             <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
@@ -833,7 +810,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <>
                 <SectionLabel>B. 紹介メニューと報酬</SectionLabel>
 
-                {liveMenus.filter(m => m.category !== 'cooperation').map((menu, i, arr) => (
+                {liveMenus.map((menu, i, arr) => (
                   <div key={menu.id}>
                     {menuEditId === menu.id ? (
                       <MenuEditForm
@@ -890,52 +867,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               </>
             )}
 
-            {/* ── C. 協力設定（サービス既定・フォールバック） ── */}
-            <div style={{ paddingTop: 16, borderTop: '1px solid var(--line)', marginTop: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                <CoopChip />
-                <span style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-                  C. サービス既定（フォールバック）
-                </span>
-              </div>
-              <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.5 }}>
-                メニューごとに協力報酬が未設定の場合に適用される既定値です。
-              </p>
-
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13 }}>
-                <Toggle2
-                  val={svcForm.coop_enabled}
-                  onA={() => setF({ coop_enabled: false })}
-                  onB={() => setF({ coop_enabled: true })}
-                  labelA="既定なし"
-                  labelB="既定あり"
-                />
-
-                {svcForm.coop_enabled && (
-                  <div style={{ paddingTop: 4 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      <Fld label="協力率（%）">
-                        <FInput value={svcForm.coop_rate} onChange={v => setF({ coop_rate: v })} placeholder="50" type="number" />
-                      </Fld>
-                      <Fld label="協力基準">
-                        <FSelect value={svcForm.coop_base} onChange={v => setF({ coop_base: v })}
-                          options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
-                      </Fld>
-                    </div>
-
-                    <Fld label="協力の成果地点">
-                      <FInput value={svcForm.coop_trigger} onChange={v => setF({ coop_trigger: v })} placeholder="共同仲介を担当" />
-                    </Fld>
-
-                    <Fld label="協力の資格条件（任意）">
-                      <FInput value={svcForm.coop_condition} onChange={v => setF({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
-                    </Fld>
-
-                    <CoverageField steps={svcForm.coop_coverage} onChange={steps => setF({ coop_coverage: steps })} />
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* 協力はメニュー単位（B のメニュー編集内）に一本化。サービス既定 coop_* は廃止。 */}
 
             {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{svcError}</p>}
 

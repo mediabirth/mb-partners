@@ -10,10 +10,9 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
 }
 
 const ALLOWED = [
-  'name', 'category', 'ref_type', 'ref_value', 'ref_base', 'ref_trigger', 'ref_months', 'example_ref',
-  'ft_enabled', 'ft_rate', 'ft_basis', 'ft_trigger', 'ft_condition', 'example_ft',
+  'name', 'ref_type', 'ref_value', 'ref_base', 'ref_trigger', 'ref_months', 'example_ref',
   'coverage_steps', 'qualification', 'sort',
-  // ⑧ per-menu engagement flags
+  // ⑧ per-menu engagement flags（category/ft_* は廃止）
   'ref_enabled', 'coop_enabled', 'coop_type', 'coop_value', 'coop_base', 'coop_coverage', 'coop_condition',
 ]
 

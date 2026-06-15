@@ -158,8 +158,13 @@ export default function ReferPage() {
               const topMenu = refMenus.length
                 ? [...refMenus].sort((a, b) => Number(b.ref_value) - Number(a.ref_value))[0]
                 : null
-              const coopAmt = svc.coop_enabled && svc.coop_rate
-                ? `${svc.coop_rate}%${svc.coop_base ? ` (${svc.coop_base})` : ''}`
+              // 協力ヘッドライン: メニュー単位 coop_* から代表値（サービス単位 coop_* は廃止）
+              const coopMenus = svc.service_menus.filter(m => m.coop_enabled === true)
+              const topCoop = coopMenus[0] ?? null
+              const coopAmt = topCoop
+                ? (topCoop.coop_type === 'fixed'
+                    ? `¥${Number(topCoop.coop_value ?? 0).toLocaleString()}`
+                    : `${topCoop.coop_value ?? 0}%${topCoop.coop_base ? ` (${topCoop.coop_base})` : ''}`)
                 : null
               return (
                 <button key={svc.id} onClick={() => pickService(svc)} className="card-hover"

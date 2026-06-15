@@ -70,7 +70,7 @@ export default async function PartnerDetailPage({
   // Round 2: deals + payouts + inquiries (keyed by partner id)
   const [dealsRes, payoutsRes, inquiryCountRes] = await Promise.all([
     service.from('deals')
-      .select('id, customer_name, status, amount, created_at, channel, service_menus(category), services(name)')
+      .select('id, customer_name, status, amount, created_at, channel, services(name)')
       .eq('partner_id', id)
       .order('created_at', { ascending: false }),
     service.from('payout_items')
@@ -103,12 +103,10 @@ export default async function PartnerDetailPage({
   const activeDeals    = deals.filter((d: any) => ['received', 'in_progress'].includes(d.status)).length
   const monthConfirmed = deals.filter((d: any) => d.status === 'confirmed' && d.fixed_month?.startsWith(ym)).length
 
-  // Channel breakdown: referral (紹介) vs others
-  const referralDeals = deals.filter((d: any) =>
-    d.channel === 'referral' || d.service_menus?.category === 'referral'
-  ).length
+  // Channel breakdown: referral (紹介) vs cooperation (協力) — channel ベース（service_menus.category は廃止）
+  const referralDeals = deals.filter((d: any) => d.channel === 'referral').length
   const coopDeals = deals.filter((d: any) =>
-    d.service_menus?.category === 'cooperation'
+    d.channel === 'cooperation' || d.channel === 'frontier'
   ).length
   const directDeals = totalDeals - referralDeals - coopDeals
 

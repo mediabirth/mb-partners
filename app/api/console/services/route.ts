@@ -12,10 +12,10 @@ export async function POST(req: Request) {
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { name, subtitle, description, who, url, active, logo_path, icon, color,
-          coop_enabled, coop_rate, coop_base, ft_trigger, ft_condition, coverage_steps } = body
+  const { name, subtitle, description, who, url, active, logo_path, icon, color } = body
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
+  // 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
   const { data: service, error } = await supabase
     .from('services')
     .insert({
@@ -29,12 +29,6 @@ export async function POST(req: Request) {
       icon:           icon           || 'arrows',
       color:          color          || '#4733e6',
       sort:           99,
-      coop_enabled:   coop_enabled   ?? false,
-      coop_rate:      coop_rate      ?? null,
-      coop_base:      coop_base      || null,
-      ft_trigger:     ft_trigger     || null,
-      ft_condition:   ft_condition   || null,
-      coverage_steps: coverage_steps ?? null,
     })
     .select('*')
     .single()

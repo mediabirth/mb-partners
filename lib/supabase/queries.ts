@@ -69,7 +69,7 @@ export async function getAllDeals(supabase: SupabaseClient) {
       id, customer_name, channel, source, status, amount, base_amount,
       fixed_month, consent, meeting_at, created_at, updated_at,
       service_id, internal_memo, reward_snapshot,
-      services(id, name, subtitle, icon, color, coop_rate, coop_base),
+      services(id, name, subtitle, icon, color),
       partners(id, code, profiles(name, color))
     `)
     .order('created_at', { ascending: false })
@@ -173,28 +173,20 @@ export type ServiceRow = {
   description: string | null; who: string | null
   icon: string; color: string; rail: string | null; active: boolean; sort: number
   logo_path: string | null
-  // cooperation (service-level)
-  coop_enabled: boolean
-  coop_rate: number | null
-  coop_base: string | null
-  coverage_steps: { label: string; included: boolean }[] | null  // 協力の対応範囲
-  ft_trigger: string | null   // 協力の成果地点
-  ft_condition: string | null // 協力の資格条件
+  // ※サービス単位 coop_*/ft_* は廃止（協力は service_menus.coop_* に一本化）
+  coverage_steps: { label: string; included: boolean }[] | null
 }
 
 export type MenuRow = {
   id: string; service_id: string; name: string
-  category: 'referral' | 'cooperation' | null
   ref_type: 'fixed' | 'rate'; ref_value: number
   ref_base: string | null
   ref_trigger: string | null; ref_months: number
   example_ref: string | null
-  ft_enabled: boolean; ft_rate: number | null; ft_basis: string | null
-  ft_trigger: string | null; ft_condition: string | null
-  example_ft: string | null; sort: number
+  sort: number
   coverage_steps: { label: string; included: boolean }[] | null
   qualification: string | null
-  // ⑧ per-menu engagement
+  // ⑧ per-menu engagement（紹介/協力は ref_enabled/coop_enabled で判定。category/ft_* は廃止）
   ref_enabled: boolean
   coop_enabled: boolean
   coop_type: 'fixed' | 'rate' | null
@@ -219,7 +211,7 @@ export type AdminDealRow = DealRow & {
   internal_memo: string | null
   base_amount: number | null
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; [k: string]: unknown } | null
-  services: { id: string; name: string; subtitle: string | null; icon: string; color: string; coop_rate: number | null; coop_base: string | null } | null
+  services: { id: string; name: string; subtitle: string | null; icon: string; color: string } | null
   partners: { id: string; code: string; profiles: { name: string; color: string } | null } | null
 }
 

@@ -1,0 +1,431 @@
+[
+  {
+    "id": "c0000005-0000-0000-0000-000000000000",
+    "service_id": "reso",
+    "name": "ロゴ制作",
+    "ref_type": "fixed",
+    "ref_value": 50000,
+    "ref_basis": null,
+    "ref_trigger": "納品後",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": "例)ロゴ制作の紹介 → ¥50,000",
+    "example_ft": null,
+    "sort": 1,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "利益",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  },
+  {
+    "id": "a8880554-667e-4218-996a-352b6149ad2f",
+    "service_id": "mh",
+    "name": "転職サポート（個人）",
+    "ref_type": "fixed",
+    "ref_value": 30000,
+    "ref_basis": null,
+    "ref_trigger": "転職決定で確定",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": null,
+    "example_ft": null,
+    "sort": 0,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "売上",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  },
+  {
+    "id": "991c8bfa-09aa-427f-a637-6694966afc8a",
+    "service_id": "mh",
+    "name": "採用企業の開拓",
+    "ref_type": "fixed",
+    "ref_value": 30000,
+    "ref_basis": null,
+    "ref_trigger": "採用決定で確定",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": null,
+    "example_ft": null,
+    "sort": 1,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "売上",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  },
+  {
+    "id": "c0000004-0000-0000-0000-000000000000",
+    "service_id": "reso",
+    "name": "撮影",
+    "ref_type": "fixed",
+    "ref_value": 30000,
+    "ref_basis": null,
+    "ref_trigger": "納品後",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": "例)撮影の紹介 → ¥30,000",
+    "example_ft": null,
+    "sort": 0,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "利益",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  },
+  {
+    "id": "c0000006-0000-0000-0000-000000000000",
+    "service_id": "reso",
+    "name": "サイト制作",
+    "ref_type": "fixed",
+    "ref_value": 100000,
+    "ref_basis": null,
+    "ref_trigger": "納品後",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": "例)サイト制作の紹介 → ¥100,000",
+    "example_ft": null,
+    "sort": 2,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "利益",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  },
+  {
+    "id": "0565bb3f-af04-4de2-a6c9-6b643acbc3ff",
+    "service_id": "dx",
+    "name": "DX・AI導入",
+    "ref_type": "fixed",
+    "ref_value": 40000,
+    "ref_basis": null,
+    "ref_trigger": "受注確定で確定",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": "案件獲得・見積合意まで",
+    "ft_condition": null,
+    "example_ref": "例)AI気になってる社長を紹介し受注 → ¥40,000",
+    "example_ft": null,
+    "sort": 0,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "利益",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  },
+  {
+    "id": "b50aa754-2e2d-4eeb-96a8-aae8cd50a4ae",
+    "service_id": "live",
+    "name": "配信クリエイター所属",
+    "ref_type": "rate",
+    "ref_value": 10,
+    "ref_basis": null,
+    "ref_trigger": "所属契約締結後・受取収入の10%（12ヶ月間）",
+    "ref_months": 12,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": null,
+    "example_ft": null,
+    "sort": 0,
+    "ref_base": "受取収入",
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": false,
+    "coop_type": null,
+    "coop_value": null,
+    "coop_base": null,
+    "coop_coverage": null,
+    "coop_condition": null
+  },
+  {
+    "id": "8952ce49-f4f8-41a7-a30a-cb3affb483b5",
+    "service_id": "moom",
+    "name": "賃貸仲介",
+    "ref_type": "fixed",
+    "ref_value": 30000,
+    "ref_basis": null,
+    "ref_trigger": "賃貸成約で確定",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": null,
+    "example_ft": null,
+    "sort": 0,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 50,
+    "coop_base": "粗利",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": true
+      },
+      {
+        "label": "商談",
+        "included": true
+      },
+      {
+        "label": "価格合意",
+        "included": true
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": true
+      }
+    ],
+    "coop_condition": "宅建業免許が必要"
+  },
+  {
+    "id": "c0000007-0000-0000-0000-000000000000",
+    "service_id": "reso",
+    "name": "受託開発",
+    "ref_type": "fixed",
+    "ref_value": 300000,
+    "ref_basis": null,
+    "ref_trigger": "着手金入金後",
+    "ref_months": 1,
+    "ft_enabled": false,
+    "ft_rate": null,
+    "ft_basis": null,
+    "ft_trigger": null,
+    "ft_condition": null,
+    "example_ref": "例)受託開発の紹介 → ¥300,000",
+    "example_ft": null,
+    "sort": 3,
+    "ref_base": null,
+    "category": "referral",
+    "coverage_steps": null,
+    "qualification": null,
+    "ref_enabled": true,
+    "coop_enabled": true,
+    "coop_type": "rate",
+    "coop_value": 10,
+    "coop_base": "利益",
+    "coop_coverage": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "coop_condition": null
+  }
+]

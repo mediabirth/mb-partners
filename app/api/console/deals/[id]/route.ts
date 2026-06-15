@@ -25,14 +25,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const valid = ['received', 'in_progress', 'confirmed', 'paid']
   if (hasStatus && !valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
-  // ⑧ Reward resolution. cooperation → 選択メニューの coop_*（無ければ services.coop_* 互換fallback）。
+  // ⑧ Reward resolution. cooperation → 選択メニューの coop_*（協力dealはmenu_idバックフィル済→メニュー一本化）。
   const { data: ctx } = await supabase
     .from('deals')
-    .select('channel, amount, base_amount, reward_snapshot, menu_id, service_menus(coop_enabled, coop_type, coop_value, coop_base), services(coop_rate, coop_base, coop_enabled)')
+    .select('channel, amount, base_amount, reward_snapshot, menu_id, service_menus(coop_enabled, coop_type, coop_value, coop_base)')
     .eq('id', id)
     .single()
 
-  const svc = (ctx?.services ?? null) as { coop_rate: number | null; coop_base: string | null; coop_enabled: boolean | null } | null
   const menu = (ctx?.service_menus ?? null) as { coop_enabled: boolean | null; coop_type: string | null; coop_value: number | null; coop_base: string | null } | null
   const snap = (ctx?.reward_snapshot ?? null) as { ref_type?: string; ref_value?: number; ref_base?: string } | null
 
@@ -42,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (ctx?.channel === 'cooperation') {
     const c = menu?.coop_enabled
       ? { type: menu.coop_type ?? 'rate', value: Number(menu.coop_value ?? 0), base: menu.coop_base ?? '売上' }
-      : (svc ? { type: 'rate', value: Number(svc.coop_rate ?? 0), base: svc.coop_base ?? '売上' } : null) // 互換fallback
+      : null
     if (c) {
       baseLabel = c.base
       if (c.type === 'fixed') fixedCoop = c.value
