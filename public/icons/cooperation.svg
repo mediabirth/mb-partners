@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
-  <!-- 協力: 並んで一緒に（方向なし・対等）。同サイズの角丸スクエア2つを横並び、中央で連結。 -->
-  <!-- 左ノード（アウトライン #0E0E14） -->
-  <rect x="6" y="17" width="14" height="14" rx="4" stroke="#0E0E14" stroke-width="3"/>
-  <!-- 右ノード（塗り #4733E6・同サイズ） -->
-  <rect x="28" y="17" width="14" height="14" rx="4" fill="#4733E6"/>
-  <!-- 対等な連結（矢印なし・短いブリッジ #4733E6） -->
-  <path d="M20 24 H28" stroke="#4733E6" stroke-width="3" stroke-linecap="round"/>
-</svg>

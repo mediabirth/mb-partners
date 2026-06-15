@@ -477,12 +477,7 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
     <button onClick={onPick} className="card-hover lift"
       style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* 関わり方アイコン（紹介=方向／協力=並ぶ）仮当て。currentColorでchip色に追従 */}
-        <span className={`chip ${chipCls}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={isRef ? '/icons/referral-glyph.svg' : '/icons/cooperation-glyph.svg'} alt="" width={14} height={14} style={{ display: 'block' }} />
-          {label}
-        </span>
+        <span className={`chip ${chipCls}`}>{label}</span>
         {/* 報酬は控えめに添える */}
         <span style={{ marginLeft: 'auto', fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{reward}</span>
         <span style={{ color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>›</span>
