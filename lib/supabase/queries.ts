@@ -95,7 +95,7 @@ export async function getAllDealsWithEvents(supabase: SupabaseClient, dealId: st
 export async function getPartnersWithProfiles(supabase: SupabaseClient) {
   const { data } = await supabase
     .from('partners')
-    .select('id, code, status, tax_type, created_at, kyc_verified_at, profiles(name, email, color, avatar_url)')
+    .select('id, code, status, tax_type, created_at, kyc_verified_at, profiles(name, email, color, avatar_url, role)')
     .order('created_at', { ascending: false })
   return (data ?? []) as unknown as PartnerRow[]
 }
@@ -228,7 +228,7 @@ export type PartnerRow = {
   id: string; code: string; status: string; tax_type: string
   created_at: string; kyc_verified_at: string | null
   bank: BankInfo | null
-  profiles: { name: string; email: string; color: string; avatar_url: string | null } | null
+  profiles: { name: string; email: string; color: string; avatar_url: string | null; role?: string } | null
 }
 
 export type BankInfo = {

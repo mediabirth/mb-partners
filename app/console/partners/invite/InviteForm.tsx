@@ -70,17 +70,6 @@ export default function InviteForm() {
             />
           </div>
 
-          <div className="fld" style={{ marginBottom: 20 }}>
-            <label htmlFor="inv-role">ロール</label>
-            <select
-              id="inv-role"
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: '.8rem', background: '#fff' }}
-            >
-              <option value="partner">パートナー</option>
-            </select>
-          </div>
 
           {error && (
             <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>

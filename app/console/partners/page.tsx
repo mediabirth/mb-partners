@@ -44,12 +44,14 @@ export default async function PartnersPage() {
       .filter(d => d.partners?.id === pid && ['paid', 'confirmed'].includes(d.status))
       .reduce((s, d) => s + (d.amount || 0), 0)
 
-  const pendingPartners  = partners.filter(p => p.status === 'pending')
-  const nonPending       = partners.filter(p => p.status !== 'pending')
-  const externalPartners = nonPending
-    .filter(p => !INTERNAL_CODES.has(p.code))
+  // ③ 実パートナーのみ表示：内部コード／管理・オーナー(role≠partner)を除外
+  const isRealPartner = (p: typeof partners[number]) =>
+    !INTERNAL_CODES.has(p.code) && (p.profiles?.role ?? 'partner') === 'partner'
+  const realPartners     = partners.filter(isRealPartner)
+  const pendingPartners  = realPartners.filter(p => p.status === 'pending')
+  const externalPartners = realPartners
+    .filter(p => p.status !== 'pending')
     .sort((a, b) => partnerReward(b.id) - partnerReward(a.id))
-  const internalPartners = nonPending.filter(p => INTERNAL_CODES.has(p.code))
 
   // KPI summary (external non-pending only)
   const activeExternal = externalPartners.filter(p => p.status === 'active')
@@ -95,8 +97,8 @@ export default async function PartnersPage() {
             ))}
           </div>
 
-          {/* Partners table */}
-          {(externalPartners.length > 0 || internalPartners.length > 0) ? (
+          {/* Partners table — 実パートナーのみ（内部/管理は非表示） */}
+          {externalPartners.length > 0 ? (
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               {/* Table header */}
               <div style={{
@@ -170,61 +172,6 @@ export default async function PartnersPage() {
                   </Link>
                 )
               })}
-
-              {/* Internal partners */}
-              {internalPartners.length > 0 && (
-                <>
-                  <div style={{ padding: '6px 20px', background: '#F8F8FC', borderTop: '1px solid var(--line)' }}>
-                    <span style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-                      内部アカウント（KPI除外）
-                    </span>
-                  </div>
-                  {internalPartners.map(p => (
-                    <Link
-                      key={p.id}
-                      href={`/console/partners/${p.id}`}
-                      className="row-hover lift"
-                      style={{
-                        display: 'grid', gridTemplateColumns: '2.2fr .8fr .7fr .65fr 1.1fr .85fr',
-                        padding: '12px 20px', borderTop: '1px solid #F2F2F6',
-                        alignItems: 'center', textDecoration: 'none', color: 'inherit', opacity: 0.65,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                          background: p.profiles?.color ?? '#B9BAC4',
-                          color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '.65rem', fontWeight: 700,
-                        }}>
-                          {(p.profiles?.name ?? p.code)[0]}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <span style={{ fontWeight: 700, fontSize: '.78rem' }}>{p.profiles?.name ?? '—'}</span>
-                            <span style={{ fontSize: '.54rem', fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: '#EBEBF0', color: 'var(--muted2)' }}>内部</span>
-                          </div>
-                          <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{p.profiles?.email}</div>
-                        </div>
-                      </div>
-                      <span style={{ fontFamily: 'Inter', fontSize: '.7rem', color: 'var(--muted2)' }}>{p.code}</span>
-                      <span>
-                        <span className="chip chip-direct">{p.tax_type === 'individual' ? '個人' : '法人'}</span>
-                      </span>
-                      <div>
-                        <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}>{dealCount(p.id)}</span>
-                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', marginLeft: 3 }}>件</span>
-                      </div>
-                      <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.86rem', fontFeatureSettings: '"tnum"' }}>
-                        ¥{partnerReward(p.id).toLocaleString()}
-                      </span>
-                      <span style={{ fontSize: '.6rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: '#EBEBF0', color: 'var(--muted2)' }}>
-                        内部
-                      </span>
-                    </Link>
-                  ))}
-                </>
-              )}
             </div>
           ) : pendingPartners.length === 0 && (
             <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>パートナーがいません</p>

@@ -1,0 +1,60 @@
+========================================================
+MB Partners — コンソール Wave A（②③④）報告
+日時: 2026-06-15
+②=調査＋提案（削除は承認後・未実施）／③④=実装(表示/UIのみ・data不変)
+========================================================
+
+■ ② コンソール⇄APP アカウント混線：原因
+  1) 単一の共有Supabase認証セッション：console(/console) と APP(/app) は同一ドメイン・同一プロジェクトの
+     同一cookie(sb-<ref>-auth-token)を共有。1ブラウザ＝1アイデンティティ。adminでログインすると /app も
+     同じadminセッションを使う。
+  2) 実管理者(mediabirth.project@gmail.com / owner)が partner record「ZZ8463」も保有 → adminセッションで
+     /app を開くと"パートナー(内部)"として解釈され、別アカウントに切替わって見える（混線の核心）。
+  3) 重複アカウント：MB Admin×2(owner)、勝彦×2(partner)が存在し混乱を助長。
+
+■ ② 現存アカウント棚卸し（profiles 8 / partners 5）
+  profiles:
+   - owner  | MB Admin      | mediabirth.project@gmail.com | 39b30d21  ← 実管理者(KEEP) ※partner ZZ8463保有
+   - owner  | MB Admin      | owner@mb-partners.jp         | a0000001  ← 重複オーナー(seed)・partnerなし
+   - partner| 勝彦          | kthk.kmbr@gmail.com          | 653eead3  ← 孤立(partner record無)・要確認(個人?)
+   - partner| テストパートナー| kthk.kmbr+partner@gmail.com  | 9a973de5  ← partner ZZ8354(0 deals)
+   - partner| 勝田 勝彦      | katsuhiko-demo@mb-demo.test  | f72764a8  ← KT8842(12 deals) KEEP
+   - partner| 佐々木 恵美    | sasaki-demo@mb-demo.test     | 9eba29fc  ← SS1203(5 deals)
+   - partner| 井上 翔太      | inoue-demo@mb-demo.test      | e3c7b9b1  ← IN0907(5 deals)
+   - partner| 勝彦          | kthk.kmbr@gmail.com          | a0000002  ← 勝彦の重複(partner record無)
+  partners:
+   - KT8842(f72764a8, 12 deals) / SS1203(9eba29fc,5) / IN0907(e3c7b9b1,5)
+   - ZZ8354(9a973de5,0) / ZZ8463(39b30d21=admin,0)
+
+■ ② 整理案（2アカウントに集約・★削除は承認後）
+  KEEP(2):
+   - コンソール=管理: MB Admin / mediabirth.project@gmail.com  ※partner record ZZ8463 は「削除」推奨(adminをconsole専用に)
+   - APP=パートナー: KT8842 / 勝田 勝彦 / katsuhiko-demo  (deals豊富・consoleで動かすとAPPに反映)
+  DELETE候補(承認後):
+   a) owner@mb-partners.jp (a0000001) 重複オーナー
+   b) partner ZZ8463 (admin保有の余分なpartner record／ユーザーは残す)
+   c) テストパートナー ZZ8354 / 9a973de5
+   d) SS1203 / IN0907 (デモdeals 5件ずつ。集約するなら削除＝console表示は減る／2nd demoとして残す選択も可)
+   e) 勝彦 重複 a0000002 (partner record無)
+  要・個別確認(消さない既定):
+   - 653eead3 / a0000002 の kthk.kmbr@gmail.com は勝彦さん個人の可能性 → 削除可否を明示確認。
+  混線の根治オプション:
+   - (推奨) ZZ8463 partner record 削除 → admin が /app でパートナー扱いされない。
+   - (コードすみ分け・任意) ルートで role により振り分け：owner/管理が /app に来たら /console へ、partner が
+     /console に来たら /app へリダイレクト（共有セッションでも役割で分離）。承認あれば次で実装。
+   - 実運用は別ブラウザ/シークレットで console=admin・app=KT8842 を併用（同一セッション衝突回避）。
+
+■ ③ パートナー一覧から内部アカウント除外（実装済・表示のみ）
+  - app/console/partners/page.tsx：内部(INTERNAL_CODES=ZZ8463/ZZ8354)＋role≠partner を一覧から除外。
+    「内部アカウント（KPI除外）」セクションを撤去し、実パートナーのみ表示。
+  - 共有クエリ getPartnersWithProfiles に profiles.role を追加（フィルタ用）。
+  - 検証：一覧は KT8842/IN0907/SS1203 のみ（admin/ZZ8463/ZZ8354 非表示）。KPI 3名・22件・¥1,120,000。
+
+■ ④ 新規招待のロール選択撤去（実装済）
+  - app/console/partners/invite/InviteForm.tsx：ロール<select>を撤去（常に partner 固定）。
+    サーバ側 POST /api/console/invites は既に owner→partner クランプ済（Batch E）。
+  - 検証：招待フォームに「ロール」項目なし。
+
+■ ステータス
+  - ③④：build exit0・ローカル検証OK・data不変。デプロイは承認後(vercel --prod)。
+  - ②：削除/分離は本報告の承認後に実施（いきなり消さない）。
