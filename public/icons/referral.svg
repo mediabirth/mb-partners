@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- 紹介: つなぐ／引き合わせる（方向あり）。起点=円(アウトライン)、矢印で、終点=塗りの角丸スクエアへ。 -->
+  <!-- 起点ノード（円・アウトライン #0E0E14） -->
+  <circle cx="12" cy="24" r="6.5" stroke="#0E0E14" stroke-width="3"/>
+  <!-- 終点ノード（角丸スクエア・塗り #4733E6） -->
+  <rect x="30" y="17.5" width="13" height="13" rx="3.5" fill="#4733E6"/>
+  <!-- 方向のあるコネクタ（矢印 #4733E6） -->
+  <path d="M19.5 24 H28.5" stroke="#4733E6" stroke-width="3" stroke-linecap="round"/>
+  <path d="M25.5 20.5 L29 24 L25.5 27.5" stroke="#4733E6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

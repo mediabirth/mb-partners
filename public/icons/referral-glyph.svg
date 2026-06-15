@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- 紹介グリフ: 小サイズ判別用。点→矢印→点（方向あり）。currentColor で chip 文字色に追従。 -->
+  <circle cx="5" cy="12" r="2.6" fill="currentColor"/>
+  <path d="M9 12 H16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M14 9 L17 12 L14 15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="19.5" cy="12" r="2.6" fill="currentColor"/>
+</svg>

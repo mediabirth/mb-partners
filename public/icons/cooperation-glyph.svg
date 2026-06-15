@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- 協力グリフ: 小サイズ判別用。同サイズの角丸スクエア2つを横並び（対等・方向なし）。currentColor。 -->
+  <rect x="3.5" y="8" width="7.5" height="8" rx="2.2" stroke="currentColor" stroke-width="2.2"/>
+  <rect x="13" y="8" width="7.5" height="8" rx="2.2" fill="currentColor"/>
+</svg>
