@@ -47,7 +47,10 @@ export default function ReferPage() {
   const [selSvc, setSelSvc]               = useState<ServiceWithMenus | null>(null)
   const [selMenu, setSelMenu]             = useState<MenuRow | null>(null)
   const [coopMode, setCoopMode]           = useState(false)
+  const [customerType, setCustomerType]   = useState<'individual' | 'corporate'>('individual')
   const [customerName, setCustomerName]   = useState('')
+  const [companyName, setCompanyName]     = useState('')
+  const [contactName, setContactName]     = useState('')
   const [phone, setPhone]                 = useState('')
   const [memo, setMemo]                   = useState('')
   const [consent, setConsent]             = useState(false)
@@ -119,15 +122,35 @@ export default function ReferPage() {
     })
   }
 
+  // ⑦ 顧客属性のバリデーション＋FormData組み立て（customer_name は表示用に会社名/氏名を入れる）
+  function customerError(): string {
+    if (customerType === 'corporate') {
+      if (!companyName) return '会社名を入力してください'
+    } else if (!customerName) {
+      return 'お客様のお名前を入力してください'
+    }
+    return ''
+  }
+  function applyCustomerFields(fd: FormData) {
+    fd.set('customerType', customerType)
+    if (customerType === 'corporate') {
+      fd.set('companyName', companyName)
+      fd.set('contactName', contactName)
+      fd.set('customerName', companyName) // 一覧等の後方互換: 表示主体=会社名
+    } else {
+      fd.set('customerName', customerName)
+    }
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (!customerName) { setError('お名前を入力してください'); return }
-    if (!consent)       { setError('顧客の同意確認が必要です'); return }
+    const ce = customerError(); if (ce) { setError(ce); return }
+    if (!consent) { setError('顧客の同意確認が必要です'); return }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
-    fd.set('customerName', customerName)
+    applyCustomerFields(fd)
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', coopMode ? 'cooperation' : 'referral')
@@ -142,10 +165,11 @@ export default function ReferPage() {
 
   // 協力「自分で予約」: 予約確定の瞬間に協力deal を作成して dealId を返す（同意内包）
   async function coopCreateDeal(): Promise<string | null> {
+    const ce = customerError(); if (ce) { setError(ce); return null }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
-    fd.set('customerName', customerName)
+    applyCustomerFields(fd)
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', 'cooperation')
@@ -155,7 +179,8 @@ export default function ReferPage() {
   function resetForNext() {
     setDone(false); setStep('service'); setShowSelfBook(false)
     setSelSvc(null); setSelMenu(null); setCoopMode(false)
-    setCustomerName(''); setPhone(''); setMemo(''); setConsent(false); setError('')
+    setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName('')
+    setPhone(''); setMemo(''); setConsent(false); setError('')
     setToken(null); setShowQR(false); setDealId(null); setShowBooking(false); setBookedAt(null)
   }
 
@@ -166,22 +191,17 @@ export default function ReferPage() {
     const hl = rewardHighlight(selMenu, coopMode)
     return (
       <div className="page-anim" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 380, padding: '40px 28px', textAlign: 'center' }}>
-        <div className="celebrate-pop" style={{ fontSize: '3rem', lineHeight: 1, marginBottom: 12 }} aria-hidden>🎉</div>
-        <h2 style={{ fontSize: '1.18rem', fontWeight: 900, marginBottom: 8, letterSpacing: '-.01em' }}>
-          {coopMode ? '協力を申し込みました！' : '紹介を登録しました！'}
+        {/* ⑥ 煽りでなく感謝。控えめなチェック */}
+        <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2.2"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+        <h2 style={{ fontSize: '1.12rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-.01em' }}>
+          {coopMode ? 'お預かりしました' : 'ご紹介ありがとうございます'}
         </h2>
         <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 18 }}>
           MBが内容を確認し、次のステップへご案内します。
+          {hl && <><br/><span style={{ color: 'var(--muted)' }}>報酬の目安：{hl}（成約時）</span></>}
         </p>
-
-        {/* 見込み報酬 */}
-        {hl && (
-          <div className="shine" style={{ background: 'linear-gradient(120deg,var(--blue) 0%,var(--blue-dk) 100%)', color: '#fff', borderRadius: 16, padding: '16px 22px', marginBottom: 22, minWidth: 220, boxShadow: '0 10px 28px rgba(71,51,230,.22)' }}>
-            <div style={{ fontSize: '.6rem', opacity: .85, fontWeight: 700, letterSpacing: '.08em' }}>見込み報酬</div>
-            <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.7rem', marginTop: 4, lineHeight: 1.05 }}>{hl}</div>
-            <div style={{ fontSize: '.58rem', opacity: .8, marginTop: 4 }}>成約時にお支払いします</div>
-          </div>
-        )}
 
         {bookedAt && (
           <p style={{ fontSize: '.7rem', color: 'var(--green)', fontWeight: 700, marginBottom: 12 }}>
@@ -224,8 +244,8 @@ export default function ReferPage() {
             {services.map(svc => {
               const copy = svc.subtitle || svc.description || ''
               return (
-                <button key={svc.id} onClick={() => pickService(svc)} className="card-hover lift shine"
-                  style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderLeft: `3px solid ${svc.color}`, borderRadius: 16, padding: '15px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
+                <button key={svc.id} onClick={() => pickService(svc)} className="card-hover lift"
+                  style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '15px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                     <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={44} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -295,11 +315,12 @@ export default function ReferPage() {
             </h2>
           </div>
 
-          {/* 報酬ハイライト */}
+          {/* ⑥ 報酬は控えめに添える */}
           {rewardHighlight(selMenu, coopMode) && (
-            <div className="shine" style={{ margin: '8px 20px 14px', background: 'linear-gradient(120deg,var(--blue) 0%,var(--blue-dk) 100%)', color: '#fff', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(71,51,230,.2)' }}>
-              <div style={{ fontSize: '.72rem', fontWeight: 700 }}>{coopMode ? 'この協力の報酬' : 'この紹介で'}</div>
-              <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', lineHeight: 1 }}>{rewardHighlight(selMenu, coopMode)}</div>
+            <div style={{ margin: '6px 20px 14px', display: 'flex', alignItems: 'baseline', gap: 8, color: 'var(--muted)' }}>
+              <span style={{ fontSize: '.66rem' }}>{coopMode ? '協力報酬の目安' : '紹介報酬の目安'}</span>
+              <span style={{ fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, color: 'var(--txt)' }}>{rewardHighlight(selMenu, coopMode)}</span>
+              <span style={{ fontSize: '.6rem' }}>（成約時）</span>
             </div>
           )}
 
@@ -359,7 +380,7 @@ export default function ReferPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
                   <span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} /><span style={{ fontSize: '.56rem', color: '#7676B0', fontWeight: 700 }}>または</span><span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} />
                 </div>
-                <button type="button" onClick={() => { if (!customerName) { setError('自分で予約する前に、下の「お名前」を入力してください'); return } setError(''); setShowSelfBook(true) }}
+                <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } setError(''); setShowSelfBook(true) }}
                   className="btn btn-p lift" style={{ width: '100%' }}>自分で予約する</button>
                 {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
               </>
@@ -369,12 +390,39 @@ export default function ReferPage() {
           {/* ── 経路A: その場でフォーム登録 ── */}
           <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '16px 18px 20px' }}>
             <div style={{ fontSize: '.7rem', fontWeight: 800, color: 'var(--txt)', marginBottom: 4 }}>その場で登録する</div>
-            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>必要なのはお名前だけ。連絡先・メモは任意です。</p>
+            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>連絡先・メモは任意です。</p>
             <form onSubmit={handleSubmit}>
+              {/* ⑦ お客様の属性 */}
               <div className="fld">
-                <label>お名前 <span style={{ color: 'var(--red)' }}>*</span></label>
-                <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" required />
+                <label>お客様の種別</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
+                    <button type="button" key={v} onClick={() => setCustomerType(v)}
+                      style={{ flex: 1, padding: '9px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer',
+                        border: `1.5px solid ${customerType === v ? 'var(--blue)' : 'var(--line)'}`,
+                        background: customerType === v ? 'var(--blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {customerType === 'individual' ? (
+                <div className="fld">
+                  <label>{coopMode ? 'お客様のお名前' : 'ご紹介先のお名前'} <span style={{ color: 'var(--red)' }}>*</span></label>
+                  <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" />
+                </div>
+              ) : (
+                <>
+                  <div className="fld">
+                    <label>会社名 <span style={{ color: 'var(--red)' }}>*</span></label>
+                    <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" />
+                  </div>
+                  <div className="fld">
+                    <label>ご担当者名（任意）</label>
+                    <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" />
+                  </div>
+                </>
+              )}
               <div className="fld">
                 <label>連絡先（任意）</label>
                 <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" />
@@ -411,8 +459,8 @@ export default function ReferPage() {
   )
 }
 
-// B2: 関わり方の選択肢カード（紹介/協力）。報酬を主役に、対応範囲・条件は簡潔。count-up＋lift/shine。
-function EngageOption({ menu, kind, accent, onPick }: {
+// ⑤⑥: 関わり方の選択肢（紹介/協力）。枠の色を排しリスト然と。対応範囲はオシャレなタグ。報酬は控えめに添える。
+function EngageOption({ menu, kind, accent: _accent, onPick }: {
   menu: MenuRow; kind: 'ref' | 'coop'; accent: string; onPick: () => void
 }) {
   const isRef = kind === 'ref'
@@ -423,42 +471,25 @@ function EngageOption({ menu, kind, accent, onPick }: {
   const cond  = isRef ? menu.qualification : menu.coop_condition
   const label = isRef ? '紹介' : '協力'
   const chipCls = isRef ? 'chip-referral' : 'chip-cooperation'
-  const fg = isRef ? 'var(--blue)' : 'var(--blue-dk)'
-  const bannerBg = isRef ? 'var(--blue-bg2)' : '#F4F3FA'
-  const bannerLine = isRef ? 'var(--blue-bg)' : '#E7E4F7'
-  const covBg = isRef ? 'var(--blue-bg)' : '#ECE9F8'
+  const reward = fixed ? `¥${val.toLocaleString()}` : `${val}%${base ? `・${base}` : ''}`
 
   return (
-    <button onClick={onPick} className="card-hover lift shine"
-      style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: `1.5px solid ${bannerLine}`, borderRadius: 16, padding: 0, cursor: 'pointer', overflow: 'hidden', position: 'relative' }}>
-      <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: accent }} />
-      {/* Reward banner（主役） */}
-      <div style={{ background: bannerBg, borderBottom: `1px solid ${bannerLine}`, padding: '12px 16px 12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+    <button onClick={onPick} className="card-hover lift"
+      style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span className={`chip ${chipCls}`}>{label}</span>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: '.5rem', fontWeight: 700, color: fg, opacity: .72, letterSpacing: '.08em' }}>REWARD</div>
-          <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', color: fg, lineHeight: 1.04, whiteSpace: 'nowrap' }}>
-            {fixed
-              ? <CountUp value={val} format="yen" />
-              : <>{val}<span style={{ fontSize: '.9rem', fontWeight: 700 }}>%</span>{base && <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', marginLeft: 4 }}>{base}</span>}</>}
-          </div>
-        </div>
+        {/* 報酬は控えめに添える */}
+        <span style={{ marginLeft: 'auto', fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{reward}</span>
+        <span style={{ color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>›</span>
       </div>
-      {/* Body（簡潔） */}
-      <div style={{ padding: '11px 16px 13px 18px' }}>
-        {cov.length > 0 && (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: cond ? 7 : 9 }}>
-            {cov.map((s: { label: string }) => (
-              <span key={s.label} style={{ fontSize: '.57rem', fontWeight: 600, padding: '3px 9px', borderRadius: 10, background: covBg, color: fg }}>{s.label}</span>
-            ))}
-          </div>
-        )}
-        {cond && <p style={{ fontSize: '.62rem', color: 'var(--amber)', margin: '0 0 8px', lineHeight: 1.5 }}>⚠ {cond}</p>}
-        <div style={{ fontSize: '.74rem', fontWeight: 800, color: fg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>{isRef ? 'この報酬で紹介する' : 'この報酬で協力する'}</span>
-          <span style={{ width: 24, height: 24, borderRadius: '50%', background: covBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</span>
+      {cov.length > 0 && (
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 9 }}>
+          {cov.map((s: { label: string }) => (
+            <span key={s.label} style={{ fontSize: '.57rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'var(--bg2)', color: 'var(--muted)', border: '1px solid var(--line)' }}>{s.label}</span>
+          ))}
         </div>
-      </div>
+      )}
+      {cond && <p style={{ fontSize: '.61rem', color: 'var(--muted2)', margin: '7px 0 0', lineHeight: 1.5 }}>※ {cond}</p>}
     </button>
   )
 }

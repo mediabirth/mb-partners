@@ -5,6 +5,7 @@ import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/que
 import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
 import { nextPayoutDate } from '@/lib/payout'
+import { customerHonorific } from '@/lib/customer'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
@@ -164,11 +165,10 @@ export default async function AppPage() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {d.customer_name} — 商談
+                  {customerHonorific(d)}{(d.service_menus?.name || d.services?.name) ? `（${d.service_menus?.name || d.services?.name}について）` : ''}
                 </div>
                 <div style={{ fontSize: '.6rem', color: 'var(--blue)', marginTop: 1, fontWeight: 700 }}>
                   {new Date(d.meeting_at!).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}
-                  <span style={{ color: 'var(--muted2)', fontWeight: 500 }}>　{d.services?.name}</span>
                 </div>
               </div>
               <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
@@ -191,7 +191,7 @@ export default async function AppPage() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {d.customer_name} — 受付済み
+                  {customerHonorific(d)} — 受付済み
                 </div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
                   {d.services?.name} · {new Date(d.created_at).toLocaleDateString('ja')}
@@ -228,7 +228,7 @@ export default async function AppPage() {
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '.72rem', color: 'var(--txt)', lineHeight: 1.55, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    <b>{deal?.customer_name}</b> — {e.body}
+                    <b>{deal ? customerHonorific(deal) : ''}</b> — {e.body}
                   </div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 2 }}>
                     {new Date(e.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

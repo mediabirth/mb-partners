@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId, getDealWithEvents } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
+import { customerHonorific } from '@/lib/customer'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
@@ -45,7 +46,7 @@ export default async function CaseDetailPage({
         {svc && <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={46} />}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ fontSize: '1.18rem', fontWeight: 900, letterSpacing: '-.01em' }}>{deal.customer_name}</h1>
+            <h1 style={{ fontSize: '1.18rem', fontWeight: 900, letterSpacing: '-.01em' }}>{customerHonorific(deal)}</h1>
             <span className={`chip ${deal.channel === 'cooperation' ? 'chip-cooperation' : deal.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`}>
               {deal.channel === 'referral' ? '紹介' : deal.channel === 'cooperation' ? '協力' : '営業'}
             </span>

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "dx",
+    "name": "PRAGMATION / EMANATION",
+    "logo_path": null
+  },
+  {
+    "id": "moom",
+    "name": "MOOM",
+    "logo_path": "/logos/moom.jpg"
+  },
+  {
+    "id": "mh",
+    "name": "MatchHub",
+    "logo_path": "/logos/mh.jpg"
+  },
+  {
+    "id": "reso",
+    "name": "RESONATION",
+    "logo_path": "/logos/reso.png"
+  },
+  {
+    "id": "live",
+    "name": "ENTERSOLOGY LIVE",
+    "logo_path": "/logos/live.png"
+  }
+]

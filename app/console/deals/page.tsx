@@ -2,6 +2,7 @@
 import { useEffect, useState, useTransition, useRef } from 'react'
 import ServiceIcon from '@/components/ServiceIcon'
 import ConsoleNav from '@/components/ConsoleNav'
+import { customerHonorific } from '@/lib/customer'
 
 function channelChip(channel: string) {
   if (channel === 'referral') return { cls: 'chip chip-referral', label: '紹介' }
@@ -11,6 +12,7 @@ function channelChip(channel: string) {
 
 type Deal = {
   id: string; customer_name: string; channel: string; source: string
+  customer_type?: string | null; company_name?: string | null; contact_name?: string | null
   status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string } | null
   service_menus: { coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
@@ -308,7 +310,7 @@ export default function DealsPage() {
                         {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={28} />}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <b style={{ display: 'block', fontSize: '.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {d.customer_name}
+                            {customerHonorific(d)}
                           </b>
                           {d.services && (
                             <span style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -354,7 +356,7 @@ export default function DealsPage() {
           <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.25)', zIndex: 70 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, width: 460, maxWidth: '96vw', height: '100%', background: '#fff', borderLeft: '1px solid var(--line)', zIndex: 80, display: 'flex', flexDirection: 'column', boxShadow: '-18px 0 48px rgba(14,14,20,.1)' }}>
             <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <b style={{ fontSize: '.9rem' }}>{selected.customer_name}</b>
+              <b style={{ fontSize: '.9rem' }}>{customerHonorific(selected)}</b>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
             <div className="cascade" style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>

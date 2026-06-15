@@ -66,7 +66,7 @@ export async function getAllDeals(supabase: SupabaseClient) {
   const { data } = await supabase
     .from('deals')
     .select(`
-      id, customer_name, channel, source, status, amount, base_amount,
+      id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount, base_amount,
       fixed_month, consent, meeting_at, created_at, updated_at,
       service_id, internal_memo, reward_snapshot,
       services(id, name, subtitle, icon, color),
@@ -127,9 +127,10 @@ export async function getPartnerWithDeals(supabase: SupabaseClient, userId: stri
     .select(`
       id, code, status, tax_type, bank,
       deals:deals!partner_id(
-        id, customer_name, channel, source, status, amount,
-        fixed_month, consent, meeting_at, created_at, updated_at, service_id,
-        services(id, name, subtitle, icon, color, logo_path)
+        id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount,
+        menu_id, fixed_month, consent, meeting_at, created_at, updated_at, service_id,
+        services(id, name, subtitle, icon, color, logo_path),
+        service_menus(name)
       )
     `)
     .eq('profile_id', userId)
@@ -200,11 +201,13 @@ export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }
 
 export type DealRow = {
   id: string; customer_name: string; channel: string; source: string
+  customer_type?: string | null; company_name?: string | null; contact_name?: string | null
   status: 'received' | 'in_progress' | 'confirmed' | 'paid'
-  amount: number; fixed_month: string | null
+  amount: number; fixed_month: string | null; menu_id?: string | null
   consent: boolean; meeting_at: string | null
   created_at: string; updated_at: string; service_id: string
   services: { id: string; name: string; subtitle: string | null; icon: string; color: string; logo_path: string | null } | null
+  service_menus?: { name: string } | null
 }
 
 export type AdminDealRow = DealRow & {

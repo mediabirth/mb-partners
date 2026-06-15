@@ -6,6 +6,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
 import BankChangeSection from './BankChangeSection'
 import { withholdingTax } from '@/lib/payout'
+import { customerHonorific } from '@/lib/customer'
 
 export const runtime = 'edge'
 
@@ -106,7 +107,7 @@ export default async function RewardsPage() {
                   {d.services && <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={26} />}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 600 }}>{d.customer_name}</span>
+                      <span style={{ fontWeight: 600 }}>{customerHonorific(d)}</span>
                       <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`}>
                         {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '営業'}
                       </span>

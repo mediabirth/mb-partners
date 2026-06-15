@@ -52,12 +52,15 @@ export async function submitPartnerReferral(formData: FormData) {
 
   const serviceId    = formData.get('serviceId') as string
   const menuId       = formData.get('menuId') as string
-  const customerName = formData.get('customerName') as string
+  const customerType = ((formData.get('customerType') as string) || 'individual') as 'individual' | 'corporate'
+  const companyName  = (formData.get('companyName') as string) || ''
+  const contactName  = (formData.get('contactName') as string) || ''
+  const customerName = (formData.get('customerName') as string) || (customerType === 'corporate' ? companyName : '')
   const phone        = formData.get('phone') as string
   const memo         = formData.get('memo') as string
   const channel      = (formData.get('channel') as string) || 'referral'
 
-  if (!customerName) throw new Error('お名前は必須です')
+  if (!customerName) throw new Error('お客様情報は必須です')
 
   const { data: partner } = await supabase
     .from('partners')
@@ -94,6 +97,9 @@ export async function submitPartnerReferral(formData: FormData) {
       service_id: serviceId,
       menu_id: menuId || null,
       customer_name: customerName,
+      customer_type: customerType,
+      company_name: customerType === 'corporate' ? (companyName || null) : null,
+      contact_name: customerType === 'corporate' ? (contactName || null) : null,
       channel,
       source: 'partner_form',
       status: 'received',
@@ -133,11 +139,12 @@ export async function submitPartnerReferral(formData: FormData) {
     if (profile?.email) {
       const { data: svc } = await supabase.from('services').select('name').eq('id', serviceId).single()
       const { sendReceiptEmail } = await import('@/lib/email')
+      const { customerHonorific } = await import('@/lib/customer')
       await sendReceiptEmail({
         to: profile.email,
         partnerName: profile.name,
         kind: channel === 'cooperation' ? 'cooperation' : 'referral',
-        customerName,
+        customerName: customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }),
         serviceName: svc?.name ?? null,
         menuName: (menu as { name?: string } | null)?.name ?? null,
       })

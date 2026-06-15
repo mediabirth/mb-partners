@@ -54,7 +54,7 @@ export async function GET() {
   const { data: deals } = await supabase
     .from('deals')
     .select(`
-      id, customer_name, channel, source, status, amount, base_amount,
+      id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount, base_amount,
       fixed_month, created_at, service_id, menu_id, reward_snapshot,
       service_menus(coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color),
