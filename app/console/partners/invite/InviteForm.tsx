@@ -6,10 +6,14 @@ export default function InviteForm() {
   const [email, setEmail]   = useState('')
   const [name, setName]     = useState('')
   const [role, setRole]     = useState('partner')
+  const [isFrontier, setIsFrontier] = useState(false)  // R2-B: フロンティアとして招待
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState('')
   const [inviteUrl, setInviteUrl] = useState('')
   const [copied, setCopied] = useState(false)
+
+  // フロンティア招待は ?role=frontier を付与（受諾時に is_frontier=true）
+  const shareUrl = inviteUrl && isFrontier ? `${inviteUrl}?role=frontier` : inviteUrl
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,7 +40,7 @@ export default function InviteForm() {
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(inviteUrl)
+    await navigator.clipboard.writeText(shareUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -70,6 +74,22 @@ export default function InviteForm() {
             />
           </div>
 
+          {/* R2-B: 役割 */}
+          <div className="fld" style={{ marginBottom: 14 }}>
+            <label>役割</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {([[false, '通常パートナー'], [true, 'フロンティア']] as const).map(([v, l]) => (
+                <button type="button" key={l} onClick={() => setIsFrontier(v)}
+                  style={{ flex: 1, padding: '9px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.76rem', fontWeight: 700, cursor: 'pointer',
+                    border: `1.5px solid ${isFrontier === v ? 'var(--blue)' : 'var(--line)'}`,
+                    background: isFrontier === v ? 'var(--blue)' : '#fff', color: isFrontier === v ? '#fff' : 'var(--txt)' }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {isFrontier && <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 6 }}>このリンクで登録すると「フロンティア（統括パートナー）」になります。</p>}
+          </div>
+
 
           {error && (
             <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>
@@ -99,7 +119,7 @@ export default function InviteForm() {
               padding: '10px 12px', fontSize: '.68rem', fontFamily: 'monospace',
               wordBreak: 'break-all', marginBottom: 10, color: 'var(--text)',
             }}>
-              {inviteUrl}
+              {shareUrl}
             </div>
             <button
               className="btn btn-g"

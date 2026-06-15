@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { augmentBatches } from '@/lib/frontier-payout'
 
 export const runtime = 'edge'
 
@@ -21,7 +22,11 @@ export async function GET() {
     .order('month', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ batches: batches ?? [] })
+
+  // R2-E: フロンティアの override を合算（snapshot不変・導出）
+  const admin = await createServiceRoleClient()
+  const augmented = await augmentBatches(admin, batches ?? [])
+  return NextResponse.json({ batches: augmented })
 }
 
 export async function POST() {

@@ -7,8 +7,14 @@ type PayoutItem = {
   gross: number
   withholding: number
   net: number
-  statement: { deal_count: number; tax_type: string }
+  statement: { deal_count?: number; tax_type?: string; override_only?: boolean }
   partners: { code: string; profiles: { name: string; color: string } | null } | null
+  // R2-E: フロンティア override 合算（API導出）
+  override_gross?: number
+  combined_gross?: number
+  combined_withholding?: number
+  combined_net?: number
+  synthetic?: boolean
 }
 
 type Batch = {
@@ -80,9 +86,9 @@ export default function PayoutsPage() {
     })
   }
 
-  const totalGross = (items: PayoutItem[]) => items.reduce((s, i) => s + i.gross, 0)
-  const totalNet   = (items: PayoutItem[]) => items.reduce((s, i) => s + i.net, 0)
-  const totalWh    = (items: PayoutItem[]) => items.reduce((s, i) => s + i.withholding, 0)
+  const totalGross = (items: PayoutItem[]) => items.reduce((s, i) => s + (i.combined_gross ?? i.gross), 0)
+  const totalNet   = (items: PayoutItem[]) => items.reduce((s, i) => s + (i.combined_net ?? i.net), 0)
+  const totalWh    = (items: PayoutItem[]) => items.reduce((s, i) => s + (i.combined_withholding ?? i.withholding), 0)
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
@@ -208,17 +214,22 @@ export default function PayoutsPage() {
                               <span className="chip" style={{ fontSize: '.56rem', padding: '1px 7px', borderRadius: 10, background: 'var(--bg2)', color: 'var(--muted2)' }}>
                                 {item.statement?.tax_type === 'individual' ? '個人' : '法人'}
                               </span>
+                              {(item.override_gross ?? 0) > 0 && (
+                                <span className="chip" style={{ fontSize: '.54rem', padding: '1px 7px', borderRadius: 10, background: 'var(--blue-bg2)', color: 'var(--blue)', fontWeight: 700 }}>👑 統括</span>
+                              )}
                             </div>
                             <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>
-                              {item.statement?.deal_count ?? '?'}件 · 源泉 <span style={{ color: 'var(--muted2)' }}>−¥{item.withholding.toLocaleString()}</span>
+                              {item.synthetic ? '配下オーバーライドのみ' : `${item.statement?.deal_count ?? '?'}件`}
+                              {(item.override_gross ?? 0) > 0 && <> · override <span style={{ color: 'var(--blue)' }}>＋¥{(item.override_gross ?? 0).toLocaleString()}</span></>}
+                              {' · 源泉 '}<span style={{ color: 'var(--muted2)' }}>−¥{(item.combined_withholding ?? item.withholding).toLocaleString()}</span>
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
                             <div className="tnum" style={{ fontSize: '.82rem', fontWeight: 800, fontFamily: 'Inter', color: 'var(--txt)' }}>
-                              ¥{item.net.toLocaleString()}
+                              ¥{(item.combined_net ?? item.net).toLocaleString()}
                             </div>
                             <div style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>
-                              総額 ¥{item.gross.toLocaleString()}
+                              総額 ¥{(item.combined_gross ?? item.gross).toLocaleString()}
                             </div>
                           </div>
                         </div>

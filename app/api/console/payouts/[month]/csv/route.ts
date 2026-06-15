@@ -19,23 +19,21 @@ export async function GET(
 
   const { data: batch } = await supabase
     .from('payout_batches')
-    .select('id, status')
+    .select('id, month, status, payout_items(id, partner_id, gross, withholding, net, statement, partners(code, profiles(name)))')
     .eq('month', monthDate)
     .single()
 
   if (!batch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 })
   if (batch.status === 'open') return NextResponse.json({ error: 'Batch is not yet closed' }, { status: 400 })
 
-  const { data: items } = await supabase
-    .from('payout_items')
-    .select('gross, withholding, net, statement, partners(code, profiles(name))')
-    .eq('batch_id', batch.id)
-    .order('partner_id')
-
-  if (!items) return NextResponse.json({ error: 'No items' }, { status: 404 })
+  // R2-E: override を合算（フロンティアの配下分を含む）
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const { augmentBatches } = await import('@/lib/frontier-payout')
+  const admin = await createServiceRoleClient()
+  const [aug] = await augmentBatches(admin, [batch])
+  const items: any[] = (aug?.payout_items ?? []).slice().sort((a: any, b: any) => String(a.partner_id).localeCompare(String(b.partner_id)))
 
   // ── 全銀フォーマット風 CSV ────────────────────────────────────
-  // CSV フィールドのエスケープ（氏名にカンマ/引用符/改行が含まれても壊さない）
   const esc = (v: string | number) => {
     const s = String(v ?? '')
     return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -43,21 +41,23 @@ export async function GET(
   const line = (cells: (string | number)[]) => cells.map(esc).join(',')
 
   const rows: string[] = [
-    line(['パートナーコード', '氏名', '報酬総額', '源泉所得税', '振込金額(手取)']),
+    line(['パートナーコード', '氏名', '報酬(自己)', 'オーバーライド', '報酬総額', '源泉所得税', '振込金額(手取)']),
   ]
 
   for (const item of items) {
     const partner = item.partners as any
     const code = partner?.code ?? ''
     const name = (partner?.profiles as any)?.name ?? ''
-    rows.push(line([code, name, item.gross, item.withholding, item.net]))
+    rows.push(line([code, name, item.gross, item.override_gross ?? 0, item.combined_gross ?? item.gross, item.combined_withholding ?? item.withholding, item.combined_net ?? item.net]))
   }
 
   // Totals row
-  const totalGross = items.reduce((s, i) => s + i.gross, 0)
-  const totalWh    = items.reduce((s, i) => s + i.withholding, 0)
-  const totalNet   = items.reduce((s, i) => s + i.net, 0)
-  rows.push(line(['', '合計', totalGross, totalWh, totalNet]))
+  const totalOwn = items.reduce((s, i) => s + (i.gross || 0), 0)
+  const totalOv  = items.reduce((s, i) => s + (i.override_gross || 0), 0)
+  const totalGross = items.reduce((s, i) => s + (i.combined_gross ?? i.gross), 0)
+  const totalWh    = items.reduce((s, i) => s + (i.combined_withholding ?? i.withholding), 0)
+  const totalNet   = items.reduce((s, i) => s + (i.combined_net ?? i.net), 0)
+  rows.push(line(['', '合計', totalOwn, totalOv, totalGross, totalWh, totalNet]))
 
   // Excel(Windows) で日本語が文字化けしないよう UTF-8 BOM を付与
   const csv = '﻿' + rows.join('\r\n')

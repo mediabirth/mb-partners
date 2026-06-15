@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 type Step = 1 | 2 | 3 | 4
@@ -17,6 +17,9 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 
 export default function InviteForm({ email, defaultName, token }: { email: string; defaultName: string; token: string }) {
   const router = useRouter()
+  const sp = useSearchParams()
+  const frontierFlag = sp.get('role') === 'frontier'   // フロンティアとして登録
+  const frontierId = sp.get('f') || undefined          // 配下として紐づくフロンティアID
   const [step, setStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -70,6 +73,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
         taxType, bankName: bankName.trim(), branchName: branchName.trim(), accountType,
         accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim(), invoiceNumber: invoiceNumber.trim(),
         agreeTerms, agreePrivacy,
+        frontierFlag, frontierId,
       }),
     })
     const data = await res.json().catch(() => ({}))

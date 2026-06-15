@@ -1,0 +1,23 @@
+[
+  {
+    "id": "b0000001-0000-0000-0000-000000000000",
+    "code": "KT8842",
+    "is_frontier": false,
+    "frontier_id": null,
+    "frontier_linked_at": null
+  },
+  {
+    "id": "44beeb84-d084-4413-b680-439ea3288c5b",
+    "code": "SS1203",
+    "is_frontier": false,
+    "frontier_id": null,
+    "frontier_linked_at": null
+  },
+  {
+    "id": "a240bcf1-f5e4-4db2-a8d1-cfd3fab36631",
+    "code": "IN0907",
+    "is_frontier": false,
+    "frontier_id": null,
+    "frontier_linked_at": null
+  }
+]

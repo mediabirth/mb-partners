@@ -112,6 +112,18 @@ export default async function AppPage() {
         </div>
       </div>
 
+      {/* R2-C: フロンティア導線（is_frontier のみ） */}
+      {(partner as { is_frontier?: boolean }).is_frontier && (
+        <Link href="/app/frontier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 20px 0', background: 'linear-gradient(120deg,var(--blue-dk),#2a1fb0)', color: '#fff', borderRadius: 14, padding: '14px 16px', textDecoration: 'none' }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>👑</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.82rem', fontWeight: 800 }}>フロンティア ダッシュボード</div>
+            <div style={{ fontSize: '.62rem', opacity: .85, marginTop: 1 }}>配下のオーバーライドと招待を管理</div>
+          </div>
+          <span style={{ fontSize: '1rem', opacity: .9 }}>›</span>
+        </Link>
+      )}
+
       {/* ⑨ 動機づけ: 次回振込までの進捗＋励まし */}
       {!isEmpty && (
         <div className="card-hover" style={{ margin: '12px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px' }}>

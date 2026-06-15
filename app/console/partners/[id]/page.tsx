@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
 import BankChangePanel from './BankChangePanel'
 import StatusControl from './StatusControl'
+import FrontierControls from '@/components/FrontierControls'
 import CountUp from '@/components/CountUp'
 
 export const runtime = 'edge'
@@ -50,7 +51,7 @@ export default async function PartnerDetailPage({
   const [profileForCheck, partnerRes, bankRequestsRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
     service.from('partners')
-      .select('id, code, status, tax_type, kyc_verified_at, bank, profile_id, created_at, profiles(name, email, color)')
+      .select('id, code, status, tax_type, kyc_verified_at, bank, profile_id, created_at, is_frontier, frontier_id, frontier_linked_at, profiles(name, email, color)')
       .eq('id', id)
       .single(),
     service.from('bank_change_requests')
@@ -66,6 +67,13 @@ export default async function PartnerDetailPage({
   if (!partner) notFound()
 
   const bankRequests = bankRequestsRes.data ?? []
+
+  // R2-B: フロンティア候補（is_frontier=true のパートナー）
+  const { data: frontiersRaw } = await service
+    .from('partners')
+    .select('id, code, profiles(name)')
+    .eq('is_frontier', true)
+  const frontiers = (frontiersRaw ?? []).map((f: any) => ({ id: f.id, code: f.code, name: f.profiles?.name ?? f.code }))
 
   // Round 2: deals + payouts + inquiries (keyed by partner id)
   const [dealsRes, payoutsRes, inquiryCountRes] = await Promise.all([
@@ -344,6 +352,14 @@ export default async function PartnerDetailPage({
 
               {/* Status control (suspend / reactivate) */}
               <StatusControl partnerId={id} currentStatus={p.status as 'active' | 'pending' | 'suspended'} />
+
+              {/* R2-B: 役割 / フロンティア */}
+              <FrontierControls
+                partnerId={id}
+                initialIsFrontier={!!(partner as any).is_frontier}
+                initialFrontierId={(partner as any).frontier_id ?? null}
+                frontiers={frontiers}
+              />
 
               {/* Bank change requests */}
               <BankChangePanel requests={bankRequests as Parameters<typeof BankChangePanel>[0]['requests']} />

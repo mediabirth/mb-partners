@@ -125,7 +125,7 @@ export async function getPartnerWithDeals(supabase: SupabaseClient, userId: stri
   const { data } = await supabase
     .from('partners')
     .select(`
-      id, code, status, tax_type, bank,
+      id, code, status, tax_type, bank, is_frontier,
       deals:deals!partner_id(
         id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount,
         menu_id, fixed_month, consent, meeting_at, created_at, updated_at, service_id,
@@ -222,6 +222,7 @@ export type PartnerRow = {
   id: string; code: string; status: string; tax_type: string
   created_at: string; kyc_verified_at: string | null
   bank: BankInfo | null
+  is_frontier?: boolean
   profiles: { name: string; email: string; color: string; avatar_url: string | null; role?: string } | null
 }
 

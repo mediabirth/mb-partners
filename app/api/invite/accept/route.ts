@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     taxType, bankName, branchName, accountType, accountNumber, accountHolder, invoiceNumber,
     agreeTerms, agreePrivacy,
     name: legacyName,
+    frontierFlag, frontierId,   // R2: ?role=frontier → is_frontier / ?f=<id> → 配下紐づけ
   } = body
 
   const name = (lastName || firstName)
@@ -197,6 +198,13 @@ export async function POST(req: NextRequest) {
       account_holder: (accountHolder ?? '').trim(),
     } : null
     const nowIso = new Date().toISOString()
+    // R2: フロンティア役割／配下紐づけ（招待リンクのパラメータ由来）
+    const frontierFields: Record<string, unknown> = {}
+    if (frontierFlag === true) frontierFields.is_frontier = true
+    if (typeof frontierId === 'string' && frontierId) {
+      frontierFields.frontier_id = frontierId
+      frontierFields.frontier_linked_at = nowIso
+    }
     const partnerFields = fullRegistration ? {
       tax_type: taxType,
       bank,
@@ -205,7 +213,8 @@ export async function POST(req: NextRequest) {
       invoice_number: (invoiceNumber ?? '').trim() || null,
       terms_agreed_at: agreeTerms ? nowIso : null,
       privacy_agreed_at: agreePrivacy ? nowIso : null,
-    } : {}
+      ...frontierFields,
+    } : { ...frontierFields }
 
     const { data: existingPartner } = await service
       .from('partners').select('id, code').eq('profile_id', userId).maybeSingle()
