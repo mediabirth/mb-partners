@@ -19,6 +19,7 @@ export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed
 }) {
   const [days, setDays]       = useState<Day[]>([])
   const [selDate, setSelDate] = useState<string | null>(null)
+  const [selSlot, setSelSlot] = useState<Slot | null>(null)
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -100,7 +101,7 @@ export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed
                 const active = d.date === selDate
                 const empty = (d.count ?? d.slots.length) === 0
                 return (
-                  <button key={d.date} onClick={() => !empty && setSelDate(d.date)} disabled={empty}
+                  <button key={d.date} onClick={() => { if (!empty) { setSelDate(d.date); setSelSlot(null) } }} disabled={empty}
                     style={{
                       flexShrink: 0, minWidth: 56, padding: '7px 11px', borderRadius: 11,
                       border: `1.5px solid ${active ? 'var(--blue)' : empty ? 'var(--line)' : 'var(--blue-bg)'}`,
@@ -116,16 +117,26 @@ export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed
                 )
               })}
             </div>
-            {/* 時間枠（即時表示） */}
+            {/* 時間枠（即時表示）。ワンタップ＝選択（即予約はしない） */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {(day?.slots ?? []).map(s => (
-                <button key={s.start} disabled={saving} onClick={() => confirm(s)} className="lift"
-                  style={{ padding: '11px 0', borderRadius: 10, border: '1.5px solid var(--blue-bg)', background: 'var(--blue-bg2)', color: 'var(--blue-dk)', fontSize: '.8rem', fontWeight: 800, fontFamily: 'Inter', cursor: saving ? 'wait' : 'pointer' }}>
-                  {fmtTime(s.start)}
-                </button>
-              ))}
+              {(day?.slots ?? []).map(s => {
+                const sel = selSlot?.start === s.start
+                return (
+                  <button key={s.start} onClick={() => setSelSlot(s)} className="lift"
+                    style={{ padding: '11px 0', borderRadius: 10, fontSize: '.8rem', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer',
+                      border: `1.5px solid ${sel ? 'var(--blue)' : 'var(--blue-bg)'}`,
+                      background: sel ? 'var(--blue)' : 'var(--blue-bg2)', color: sel ? '#fff' : 'var(--blue-dk)' }}>
+                    {fmtTime(s.start)}
+                  </button>
+                )
+              })}
             </div>
             {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 12 }}>{error}</p>}
+            {/* 確定 */}
+            <button onClick={() => selSlot && confirm(selSlot)} disabled={!selSlot || saving} className="btn btn-p lift"
+              style={{ width: '100%', marginTop: 14, opacity: (!selSlot || saving) ? .5 : 1 }}>
+              {saving ? '確定中…' : selSlot ? `${fmtTime(selSlot.start)} で予約を確定` : '時間を選択してください'}
+            </button>
           </>
         )}
       </div>

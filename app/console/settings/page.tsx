@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import ConsoleNav from '@/components/ConsoleNav'
 import LogoutButton from '@/components/LogoutButton'
+import ConsoleCalendarCard from '@/components/ConsoleCalendarCard'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AdminUser = { id: string; name: string; email: string; role: string; color: string }
@@ -222,24 +223,8 @@ export default function SettingsPage() {
             </form>
           </SectionCard>
 
-          {/* 3. カレンダー連携 */}
-          <SectionCard title="カレンダー連携">
-            <RowItem label="Google カレンダー連携" desc="商談日程を自動でカレンダーに追加します">
-              <Toggle on={calEnabled} onChange={setCalEnabled} />
-            </RowItem>
-            {calEnabled && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>カレンダー ID</label>
-                <input
-                  value={calUrl}
-                  onChange={e => setCalUrl(e.target.value)}
-                  placeholder="example@group.calendar.google.com"
-                  style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.8rem' }}
-                />
-              </div>
-            )}
-            <button onClick={saveCal} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 18px' }}>保存する</button>
-          </SectionCard>
+          {/* 3. カレンダー連携（②③ MB運営カレンダー） */}
+          <ConsoleCalendarCard />
 
           {/* 4. 通知設定 */}
           <SectionCard title="通知設定">

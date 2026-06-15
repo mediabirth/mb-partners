@@ -31,7 +31,10 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
   const [slots, setSlots]            = useState<TimeSlot[]>([])
   const [slotsLoading, setSlotsLoad] = useState(false)
   const [selectedSlot, setSelSlot]   = useState<TimeSlot | null>(null)
+  const [customerType, setCustomerType] = useState<'individual' | 'corporate'>('individual')
   const [name, setName]              = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [contactName, setContactName] = useState('')
   const [email, setEmail]            = useState('')
   const [submitting, setSubmitting]  = useState(false)
   const [error, setError]            = useState('')
@@ -46,8 +49,13 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
       .finally(() => setSlotsLoad(false))
   }, [selectedDate, step, partner_id])
 
+  const composedName = customerType === 'corporate'
+    ? (contactName.trim() ? `${companyName.trim()}（${contactName.trim()}）` : companyName.trim())
+    : name.trim()
+  const customerValid = customerType === 'corporate' ? !!companyName.trim() : !!name.trim()
+
   const handleSubmit = async () => {
-    if (!selectedSlot || !name.trim() || !email.trim()) return
+    if (!selectedSlot || !customerValid || !email.trim()) return
     setSubmitting(true)
     setError('')
     const res = await fetch('/api/meetings', {
@@ -57,8 +65,11 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
         partner_id,
         start_at: selectedSlot.start,
         end_at: selectedSlot.end,
-        client_name: name.trim(),
+        client_name: composedName,
         client_email: email.trim(),
+        customer_type: customerType,
+        company_name: customerType === 'corporate' ? companyName.trim() : null,
+        contact_name: customerType === 'corporate' ? contactName.trim() : null,
       }),
     })
     setSubmitting(false)
@@ -292,18 +303,44 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
             <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>お客様情報</h2>
 
+            {/* ⑦ お客様の種別 */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
-                お名前 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="山田 太郎"
-                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
-              />
+              <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>お客様の種別</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
+                  <button type="button" key={v} onClick={() => setCustomerType(v)}
+                    style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                      border: `1.5px solid ${customerType === v ? '#2563EB' : '#E5E7EB'}`,
+                      background: customerType === v ? '#2563EB' : '#fff', color: customerType === v ? '#fff' : '#111827' }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
             </div>
+            {customerType === 'individual' ? (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                  お客様のお名前 <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎"
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                    会社名 <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇"
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>ご担当者名（任意）</label>
+                  <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎"
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+                </div>
+              </>
+            )}
             <div style={{ marginBottom: 22 }}>
               <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
                 メールアドレス <span style={{ color: '#EF4444' }}>*</span>
@@ -321,12 +358,12 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
             <button
               onClick={handleSubmit}
-              disabled={submitting || !name.trim() || !email.trim()}
+              disabled={submitting || !customerValid || !email.trim()}
               style={{
                 width: '100%', padding: '13px', background: '#2563EB', color: '#fff',
                 border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15,
-                cursor: submitting || !name.trim() || !email.trim() ? 'default' : 'pointer',
-                opacity: submitting || !name.trim() || !email.trim() ? 0.6 : 1,
+                cursor: submitting || !customerValid || !email.trim() ? 'default' : 'pointer',
+                opacity: submitting || !customerValid || !email.trim() ? 0.6 : 1,
               }}
             >
               {submitting ? '予約中...' : '予約を確定する'}

@@ -107,6 +107,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertErr.message }, { status: 500 })
   }
 
+  // R1① 顧客へ予約完了メール（ベストエフォート）
+  try {
+    const { sendBookingConfirmEmail } = await import('@/lib/email')
+    await sendBookingConfirmEmail({ to: client_email, clientName: client_name, partnerName: profile?.name ?? null, startAt: start_at })
+  } catch { /* best-effort */ }
+
   // パートナーに予約通知
   const startJST = new Date(start_at).toLocaleString('ja', {
     month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo',

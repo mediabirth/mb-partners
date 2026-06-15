@@ -13,8 +13,8 @@ import { decryptTokens, encryptTokens } from '@/lib/google-token'
 import { getValidAccessToken, getFreeBusy, calcAvailableSlots, type Availability, type BusyBlock } from '@/lib/google-calendar'
 import type { StoredTokens } from '@/lib/google-token'
 
-// MB運営の標準受付（平日10-18 / 30分 / バッファ0）
-const DEFAULT_AVAIL: Availability = { days: [1, 2, 3, 4, 5], start: '10:00', end: '18:00', slot_minutes: 30, buffer_minutes: 0 }
+// MB運営の標準受付（平日9:00-18:00 / 30分 / バッファ0）。③のコンソール設定で将来上書き予定。
+const DEFAULT_AVAIL: Availability = { days: [1, 2, 3, 4, 5], start: '09:00', end: '18:00', slot_minutes: 30, buffer_minutes: 0 }
 const DISPLAY_DAYS = 21   // チップ表示する日数
 const HORIZON_DAYS = 60   // 空き探索の上限
 

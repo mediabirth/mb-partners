@@ -17,6 +17,60 @@ const LOGO_BAR =
 </div>`
 
 /**
+ * R1① 顧客への予約完了メール（ベストエフォート）。予約日時＋打ち合わせ案内。
+ */
+export async function sendBookingConfirmEmail(params: {
+  to: string
+  clientName?: string | null
+  partnerName?: string | null
+  startAt: string
+  meetingUrl?: string | null
+}): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
+  if (!params.to) return { sent: false, skipped: 'no recipient' }
+  const when = new Date(params.startAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+  const nm = params.clientName?.trim() || 'お客様'
+  const subject = '【MB Partners】ご予約を承りました'
+  const linkLine = params.meetingUrl ? `\n▼ 打ち合わせリンク\n${params.meetingUrl}\n` : ''
+  const text =
+`${nm} 様
+
+ご予約を承りました。当日はどうぞよろしくお願いいたします。
+
+▼ 日時
+${when}
+${linkLine}
+ご不明な点は ${SUPPORT} までお問い合わせください。
+— MB Partners 運営事務局`
+  const html =
+`<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
+  ${LOGO_BAR}
+  <div style="background:#F6F6F8;border-radius:14px;padding:24px 22px">
+    <p style="margin:0 0 14px">${nm} 様</p>
+    <p style="margin:0 0 16px">ご予約を承りました。当日はどうぞよろしくお願いいたします。</p>
+    <div style="background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;color:#6E707D;margin-bottom:4px">日時</div>
+      <div style="font-size:15px;font-weight:700;color:#1E3A8A">${when}</div>
+    </div>
+    ${params.meetingUrl ? `<p style="margin:0"><a href="${params.meetingUrl}" style="color:#2563EB;font-weight:600">打ち合わせリンクを開く</a></p>` : '<p style="margin:0;font-size:13px;color:#6E707D">カレンダー招待を別途お送りする場合があります。</p>'}
+  </div>
+  <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
+  <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
+</div>`
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [params.to], subject, text, html }),
+    })
+    if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
+    return { sent: true }
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : 'send failed' }
+  }
+}
+
+/**
  * C2④ パートナー本人への受付確認メール（ベストエフォート）。
  * 紹介登録 / 協力申込 / 商談予約 の完了時に送信。RESEND_API_KEY 未設定なら no-op。
  */
