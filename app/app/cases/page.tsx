@@ -2,21 +2,41 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
-import ServiceIcon from '@/components/ServiceIcon'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
 }
-// Compact status chip palette: neutral / blue / green / muted-green
-const STATUS_CHIP: Record<string, { bg: string; color: string; dot: string }> = {
-  received:    { bg: 'var(--bg2)',     color: 'var(--muted2)', dot: 'var(--muted2)' },
-  in_progress: { bg: 'var(--blue-bg)', color: 'var(--blue)',   dot: 'var(--blue)' },
-  confirmed:   { bg: 'var(--green-bg)', color: 'var(--green)', dot: 'var(--green)' },
-  paid:        { bg: 'var(--bg2)',     color: 'var(--green)',  dot: 'var(--green)' },
+// ⑥ 段階ステッパー（4段）
+const RAIL_STEPS = ['受付', '対応中', '成約', '支払済']
+const STATUS_STEP: Record<string, number> = {
+  received: 0, in_progress: 1, confirmed: 2, paid: 3,
 }
-// Thin progress hint (0–1) per status — replaces the old 4-step rail
-const STATUS_PROGRESS: Record<string, number> = {
-  received: 0.25, in_progress: 0.55, confirmed: 0.85, paid: 1,
+
+// 4段ステッパー（旧実装の段階表示に回帰）。完了段は塗り、現在段は強調。
+function StatusStepper({ step }: { step: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 12 }}>
+      {RAIL_STEPS.map((label, i) => {
+        const done = i <= step
+        const isCurrent = i === step
+        const color = i === 3 && done ? 'var(--green)' : 'var(--blue)'
+        return (
+          <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+            {/* connector to previous node */}
+            {i > 0 && (
+              <span style={{ position: 'absolute', top: 6, right: '50%', width: '100%', height: 2, background: i <= step ? color : 'var(--line)' }} />
+            )}
+            <span style={{
+              position: 'relative', zIndex: 1, width: isCurrent ? 14 : 12, height: isCurrent ? 14 : 12, borderRadius: '50%',
+              background: done ? color : '#fff', border: `2px solid ${done ? color : 'var(--line)'}`,
+              boxShadow: isCurrent ? `0 0 0 4px ${i === 3 ? 'var(--green-bg)' : 'var(--blue-bg)'}` : 'none',
+            }} />
+            <span style={{ fontSize: '.56rem', fontWeight: isCurrent ? 800 : 600, color: done ? 'var(--txt)' : 'var(--muted2)', marginTop: 6 }}>{label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export const runtime = 'edge'
@@ -82,8 +102,7 @@ export default async function CasesPage({
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column' }}>
             {filtered.map(d => {
-              const chip = STATUS_CHIP[d.status] ?? STATUS_CHIP.received
-              const progress = STATUS_PROGRESS[d.status] ?? 0
+              const step = STATUS_STEP[d.status] ?? 0
               return (
                 <Link
                   key={d.id}
@@ -92,48 +111,28 @@ export default async function CasesPage({
                   style={{
                     display: 'block', textDecoration: 'none', color: 'var(--txt)',
                     background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
-                    padding: '14px 15px', marginBottom: 10,
+                    padding: '14px 15px 13px', marginBottom: 10,
                   }}
                 >
-                  {/* Line 1 — customer name + status chip (left), amount (right) */}
+                  {/* Line 1 — 誰を/どの企業を + channel chip (left), 報酬 (right, concise) */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                      <b style={{ fontSize: '.88rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <b style={{ fontSize: '.9rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {d.customer_name}
                       </b>
-                      <span style={{
-                        flexShrink: 0,
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '3px 9px', borderRadius: 999,
-                        fontSize: '.6rem', fontWeight: 700,
-                        background: chip.bg, color: chip.color,
-                      }}>
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: chip.dot, flexShrink: 0 }} />
-                        {STATUS_LABEL[d.status]}
+                      <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`} style={{ flexShrink: 0 }}>
+                        {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '直販'}
                       </span>
                     </div>
                     {d.amount > 0 && (
-                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.96rem', fontWeight: 800, color: 'var(--txt)', letterSpacing: '-.012em' }}>
+                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.96rem', fontWeight: 800, color: d.status === 'paid' ? 'var(--green)' : 'var(--txt)', letterSpacing: '-.012em' }}>
                         ¥{d.amount.toLocaleString()}
                       </span>
                     )}
                   </div>
 
-                  {/* Line 2 — service (icon + name, muted) + channel chip */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
-                    {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={20} />}
-                    <small style={{ flex: 1, minWidth: 0, fontSize: '.68rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {d.services?.name}
-                    </small>
-                    <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`} style={{ flexShrink: 0 }}>
-                      {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '直販'}
-                    </span>
-                  </div>
-
-                  {/* Thin progress hint — replaces the old 4-step rail */}
-                  <div style={{ marginTop: 11, height: 3, borderRadius: 2, background: 'var(--bg2)', overflow: 'hidden' }}>
-                    <div style={{ width: `${progress * 100}%`, height: '100%', borderRadius: 2, background: chip.color === 'var(--muted2)' ? 'var(--muted2)' : chip.color }} />
-                  </div>
+                  {/* 段階ステッパー */}
+                  <StatusStepper step={step} />
                 </Link>
               )
             })}

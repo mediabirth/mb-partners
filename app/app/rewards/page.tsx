@@ -112,7 +112,7 @@ export default async function RewardsPage() {
                       </span>
                     </div>
                     <div style={{ fontSize: '.59rem', color: 'var(--muted)', marginTop: 1 }}>
-                      {d.services?.name}
+                      {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約・確定' : d.status === 'in_progress' ? '対応中' : '受付'}
                     </div>
                   </div>
                 </div>
@@ -141,25 +141,27 @@ export default async function RewardsPage() {
 function MonthAccordion({ title, subtitle, net, children }: {
   title: string; subtitle: string; net: number; children: React.ReactNode
 }) {
-  // Server-rendered as open for first month — using details/summary for native accordion
+  // ⑧ 既定で折りたたみ（open なし）。行タップで内訳を展開（native details/summary, JS不要）。
+  // chevron は details[open] で回転（globals に依存せず scoped style）。
   return (
-    <details style={{ margin: '0 20px 10px', borderBottom: '1px solid var(--line)' }} open>
-      <summary style={{
+    <details className="acc" style={{ margin: '0 20px 10px', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+      <style>{`.acc > summary::-webkit-details-marker{display:none} .acc[open] .acc-chev{transform:rotate(90deg)}`}</style>
+      <summary className="card-hover" style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '16px 6px', cursor: 'pointer', listStyle: 'none',
+        padding: '15px 14px', cursor: 'pointer', listStyle: 'none',
       }}>
         <div>
-          <b style={{ fontSize: '.78rem', display: 'block' }}>{title}</b>
-          <small style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{subtitle}</small>
+          <b style={{ fontSize: '.8rem', display: 'block' }}>{title}</b>
+          <small style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{subtitle}・タップで内訳</small>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '1rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.016em' }}>
+          <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.016em' }}>
             ¥{net.toLocaleString()}
           </span>
-          <span style={{ color: 'var(--muted)', fontSize: '.85rem' }}>›</span>
+          <span className="acc-chev" style={{ color: 'var(--muted)', fontSize: '.85rem', transition: 'transform .2s ease', display: 'inline-block' }}>›</span>
         </div>
       </summary>
-      <div style={{ borderTop: '1px solid var(--line)', paddingBottom: 6 }}>
+      <div style={{ borderTop: '1px solid var(--line)', padding: '0 8px 6px' }}>
         {children}
       </div>
     </details>
