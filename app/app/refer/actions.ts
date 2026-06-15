@@ -68,7 +68,7 @@ export async function submitPartnerReferral(formData: FormData) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name')
+    .select('name, email')
     .eq('id', user.id)
     .single()
 
@@ -127,6 +127,22 @@ export async function submitPartnerReferral(formData: FormData) {
     action: '紹介登録(フォーム)',
     meta: { service_id: serviceId, partner_id: partner.id, menu_id: menuId },
   })
+
+  // C2④ パートナー本人へ受付確認メール（ベストエフォート）
+  try {
+    if (profile?.email) {
+      const { data: svc } = await supabase.from('services').select('name').eq('id', serviceId).single()
+      const { sendReceiptEmail } = await import('@/lib/email')
+      await sendReceiptEmail({
+        to: profile.email,
+        partnerName: profile.name,
+        kind: channel === 'cooperation' ? 'cooperation' : 'referral',
+        customerName,
+        serviceName: svc?.name ?? null,
+        menuName: (menu as { name?: string } | null)?.name ?? null,
+      })
+    }
+  } catch { /* best-effort */ }
 
   revalidatePath('/app')
   return { dealId: deal!.id }

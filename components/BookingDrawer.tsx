@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 
 type Slot = { start: string; end: string }
-type Day = { date: string; label: string; slots: Slot[] }
+type Day = { date: string; label: string; weekday?: string; count?: number; slots: Slot[] }
 
 /**
  * in-app 商談予約ドロワー。
@@ -10,8 +10,12 @@ type Day = { date: string; label: string; slots: Slot[] }
  * 確定で /api/deals/[id]/meeting に保存（meeting_at / calendar_event_id）。
  * 外部遷移・新規タブは使わない。
  */
-export default function BookingDrawer({ dealId, onClose, onConfirmed }: {
-  dealId: string; onClose: () => void; onConfirmed?: (startAt: string) => void
+export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed }: {
+  dealId?: string | null
+  // 予約確定の瞬間に deal を作成して dealId を返す（協力の自分で予約用）
+  createDeal?: () => Promise<string | null>
+  onClose: () => void
+  onConfirmed?: (startAt: string) => void
 }) {
   const [days, setDays]       = useState<Day[]>([])
   const [selDate, setSelDate] = useState<string | null>(null)
@@ -38,7 +42,14 @@ export default function BookingDrawer({ dealId, onClose, onConfirmed }: {
   async function confirm(slot: Slot) {
     setSaving(true); setError('')
     try {
-      const res = await fetch(`/api/deals/${dealId}/meeting`, {
+      // 協力の「自分で予約」: この瞬間に協力deal を作成して dealId を得る
+      let id = dealId ?? null
+      if (!id && createDeal) {
+        id = await createDeal()
+        if (!id) { setError('申し込みに失敗しました'); return }
+      }
+      if (!id) { setError('対象の案件が見つかりません'); return }
+      const res = await fetch(`/api/deals/${id}/meeting`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ start_at: slot.start, end_at: slot.end }),
       })
@@ -83,14 +94,24 @@ export default function BookingDrawer({ dealId, onClose, onConfirmed }: {
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '6px 0 12px', lineHeight: 1.6 }}>
               空いている日時から選ぶだけ。{connected ? 'Googleカレンダーの予定を避けて表示しています。' : ''}
             </p>
-            {/* 日付チップ（次の空き日が既定選択） */}
+            {/* 日付チップ（空き枠数を表示・空きのない日はグレーアウト・次の空き日が既定選択） */}
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 14 }}>
               {days.map(d => {
                 const active = d.date === selDate
+                const empty = (d.count ?? d.slots.length) === 0
                 return (
-                  <button key={d.date} onClick={() => setSelDate(d.date)}
-                    style={{ flexShrink: 0, padding: '8px 13px', borderRadius: 11, border: `1.5px solid ${active ? 'var(--blue)' : 'var(--line)'}`, background: active ? 'var(--blue)' : '#fff', color: active ? '#fff' : 'var(--txt)', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {d.label}
+                  <button key={d.date} onClick={() => !empty && setSelDate(d.date)} disabled={empty}
+                    style={{
+                      flexShrink: 0, minWidth: 56, padding: '7px 11px', borderRadius: 11,
+                      border: `1.5px solid ${active ? 'var(--blue)' : empty ? 'var(--line)' : 'var(--blue-bg)'}`,
+                      background: active ? 'var(--blue)' : empty ? 'var(--bg2)' : '#fff',
+                      color: active ? '#fff' : empty ? 'var(--muted2)' : 'var(--txt)',
+                      opacity: empty ? .55 : 1, cursor: empty ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                    }}>
+                    <div style={{ fontSize: '.72rem', fontWeight: 800 }}>{d.label}{d.weekday ? `(${d.weekday})` : ''}</div>
+                    <div style={{ fontSize: '.54rem', fontWeight: 700, marginTop: 2, color: active ? 'rgba(255,255,255,.9)' : empty ? 'var(--muted2)' : 'var(--blue)' }}>
+                      {empty ? '満' : `${d.count ?? d.slots.length}枠`}
+                    </div>
                   </button>
                 )
               })}

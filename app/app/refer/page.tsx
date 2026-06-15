@@ -59,6 +59,7 @@ export default function ReferPage() {
   const [done, setDone]                   = useState(false)
   const [dealId, setDealId]               = useState<string | null>(null)
   const [showBooking, setShowBooking]     = useState(false)
+  const [showSelfBook, setShowSelfBook]   = useState(false)
   const [bookedAt, setBookedAt]           = useState<string | null>(null)
   const [error, setError]                 = useState('')
 
@@ -138,8 +139,20 @@ export default function ReferPage() {
     })
   }
 
+  // 協力「自分で予約」: 予約確定の瞬間に協力deal を作成して dealId を返す（同意内包）
+  async function coopCreateDeal(): Promise<string | null> {
+    const fd = new FormData()
+    fd.set('serviceId', selSvc!.id)
+    fd.set('menuId', selMenu?.id ?? '')
+    fd.set('customerName', customerName)
+    fd.set('phone', phone)
+    fd.set('memo', memo)
+    fd.set('channel', 'cooperation')
+    try { const res = await submitPartnerReferral(fd); return res?.dealId ?? null } catch { return null }
+  }
+
   function resetForNext() {
-    setDone(false); setStep('service')
+    setDone(false); setStep('service'); setShowSelfBook(false)
     setSelSvc(null); setSelMenu(null); setCoopMode(false)
     setCustomerName(''); setPhone(''); setMemo(''); setConsent(false); setError('')
     setToken(null); setShowQR(false); setDealId(null); setShowBooking(false); setBookedAt(null)
@@ -413,6 +426,13 @@ export default function ReferPage() {
                     {bookingCopied ? 'COPIED' : 'COPY'}
                   </button>
                 </div>
+                {/* 同一画面2択: 自分で予約する → その場でカレンダー展開→枠選択→予約で協力deal＋商談予約を同時実行 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
+                  <span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} /><span style={{ fontSize: '.56rem', color: '#7676B0', fontWeight: 700 }}>または</span><span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} />
+                </div>
+                <button type="button" onClick={() => { if (!customerName) { setError('自分で予約する前に、下の「お名前」を入力してください'); return } setError(''); setShowSelfBook(true) }}
+                  className="btn btn-p lift" style={{ width: '100%' }}>自分で予約する</button>
+                {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
               </>
             )}
           </div>
@@ -447,6 +467,15 @@ export default function ReferPage() {
             </form>
           </div>
           <div style={{ height: 24 }} />
+
+          {/* 協力「自分で予約」: 予約確定で協力deal作成＋商談予約を同時実行 */}
+          {showSelfBook && (
+            <BookingDrawer
+              createDeal={coopCreateDeal}
+              onClose={() => setShowSelfBook(false)}
+              onConfirmed={(at) => { setShowSelfBook(false); setBookedAt(at); setDone(true) }}
+            />
+          )}
         </div>
       )}
     </div>

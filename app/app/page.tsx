@@ -45,6 +45,11 @@ export default async function AppPage() {
     ? `${nextPayDate.getMonth() + 1}/${nextPayDate.getDate()} — ¥${nextPayoutAmt.toLocaleString()}`
     : null
 
+  // C2③ 商談予定（meeting_at が未来）を日時順
+  const upcomingMeetings = deals
+    .filter(d => d.meeting_at && new Date(d.meeting_at).getTime() >= now.getTime())
+    .sort((a, b) => new Date(a.meeting_at!).getTime() - new Date(b.meeting_at!).getTime())
+
   // ⑨ 動機づけ: 次回振込までの進捗＋やさしい励まし
   const daysToPay   = Math.max(0, Math.ceil((nextPayDate.getTime() - now.getTime()) / 86_400_000))
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
@@ -149,7 +154,27 @@ export default async function AppPage() {
           <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>やること</h2>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
-          {todos.length === 0 ? (
+          {/* C2③ 商談予定（日時順） */}
+          {upcomingMeetings.map(d => (
+            <Link key={`mtg-${d.id}`} href={`/app/cases/${d.id}`} className="row-hover lift" style={{
+              display: 'flex', gap: 11, padding: '13px 14px', borderBottom: '1px solid var(--line)', textDecoration: 'none', alignItems: 'center',
+            }}>
+              <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--blue-bg)', color: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {d.customer_name} — 商談
+                </div>
+                <div style={{ fontSize: '.6rem', color: 'var(--blue)', marginTop: 1, fontWeight: 700 }}>
+                  {new Date(d.meeting_at!).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}
+                  <span style={{ color: 'var(--muted2)', fontWeight: 500 }}>　{d.services?.name}</span>
+                </div>
+              </div>
+              <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
+            </Link>
+          ))}
+          {todos.length === 0 && upcomingMeetings.length === 0 ? (
             <p style={{ padding: '16px 14px', fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>
               現在、対応待ちの案件はありません。
             </p>

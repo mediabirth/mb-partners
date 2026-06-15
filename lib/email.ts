@@ -10,6 +10,90 @@
 const FROM = 'MB Partners <noreply@mb-partners.app>'
 const SUPPORT = 'support@mb-partners.app'
 
+const LOGO_BAR =
+`<div style="padding:20px 0;text-align:center">
+  <img src="https://mb-partners.app/icon-192.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:9px" />
+  <span style="font-weight:800;font-size:17px;vertical-align:middle;margin-left:9px">MB <span style="color:#4733E6">Partners</span></span>
+</div>`
+
+/**
+ * C2④ パートナー本人への受付確認メール（ベストエフォート）。
+ * 紹介登録 / 協力申込 / 商談予約 の完了時に送信。RESEND_API_KEY 未設定なら no-op。
+ */
+export async function sendReceiptEmail(params: {
+  to: string
+  partnerName?: string | null
+  kind: 'referral' | 'cooperation' | 'meeting'
+  customerName: string
+  serviceName?: string | null
+  menuName?: string | null
+  meetingAt?: string | null
+}): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
+  if (!params.to) return { sent: false, skipped: 'no recipient' }
+
+  const kindLabel = params.kind === 'meeting' ? '商談予約' : params.kind === 'cooperation' ? '協力のお申し込み' : 'ご紹介の登録'
+  const engage = params.kind === 'cooperation' ? '協力' : '紹介'
+  const name = params.partnerName?.trim() || 'パートナー'
+  const meeting = params.meetingAt
+    ? new Date(params.meetingAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+    : null
+
+  const rows: [string, string][] = [
+    ['お客さま', params.customerName],
+    ...(params.serviceName ? [['サービス', params.menuName ? `${params.serviceName} / ${params.menuName}` : params.serviceName] as [string, string]] : []),
+    ['関わり方', engage],
+    ...(meeting ? [['商談日時', meeting] as [string, string]] : []),
+  ]
+
+  const subject = `【MB Partners】${kindLabel}を受け付けました`
+  const text =
+`${name} 様
+
+${kindLabel}を受け付けました。内容は以下のとおりです。
+
+${rows.map(([k, v]) => `・${k}：${v}`).join('\n')}
+
+▼ この後の流れ
+1. MBが内容を確認します
+2. お客さまへ商談・ご提案
+3. 成約で報酬が発生（月末締め・翌月末払い）
+
+ご不明な点は ${SUPPORT} までお問い合わせください。
+— MB Partners 運営事務局`
+
+  const html =
+`<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
+  ${LOGO_BAR}
+  <div style="background:#F6F6F8;border-radius:14px;padding:24px 22px">
+    <p style="margin:0 0 14px">${name} 様</p>
+    <p style="margin:0 0 16px"><b>${kindLabel}</b>を受け付けました。</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:18px">
+      ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:90px">${k}</td><td style="padding:6px 0;font-weight:600">${v}</td></tr>`).join('')}
+    </table>
+    <div style="background:#fff;border-radius:10px;padding:14px 16px">
+      <div style="font-size:12px;font-weight:700;color:#4733E6;margin-bottom:8px">この後の流れ</div>
+      <div style="font-size:13px;color:#41414E">1. MBが内容を確認 → 2. 商談・ご提案 → 3. 成約で報酬（月末締め・翌月末払い）</div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
+  <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
+</div>`
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [params.to], subject, text, html }),
+    })
+    if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
+    return { sent: true }
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : 'send failed' }
+  }
+}
+
 export async function sendInviteEmail(params: {
   to: string
   name?: string | null

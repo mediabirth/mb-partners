@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // 案件は本人のものに限定
   const { data: deal } = await supabase
     .from('deals')
-    .select('id, customer_name, partner_id')
+    .select('id, customer_name, partner_id, service_id')
     .eq('id', id)
     .eq('partner_id', partner.id)
     .single()
@@ -74,5 +74,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .eq('partner_id', partner.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // C2④ パートナー本人へ商談予約の受付確認メール（ベストエフォート）
+  try {
+    if (profile?.email) {
+      const { data: svc } = await supabase.from('services').select('name').eq('id', (deal as { service_id?: string }).service_id ?? '').single()
+      const { sendReceiptEmail } = await import('@/lib/email')
+      await sendReceiptEmail({
+        to: profile.email,
+        partnerName: profile.name,
+        kind: 'meeting',
+        customerName: deal.customer_name,
+        serviceName: svc?.name ?? null,
+        meetingAt: start_at,
+      })
+    }
+  } catch { /* best-effort */ }
+
   return NextResponse.json({ ok: true, meeting_at: start_at, calendar_event_id: eventId, googleSynced: !!eventId })
 }
