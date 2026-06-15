@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/queries'
-import ServiceIcon from '@/components/ServiceIcon'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
 import { nextPayoutDate } from '@/lib/payout'
 
@@ -44,6 +44,19 @@ export default async function AppPage() {
   const nextPayLabel = nextPayoutAmt > 0
     ? `${nextPayDate.getMonth() + 1}/${nextPayDate.getDate()} — ¥${nextPayoutAmt.toLocaleString()}`
     : null
+
+  // ⑨ 動機づけ: 次回振込までの進捗＋やさしい励まし
+  const daysToPay   = Math.max(0, Math.ceil((nextPayDate.getTime() - now.getTime()) / 86_400_000))
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const cycleProgress = Math.min(1, now.getDate() / daysInMonth)
+  const isEmpty = deals.length === 0
+  const encouragement = isEmpty
+    ? ''
+    : nextPayoutAmt > 0
+      ? `確定報酬 ¥${nextPayoutAmt.toLocaleString()} が次回振込にのります。`
+      : active.length > 0
+        ? 'いい調子です。進行中の案件が成約すると報酬になります。'
+        : '次の紹介で、新しい報酬が生まれます。'
 
   // Todo: deals waiting for partner action (received status)
   const todos = deals.filter(d => d.status === 'received').slice(0, 3)
@@ -93,12 +106,42 @@ export default async function AppPage() {
         </div>
       </div>
 
+      {/* ⑨ 動機づけ: 次回振込までの進捗＋励まし */}
+      {!isEmpty && (
+        <div className="card-hover" style={{ margin: '12px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: '.72rem', fontWeight: 800 }}>次回振込まで <span style={{ color: 'var(--blue)' }}>あと{daysToPay}日</span></span>
+            <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 600 }}>{nextPayLabel ?? '予定なし'}</span>
+          </div>
+          <div className="bar-grow" style={{ height: 7, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}>
+            <div style={{ width: `${Math.round(cycleProgress * 100)}%`, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,var(--blue) 0%,var(--blue-dk) 100%)' }} />
+          </div>
+          <p style={{ fontSize: '.64rem', color: 'var(--muted)', margin: '9px 0 0', lineHeight: 1.6 }}>{encouragement}</p>
+        </div>
+      )}
+
+      {/* ⑨ 空状態: 最初の紹介をしてみよう */}
+      {isEmpty && (
+        <div className="page-anim" style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '26px 22px', textAlign: 'center' }}>
+          <div className="celebrate-pop" style={{ fontSize: '2.2rem', marginBottom: 10 }} aria-hidden>✨</div>
+          <b style={{ fontSize: '.92rem', display: 'block', marginBottom: 6 }}>最初の紹介をしてみよう</b>
+          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 16 }}>
+            知り合いをひとり思い浮かべて、つなぐだけ。あとはMBが対応します。
+          </p>
+          <Link href="/app/refer" className="btn btn-p lift" style={{ display: 'inline-block', textDecoration: 'none', padding: '11px 26px' }}>
+            紹介をはじめる
+          </Link>
+        </div>
+      )}
+
       {/* Stats */}
+      {!isEmpty && (
       <div className="stagger" style={{ display: 'flex', gap: 10, margin: '14px 20px 0' }}>
         <StatCard label="進行中の案件" countUp={active.length} unit="件" href="/app/cases?f=active" />
         <StatCard label="見込み報酬" countUp={pipeline} format="yen" href="/app/cases?f=active" />
         <StatCard label="今月の成約" countUp={monthConfirmed.length} unit="件" href="/app/rewards" />
       </div>
+      )}
 
       {/* Todos */}
       <div style={{ padding: '22px 20px 6px' }}>
@@ -156,7 +199,7 @@ export default async function AppPage() {
                 alignItems: 'center',
               }}>
                 {deal?.services && (
-                  <ServiceIcon icon={deal.services.icon} color={deal.services.color} size={30} />
+                  <ServiceAvatar logoPath={deal.services.logo_path} icon={deal.services.icon} color={deal.services.color} name={deal.services.name} size={30} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '.72rem', color: 'var(--txt)', lineHeight: 1.55, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
