@@ -45,5 +45,15 @@ export async function POST() {
   const targetMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const { data, error } = await serviceSupabase.rpc('close_month_batch', { target_month: targetMonth })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 締め時点で override を凍結（payout_overrides 未作成時は no-op）
+  try {
+    const batchId = (data as { batch_id?: string } | null)?.batch_id
+    if (batchId) {
+      const { freezeOverridesForBatch } = await import('@/lib/frontier-payout')
+      await freezeOverridesForBatch(serviceSupabase, batchId, targetMonth)
+    }
+  } catch { /* best-effort */ }
+
   return NextResponse.json({ ok: true, result: data })
 }

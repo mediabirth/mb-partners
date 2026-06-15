@@ -33,6 +33,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // 締め時点で override を凍結（payout_overrides 未作成時は no-op）
+  try {
+    const batchId = (data as { batch_id?: string } | null)?.batch_id
+    if (batchId) {
+      const { freezeOverridesForBatch } = await import('@/lib/frontier-payout')
+      await freezeOverridesForBatch(supabase, batchId, targetMonth)
+    }
+  } catch { /* best-effort */ }
+
   console.log('[cron/close-month] success:', JSON.stringify(data))
   return NextResponse.json({ ok: true, result: data })
 }
