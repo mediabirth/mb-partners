@@ -1,0 +1,171 @@
+[
+  {
+    "id": "mh",
+    "name": "MatchHub",
+    "subtitle": "転職 / 採用企業の開拓",
+    "url": "matchhub.jp",
+    "description": "AI Cosearchが求人を探し、専任CAが入社まで伴走する転職支援。",
+    "who": "転職を考えている方 / 採用を拡大したい企業",
+    "icon": "circles",
+    "color": "#1e9e6a",
+    "logo_path": null,
+    "rail": "mh",
+    "active": true,
+    "sort": 2,
+    "coverage_steps": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "ft_trigger": null,
+    "ft_condition": "求職者本人への接触は不可"
+  },
+  {
+    "id": "dx",
+    "name": "PRAGMATION / EMANATION",
+    "subtitle": "DX・AI導入",
+    "url": "pragmation.jp",
+    "description": "業務設計・DX・AI導入を、導入後の継続改善まで顧問型で支援。",
+    "who": "業務効率化・AI活用に悩む中小企業",
+    "icon": "arrows",
+    "color": "#15917E",
+    "logo_path": null,
+    "rail": "std",
+    "active": true,
+    "sort": 4,
+    "coverage_steps": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "ft_trigger": null,
+    "ft_condition": null
+  },
+  {
+    "id": "reso",
+    "name": "RESONATION",
+    "subtitle": "撮影・制作・開発",
+    "url": "resonation.jp",
+    "description": "ブランド戦略・撮影・サイト・開発まで。「伝わる」をつくる制作ブランド。",
+    "who": "撮影 / ロゴ / サイト / 開発を頼みたい会社・店舗",
+    "icon": "aperture",
+    "color": "#8b5cf6",
+    "logo_path": null,
+    "rail": "std",
+    "active": true,
+    "sort": 3,
+    "coverage_steps": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": false
+      },
+      {
+        "label": "商談",
+        "included": false
+      },
+      {
+        "label": "価格合意",
+        "included": false
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": false
+      }
+    ],
+    "ft_trigger": null,
+    "ft_condition": null
+  },
+  {
+    "id": "moom",
+    "name": "MOOM",
+    "subtitle": "お部屋探し・引越し",
+    "url": "moom.jp",
+    "description": "住まい探しをテクノロジーで丁寧に。内見から契約までオンラインで完結する不動産仲介。",
+    "who": "引越し・住み替え・転勤で部屋を探している方",
+    "icon": "home",
+    "color": "#4733e6",
+    "logo_path": null,
+    "rail": "std",
+    "active": true,
+    "sort": 1,
+    "coverage_steps": [
+      {
+        "label": "つなぐ",
+        "included": true
+      },
+      {
+        "label": "アポイント設定",
+        "included": true
+      },
+      {
+        "label": "商談",
+        "included": true
+      },
+      {
+        "label": "価格合意",
+        "included": true
+      },
+      {
+        "label": "フォロー・アシスト",
+        "included": true
+      }
+    ],
+    "ft_trigger": "共同仲介を担当",
+    "ft_condition": "宅建業免許が必要"
+  },
+  {
+    "id": "live",
+    "name": "ENTERSOLOGY LIVE",
+    "subtitle": "配信クリエイター",
+    "url": "entersology.jp",
+    "description": "ライブ配信クリエイターの所属・マネジメント。",
+    "who": "配信で本格的に活動したいクリエイター",
+    "icon": "mic",
+    "color": "#ec4899",
+    "logo_path": null,
+    "rail": "std",
+    "active": true,
+    "sort": 6,
+    "coverage_steps": null,
+    "ft_trigger": null,
+    "ft_condition": null
+  }
+]
