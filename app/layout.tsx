@@ -23,6 +23,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#4733E6',
+  // H: iOS Safari の動的下部バー対策。env(safe-area-inset-*) を有効化（cover必須）。
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

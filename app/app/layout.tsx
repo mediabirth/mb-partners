@@ -20,9 +20,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .single()
 
   return (
-    <div style={{ background: '#E9E9ED', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ background: '#E9E9ED', minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
       <div style={{
-        width: '100%', maxWidth: 430, background: '#fff', minHeight: '100vh',
+        width: '100%', maxWidth: 430, background: '#fff', minHeight: '100dvh',
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 0 48px rgba(14,14,20,.12)', position: 'relative',
       }}>
@@ -77,8 +77,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Page content */}
-        <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 86 }}>
+        {/* Page content — fixed nav + iOS home indicator 分の余白を確保 */}
+        <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(86px + env(safe-area-inset-bottom))' }}>
           <PageTransition>{children}</PageTransition>
         </main>
 
