@@ -99,7 +99,7 @@ export default async function PartnersPage() {
 
           {/* Partners table — 実パートナーのみ（内部/管理は非表示） */}
           {externalPartners.length > 0 ? (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+            <div className="ctable-scroll" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               {/* Table header */}
               <div style={{
                 display: 'grid', gridTemplateColumns: '2.2fr .8fr .7fr .65fr 1.1fr .85fr',

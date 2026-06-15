@@ -1,14 +1,32 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useConsoleSession } from '@/components/ConsoleSession'
 
+// G: レスポンシブ。<=900px ではサイドバーをドロワー化＋ハンバーガー。
+// コンテンツ余白(inline margin-left:230)は aside[data-cnav]~* を !important で上書き。
 const NAV_STYLE = `
   .cnav-link { transition: color .18s, background .18s; }
   .cnav-link:hover:not(.cnav-active) { background: var(--bg2) !important; color: var(--txt) !important; }
   .cnav-active { background: var(--blue-bg2) !important; color: var(--blue) !important; font-weight: 700 !important; }
   .cnav-acct { transition: background .18s; }
   .cnav-acct:hover { background: var(--bg2) !important; }
+  .cnav-burger { display: none; }
+  .cnav-scrim { display: none; }
+  @media (max-width: 900px) {
+    aside[data-cnav] { transform: translateX(-100%); transition: transform .26s cubic-bezier(.4,0,.2,1); box-shadow: 8px 0 40px rgba(14,14,20,.16); }
+    aside[data-cnav].cnav-open { transform: translateX(0); }
+    aside[data-cnav] ~ * { margin-left: 0 !important; }
+    .cnav-burger { display: flex !important; }
+    .cnav-scrim.cnav-open { display: block; }
+    /* 広いコンテンツは横スクロール（カンバン4列・広いテーブル） */
+    .ckanban { grid-template-columns: repeat(4, 80vw) !important; overflow-x: auto; gap: 12px !important; padding-bottom: 8px; }
+    .ctable-scroll { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .ctable-scroll > * { min-width: 680px; }
+    /* モバイルで上部バーのタイトルがハンバーガーに被らないよう確保 */
+    .console-topbar { padding-left: 60px !important; }
+  }
 `
 
 const ITEMS = [
@@ -46,6 +64,9 @@ function NavIcon({ id }: { id: string }) {
 
 export default function ConsoleNav(_props?: { profileName?: string; profileColor?: string }) {
   const path = usePathname()
+  const [open, setOpen] = useState(false)
+  // 画面遷移でドロワーを閉じる
+  useEffect(() => { setOpen(false) }, [path])
   const active = (href: string) =>
     href === '/console' ? path === '/console' : path.startsWith(href)
 
@@ -59,10 +80,18 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
   return (
     <>
     <style>{NAV_STYLE}</style>
-    <aside style={{
+    {/* ハンバーガー（モバイルのみ） */}
+    <button onClick={() => setOpen(true)} aria-label="メニュー" className="cnav-burger"
+      style={{ position: 'fixed', top: 12, left: 12, zIndex: 60, width: 40, height: 40, borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(8px)', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--txt)' }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    {/* スクリム */}
+    <div onClick={() => setOpen(false)} className={`cnav-scrim${open ? ' cnav-open' : ''}`}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(2px)', zIndex: 45 }} />
+    <aside data-cnav className={open ? 'cnav-open' : ''} style={{
       width: 230, background: '#fff', borderRight: '1px solid var(--line)',
       padding: '22px 14px', position: 'fixed', top: 0, bottom: 0,
-      display: 'flex', flexDirection: 'column', gap: 2, zIndex: 40, overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', gap: 2, zIndex: 50, overflowY: 'auto',
     }}>
       <Link href="/console" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 12px 18px', textDecoration: 'none' }}>
         <svg width="26" height="26" viewBox="0 0 48 48" fill="none">

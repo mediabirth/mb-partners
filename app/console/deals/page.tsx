@@ -227,7 +227,7 @@ export default function DealsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
+        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ flex: 1 }}>
             <p className="eyebrow" style={{ marginBottom: 2 }}>案件管理</p>
             <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>案件ボード</h1>
@@ -247,7 +247,7 @@ export default function DealsPage() {
         </div>
 
         <div style={{ padding: '28px 32px' }}>
-          <div className="page-anim" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 22, alignItems: 'start' }}>
+          <div className="page-anim ckanban" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 22, alignItems: 'start' }}>
             {COLS.map((col, ci) => {
               const colDeals = filteredDeals.filter(d => d.status === col.key)
               return (
