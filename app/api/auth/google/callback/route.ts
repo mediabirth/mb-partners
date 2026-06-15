@@ -28,15 +28,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/app/calendar?error=missing_params`)
   }
 
-  // state をデコードして partner_id を取得
-  let partnerId: string
+  // state をデコード。mode='mb'(MB運営) か partner_id(個人) を判定
+  let partnerId: string | null = null
+  let isMb = false
   try {
     const decoded = JSON.parse(Buffer.from(state, 'base64url').toString())
-    partnerId = decoded.partner_id
-    if (!partnerId) throw new Error('no partner_id')
+    if (decoded.mode === 'mb') isMb = true
+    else { partnerId = decoded.partner_id; if (!partnerId) throw new Error('no id') }
   } catch {
     return NextResponse.redirect(`${appUrl}/app/calendar?error=invalid_state`)
   }
+  // 連携後の戻り先
+  const okUrl  = isMb ? `${appUrl}/console/settings?calendar=connected` : `${appUrl}/app/calendar?connected=1`
+  const errUrl = (e: string) => isMb ? `${appUrl}/console/settings?calendar_error=${e}` : `${appUrl}/app/calendar?error=${e}`
 
   // code → tokens 交換
   let tokens: { access_token: string; refresh_token: string; expires_in: number }
@@ -57,7 +61,7 @@ export async function GET(req: NextRequest) {
     if (!tokens.refresh_token) throw new Error('no refresh_token — user may need to re-consent')
   } catch (e: any) {
     console.error('[OAuth callback] token exchange error:', e.message)
-    return NextResponse.redirect(`${appUrl}/app/calendar?error=token_exchange_failed`)
+    return NextResponse.redirect(errUrl('token_exchange_failed'))
   }
 
   // Google アカウントのメールアドレス取得
@@ -78,8 +82,22 @@ export async function GET(req: NextRequest) {
     expires_at:    expiresAt,
   })
 
-  // calendar_links に upsert（partner_id でユニーク）
   const supabase = await createServiceRoleClient()
+
+  if (isMb) {
+    // MB運営カレンダー: mb_calendar(id=1) に保存
+    const { error: mbErr } = await supabase
+      .from('mb_calendar')
+      .upsert({ id: 1, google_email: googleEmail, oauth_tokens: encrypted, active: true, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+    if (mbErr) {
+      console.error('[OAuth callback] mb_calendar upsert error:', mbErr.message)
+      // テーブル未作成（DDL未実行）の可能性 → 明示エラーで戻す
+      return NextResponse.redirect(errUrl('mb_save_failed'))
+    }
+    return NextResponse.redirect(okUrl)
+  }
+
+  // 個人パートナー: calendar_links に upsert（partner_id でユニーク）
   const { error: upsertErr } = await supabase
     .from('calendar_links')
     .upsert(
@@ -88,16 +106,16 @@ export async function GET(req: NextRequest) {
         google_email: googleEmail,
         oauth_tokens: encrypted,
         active:       true,
-        owner_name:   googleEmail,   // owner_name は NOT NULL なので email を代入
-        service_ids:  [],            // 後で設定画面から変更可
+        owner_name:   googleEmail,
+        service_ids:  [],
       },
       { onConflict: 'partner_id' }
     )
 
   if (upsertErr) {
     console.error('[OAuth callback] upsert error:', upsertErr.message)
-    return NextResponse.redirect(`${appUrl}/app/calendar?error=save_failed`)
+    return NextResponse.redirect(errUrl('save_failed'))
   }
 
-  return NextResponse.redirect(`${appUrl}/app/calendar?connected=1`)
+  return NextResponse.redirect(okUrl)
 }

@@ -19,17 +19,20 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: partner } = await supabase
-    .from('partners')
-    .select('id')
-    .eq('profile_id', user.id)
-    .single()
-  if (!partner) return NextResponse.json({ error: 'Partner not found' }, { status: 404 })
+  // owner/manager は MB運営カレンダー連携（partner不要）。partner は自分のカレンダー。
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: partner } = await supabase.from('partners').select('id').eq('profile_id', user.id).single()
 
-  const state = Buffer.from(JSON.stringify({
-    partner_id: partner.id,
-    nonce: randomBytes(16).toString('hex'),
-  })).toString('base64url')
+  let statePayload: Record<string, unknown>
+  if (partner && profile?.role === 'partner') {
+    statePayload = { partner_id: partner.id, nonce: randomBytes(16).toString('hex') }
+  } else if (profile && profile.role !== 'partner') {
+    statePayload = { mode: 'mb', nonce: randomBytes(16).toString('hex') } // MB運営
+  } else {
+    return NextResponse.json({ error: 'No calendar identity' }, { status: 404 })
+  }
+
+  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url')
 
   const redirectUri = process.env.GOOGLE_REDIRECT_URI!
   const params = new URLSearchParams({

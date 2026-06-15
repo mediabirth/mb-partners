@@ -1,21 +1,48 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 /**
- * ②③ コンソールのカレンダー設定UI。
- * - ② Googleカレンダー連携ボタン（OAuth開始）。MB運営アカウント接続で実 free/busy を使用。
- * - ③ 営業時間 / 土日祝NG / 枠間隔 / バッファ の設定UI。
- * ※ MB運営カレンダーの保存・OAuth(owner) は要DBマイグレーション＋勝彦のワンクリック認可。
- *   それまでは設定はプレビュー、空き枠は既定(平日9:00-18:00)で算出されます（レポート参照）。
+ * ②③ コンソールのカレンダー設定UI（MB運営）。
+ * - ② Google連携（OAuth開始）。接続済みならメール表示。
+ * - ③ 営業時間 / 土日NG / 祝日NG / 枠間隔 / バッファ を mb_calendar に保存。
+ * mb_calendar 未作成時は保存で「DB適用が必要」を表示（halt しない）。
  */
+type Settings = {
+  business_start: string; business_end: string
+  no_weekend: boolean; no_holiday: boolean
+  slot_minutes: number; buffer_minutes: number
+  google_email?: string | null
+}
+
 export default function ConsoleCalendarCard() {
-  const [start, setStart]       = useState('09:00')
-  const [end, setEnd]           = useState('18:00')
-  const [noWeekend, setNoWeek]  = useState(true)
-  const [noHoliday, setNoHol]   = useState(true)
-  const [slot, setSlot]         = useState(30)
-  const [buffer, setBuffer]     = useState(0)
-  const [note, setNote]         = useState('')
+  const [s, setS] = useState<Settings>({ business_start: '09:00', business_end: '18:00', no_weekend: true, no_holiday: true, slot_minutes: 30, buffer_minutes: 0 })
+  const [connected, setConnected] = useState(false)
+  const [ready, setReady] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    fetch('/api/console/calendar').then(r => r.json()).then(d => {
+      if (d.settings) setS(v => ({ ...v, ...d.settings }))
+      setConnected(!!d.connected); setReady(d.ready !== false)
+      // 連携直後/失敗のフラッシュ
+      const p = new URLSearchParams(window.location.search)
+      if (p.get('calendar') === 'connected') setNote('Googleカレンダーと連携しました。')
+      if (p.get('calendar_error')) setNote(`連携エラー: ${p.get('calendar_error')}（mb_calendar 未作成の可能性）`)
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  async function save() {
+    setSaving(true); setNote('')
+    try {
+      const r = await fetch('/api/console/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) })
+      const d = await r.json()
+      if (d.ok) setNote('保存しました。')
+      else if (d.needsMigration) setNote('保存には mb_calendar テーブルのDB適用が必要です（連携レポートのSQL）。')
+      else setNote('保存に失敗しました。')
+    } catch { setNote('保存に失敗しました。') } finally { setSaving(false) }
+  }
 
   const Row = ({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid #F2F2F6' }}>
@@ -44,38 +71,39 @@ export default function ConsoleCalendarCard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '.78rem', fontWeight: 700 }}>Googleカレンダー連携</div>
-          <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>MB運営アカウントを接続し、実際の空き時間で枠を生成</div>
+          <div style={{ fontSize: '.62rem', color: connected ? 'var(--green)' : 'var(--muted2)', marginTop: 2 }}>
+            {loading ? '確認中…' : connected ? `✓ 連携済み${s.google_email ? `（${s.google_email}）` : ''}` : 'MB運営アカウントを接続し、実際の空き時間で枠を生成'}
+          </div>
         </div>
         <a href="/api/auth/google" style={{ flexShrink: 0, display: 'inline-block', background: '#4285F4', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: '.74rem', fontWeight: 700, textDecoration: 'none' }}>
-          Googleと連携する
+          {connected ? '再連携' : 'Googleと連携する'}
         </a>
       </div>
 
       {/* ③ 設定 */}
       <Row label="営業時間" desc="この時間帯の中で枠を生成">
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input type="time" value={start} onChange={e => setStart(e.target.value)} style={inp} />
+          <input type="time" value={s.business_start} onChange={e => setS(v => ({ ...v, business_start: e.target.value }))} style={inp} />
           <span style={{ color: 'var(--muted2)' }}>〜</span>
-          <input type="time" value={end} onChange={e => setEnd(e.target.value)} style={inp} />
+          <input type="time" value={s.business_end} onChange={e => setS(v => ({ ...v, business_end: e.target.value }))} style={inp} />
         </span>
       </Row>
-      <Row label="土日を予約不可" desc="土曜・日曜は枠を出さない"><Tg on={noWeekend} set={setNoWeek} /></Row>
-      <Row label="祝日を予約不可" desc="日本の祝日は枠を出さない"><Tg on={noHoliday} set={setNoHol} /></Row>
+      <Row label="土日を予約不可" desc="土曜・日曜は枠を出さない"><Tg on={s.no_weekend} set={v => setS(p => ({ ...p, no_weekend: v }))} /></Row>
+      <Row label="祝日を予約不可" desc="日本の祝日は枠を出さない"><Tg on={s.no_holiday} set={v => setS(p => ({ ...p, no_holiday: v }))} /></Row>
       <Row label="枠の間隔">
-        <select value={slot} onChange={e => setSlot(Number(e.target.value))} style={inp}>
+        <select value={s.slot_minutes} onChange={e => setS(v => ({ ...v, slot_minutes: Number(e.target.value) }))} style={inp}>
           {[15, 30, 45, 60, 90].map(v => <option key={v} value={v}>{v}分</option>)}
         </select>
       </Row>
       <Row label="前後のバッファ" desc="予定の前後に確保する余白">
-        <select value={buffer} onChange={e => setBuffer(Number(e.target.value))} style={inp}>
+        <select value={s.buffer_minutes} onChange={e => setS(v => ({ ...v, buffer_minutes: Number(e.target.value) }))} style={inp}>
           {[0, 10, 15, 30].map(v => <option key={v} value={v}>{v}分</option>)}
         </select>
       </Row>
 
       <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => setNote('この設定の本番保存には、MB運営カレンダーのDB適用と Google 認可が必要です（手順は連携レポート参照）。')}
-          className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px' }}>保存する</button>
-        {note && <span style={{ fontSize: '.64rem', color: 'var(--amber)' }}>{note}</span>}
+        <button onClick={save} disabled={saving} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px', opacity: saving ? .6 : 1 }}>{saving ? '保存中…' : '保存する'}</button>
+        {note && <span style={{ fontSize: '.64rem', color: note.includes('しました') ? 'var(--green)' : 'var(--amber)' }}>{note}</span>}
       </div>
     </div>
   )
