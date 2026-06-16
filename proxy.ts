@@ -52,8 +52,12 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  // B2: role を JWT/app_metadata クレームから読む（あればDB問い合わせ不要＝高速）。
+  // 無ければ従来の profiles 参照へ自動フォールバック（クレーム未設定でも従来どおり動く）。
   async function roleOf(): Promise<string | null> {
     if (!user) return null
+    const claimRole = (user.app_metadata as { role?: string } | undefined)?.role
+    if (claimRole) return claimRole
     const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     return data?.role ?? null
   }

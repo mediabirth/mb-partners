@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     email,
     password,
     email_confirm: true,
+    app_metadata: { role },   // B2: roleクレームを付与（middlewareがDBなしで判定）
   })
 
   if (created?.user) {

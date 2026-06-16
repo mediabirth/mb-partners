@@ -1,0 +1,27 @@
+[
+  {
+    "id": "653eead3-c0c0-47dd-8f65-96f4b80931d9",
+    "role": "partner",
+    "email": "kthk.kmbr@gmail.com"
+  },
+  {
+    "id": "39b30d21-61ae-4573-8ea8-2f6b493bf969",
+    "role": "owner",
+    "email": "mediabirth.project@gmail.com"
+  },
+  {
+    "id": "f72764a8-8f53-4740-911b-ca06245f41a7",
+    "role": "partner",
+    "email": "katsuhiko-demo@mb-demo.test"
+  },
+  {
+    "id": "9eba29fc-2e07-42a3-84fb-2efd99d7a799",
+    "role": "partner",
+    "email": "sasaki-demo@mb-demo.test"
+  },
+  {
+    "id": "e3c7b9b1-e075-48c2-9052-1f4947ca32fa",
+    "role": "partner",
+    "email": "inoue-demo@mb-demo.test"
+  }
+]
