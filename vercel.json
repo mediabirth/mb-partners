@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/close-month",
       "schedule": "0 14 28-31 * *"
+    },
+    {
+      "path": "/api/health",
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": [
@@ -23,6 +27,12 @@
       "source": "/((?!_next/static|_next/image).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/api/services",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, s-maxage=300, stale-while-revalidate=600" }
       ]
     }
   ]
