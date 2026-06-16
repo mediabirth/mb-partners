@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Zen_Kaku_Gothic_New } from 'next/font/google'
 import './globals.css'
+import InstallHint from '@/components/InstallHint'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -19,6 +20,24 @@ const zenKaku = Zen_Kaku_Gothic_New({
 export const metadata: Metadata = {
   title: 'MB Partners',
   description: 'Media Birth Partner Program',
+  applicationName: 'MB Partners',
+  // PWA: アイコン + apple-touch-icon
+  icons: {
+    icon: [
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
+  // ③ iOS: ホーム画面追加で全画面・ステータスバー・タイトル
+  appleWebApp: {
+    capable: true,
+    title: 'MB Partners',
+    statusBarStyle: 'default',
+  },
+  // 旧iOS全画面用に明示（Next は mobile-web-app-capable を出すため apple- 版も併記）
+  other: { 'apple-mobile-web-app-capable': 'yes' },
 }
 
 export const viewport: Viewport = {
@@ -36,6 +55,7 @@ export default function RootLayout({
     <html lang="ja" className={`${inter.variable} ${zenKaku.variable}`}>
       <body>
         {children}
+        <InstallHint />
         <script dangerouslySetInnerHTML={{ __html: `
 if ('serviceWorker' in navigator) {
   var _mbpRefreshing = false;

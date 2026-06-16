@@ -6,6 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'MB Partners',
     description: 'Media Birth Partner Program',
     start_url: '/',
+    scope: '/',
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#4733E6',
