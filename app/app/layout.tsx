@@ -46,21 +46,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </b>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Link href="/app/mypage" style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              border: '1px solid var(--line)', borderRadius: 30,
-              padding: '4px 12px 4px 4px', minHeight: 40, textDecoration: 'none', color: 'inherit',
-              transition: 'border-color .2s',
+            {/* ① アイコンのみ表示（名前は非表示）。タップでマイページは従来どおり */}
+            <Link href="/app/mypage" aria-label={profile?.name ?? 'プロフィール'} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: 'inherit',
             }}>
               <span style={{
-                width: 27, height: 27, borderRadius: '50%',
+                width: 36, height: 36, borderRadius: '50%',
                 background: profile?.color ?? 'var(--blue)', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '.72rem', fontWeight: 700, flexShrink: 0,
+                fontSize: '.86rem', fontWeight: 700, flexShrink: 0,
               }}>
                 {(profile?.name ?? 'P')[0]}
               </span>
-              <b style={{ fontSize: '.72rem' }}>{profile?.name ?? '—'}</b>
             </Link>
             <Link href="/app/settings" aria-label="設定" style={{
               width: 40, height: 40, borderRadius: '50%',

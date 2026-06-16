@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useTransition, useRef } from 'react'
 import ServiceIcon from '@/components/ServiceIcon'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import ConsoleNav from '@/components/ConsoleNav'
 import { customerHonorific } from '@/lib/customer'
 
@@ -16,7 +17,7 @@ type Deal = {
   status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string } | null
   service_menus: { coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
-  services: { name: string; icon: string; color: string } | null
+  services: { name: string; icon: string; color: string; logo_path?: string | null } | null
   partners: { code: string; profiles: { name: string; color: string } | null } | null
 }
 
@@ -305,17 +306,21 @@ export default function DealsPage() {
                         userSelect: 'none',
                       }}
                     >
-                      {/* Service + customer */}
+                      {/* ④ サービス(ロゴ→アイコン) + ⑤ お客様＋紹介者 */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-                        {d.services && <ServiceIcon icon={d.services.icon} color={d.services.color} size={28} />}
+                        {d.services && <ServiceAvatar logoPath={(d.services as any).logo_path ?? null} icon={d.services.icon} color={d.services.color} name={d.services.name} size={28} />}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <b style={{ display: 'block', fontSize: '.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {customerHonorific(d)}
                           </b>
-                          {d.services && (
-                            <span style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {d.services.name}
+                          {/* ⑤ サービス名の代わりに紹介者（担当パートナー） */}
+                          {d.partners?.profiles ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '.58rem', color: 'var(--muted2)', minWidth: 0 }}>
+                              <span style={{ width: 14, height: 14, borderRadius: '50%', background: d.partners.profiles.color, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '.46rem', fontWeight: 700, flexShrink: 0 }}>{d.partners.profiles.name[0]}</span>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.partners.profiles.name}</span>
                             </span>
+                          ) : (
+                            <span style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted2)' }}>{channelChip(d.channel).label === '直販' ? '直販' : '—'}</span>
                           )}
                         </div>
                       </div>
@@ -331,16 +336,6 @@ export default function DealsPage() {
                           </span>
                         ) : null}
                       </div>
-
-                      {/* Partner */}
-                      {d.partners?.profiles && (
-                        <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ width: 18, height: 18, borderRadius: '50%', background: d.partners.profiles.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.52rem', fontWeight: 700, flexShrink: 0 }}>
-                            {d.partners.profiles.name[0]}
-                          </span>
-                          <span style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.partners.profiles.name}</span>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

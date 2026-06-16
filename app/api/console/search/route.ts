@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const [dealsRes, partnersRes, servicesRes, inquiriesRes] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, customer_name, status, services(name)')
+      .select('id, customer_name, customer_type, company_name, contact_name, status, services(name)')
       .ilike('customer_name', `%${q}%`)
       .limit(5),
     supabase
@@ -53,11 +53,12 @@ export async function GET(req: Request) {
     received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
   }
 
+  const { customerHonorific } = await import('@/lib/customer')
   for (const d of dealsRes.data ?? []) {
     results.push({
       type: 'deal',
       id: d.id,
-      label: d.customer_name,
+      label: customerHonorific(d),
       sub: `${(d as any).services?.name ?? ''} · ${STATUS[d.status] ?? d.status}`,
       href: '/console/deals',
     })

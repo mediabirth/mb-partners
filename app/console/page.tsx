@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getAllDeals } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
 import ChannelChart from './ChannelChart'
 import GlobalSearchClient from './GlobalSearchClient'
 import MonthSelector from './MonthSelector'
+import { customerHonorific } from '@/lib/customer'
 import ConsoleMain from '@/components/ConsolePageTransition'
 import CountUp from '@/components/CountUp'
 
@@ -17,17 +18,21 @@ export default async function ConsolePage({ searchParams }: { searchParams: Prom
   if (!user) redirect('/console/login')
   const { m: mParam } = await searchParams
 
+  // owner認証では nested partners.profiles が RLS で null → 担当名表示のため service role で読取（/console は middleware でガード済）
+  const admin = await createServiceRoleClient()
   const [profileRes, deals, recentEventsRes, activePartnersRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
-    getAllDeals(supabase),
-    supabase.from('deal_events')
-      .select('id, body, created_at, deal_id, deals(customer_name, service_id, channel)')
+    getAllDeals(admin),
+    admin.from('deal_events')
+      .select('id, body, created_at, deal_id, deals(customer_name, customer_type, company_name, contact_name, service_id, channel, partners(profiles(name)))')
       .order('created_at', { ascending: false })
       .limit(6),
     supabase.from('partners').select('id', { count: 'exact', head: true }).eq('status', 'active'),
   ])
   const profile = profileRes.data
   const recentEvents = recentEventsRes.data
+  // ③ 担当パートナー解決用（getAllDeals は partners 埋め込み済で確実）
+  const dealById = Object.fromEntries(deals.map(d => [d.id, d])) as Record<string, typeof deals[number]>
 
   // KPIs
   const now = new Date()
@@ -160,9 +165,12 @@ export default async function ConsolePage({ searchParams }: { searchParams: Prom
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <b style={{ fontSize: '.74rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {e.deals?.customer_name}
+                              {e.deals ? customerHonorific(e.deals) : ''}
                             </b>
                             {ch.label && <span className={`chip ${ch.cls}`}>{ch.label}</span>}
+                            {dealById[e.deal_id]?.partners?.profiles?.name && (
+                              <span style={{ fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap' }}>担当: {dealById[e.deal_id]!.partners!.profiles!.name}</span>
+                            )}
                           </div>
                           <small style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {e.body}
@@ -232,10 +240,10 @@ export default async function ConsolePage({ searchParams }: { searchParams: Prom
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {d.customer_name}
+                        {customerHonorific(d)}
                       </div>
                       <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>
-                        {d.services?.name}{d.partners?.profiles?.name ? ` · ${d.partners.profiles.name}` : ''}
+                        {d.services?.name}{d.partners?.profiles?.name ? ` · 担当 ${d.partners.profiles.name}` : ''}
                       </div>
                     </div>
                     {isToday && (

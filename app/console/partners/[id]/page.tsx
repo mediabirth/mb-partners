@@ -6,6 +6,7 @@ import BankChangePanel from './BankChangePanel'
 import StatusControl from './StatusControl'
 import FrontierControls from '@/components/FrontierControls'
 import CountUp from '@/components/CountUp'
+import { customerHonorific } from '@/lib/customer'
 
 export const runtime = 'edge'
 
@@ -78,7 +79,7 @@ export default async function PartnerDetailPage({
   // Round 2: deals + payouts + inquiries (keyed by partner id)
   const [dealsRes, payoutsRes, inquiryCountRes] = await Promise.all([
     service.from('deals')
-      .select('id, customer_name, status, amount, created_at, channel, services(name)')
+      .select('id, customer_name, customer_type, company_name, contact_name, status, amount, created_at, channel, services(name)')
       .eq('partner_id', id)
       .order('created_at', { ascending: false }),
     service.from('payout_items')
@@ -247,7 +248,7 @@ export default async function PartnerDetailPage({
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: '.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {d.customer_name}
+                        {customerHonorific(d)}
                       </div>
                       <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
                         {d.services?.name}

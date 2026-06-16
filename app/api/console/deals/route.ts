@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notifySlackEvent } from '@/lib/slack'
 
 export const runtime = 'edge'
@@ -51,13 +51,15 @@ export async function GET() {
 
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: deals } = await supabase
+  // owner認証では nested partners.profiles が RLS で null になるため、所有確認済みで service role 読取
+  const admin = await createServiceRoleClient()
+  const { data: deals } = await admin
     .from('deals')
     .select(`
       id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount, base_amount,
       fixed_month, created_at, service_id, menu_id, reward_snapshot,
       service_menus(coop_enabled, coop_type, coop_value, coop_base),
-      services(name, icon, color),
+      services(name, icon, color, logo_path),
       partners(code, profiles(name, color))
     `)
     .order('created_at', { ascending: false })
