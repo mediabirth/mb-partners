@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
 import PageTransition from '@/components/PageTransition'
+import SWRProvider from '@/components/SWRProvider'
 
 // Edge runtime: no cold starts, globally distributed SSR
 // All server components in /app/** use only @supabase/ssr + next/headers (edge-safe)
@@ -77,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         {/* Page content — fixed nav + iOS home indicator 分の余白を確保 */}
         <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(86px + env(safe-area-inset-bottom))' }}>
-          <PageTransition>{children}</PageTransition>
+          <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
         </main>
 
         <AppNav />

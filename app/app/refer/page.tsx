@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useTransition } from 'react'
+import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import BookingDrawer from '@/components/BookingDrawer'
@@ -42,7 +43,8 @@ function CoopBadge() {
 
 export default function ReferPage() {
   const router = useRouter()
-  const [services, setServices]           = useState<ServiceWithMenus[]>([])
+  // 4: services は不変マスタ。SWRでキャッシュ（CDNキャッシュ済＋クライアントでも再取得抑制）
+  const { data: services = [] } = useSWR<ServiceWithMenus[]>('/api/services')
   const [step, setStep]                   = useState<Step>('service')
   const [selSvc, setSelSvc]               = useState<ServiceWithMenus | null>(null)
   const [selMenu, setSelMenu]             = useState<MenuRow | null>(null)
@@ -68,7 +70,6 @@ export default function ReferPage() {
   const [error, setError]                 = useState('')
 
   useEffect(() => {
-    fetch('/api/services').then(r => r.json()).then(setServices)
     startTransition(async () => {
       try { setPartnerCode((await getPartnerInfo()).code) } catch { /* silent */ }
     })

@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import useSWR from 'swr'
 import ConsoleNav from '@/components/ConsoleNav'
 
 type PayoutItem = {
@@ -47,8 +48,9 @@ function statusBadge(status: string) {
 }
 
 export default function PayoutsPage() {
-  const [batches, setBatches]   = useState<Batch[]>([])
-  const [loading, setLoading]   = useState(true)
+  // 4(金額整合): SWRでキャッシュ＋focus再検証（staleな金額を見せない）。ミューテーション後は mutate で必ず再検証。
+  const { data, isLoading: loading, mutate } = useSWR<{ batches: Batch[] }>('/api/console/payouts')
+  const batches = data?.batches ?? []
   const [expanded, setExpanded] = useState<string | null>(null)
   const [toast, setToast]       = useState('')
   const [pending, startTransition] = useTransition()
@@ -57,15 +59,6 @@ export default function PayoutsPage() {
     setToast(msg)
     setTimeout(() => setToast(''), 2500)
   }
-
-  useEffect(() => {
-    // Only the payout batches are needed here; the account display comes from the
-    // shared ConsoleSession provider, so we avoid the heavy /api/console/deals call.
-    fetch('/api/console/payouts')
-      .then(r => r.json())
-      .then(d => { setBatches(d.batches ?? []) })
-      .finally(() => setLoading(false))
-  }, [])
 
   function markPaid(month: string) {
     if (!confirm(`${monthLabel(month)} バッチを支払済にしますか？\n対象の案件が「支払済」列に移動します。`)) return
@@ -77,7 +70,7 @@ export default function PayoutsPage() {
         body: JSON.stringify({ action: 'mark_paid' }),
       })
       if (res.ok) {
-        setBatches(prev => prev.map(b => b.month === month ? { ...b, status: 'paid', paid_at: new Date().toISOString() } : b))
+        await mutate()   // 支払処理後は必ずサーバから再取得（最新の金額/状態を表示）
         showToast('支払済に変更しました')
       } else {
         const d = await res.json()
