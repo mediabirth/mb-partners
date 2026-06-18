@@ -4,8 +4,8 @@ type ColorSpec = { bg: string; fg: string }
 const COLOR_MAP: Record<string, ColorSpec> = {
   'c-blue':   { bg: '#EDEBFC', fg: '#4733E6' },
   'c-purple': { bg: '#F0EAFA', fg: '#7A48D6' },
-  'c-amber':  { bg: '#FBF1DF', fg: '#D98914' },
-  'c-green':  { bg: '#E5F3F1', fg: '#15917E' },
+  'c-amber':  { bg: '#FBF1DF', fg: '#C07A12' },
+  'c-green':  { bg: '#E7F6EF', fg: '#1E9E6A' },
   'c-pink':   { bg: '#F9EAF4', fg: '#C2479E' },
   // Common hex values stored in DB
   '#4733e6': { bg: '#EDEBFC', fg: '#4733E6' },
@@ -18,8 +18,8 @@ const COLOR_MAP: Record<string, ColorSpec> = {
   '#14b8a6': { bg: '#CCFBF1', fg: '#0F766E' },
 }
 
-function getColors(color: string): ColorSpec {
-  const key = color.toLowerCase()
+export function getServiceColors(color: string): ColorSpec {
+  const key = (color ?? '').toLowerCase()
   return COLOR_MAP[key] ?? COLOR_MAP[color] ?? { bg: '#EDEBFC', fg: '#4733E6' }
 }
 
@@ -87,7 +87,7 @@ function IconShape({ icon }: { icon: string }) {
 export default function ServiceIcon({
   icon, color, size = 38,
 }: { icon: string; color: string; size?: number }) {
-  const c = getColors(color)
+  const c = getServiceColors(color)
   const r = size <= 32 ? 9 : size <= 42 ? 11 : 13
   const sw = Math.round(size * 0.5)
   return (

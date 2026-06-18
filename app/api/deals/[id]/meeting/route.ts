@@ -1,25 +1,24 @@
 /**
  * POST /api/deals/[id]/meeting
  * パートナーが自分の案件に商談日時を設定（in-app）。
- * - Google連携時はカレンダーにイベント作成 → calendar_event_id を保存。
- * - deals.meeting_at / deals.calendar_event_id を更新。
- * - 未連携でも meeting_at は保存（event_id は null）。
+ * - 予定は MB中心アカウント(mb_calendar)に作成し、Google Meet リンクを生成（best-effort）。
+ *   パートナー＋顧客(メールがあれば)を attendees に招待（sendUpdates=all）。
+ * - deals.meeting_at / calendar_event_id / meeting_url を更新（未連携でも meeting_at は保存）。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { decryptTokens, encryptTokens } from '@/lib/google-token'
-import { getValidAccessToken, createCalendarEvent } from '@/lib/google-calendar'
-import type { StoredTokens } from '@/lib/google-token'
+import { createCentralMeetEvent } from '@/lib/mb-calendar-event'
 
-// crypto(node) を使うため nodejs ランタイム
+// node ランタイム（Google連携・暗号化トークンを扱うため）
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { start_at, end_at } = await req.json()
+  const { start_at, end_at, customer_email } = await req.json()
   if (!start_at || !end_at) return NextResponse.json({ error: 'start_at and end_at required' }, { status: 400 })
+  const bodyEmail = (typeof customer_email === 'string' ? customer_email.trim() : '') || null
 
   const { data: partner } = await supabase.from('partners').select('id').eq('profile_id', user.id).single()
   if (!partner) return NextResponse.json({ error: 'Partner not found' }, { status: 404 })
@@ -34,48 +33,71 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!deal) return NextResponse.json({ error: 'Deal not found' }, { status: 404 })
 
   const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', user.id).single()
-
-  // Google 連携時のみイベント作成（失敗しても meeting_at は保存）
-  let eventId: string | null = null
-  const { data: link } = await supabase
-    .from('calendar_links')
-    .select('oauth_tokens, google_email, active')
-    .eq('partner_id', partner.id)
-    .single()
-
-  if (link?.active && link.oauth_tokens) {
-    try {
-      const tokens = decryptTokens(link.oauth_tokens as StoredTokens)
-      const accessToken = await getValidAccessToken(tokens, async (refreshed) => {
-        const updated = encryptTokens({ access_token: refreshed.access_token, refresh_token: tokens.refresh_token, expires_at: refreshed.expires_at })
-        await supabase.from('calendar_links').update({ oauth_tokens: updated }).eq('partner_id', partner.id)
-      })
-      eventId = await createCalendarEvent(accessToken, {
-        summary:      `${deal.customer_name} 商談`,
-        description:  `${profile?.name ?? 'パートナー'} の案件商談`,
-        startAt:      new Date(start_at),
-        endAt:        new Date(end_at),
-        partnerEmail: link.google_email ?? profile?.email ?? '',
-        clientEmail:  profile?.email ?? '',
-        partnerName:  profile?.name ?? '',
-        clientName:   deal.customer_name,
-      })
-    } catch {
-      eventId = null // 連携エラー時は meeting_at のみ保存
-    }
-  }
-
-  // 所有確認は上の authed select 済み。UPDATE は RLS を回避するため service role で実施。
   const admin = await createServiceRoleClient()
+
+  // 顧客メールを解決（入力 or 既存）。customer_email 列が未追加(DDL前)でも壊さない best-effort。
+  let customerEmail: string | null = bodyEmail
+  try {
+    if (bodyEmail) {
+      await admin.from('deals').update({ customer_email: bodyEmail }).eq('id', id)
+    } else {
+      const { data: row } = await admin.from('deals').select('customer_email').eq('id', id).single()
+      customerEmail = (row as { customer_email?: string | null } | null)?.customer_email ?? null
+    }
+  } catch { /* best-effort */ }
+
+  // MB中心アカウントで予定＋Meetを作成（best-effort：未連携/失敗でも meeting_at は保存）。
+  let eventId: string | null = null
+  let meetingUrl: string | null = null
+  try {
+    const r = await createCentralMeetEvent(admin, {
+      summary:      `${deal.customer_name} 商談`,
+      description:  `${profile?.name ?? 'パートナー'} の案件商談`,
+      startAt:      new Date(start_at),
+      endAt:        new Date(end_at),
+      partnerEmail: profile?.email ?? null,
+      partnerName:  profile?.name ?? null,
+      clientEmail:  customerEmail,
+      clientName:   deal.customer_name,
+    })
+    eventId = r.eventId
+    meetingUrl = r.meetingUrl
+  } catch { /* best-effort */ }
+
+  // 所有確認は authed select 済み。UPDATE は RLS 回避のため service role。meeting_at は必須保存。
   const { error } = await admin
     .from('deals')
     .update({ meeting_at: start_at, calendar_event_id: eventId, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('partner_id', partner.id)
-
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // C2④ パートナー本人へ商談予約の受付確認メール（ベストエフォート）
+  // meeting_url は列未追加(DDL前)でも meeting_at 保存を壊さないよう分離した best-effort。
+  if (meetingUrl) {
+    try { await admin.from('deals').update({ meeting_url: meetingUrl }).eq('id', id) } catch { /* 列なし時は無視 */ }
+  }
+
+  // P: 自動チェック — 商談設定で auto タスク（trigger 'meeting_set'）を完了（冪等・best-effort）。
+  try {
+    const { markAutoTaskDone } = await import('@/lib/coop-tasks')
+    await markAutoTaskDone(admin, id, 'meeting_set')
+  } catch { /* best-effort */ }
+
+  // 顧客へ予約確認メール（連絡先がある場合のみ）＋ Meetリンク。
+  try {
+    if (customerEmail) {
+      const { sendBookingConfirmEmail } = await import('@/lib/email')
+      await sendBookingConfirmEmail({
+        to: customerEmail,
+        clientName: deal.customer_name,
+        partnerName: profile?.name ?? null,
+        startAt: start_at,
+        meetingUrl,
+      })
+    }
+  } catch { /* best-effort */ }
+
+  // パートナー本人へ受付確認メール（Meetリンク同梱）。
   try {
     if (profile?.email) {
       const { data: svc } = await supabase.from('services').select('name').eq('id', (deal as { service_id?: string }).service_id ?? '').single()
@@ -87,9 +109,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         customerName: deal.customer_name,
         serviceName: svc?.name ?? null,
         meetingAt: start_at,
+        meetingUrl,
       })
     }
   } catch { /* best-effort */ }
 
-  return NextResponse.json({ ok: true, meeting_at: start_at, calendar_event_id: eventId, googleSynced: !!eventId })
+  // 運営Slack/メール（Meetリンク同梱）。best-effort。
+  try {
+    const { sendSlack, sendOpsEmail, fmtJST } = await import('@/lib/notify')
+    const whenJa = fmtJST(start_at)
+    const meetLine = meetingUrl ? `\n・Meet：${meetingUrl}` : ''
+    await sendSlack(`📅 商談予約: ${deal.customer_name} — ${whenJa}${profile?.name ? `（担当: ${profile.name}）` : ''}${meetingUrl ? `\nMeet: ${meetingUrl}` : ''}`)
+    await sendOpsEmail(`【MB Partners】商談予約: ${deal.customer_name}`, `商談予約が登録されました。\n・お客さま：${deal.customer_name}\n・日時：${whenJa}\n・担当：${profile?.name ?? '—'}${meetLine}`)
+  } catch { /* best-effort */ }
+
+  return NextResponse.json({ ok: true, meeting_at: start_at, calendar_event_id: eventId, meeting_url: meetingUrl, googleSynced: !!eventId })
 }

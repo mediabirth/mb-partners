@@ -15,24 +15,24 @@ function statusLabel(s: string) {
   return m[s] ?? s
 }
 function statusColor(s: string) {
-  const m: Record<string, string> = { active: '#15917E', pending: '#D98914', suspended: '#C2479E' }
+  const m: Record<string, string> = { active: 'var(--green)', pending: 'var(--amber)', suspended: 'var(--red)' }
   return m[s] ?? 'var(--muted2)'
 }
 function statusBg(s: string) {
-  const m: Record<string, string> = { active: '#E5F3F1', pending: '#FBF1DF', suspended: '#F9EAF4' }
-  return m[s] ?? '#F4F4F7'
+  const m: Record<string, string> = { active: 'var(--green-bg)', pending: 'var(--amber-bg)', suspended: 'var(--red-bg)' }
+  return m[s] ?? 'var(--bg2)'
 }
 function dealStatusLabel(s: string) {
   const m: Record<string, string> = { received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済' }
   return m[s] ?? s
 }
 function dealStatusColor(s: string) {
-  const m: Record<string, string> = { received: 'var(--amber)', in_progress: 'var(--blue)', confirmed: '#15917E', paid: '#15917E' }
+  const m: Record<string, string> = { received: 'var(--amber)', in_progress: 'var(--blue)', confirmed: 'var(--green)', paid: 'var(--green)' }
   return m[s] ?? 'var(--muted2)'
 }
 function dealStatusBg(s: string) {
-  const m: Record<string, string> = { received: '#FBF1DF', in_progress: 'var(--blue-bg)', confirmed: '#E5F3F1', paid: '#E5F3F1' }
-  return m[s] ?? '#F4F4F7'
+  const m: Record<string, string> = { received: 'var(--amber-bg)', in_progress: 'var(--blue-bg)', confirmed: 'var(--green-bg)', paid: 'var(--green-bg)' }
+  return m[s] ?? 'var(--bg2)'
 }
 
 export default async function PartnerDetailPage({
@@ -139,7 +139,7 @@ export default async function PartnerDetailPage({
           <span style={{ color: 'var(--line)' }}>/</span>
           <h1 style={{ fontSize: '1rem', fontWeight: 900, margin: 0 }}>{p.profiles?.name ?? p.code}</h1>
           {pendingBankCount > 0 && (
-            <span style={{ fontSize: '.6rem', fontWeight: 700, background: '#D98914', color: '#fff', borderRadius: 20, padding: '2px 8px' }}>
+            <span style={{ fontSize: '.6rem', fontWeight: 700, background: 'var(--amber)', color: '#fff', borderRadius: 20, padding: '2px 8px' }}>
               口座申請 {pendingBankCount}件
             </span>
           )}
@@ -169,7 +169,7 @@ export default async function PartnerDetailPage({
                     {statusLabel(p.status)}
                   </span>
                   {p.kyc_verified_at && (
-                    <span style={{ fontSize: '.6rem', fontWeight: 700, color: '#15917E' }}>✓ KYC確認済</span>
+                    <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)' }}>✓ KYC確認済</span>
                   )}
                   <span className="chip chip-direct">{p.tax_type === 'individual' ? '個人' : '法人'}</span>
                 </div>
@@ -190,7 +190,7 @@ export default async function PartnerDetailPage({
               { label: '累計報酬(税込)', value: cumulativeReward, unit: '',   yen: true,  color: 'var(--blue)' },
               { label: '累計案件',       value: totalDeals,       unit: '件', yen: false, color: undefined },
               { label: '進行中',         value: activeDeals,      unit: '件', yen: false, color: activeDeals > 0 ? 'var(--amber)' : undefined },
-              { label: '今月成約',       value: monthConfirmed,   unit: '件', yen: false, color: monthConfirmed > 0 ? '#15917E' : undefined },
+              { label: '今月成約',       value: monthConfirmed,   unit: '件', yen: false, color: monthConfirmed > 0 ? 'var(--green)' : undefined },
             ].map(kpi => (
               <div key={kpi.label} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>
@@ -251,7 +251,7 @@ export default async function PartnerDetailPage({
                         {customerHonorific(d)}
                       </div>
                       <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
-                        {d.services?.name}
+                        {d.services?.name ?? '相談（サービス未定）'}
                         <span style={{ margin: '0 5px' }}>·</span>
                         {new Date(d.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
                       </div>
@@ -285,8 +285,8 @@ export default async function PartnerDetailPage({
                       </span>
                       <span style={{
                         fontSize: '.58rem', fontWeight: 700, padding: '2px 6px', borderRadius: 8, display: 'inline-block',
-                        background: item.payout_batches?.status === 'paid' ? '#E5F3F1' : '#F4F4F7',
-                        color: item.payout_batches?.status === 'paid' ? '#15917E' : 'var(--muted2)',
+                        background: item.payout_batches?.status === 'paid' ? 'var(--green-bg)' : 'var(--bg2)',
+                        color: item.payout_batches?.status === 'paid' ? 'var(--green)' : 'var(--muted2)',
                       }}>
                         {item.payout_batches?.status === 'paid' ? '振込済' : '処理中'}
                       </span>
@@ -319,7 +319,7 @@ export default async function PartnerDetailPage({
                     ].map(row => (
                       <tr key={row.label}>
                         <td style={{ padding: '5px 0', color: 'var(--muted2)', whiteSpace: 'nowrap', paddingRight: 12 }}>{row.label}</td>
-                        <td style={{ padding: '5px 0', fontWeight: 500, color: row.label === 'KYC' && p.kyc_verified_at ? '#15917E' : 'var(--txt)' }}>{row.value}</td>
+                        <td style={{ padding: '5px 0', fontWeight: 500, color: row.label === 'KYC' && p.kyc_verified_at ? 'var(--green)' : 'var(--txt)' }}>{row.value}</td>
                       </tr>
                     ))}
                   </tbody>

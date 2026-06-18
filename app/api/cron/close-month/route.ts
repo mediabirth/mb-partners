@@ -42,6 +42,44 @@ export async function GET(req: NextRequest) {
     }
   } catch { /* best-effort */ }
 
+  // Batch B ④: 支払確定通知（運営Slack/メール＋該当パートナーへ「報酬が確定しました」）。
+  // money path はRPCで確定済み。以降は best-effort（例外は握りつぶし締め処理に影響させない）。
+  // 多重送信防止：自動月末締め（?month指定なし）かつ JST 月末日に走った回のみ通知。
+  try {
+    const result = data as { batch_id?: string } | null
+    const batchId = result?.batch_id
+    const explicitMonth = req.nextUrl.searchParams.get('month')
+    const nowJst = new Date(Date.now() + 9 * 3600 * 1000)
+    const lastDay = new Date(Date.UTC(nowJst.getUTCFullYear(), nowJst.getUTCMonth() + 1, 0)).getUTCDate()
+    const isMonthEnd = nowJst.getUTCDate() === lastDay
+    if (batchId && isMonthEnd && !explicitMonth) {
+      const { sendSlack, sendOpsEmail, sendEmail } = await import('@/lib/notify')
+      const { data: items } = await supabase.from('payout_items').select('partner_id, net').eq('batch_id', batchId)
+      const list = items ?? []
+      const totalNet = list.reduce((s, i) => s + (i.net ?? 0), 0)
+      await sendSlack(`💰 ${targetMonth} 支払確定：${list.length}名 / 手取り総額 ¥${totalNet.toLocaleString()}`)
+      await sendOpsEmail(`【MB Partners】${targetMonth} 支払確定`, `月次締めが確定しました。\n・対象月：${targetMonth}\n・対象パートナー：${list.length}名\n・手取り総額：¥${totalNet.toLocaleString()}`)
+      if (list.length) {
+        const partnerIds = list.map(i => i.partner_id)
+        const { data: parts } = await supabase.from('partners').select('id, profile_id').in('id', partnerIds)
+        const profIdByPartner: Record<string, string> = Object.fromEntries((parts ?? []).map(p => [p.id, p.profile_id]))
+        const profIds = [...new Set(Object.values(profIdByPartner).filter(Boolean))]
+        const { data: profs } = await supabase.from('profiles').select('id, name, email').in('id', profIds)
+        const profById: Record<string, { name: string | null; email: string | null }> = Object.fromEntries((profs ?? []).map(p => [p.id, p]))
+        for (const it of list) {
+          if ((it.net ?? 0) <= 0) continue
+          const prof = profById[profIdByPartner[it.partner_id]]
+          if (!prof?.email) continue
+          await sendEmail({
+            to: prof.email,
+            subject: '【MB Partners】今月の報酬が確定しました',
+            text: `${prof.name ?? 'パートナー'} 様\n${targetMonth} 分の報酬が確定しました。\n・手取り：¥${(it.net ?? 0).toLocaleString()}\n明細はアプリの「報酬」からご確認いただけます。`,
+          })
+        }
+      }
+    }
+  } catch { /* best-effort — 通知失敗は締め処理に影響しない */ }
+
   console.log('[cron/close-month] success:', JSON.stringify(data))
   return NextResponse.json({ ok: true, result: data })
 }

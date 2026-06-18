@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notifySlackEvent } from '@/lib/slack'
+import { requiredTasksDone, markAutoTaskDone } from '@/lib/coop-tasks'
 
 export const runtime = 'edge'
 
-const STATUS_LABEL: Record<string, string> = { received: '受付', in_progress: '対応中', confirmed: '成約確定', paid: '支払済' }
+const STATUS_LABEL: Record<string, string> = { received: '受付', in_progress: '対応中', confirmed: '成約確定', paid: '支払済', lost: '不成立' }
+const LOST_REASONS = ['予算', 'タイミング', '競合', '連絡途絶', 'ニーズ不一致', 'お客様都合', 'その他']
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -16,38 +18,74 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { status, base_amount } = body
+  const { status, base_amount, lost_reason, lost_note } = body
   const hasStatus = typeof status === 'string'
   const hasBase = base_amount != null && base_amount !== ''
 
   if (!hasStatus && !hasBase) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
-  const valid = ['received', 'in_progress', 'confirmed', 'paid']
+  const valid = ['received', 'in_progress', 'confirmed', 'paid', 'lost']
   if (hasStatus && !valid.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
 
-  // ⑧ Reward resolution. cooperation → 選択メニューの coop_*（協力dealはmenu_idバックフィル済→メニュー一本化）。
+  // ⑧ Reward resolution. cooperation → 選択メニューの coop_*。紹介ダウングレード時は ref_*。
   const { data: ctx } = await supabase
     .from('deals')
-    .select('channel, amount, base_amount, reward_snapshot, menu_id, service_menus(coop_enabled, coop_type, coop_value, coop_base)')
+    .select('channel, amount, base_amount, status, partner_id, service_id, reward_snapshot, menu_id, service_menus(coop_enabled, coop_type, coop_value, coop_base, ref_type, ref_value, ref_base)')
     .eq('id', id)
     .single()
 
-  const menu = (ctx?.service_menus ?? null) as { coop_enabled: boolean | null; coop_type: string | null; coop_value: number | null; coop_base: string | null } | null
-  const snap = (ctx?.reward_snapshot ?? null) as { ref_type?: string; ref_value?: number; ref_base?: string } | null
+  // N: 支払済は不成立に変更不可（金額確定済）。
+  if (hasStatus && status === 'lost' && ctx?.status === 'paid') {
+    return NextResponse.json({ error: '支払済の案件は不成立にできません' }, { status: 400 })
+  }
 
-  let rate: number | null = null        // 料率(%)案件 → base 必要
-  let fixedCoop: number | null = null   // 協力・固定 → amount=固定額
-  let baseLabel = '売上'
+  const menu = (ctx?.service_menus ?? null) as {
+    coop_enabled: boolean | null; coop_type: string | null; coop_value: number | null; coop_base: string | null
+    ref_type?: string | null; ref_value?: number | null; ref_base?: string | null
+  } | null
+  const snap = (ctx?.reward_snapshot ?? null) as { ref_type?: string; ref_value?: number; ref_base?: string } | null
+  const confirming = hasStatus && status === 'confirmed'
+
+  // P: 報酬ゲート(a)。協力で必須タスク未達なら紹介レートへダウングレード（締め前のレート決定にのみ作用）。
+  // fail-open：deal_tasks が無い/読めない場合は協力レート維持（requiredTasksDone が true を返す）。
+  const admin = await createServiceRoleClient()
+
+  // L3: 明細0件（相談・サービス未割当）の deal は確定不可。fail-open（deal_items 未作成なら従来どおり）。
+  if (confirming) {
+    try {
+      const { count, error: cntErr } = await admin.from('deal_items').select('id', { count: 'exact', head: true }).eq('deal_id', id)
+      if (!cntErr && (count ?? 0) === 0) {
+        return NextResponse.json({ error: 'サービス明細を1つ以上追加してください', needsItems: true }, { status: 400 })
+      }
+    } catch { /* fail-open */ }
+  }
+
+  let effectiveKind: string = ctx?.channel ?? 'referral'
+  let gateReason: string | null = null
   if (ctx?.channel === 'cooperation') {
-    const c = menu?.coop_enabled
-      ? { type: menu.coop_type ?? 'rate', value: Number(menu.coop_value ?? 0), base: menu.coop_base ?? '売上' }
-      : null
-    if (c) {
-      baseLabel = c.base
-      if (c.type === 'fixed') fixedCoop = c.value
-      else rate = c.value
-    }
+    const passed = confirming ? await requiredTasksDone(admin, id) : true
+    effectiveKind = passed ? 'cooperation' : 'referral'
+    if (confirming && !passed) gateReason = '協力の必須タスク未達のため紹介レートを適用'
+  }
+
+  // 採用レート。協力(通過)=coop_*、協力ダウングレード=ref_*、生来の紹介=従来どおり。
+  let rate: number | null = null        // 料率(%)案件 → base 必要
+  let fixedAmount: number | null = null // 固定 → amount=固定額
+  let baseLabel = '売上'
+  const refType  = menu?.ref_type ?? snap?.ref_type
+  const refValue = Number(menu?.ref_value ?? snap?.ref_value ?? 0)
+  const refBase  = menu?.ref_base ?? snap?.ref_base ?? '売上'
+  if (effectiveKind === 'cooperation' && menu?.coop_enabled) {
+    baseLabel = menu.coop_base ?? '売上'
+    if ((menu.coop_type ?? 'rate') === 'fixed') fixedAmount = Number(menu.coop_value ?? 0)
+    else rate = Number(menu.coop_value ?? 0)
+  } else if (ctx?.channel === 'cooperation') {
+    // 協力→紹介ダウングレード：ref_* を採用
+    baseLabel = refBase
+    if (refType === 'rate') rate = refValue
+    else if (refType === 'fixed') fixedAmount = refValue
   } else if (snap?.ref_type === 'rate') {
+    // 生来の紹介(rate)：従来どおり
     rate = Number(snap.ref_value); baseLabel = snap.ref_base ?? '売上'
   }
   const isRate = rate != null && !Number.isNaN(rate)
@@ -63,11 +101,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     update.base_amount = base
     update.amount = computed
     update.reward_snapshot = { ...(snap ?? {}), base_amount: base, base_label: baseLabel, rate, computed }
-  } else if (hasStatus && status === 'confirmed') {
-    if (fixedCoop != null) {
-      // 協力・固定：実額不要、報酬=固定額
-      update.amount = fixedCoop
-      update.reward_snapshot = { ...(snap ?? {}), coop_type: 'fixed', base_label: baseLabel, computed: fixedCoop }
+  } else if (confirming) {
+    if (fixedAmount != null) {
+      // 固定（協力 or ダウングレード紹介・固定）：実額不要、報酬=固定額
+      update.amount = fixedAmount
+      update.reward_snapshot = { ...(snap ?? {}), reward_type: 'fixed', base_label: baseLabel, computed: fixedAmount }
     } else if (isRate) {
       // 料率：base 必須（未指定なら保存済みを使用、無ければ要求）
       const existing = ctx?.base_amount ?? null
@@ -77,7 +115,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       update.amount = Math.round(Number(existing) * (rate as number) / 100)
       update.reward_snapshot = { ...(snap ?? {}), base_amount: Number(existing), base_label: baseLabel, rate, computed: update.amount }
     }
-    // 固定（紹介）はamount既定のまま
+    // 生来の紹介(fixed)はamount既定のまま
+  }
+
+  // P: 成約時はゲート判定結果を記録（reward_snapshot は jsonb で必ず書ける）。
+  if (confirming) {
+    update.reward_snapshot = {
+      ...((update.reward_snapshot as object) ?? snap ?? {}),
+      effective_kind: effectiveKind,
+      ...(gateReason ? { gate_reason: gateReason } : {}),
+    }
   }
 
   const { data: deal, error } = await supabase
@@ -89,15 +136,98 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Audit log + Slack only when status actually changed
+  // L2: 確定時に報酬を「明細の合算」で恒久化（凍結対象 deals.amount に反映）。回帰ゼロ設計：
+  //   - 明細1件 → 上で算出した legacy 確定額（deal.amount/base_amount）へ明細を同期するだけ（金額は legacy と同一・L1 driftも解消）。
+  //   - 明細複数 → effectiveKind を全明細に適用して再集計し deals.amount を上書き（複数明細dealのみ・既存単一には無影響）。
+  //   - 明細が無い/読めない → 何もしない（fail-open・legacy のまま）。
+  if (confirming) {
+    try {
+      const { computeDealReward } = await import('@/lib/deal-reward')
+      const { data: items } = await admin.from('deal_items').select('id, service_id, menu_id, kind, amount, base_amount').eq('deal_id', id).order('sort')
+      const now2 = new Date().toISOString()
+      if (items && items.length === 1) {
+        // 単一明細：確定値へ同期（金額は legacy と完全一致）
+        await admin.from('deal_items').update({ amount: deal.amount, base_amount: deal.base_amount ?? null, updated_at: now2 }).eq('id', items[0].id)
+      } else if (items && items.length > 1) {
+        // 複数明細：メニューを引いて effectiveKind で再集計
+        const menuIds = [...new Set(items.map(i => i.menu_id).filter(Boolean))] as string[]
+        const { data: menus } = await admin.from('service_menus').select('id, coop_enabled, coop_type, coop_value, coop_base, ref_type, ref_value, ref_base').in('id', menuIds)
+        const menusById = Object.fromEntries((menus ?? []).map(m => [m.id, m]))
+        const { total, baseTotal, breakdown } = computeDealReward(items, effectiveKind, menusById)
+        await admin.from('deals').update({
+          amount: total,
+          base_amount: baseTotal || null,
+          reward_snapshot: { ...((update.reward_snapshot as object) ?? snap ?? {}), effective_kind: effectiveKind, ...(gateReason ? { gate_reason: gateReason } : {}), items: breakdown },
+        }).eq('id', id)
+        // 各明細の報酬を同期（Σ(items.amount)=deals.amount を保つ）
+        for (const b of breakdown) if (b.id) await admin.from('deal_items').update({ amount: b.reward, updated_at: now2 }).eq('id', b.id)
+      }
+    } catch { /* fail-open: 明細集約に失敗しても legacy の deals.amount を維持 */ }
+  }
+
+  // P: effective_kind 列に記録（列未追加(DDL前)でも本体更新を壊さない best-effort）。
+  if (confirming) {
+    try { await admin.from('deals').update({ effective_kind: effectiveKind }).eq('id', id) } catch { /* 列なし時は無視 */ }
+    // 自動チェック：成約に伴い「対応開始」auto タスクも完了扱い（冪等）。
+    await markAutoTaskDone(admin, id, 'in_progress')
+  }
+  // P: 対応中遷移で auto タスク（trigger 'in_progress'）を完了（冪等・best-effort）。
+  if (hasStatus && status === 'in_progress') {
+    await markAutoTaskDone(admin, id, 'in_progress')
+  }
+
   if (hasStatus) {
+    const isLost = status === 'lost'
+
+    // P: 協力→紹介ダウングレード時は監査/タイムラインに理由を残す（パートナーには出さない）。
+    if (confirming && gateReason) {
+      await supabase.from('deal_events').insert({
+        deal_id: id, body: `報酬レート判定：${gateReason}`, created_by: user.id, visible_to_partner: false,
+      })
+    }
+
+    // N: 失注メタデータ保存 / 再開時クリア。lost_* 列が未追加(DDL前)でも本体更新を壊さない best-effort。
+    try {
+      if (isLost) {
+        const reason = LOST_REASONS.includes(lost_reason) ? lost_reason : null
+        const note = typeof lost_note === 'string' && lost_note.trim() ? lost_note.trim().slice(0, 500) : null
+        await supabase.from('deals').update({ lost_at: new Date().toISOString(), lost_reason: reason, lost_note: note }).eq('id', id)
+      } else {
+        // 再開（不成立→対応中 等）：失注メタデータをクリア
+        await supabase.from('deals').update({ lost_at: null, lost_reason: null, lost_note: null }).eq('id', id)
+      }
+    } catch { /* 列なし時は無視 */ }
+
+    // 監査/タイムライン。lost は中立な内部記録（顧客向けには出さない）。
     await supabase.from('deal_events').insert({
       deal_id: id,
-      body: `ステータスを「${STATUS_LABEL[status as string]}」に変更しました`,
+      body: isLost ? '案件をクローズしました（不成立）' : `ステータスを「${STATUS_LABEL[status as string]}」に変更しました`,
       created_by: user.id,
       visible_to_partner: ['confirmed', 'paid'].includes(status),
     })
-    await notifySlackEvent('status_change', `📋 案件ステータス変更: ${deal?.customer_name ?? id} → ${STATUS_LABEL[status as string]}`)
+
+    // N: 運営Slackは lost には送らない（ひっそり中立）。他のステータス変更は従来通り。
+    if (!isLost) {
+      await notifySlackEvent('status_change', `📋 案件ステータス変更: ${deal?.customer_name ?? id} → ${STATUS_LABEL[status as string]}`)
+    }
+
+    // N: 不成立化時に担当パートナーへ中立・感謝メール1通（best-effort・運営Slackには送らない）。
+    if (isLost) {
+      try {
+        const { data: pt } = await admin.from('partners').select('profile_id').eq('id', ctx?.partner_id ?? '').single()
+        const { data: pr } = pt?.profile_id
+          ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
+          : { data: null }
+        if (pr?.email) {
+          const { sendEmail } = await import('@/lib/notify')
+          await sendEmail({
+            to: pr.email,
+            subject: '【MB Partners】案件の進捗について',
+            text: `${pr.name ?? 'パートナー'} 様\n今回は成約に至りませんでした。ご紹介ありがとうございました。\n\n引き続き、別の機会でのご紹介をお待ちしております。\n（本プログラムは成功報酬制です。報酬は成約時のみ発生します。紹介の有効期間は90日です。）\n— MB Partners 運営事務局`,
+          })
+        }
+      } catch { /* best-effort */ }
+    }
   }
 
   return NextResponse.json({ deal })

@@ -122,7 +122,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>ご予約</h1>
-          <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>相談日時をお選びください</p>
+          <p style={{ color: 'var(--muted2)', fontSize: 13, margin: 0 }}>相談日時をお選びください</p>
         </div>
 
         {/* Step indicator */}
@@ -138,16 +138,16 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                       width: 22, height: 22, borderRadius: '50%',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 10, fontWeight: 700,
-                      background: active ? '#2563EB' : done ? '#DBEAFE' : '#F3F4F6',
-                      color: active ? '#fff' : done ? '#2563EB' : '#9CA3AF',
+                      background: active ? 'var(--blue)' : done ? 'var(--blue-bg)' : 'var(--bg2)',
+                      color: active ? '#fff' : done ? 'var(--blue)' : 'var(--muted)',
                     }}>
                       {done ? '✓' : i + 1}
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? '#2563EB' : done ? '#6B7280' : '#9CA3AF' }}>
+                    <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? 'var(--blue)' : done ? 'var(--muted2)' : 'var(--muted)' }}>
                       {label}
                     </span>
                   </div>
-                  {i < 2 && <span style={{ color: '#D1D5DB', fontSize: 11 }}>›</span>}
+                  {i < 2 && <span style={{ color: 'var(--line)', fontSize: 11 }}>›</span>}
                 </div>
               )
             })}
@@ -156,13 +156,13 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
         {/* Calendar */}
         {step === 'calendar' && (
-          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #E5E7EB', padding: '20px 16px' }}>
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: '20px 16px' }}>
             {/* Month nav */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <button onClick={prevMonth} disabled={!canPrev} style={{
                 width: 32, height: 32, borderRadius: '50%', border: 'none',
-                background: canPrev ? '#F3F4F6' : 'transparent',
-                color: canPrev ? '#374151' : '#D1D5DB', fontSize: 18, cursor: canPrev ? 'pointer' : 'default',
+                background: canPrev ? 'var(--bg2)' : 'transparent',
+                color: canPrev ? 'var(--muted2)' : 'var(--line)', fontSize: 18, cursor: canPrev ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               }}>‹</button>
               <span style={{ fontWeight: 700, fontSize: 15 }}>
@@ -170,8 +170,8 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               </span>
               <button onClick={nextMonth} disabled={!canNext} style={{
                 width: 32, height: 32, borderRadius: '50%', border: 'none',
-                background: canNext ? '#F3F4F6' : 'transparent',
-                color: canNext ? '#374151' : '#D1D5DB', fontSize: 18, cursor: canNext ? 'pointer' : 'default',
+                background: canNext ? 'var(--bg2)' : 'transparent',
+                color: canNext ? 'var(--muted2)' : 'var(--line)', fontSize: 18, cursor: canNext ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               }}>›</button>
             </div>
@@ -181,7 +181,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               {WEEKDAYS.map((w, i) => (
                 <div key={w} style={{
                   textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '3px 0',
-                  color: i === 0 ? '#EF4444' : i === 6 ? '#3B82F6' : '#6B7280',
+                  color: i === 0 ? 'var(--red)' : i === 6 ? 'var(--blue)' : 'var(--muted2)',
                 }}>{w}</div>
               ))}
             </div>
@@ -204,12 +204,12 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                     disabled={isDisabled}
                     style={{
                       padding: '7px 2px', border: 'none', borderRadius: 8,
-                      background: isSelected ? '#2563EB' : isToday ? '#EFF6FF' : 'transparent',
+                      background: isSelected ? 'var(--blue)' : isToday ? 'var(--blue-bg2)' : 'transparent',
                       color: isSelected ? '#fff'
-                        : isDisabled ? '#D1D5DB'
-                        : dow === 0 ? '#EF4444'
-                        : dow === 6 ? '#3B82F6'
-                        : '#111827',
+                        : isDisabled ? 'var(--line)'
+                        : dow === 0 ? 'var(--red)'
+                        : dow === 6 ? 'var(--blue)'
+                        : 'var(--txt)',
                       fontSize: 13, fontWeight: isToday && !isSelected ? 700 : 400,
                       cursor: isDisabled ? 'default' : 'pointer', textAlign: 'center',
                     }}
@@ -220,7 +220,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               })}
             </div>
 
-            <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 14, marginBottom: 0 }}>
+            <p style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 14, marginBottom: 0 }}>
               今日から60日間の空き日程から選択できます
             </p>
           </div>
@@ -228,27 +228,27 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
         {/* Slot selection */}
         {step === 'slot' && (
-          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #E5E7EB', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: 20 }}>
             <button onClick={() => setStep('calendar')} style={{
-              background: 'none', border: 'none', color: '#2563EB', fontSize: 13,
+              background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13,
               cursor: 'pointer', marginBottom: 14, padding: 0, display: 'flex', alignItems: 'center', gap: 4,
             }}>
               ← 日付を変更
             </button>
             <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>時間を選択</h2>
-            <p style={{ color: '#6B7280', fontSize: 13, marginBottom: 16 }}>{fmtDateLong(selectedDate)}</p>
+            <p style={{ color: 'var(--muted2)', fontSize: 13, marginBottom: 16 }}>{fmtDateLong(selectedDate)}</p>
 
             {slotsLoading && (
-              <div style={{ textAlign: 'center', padding: '28px 0', color: '#9CA3AF', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--muted)', fontSize: 13 }}>
                 空き枠を確認中...
               </div>
             )}
             {!slotsLoading && slots.length === 0 && (
               <div style={{ textAlign: 'center', padding: '28px 0' }}>
-                <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 12 }}>この日は空き枠がありません</p>
+                <p style={{ color: 'var(--muted2)', fontSize: 14, marginBottom: 12 }}>この日は空き枠がありません</p>
                 <button onClick={() => setStep('calendar')} style={{
-                  background: '#F3F4F6', border: 'none', borderRadius: 8, padding: '9px 18px',
-                  fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+                  background: 'var(--bg2)', border: 'none', borderRadius: 8, padding: '9px 18px',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--muted2)',
                 }}>
                   別の日を選ぶ
                 </button>
@@ -261,17 +261,17 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                     key={slot.start}
                     onClick={() => { setSelSlot(slot); setStep('form') }}
                     style={{
-                      padding: '13px 6px', border: '1.5px solid #E5E7EB', borderRadius: 10,
-                      background: '#fff', color: '#111827', fontSize: 14, fontWeight: 600,
+                      padding: '13px 6px', border: '1.5px solid var(--line)', borderRadius: 10,
+                      background: '#fff', color: 'var(--txt)', fontSize: 14, fontWeight: 600,
                       cursor: 'pointer', textAlign: 'center',
                     }}
                     onMouseEnter={e => {
-                      ;(e.currentTarget as HTMLButtonElement).style.background = '#EFF6FF'
-                      ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#2563EB'
+                      ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--blue-bg2)'
+                      ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--blue)'
                     }}
                     onMouseLeave={e => {
                       ;(e.currentTarget as HTMLButtonElement).style.background = '#fff'
-                      ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#E5E7EB'
+                      ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--line)'
                     }}
                   >
                     {toJST(slot.start)}
@@ -284,19 +284,19 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
         {/* Form */}
         {step === 'form' && selectedSlot && (
-          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #E5E7EB', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: 20 }}>
             <button onClick={() => setStep('slot')} style={{
-              background: 'none', border: 'none', color: '#2563EB', fontSize: 13,
+              background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13,
               cursor: 'pointer', marginBottom: 14, padding: 0,
             }}>
               ← 時間を変更
             </button>
 
             {/* Appointment summary chip */}
-            <div style={{ background: '#EFF6FF', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 3 }}>予約日時</div>
+            <div style={{ background: 'var(--blue-bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 3 }}>予約日時</div>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#1E3A8A' }}>{fmtDateLong(selectedDate)}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#2563EB', marginTop: 2 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--blue)', marginTop: 2 }}>
                 {toJST(selectedSlot.start)} 〜 {toJST(selectedSlot.end)}
               </div>
             </div>
@@ -305,13 +305,13 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
             {/* ⑦ お客様の種別 */}
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>お客様の種別</label>
+              <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>お客様の種別</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
                   <button type="button" key={v} onClick={() => setCustomerType(v)}
                     style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                      border: `1.5px solid ${customerType === v ? '#2563EB' : '#E5E7EB'}`,
-                      background: customerType === v ? '#2563EB' : '#fff', color: customerType === v ? '#fff' : '#111827' }}>
+                      border: `1.5px solid ${customerType === v ? 'var(--blue)' : 'var(--line)'}`,
+                      background: customerType === v ? 'var(--blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
                     {l}
                   </button>
                 ))}
@@ -319,48 +319,48 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
             </div>
             {customerType === 'individual' ? (
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
-                  お客様のお名前 <span style={{ color: '#EF4444' }}>*</span>
+                <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                  お客様のお名前 <span style={{ color: 'var(--red)' }}>*</span>
                 </label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎"
-                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
               </div>
             ) : (
               <>
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
-                    会社名 <span style={{ color: '#EF4444' }}>*</span>
+                  <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                    会社名 <span style={{ color: 'var(--red)' }}>*</span>
                   </label>
                   <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇"
-                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>ご担当者名（任意）</label>
+                  <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>ご担当者名（任意）</label>
                   <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎"
-                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
+                    style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }} />
                 </div>
               </>
             )}
             <div style={{ marginBottom: 22 }}>
-              <label style={{ fontSize: 13, color: '#374151', display: 'block', marginBottom: 6, fontWeight: 500 }}>
-                メールアドレス <span style={{ color: '#EF4444' }}>*</span>
+              <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                メールアドレス <span style={{ color: 'var(--red)' }}>*</span>
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="example@email.com"
-                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
 
-            {error && <p style={{ color: '#EF4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {error && <p style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{error}</p>}
 
             <button
               onClick={handleSubmit}
               disabled={submitting || !customerValid || !email.trim()}
               style={{
-                width: '100%', padding: '13px', background: '#2563EB', color: '#fff',
+                width: '100%', padding: '13px', background: 'var(--blue)', color: '#fff',
                 border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15,
                 cursor: submitting || !customerValid || !email.trim() ? 'default' : 'pointer',
                 opacity: submitting || !customerValid || !email.trim() ? 0.6 : 1,
@@ -373,23 +373,23 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
 
         {/* Done */}
         {step === 'done' && (
-          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid #E5E7EB', padding: 36, textAlign: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: 36, textAlign: 'center' }}>
             <div style={{
               width: 60, height: 60, borderRadius: '50%', background: '#DCFCE7',
               display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px',
             }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E9E6A" strokeWidth="2.5">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
             <h2 style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>予約が完了しました</h2>
-            <p style={{ color: '#374151', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+            <p style={{ color: 'var(--muted2)', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
               {fmtDateLong(selectedDate)}
             </p>
-            <p style={{ color: '#2563EB', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
+            <p style={{ color: 'var(--blue)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
               {selectedSlot ? toJST(selectedSlot.start) : ''} 〜 {selectedSlot ? toJST(selectedSlot.end) : ''}
             </p>
-            <p style={{ color: '#9CA3AF', fontSize: 13 }}>
+            <p style={{ color: 'var(--muted)', fontSize: 13 }}>
               カレンダー招待をメールでお送りしました
             </p>
           </div>

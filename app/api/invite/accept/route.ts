@@ -241,6 +241,14 @@ export async function POST(req: NextRequest) {
         await service.from('partners').update(partnerFields).eq('id', existingPartner.id)
       }
     }
+
+    // Terms: 同意した規約バージョンを記録（terms_version 列が未追加(DDL前)でも登録を壊さない best-effort）。
+    if (agreeTerms) {
+      try {
+        const { TERMS_VERSION } = await import('@/lib/legal/terms')
+        await service.from('partners').update({ terms_version: TERMS_VERSION }).eq('profile_id', userId)
+      } catch { /* 列未追加 等は無視 */ }
+    }
   }
 
   // ── 招待を使用済みにマーク ────────────────────────────────────────────────
@@ -248,6 +256,19 @@ export async function POST(req: NextRequest) {
     .from('invites')
     .update({ used_at: new Date().toISOString(), name })
     .eq('token', token)
+
+  // Batch B ③: パートナー参加（招待リンク経由の登録完了）を運営へ通知。best-effort（登録完了は阻害しない）。
+  try {
+    const { sendSlack, sendOpsEmail } = await import('@/lib/notify')
+    const roleLabel = role === 'partner'
+      ? (frontierFlag === true ? 'パートナー（フロンティア）' : 'パートナー')
+      : role
+    await sendSlack(`🎉 パートナー参加: ${name}（${roleLabel}${partnerCode ? ` / ${partnerCode}` : ''}）`)
+    await sendOpsEmail(
+      `【MB Partners】パートナー参加: ${name}`,
+      `招待リンク経由で登録が完了しました。\n・お名前：${name}\n・メール：${email}\n・区分：${roleLabel}${partnerCode ? `\n・コード：${partnerCode}` : ''}`,
+    )
+  } catch { /* best-effort */ }
 
   return NextResponse.json({ ok: true, code: partnerCode }, { status: 200 })
 }

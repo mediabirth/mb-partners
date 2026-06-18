@@ -1,0 +1,94 @@
+/**
+ * 共通通知モジュール（Batch B）
+ *
+ * 既存の Resend / Slack 配線を再利用した薄いラッパ。
+ * - sendSlack(text)        … 運営Slack（SLACK_WEBHOOK_URL）へ送信
+ * - sendEmail({to,...})    … 任意宛先へ Resend 送信（verified domain noreply@mb-partners.app）
+ * - sendOpsEmail(...)      … 運営の受信先（OPS_NOTIFY_EMAIL）へ送信
+ *
+ * 鉄則：
+ * - すべて best-effort。例外は外へ投げない（core action / money path を絶対にブロックしない）。
+ * - env 未設定の経路は throw せず { sent:false, skipped } を返してスキップ（halt しない）。
+ * - エッジ/ノード両対応（global fetch のみ使用）。
+ */
+import { notifySlack } from './slack'
+import { MAIL_FROM as FROM } from './mail-from'
+const SUPPORT = 'support@mb-partners.app'
+
+const LOGO_BAR =
+`<div style="padding:20px 0;text-align:center">
+  <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:9px" />
+  <span style="font-weight:800;font-size:17px;vertical-align:middle;margin-left:9px">MB <span style="color:#4733E6">Partners</span></span>
+</div>`
+
+export type SendResult = { sent: boolean; skipped?: string; error?: string }
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/** 上品・簡潔なブランドHTML（本文段落 + 任意の明細行）。 */
+export function brandedEmailHtml(params: { lead: string; rows?: [string, string][]; note?: string }): string {
+  const rows = params.rows?.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 14px">
+        ${params.rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:96px">${escapeHtml(k)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(v)}</td></tr>`).join('')}
+      </table>`
+    : ''
+  return `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
+  ${LOGO_BAR}
+  <div style="background:#F6F6F8;border-radius:14px;padding:24px 22px">
+    <p style="margin:0 0 16px">${escapeHtml(params.lead)}</p>
+    ${rows}
+    ${params.note ? `<p style="margin:0;font-size:13px;color:#6E707D">${escapeHtml(params.note)}</p>` : ''}
+  </div>
+  <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
+  <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
+</div>`
+}
+
+/** JST の読みやすい日時表記。 */
+export function fmtJST(iso: string): string {
+  return new Date(iso).toLocaleString('ja-JP', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo',
+  })
+}
+
+/** 運営Slack（SLACK_WEBHOOK_URL）。未設定ならスキップ。例外は投げない。 */
+export async function sendSlack(text: string): Promise<SendResult> {
+  if (!process.env.SLACK_WEBHOOK_URL) return { sent: false, skipped: 'SLACK_WEBHOOK_URL 未設定' }
+  try {
+    await notifySlack(text)
+    return { sent: true }
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : 'slack failed' }
+  }
+}
+
+/** 任意宛先へメール送信（Resend）。RESEND_API_KEY 未設定 / 宛先なしはスキップ。例外は投げない。 */
+export async function sendEmail(params: {
+  to?: string | null; subject: string; text: string; html?: string
+}): Promise<SendResult> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return { sent: false, skipped: 'RESEND_API_KEY 未設定' }
+  if (!params.to) return { sent: false, skipped: '宛先なし' }
+  const html = params.html
+    ?? brandedEmailHtml({ lead: params.text.split('\n')[0] || params.subject, note: params.text.split('\n').slice(1).join(' ').trim() || undefined })
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM, to: [params.to], subject: params.subject, text: params.text, html }),
+    })
+    if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
+    return { sent: true }
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : 'send failed' }
+  }
+}
+
+/** 運営の受信先（OPS_NOTIFY_EMAIL）へメール。未設定ならスキップ。 */
+export async function sendOpsEmail(subject: string, text: string, html?: string): Promise<SendResult> {
+  const to = process.env.OPS_NOTIFY_EMAIL
+  if (!to) return { sent: false, skipped: 'OPS_NOTIFY_EMAIL 未設定' }
+  return sendEmail({ to, subject, text, html })
+}

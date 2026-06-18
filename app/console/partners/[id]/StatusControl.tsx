@@ -40,7 +40,7 @@ export default function StatusControl({ partnerId, currentStatus }: { partnerId:
           disabled={loading}
           style={{
             width: '100%', padding: '10px', border: 'none', borderRadius: 9,
-            background: '#15917E', color: '#fff', fontWeight: 700, fontSize: '.76rem',
+            background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: '.76rem',
             cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >
@@ -51,15 +51,15 @@ export default function StatusControl({ partnerId, currentStatus }: { partnerId:
           onClick={() => toggle('suspended')}
           disabled={loading}
           style={{
-            width: '100%', padding: '10px', border: '1px solid #E64733', borderRadius: 9,
-            background: 'none', color: '#E64733', fontWeight: 700, fontSize: '.76rem',
+            width: '100%', padding: '10px', border: '1px solid var(--red)', borderRadius: 9,
+            background: 'none', color: 'var(--red)', fontWeight: 700, fontSize: '.76rem',
             cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >
           {loading ? '処理中...' : 'アカウントを一時停止'}
         </button>
       ) : null}
-      {error && <p style={{ fontSize: '.68rem', color: '#E64733', marginTop: 8, marginBottom: 0 }}>{error}</p>}
+      {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', marginTop: 8, marginBottom: 0 }}>{error}</p>}
     </div>
   )
 }

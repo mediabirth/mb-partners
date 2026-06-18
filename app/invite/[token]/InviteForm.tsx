@@ -204,7 +204,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               </div>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
-                <span><a href="/app/terms" target="_blank" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>パートナー規約</a>に同意します</span>
+                <span>利用規約に同意します　<a href={`/legal/terms?kind=${frontierFlag ? 'frontier' : 'partner'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline', fontWeight: 700 }}>利用規約を読む</a></span>
               </label>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />

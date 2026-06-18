@@ -16,7 +16,7 @@ export default async function FrontierPage() {
   if (!me.is_frontier) redirect('/app')  // フロンティアのみ
 
   const admin = await createServiceRoleClient()
-  // 配下パートナー（frontier_id = 自分）
+  // チームのパートナー（frontier_id = 自分）
   const { data: subs } = await admin
     .from('partners')
     .select('id, code, frontier_linked_at, profiles(name, color)')
@@ -24,7 +24,7 @@ export default async function FrontierPage() {
   const subList = subs ?? []
   const subIds = subList.map(s => s.id)
 
-  // 配下の確定/支払 deal
+  // チームの確定/支払 deal
   let deals: any[] = []
   if (subIds.length) {
     const { data } = await admin
@@ -40,7 +40,7 @@ export default async function FrontierPage() {
   const linkedAtById: Record<string, string | null> = {}
   for (const s of subList) linkedAtById[s.id] = s.frontier_linked_at
 
-  // 配下別の今月override + 件数
+  // パートナー別の今月override + 件数
   const perSub: Record<string, { override: number; count: number; gross: number }> = {}
   let monthOverride = 0
   for (const d of deals) {
@@ -70,12 +70,12 @@ export default async function FrontierPage() {
         <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.02em', lineHeight: 1.05 }}>
           <span style={{ fontSize: '1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span><CountUp value={monthOverride} />
         </div>
-        <div style={{ fontSize: '.64rem', opacity: .85, marginTop: 8 }}>配下 {subList.length}名・今月稼働 {activeSubs}名（配下成約の{Math.round(OVERRIDE_RATE * 100)}%）</div>
+        <div style={{ fontSize: '.64rem', opacity: .85, marginTop: 8 }}>あなたのチーム {subList.length}名・今月稼働 {activeSubs}名（チーム成約の{Math.round(OVERRIDE_RATE * 100)}%）</div>
       </div>
 
       {/* KPI */}
       <div className="stagger" style={{ display: 'flex', gap: 10, margin: '14px 20px 0' }}>
-        <Kpi label="配下" value={subList.length} unit="名" />
+        <Kpi label="チーム" value={subList.length} unit="名" />
         <Kpi label="稼働率" value={utilization} unit="%" />
         <Kpi label="今月新規" value={newThisMonth} unit="名" />
       </div>
@@ -83,9 +83,14 @@ export default async function FrontierPage() {
       {/* MVP */}
       {mvp && mvp.gross > 0 && (
         <div style={{ margin: '14px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '1.3rem' }}>🏅</span>
+          <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {/* MVP スパーク（単色フラット） */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2 L14.6 9.4 L22 12 L14.6 14.6 L12 22 L9.4 14.6 L2 12 L9.4 9.4 Z" fill="var(--blue)"/>
+            </svg>
+          </span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700 }}>今月のMVP配下</div>
+            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700 }}>今月のMVPパートナー</div>
             <div style={{ fontSize: '.82rem', fontWeight: 800 }}>{(mvp.s as any).profiles?.name ?? mvp.s.code}</div>
           </div>
           <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
@@ -95,11 +100,11 @@ export default async function FrontierPage() {
         </div>
       )}
 
-      {/* 配下カード */}
+      {/* チームカード */}
       <div style={{ padding: '22px 20px 6px' }}>
-        <h2 style={{ fontSize: '.92rem', fontWeight: 800, marginBottom: 12 }}>配下パートナー</h2>
+        <h2 style={{ fontSize: '.92rem', fontWeight: 800, marginBottom: 12 }}>あなたのチーム</h2>
         {subList.length === 0 ? (
-          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 14 }}>まだ配下がいません。下の招待リンクから仲間を増やしましょう。</p>
+          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 14 }}>まだパートナーがいません。下の招待リンクから仲間を増やしましょう。</p>
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             {subList.map(s => {

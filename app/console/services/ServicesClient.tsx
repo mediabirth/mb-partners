@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ServiceAvatar from '@/components/ServiceAvatar'
+import { SectionHeader } from '@/components/ui/Header'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -384,12 +385,15 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
   return (
     <div style={{ background: '#fff', border: '1.5px solid var(--blue)', borderRadius: 12, padding: 16, marginBottom: 8, boxShadow: '0 4px 16px rgba(71,51,230,.08)' }}>
 
+      {/* BR-C3: 論理セクションを明示（①基本 ②紹介報酬 ③協力報酬）。各報酬ブロックに 対応範囲/任意条件 を内包。保存契約は不変。 */}
+      <SectionHeader title="① 基本" style={{ marginBottom: 8 }} />
       <Fld label="メニュー名 *">
         <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例: 賃貸成約時" />
       </Fld>
 
-      {/* ── 紹介（referral） — 青 ── */}
-      <div style={{ background: 'var(--blue-bg)', border: '1px solid #DDE2FF', borderRadius: 10, padding: 13, marginTop: 12 }}>
+      {/* ── ② 紹介（referral） — 青 ── */}
+      <SectionHeader title="② 紹介報酬" style={{ marginTop: 16, marginBottom: 6 }} />
+      <div style={{ background: 'var(--blue-bg)', border: '1px solid #DDE2FF', borderRadius: 10, padding: 13, marginTop: 4 }}>
         <RewardBlockHead chip={<RefChip />} title="紹介報酬" val={f.ref_enabled} onToggle={v => set({ ref_enabled: v })} />
 
         {f.ref_enabled && (
@@ -432,8 +436,9 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
         )}
       </div>
 
-      {/* ── 協力（per-menu cooperation） — 濃色 ── */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13, marginTop: 10 }}>
+      {/* ── ③ 協力（per-menu cooperation） — 濃色 ── */}
+      <SectionHeader title="③ 協力報酬" style={{ marginTop: 16, marginBottom: 6 }} />
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13, marginTop: 4 }}>
         <RewardBlockHead chip={<CoopChip />} title="協力報酬" val={f.coop_enabled} onToggle={v => set({ coop_enabled: v })} />
 
         {f.coop_enabled && (
@@ -543,13 +548,46 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [menuError, setMenuError]   = useState('')
   const [liveMenus, setLiveMenus]   = useState<MenuRow[]>([])
 
+  // C. 対応範囲（協力タスク）= cooperation_task_templates。サービス編集に統合（旧 /console/tasks）。
+  type Tpl = { id: string; service_id: string; menu_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
+  const [taskTpls, setTaskTpls] = useState<Tpl[]>([])
+  const [tLabel, setTLabel] = useState('')
+  const [tKind, setTKind] = useState<'manual' | 'auto'>('manual')
+  const [tRequired, setTRequired] = useState(true)
+  const [tTrigger, setTTrigger] = useState('')
+  const [tBusy, setTBusy] = useState(false)
+  const selSm: React.CSSProperties = { border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 8px', fontFamily: 'inherit', fontSize: '.7rem', background: '#fff' }
+
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  async function addTask() {
+    if (!editing || !tLabel.trim()) return
+    setTBusy(true)
+    try {
+      const r = await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: editing.id, label: tLabel.trim(), kind: tKind, required: tRequired, trigger_key: tKind === 'auto' ? (tTrigger || null) : null, sort: taskTpls.length }) })
+      const d = await r.json()
+      if (d.template) { setTaskTpls(p => [...p, d.template]); setTLabel(''); setTTrigger('') }
+      else showToast(d.needsMigration ? '協力タスクのDB適用が必要です（batchP DDL）' : (d.error ?? '追加に失敗しました'))
+    } finally { setTBusy(false) }
+  }
+  async function patchTask(id: string, body: Partial<Tpl>) {
+    const r = await fetch(`/api/console/task-templates/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const d = await r.json(); if (d.template) setTaskTpls(p => p.map(t => t.id === id ? d.template : t))
+  }
+  async function delTask(id: string) {
+    if (!confirm('この対応項目を削除しますか？')) return
+    const r = await fetch(`/api/console/task-templates/${id}`, { method: 'DELETE' })
+    if (r.ok) setTaskTpls(p => p.filter(t => t.id !== id))
+  }
 
   function openEdit(svc: ServiceWithMenus) {
     setSvcForm(svcToForm(svc))
     setEditing(svc); setShowAdd(false)
     setLiveMenus([...svc.service_menus].sort((a, b) => a.sort - b.sort))
     setMenuEditId(null); setSvcError('')
+    // 対応範囲（協力タスク）を読み込み（best-effort）
+    setTaskTpls([]); setTLabel(''); setTTrigger('')
+    fetch('/api/console/task-templates').then(r => r.json()).then(d => setTaskTpls((d.templates ?? []).filter((t: Tpl) => t.service_id === svc.id))).catch(() => {})
   }
 
   function openAdd() {
@@ -711,10 +749,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </button>
               </div>
 
-              {/* Per-menu summary */}
+              {/* BR-C2: メニュー＝価格表（行整列・金額右揃え・紹介/協力列・該当なしは ー）。 */}
               {refMenus.length > 0 && (
-                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {refMenus.map(menu => {
+                <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 116px 116px', gap: 10, padding: '7px 14px', background: 'var(--bg2)', alignItems: 'center' }}>
+                    <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>メニュー</span>
+                    <span style={{ textAlign: 'right' }}><span className="chip chip-referral">紹介報酬</span></span>
+                    <span style={{ textAlign: 'right' }}><span className="chip chip-cooperation">協力報酬</span></span>
+                  </div>
+                  {refMenus.map((menu, idx) => {
                     const mm = menu as MenuRow & {
                       ref_enabled?: boolean | null
                       coop_enabled?: boolean | null; coop_type?: 'fixed' | 'rate' | null
@@ -726,14 +769,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       ? `¥${Number(mm.coop_value).toLocaleString()}`
                       : `${mm.coop_value}%${mm.coop_base ? `・${mm.coop_base}` : ''}`
                     return (
-                      <div key={menu.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                        <span style={{ flex: 1, fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {menu.name}
-                        </span>
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          {showRef && <RewardChip kind="ref" text={fmtRef(menu)} />}
-                          {showCoop && <RewardChip kind="coop" text={coopText} />}
-                        </div>
+                      <div key={menu.id} style={{ display: 'grid', gridTemplateColumns: '1fr 116px 116px', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
+                        <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
+                        <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: showRef ? 'var(--txt)' : 'var(--muted)' }}>{showRef ? fmtRef(menu) : '—'}</span>
+                        <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: showCoop ? 'var(--txt)' : 'var(--muted)' }}>{showCoop ? coopText : '—'}</span>
                       </div>
                     )
                   })}
@@ -864,6 +903,42 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     ＋ メニューを追加
                   </button>
                 )}
+              </>
+            )}
+
+            {/* ── C. 対応範囲（協力タスク）＝ cooperation_task_templates。旧 /console/tasks を統合 ── */}
+            {editing && (
+              <>
+                <SectionLabel>C. 対応範囲（協力タスク）</SectionLabel>
+                <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 8, lineHeight: 1.6 }}>
+                  協力チャネルで達成すべき項目を定義します。各項目は<b>手動</b>（パートナーが実施）／<b>自動</b>（案件の進行で自動達成）を選べます。協力レートのゲート判定に使われます（挙動は従来どおり）。
+                </p>
+                {taskTpls.length === 0 && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 8 }}>対応項目はまだありません。</p>}
+                {[...taskTpls].sort((a, b) => a.sort - b.sort).map(t => (
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 10px', marginBottom: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '.58rem', color: 'var(--muted2)', cursor: 'pointer', flexShrink: 0 }}>
+                      <input type="checkbox" checked={t.required} onChange={() => patchTask(t.id, { required: !t.required })} />必須
+                    </label>
+                    <span style={{ flex: 1, fontSize: '.76rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: t.active ? 1 : .5 }}>{t.label}</span>
+                    <select value={t.kind} onChange={e => patchTask(t.id, { kind: e.target.value, trigger_key: e.target.value === 'auto' ? (t.trigger_key || 'in_progress') : null })} style={selSm}>
+                      <option value="manual">手動</option><option value="auto">自動</option>
+                    </select>
+                    {t.kind === 'auto' && (
+                      <select value={t.trigger_key ?? ''} onChange={e => patchTask(t.id, { trigger_key: e.target.value || null })} style={selSm}>
+                        <option value="">トリガー…</option><option value="in_progress">対応中に遷移</option><option value="meeting_set">商談を設定</option>
+                      </select>
+                    )}
+                    <button type="button" onClick={() => patchTask(t.id, { active: !t.active })} style={{ fontSize: '.54rem', fontWeight: 700, border: 'none', borderRadius: 20, padding: '2px 8px', cursor: 'pointer', color: t.active ? 'var(--green)' : 'var(--muted)', background: t.active ? 'var(--green-bg)' : 'var(--bg2)', flexShrink: 0 }}>{t.active ? '有効' : '無効'}</button>
+                    <button type="button" onClick={() => delTask(t.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem', flexShrink: 0 }}>✕</button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
+                  <input value={tLabel} onChange={e => setTLabel(e.target.value)} placeholder="項目名（例: 価格・条件を合意）" style={{ flex: 1, minWidth: 150, border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'inherit', fontSize: '.74rem' }} />
+                  <select value={tKind} onChange={e => setTKind(e.target.value as 'manual' | 'auto')} style={selSm}><option value="manual">手動</option><option value="auto">自動</option></select>
+                  {tKind === 'auto' && <select value={tTrigger} onChange={e => setTTrigger(e.target.value)} style={selSm}><option value="">トリガー…</option><option value="in_progress">対応中に遷移</option><option value="meeting_set">商談を設定</option></select>}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '.62rem', color: 'var(--muted2)' }}><input type="checkbox" checked={tRequired} onChange={e => setTRequired(e.target.checked)} />必須</label>
+                  <button type="button" onClick={addTask} disabled={tBusy || !tLabel.trim()} className="btn btn-g" style={{ fontSize: '.72rem', padding: '7px 12px' }}>＋ 追加</button>
+                </div>
               </>
             )}
 

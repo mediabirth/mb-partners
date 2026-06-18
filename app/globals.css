@@ -24,6 +24,43 @@
   /* Motion timing */
   --ease-out: cubic-bezier(.2,.8,.2,1);
   --ease-spring: cubic-bezier(.34,1.56,.64,1);
+
+  /* ── Type scale（APP/コンソール共通）──────────────────────────
+     ウェイトは 本文=400-500・見出し=600 を基準（極端に細い 300 以下は使わない）。
+     数値ヒーロー等の強い太字は --fw-display を限定使用。サイズはこのスケールに丸める。 */
+  --fw-body:    400;   /* 本文 */
+  --fw-medium:  500;   /* やや強調・小ラベル */
+  --fw-head:    600;   /* 見出し統一 */
+  --fw-strong:  700;   /* ボタン・チップ・強調 */
+  --fw-display: 800;   /* 金額/数値ヒーローのみ */
+  --fs-display: 1.5rem; /* ヒーロー数値・特大見出し */
+  --fs-h1:      1.02rem;/* 画面タイトル */
+  --fs-h2:      .92rem; /* セクション見出し */
+  --fs-body:    .8rem;  /* 本文 */
+  --fs-sub:     .72rem; /* 補助本文 */
+  --fs-cap:     .62rem; /* キャプション */
+  --fs-micro:   .55rem; /* マイクロラベル */
+
+  /* ── ステータス意味色（成約/進行/承認/未払い 等）。全サーフェス共通の1セット ──
+     success/確定/承認/有効 = green、progress/対応中 = blue、warn/申請中/保留 = amber、
+     danger/却下/停止 = red、neutral/支払済/完了 = muted2。チップ等はこの組を使う。 */
+  --st-success:    var(--green);  --st-success-bg: var(--green-bg);
+  --st-progress:   var(--blue);   --st-progress-bg: var(--blue-bg);
+  --st-warn:       var(--amber);  --st-warn-bg:    var(--amber-bg);
+  --st-danger:     var(--red);    --st-danger-bg:  var(--red-bg);
+  --st-neutral:    var(--muted2); --st-neutral-bg: var(--bg2);
+
+  /* ── 余白スケール ── */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
+
+  /* ── 角丸 ── */
+  --radius-sm: 8px;  --radius: 12px;  --radius-lg: 16px;  --radius-xl: 18px;  --radius-pill: 999px;
+
+  /* ── 影 ── */
+  --shadow-sm: 0 1px 2px rgba(14,14,20,.04);
+  --shadow:    0 8px 24px rgba(14,14,20,.10);
+  --shadow-lg: 0 28px 80px rgba(14,14,20,.12);
 }
 
 /* Extend Tailwind with MBP tokens */
@@ -55,7 +92,19 @@ body {
   background: var(--bg2);
   color: var(--txt);
   font-size: 16px;
+  font-weight: var(--fw-body);   /* 本文の基準ウェイト（細すぎを防止） */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* ============================================================
+   Type-scale utilities（共通トークンで管理。inline サイズはここに丸める）
+   ============================================================ */
+.ty-h1   { font-size: var(--fs-h1); font-weight: var(--fw-head); letter-spacing: -.01em; }
+.ty-h2   { font-size: var(--fs-h2); font-weight: var(--fw-head); }
+.ty-body { font-size: var(--fs-body); font-weight: var(--fw-body); }
+.ty-sub  { font-size: var(--fs-sub); font-weight: var(--fw-body); color: var(--muted2); }
+.ty-cap  { font-size: var(--fs-cap); font-weight: var(--fw-medium); color: var(--muted2); }
 
 /* ============================================================
    Custom Scrollbars
@@ -406,14 +455,14 @@ body {
 .lift { transition: background .16s var(--ease-out), box-shadow .16s var(--ease-out), transform .16s var(--ease-out); }
 .lift:hover { background: var(--blue-bg2); transform: translateY(-1px); }
 
-/* System-color chips: 紹介=青 / 協力=濃色 / 直販=中立 */
+/* System-color chips: 紹介=藍 / 協力=ティール（別色相・低彩度） / 直販=中立 */
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: .56rem; font-weight: 700; letter-spacing: .02em;
   padding: 2px 8px; border-radius: 20px; white-space: nowrap;
 }
 .chip-referral    { background: var(--blue-bg);  color: var(--blue); }
-.chip-cooperation { background: #E7E4F7;          color: var(--blue-dk); }
+.chip-cooperation { background: #E5EFEC;          color: #3F7D72; }
 .chip-direct      { background: var(--bg2);        color: var(--muted2); }
 
 /* Timeline / feed dot */

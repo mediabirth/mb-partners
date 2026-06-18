@@ -12,10 +12,14 @@ export async function GET(request: NextRequest) {
   }
 
   const cookieStore = await cookies()
+  // partner マジックリンクのコールバック＝app サーフェス。app 専用 cookie に書き込む。
+  const { surfaceFor, cookieNameFor } = await import('@/lib/supabase/surface')
+  const name = cookieNameFor(surfaceFor(request.headers.get('host'), new URL(request.url).pathname))
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: { name },
       cookies: {
         getAll:  () => cookieStore.getAll(),
         setAll:  (list) => list.forEach(({ name, value, options }) =>

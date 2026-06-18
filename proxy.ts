@@ -1,14 +1,19 @@
 /**
- * Next.js proxy (= middleware) — host separation + Supabase SSR cookie refresh + route protection
+ * Next.js proxy (= middleware) — host separation + サーフェス別セッション分離 + route protection
  *
  * Host separation:
  *   console.mb-partners.app → 管理コンソール (console only; dedicated /console/login)
- *   mb-partners.app         → パートナーAPP (app only)
- * Combined with role すみ分け: owner/管理 → console, partner → app.
- * Preview/other hosts (*.vercel.app, localhost) fall back to combined single-host behaviour.
+ *   mb-partners.app         → パートナーAPP / vendor ポータル
+ *
+ * セッション分離（本バッチ）:
+ *   console / app / vendor で別々の Supabase 認証 cookie 名前空間を使う（mb-auth-console / -app / -vendor）。
+ *   同一ブラウザで3サイト同時ログインしても互いに上書き・ログアウトされない。
+ *   x-mb-surface ヘッダを下流（server components / route handlers の createClient）へ伝播し、
+ *   各サーフェスが「自分の cookie だけ」を読む。
  */
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
+import { surfaceFor, cookieNameFor, SURFACE_HEADER } from '@/lib/supabase/surface'
 
 const APP_HOST = 'mb-partners.app'
 const CONSOLE_HOST = 'console.mb-partners.app'
@@ -19,6 +24,13 @@ export async function proxy(request: NextRequest) {
   const isConsoleHost = host === CONSOLE_HOST
   const isAppHost = host === APP_HOST || host === `www.${APP_HOST}`
 
+  // ── サーフェス判定 + 下流へ伝播 ────────────────────────────────────────────
+  const surface = surfaceFor(host, pathname)
+  const name = cookieNameFor(surface)
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set(SURFACE_HEADER, surface)
+  const passthrough = () => NextResponse.next({ request: { headers: requestHeaders } })
+
   const xConsole = (p: string) => NextResponse.redirect(`https://${CONSOLE_HOST}${p}`)
   const xApp = (p: string) => NextResponse.redirect(`https://${APP_HOST}${p}`)
 
@@ -26,23 +38,27 @@ export async function proxy(request: NextRequest) {
   if (isConsoleHost) {
     if (pathname === '/') return NextResponse.redirect(new URL('/console', request.url))
     if (pathname === '/login') return NextResponse.redirect(new URL('/console/login', request.url))
-    if (pathname.startsWith('/app')) return xApp(pathname)   // app belongs to the apex host
+    if (pathname.startsWith('/app') || pathname.startsWith('/vendor')) return xApp(pathname) // apex 所属
   }
   if (isAppHost) {
     if (pathname.startsWith('/console')) return xConsole(pathname) // console belongs to the subdomain
   }
 
-  // Build a passthrough response; setAll will recreate it with refreshed cookies
-  let response = NextResponse.next({ request })
+  // ── API: サーフェスヘッダだけ付与（セッション更新は各ハンドラが自分の cookie で実施）──
+  if (pathname.startsWith('/api')) return passthrough()
+
+  // Build a passthrough response; setAll will recreate it with refreshed cookies（surface cookie のみ）
+  let response = passthrough()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: { name },   // ← サーフェス専用 cookie 名前空間
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.next({ request })
+          response = NextResponse.next({ request: { headers: requestHeaders } })
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )
@@ -52,8 +68,7 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  // B2: role を JWT/app_metadata クレームから読む（あればDB問い合わせ不要＝高速）。
-  // 無ければ従来の profiles 参照へ自動フォールバック（クレーム未設定でも従来どおり動く）。
+  // B2: role を JWT/app_metadata クレームから読む（あればDB問い合わせ不要）。無ければ profiles 参照へ。
   async function roleOf(): Promise<string | null> {
     if (!user) return null
     const claimRole = (user.app_metadata as { role?: string } | undefined)?.role
@@ -67,7 +82,6 @@ export async function proxy(request: NextRequest) {
     if (!user) return NextResponse.redirect(new URL('/login', request.url))
     const role = await roleOf()
     if (role && role !== 'partner') {
-      // owner/管理 → console (subdomain on prod, same host elsewhere)
       return isAppHost ? xConsole('/console') : NextResponse.redirect(new URL('/console', request.url))
     }
     return response
@@ -78,9 +92,14 @@ export async function proxy(request: NextRequest) {
     if (!user) return NextResponse.redirect(new URL('/console/login', request.url))
     const role = await roleOf()
     if (role === 'partner') {
-      // partner → app (apex on prod, same host elsewhere)
       return isConsoleHost ? xApp('/app') : NextResponse.redirect(new URL('/app', request.url))
     }
+    return response
+  }
+
+  // ── /vendor/** — vendor ポータル（ページ側でも role 検証。ここでは未ログインを login へ）──
+  if (pathname.startsWith('/vendor') && !pathname.startsWith('/vendor/login') && !pathname.startsWith('/vendor/accept')) {
+    if (!user) return NextResponse.redirect(new URL('/vendor/login', request.url))
     return response
   }
 
@@ -97,7 +116,9 @@ export const config = {
     '/',
     '/app/:path*',
     '/console/:path*',
+    '/vendor/:path*',
     '/login',
     '/console/login',
+    '/api/:path*',
   ],
 }

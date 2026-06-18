@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" fill="none">
+  <rect width="760" height="420" fill="#FFFFFF"/>
+  <text x="32" y="40" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="800" fill="#0E0E14">関わり方マーク候補（単色フラット線）— 紹介=藍 / 協力=ティール / 直販=中立</text>
+  <text x="32" y="62" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#6E707D">テキストピルを置換。読まずに識別＋小ラベル/tooltipで補助。★=採用。</text>
+
+  <!-- 紹介 row -->
+  <text x="32" y="110" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="800" fill="#4733E6">紹介（つなぐ）</text>
+  <!-- A: handoff arrow (APPLIED) -->
+  <g transform="translate(60,130)">
+    <rect x="-14" y="-14" width="120" height="120" rx="14" fill="#F7F6FE" stroke="#4733E6" stroke-width="1.5"/>
+    <g transform="translate(22,22) scale(2.5)" stroke="#4733E6" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="5" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/><path d="M7.6 12h6.9M12.3 9.3 14.9 12l-2.6 2.7"/>
+    </g>
+    <text x="46" y="118" text-anchor="middle" font-family="Inter" font-size="12" font-weight="800" fill="#4733E6">A ★採用</text>
+    <text x="46" y="134" text-anchor="middle" font-family="Inter" font-size="10" fill="#6E707D">2ノード＋矢印</text>
+  </g>
+  <!-- B: chain link -->
+  <g transform="translate(210,130)">
+    <rect x="-14" y="-14" width="120" height="120" rx="14" fill="#FFFFFF" stroke="#ECECF1" stroke-width="1.5"/>
+    <g transform="translate(22,22) scale(2.5)" stroke="#4733E6" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="8.5" width="9" height="7" rx="3.5"/><rect x="12" y="8.5" width="9" height="7" rx="3.5"/>
+    </g>
+    <text x="46" y="118" text-anchor="middle" font-family="Inter" font-size="12" font-weight="800" fill="#0E0E14">B</text>
+    <text x="46" y="134" text-anchor="middle" font-family="Inter" font-size="10" fill="#6E707D">チェーン</text>
+  </g>
+
+  <!-- 協力 row -->
+  <text x="430" y="110" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="800" fill="#3F7D72">協力（協働）</text>
+  <!-- A: overlapping circles (APPLIED) -->
+  <g transform="translate(458,130)">
+    <rect x="-14" y="-14" width="120" height="120" rx="14" fill="#E5EFEC" stroke="#3F7D72" stroke-width="1.5"/>
+    <g transform="translate(22,22) scale(2.5)" stroke="#3F7D72" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9.5" cy="12" r="5"/><circle cx="14.5" cy="12" r="5"/>
+    </g>
+    <text x="46" y="118" text-anchor="middle" font-family="Inter" font-size="12" font-weight="800" fill="#3F7D72">A ★採用</text>
+    <text x="46" y="134" text-anchor="middle" font-family="Inter" font-size="10" fill="#6E707D">重なる2円</text>
+  </g>
+  <!-- B: cycle arrows -->
+  <g transform="translate(608,130)">
+    <rect x="-14" y="-14" width="120" height="120" rx="14" fill="#FFFFFF" stroke="#ECECF1" stroke-width="1.5"/>
+    <g transform="translate(22,22) scale(2.5)" stroke="#3F7D72" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9a6 6 0 0 1 10-2M18 15a6 6 0 0 1-10 2"/><path d="M16 4v3h-3M8 20v-3h3"/>
+    </g>
+    <text x="46" y="118" text-anchor="middle" font-family="Inter" font-size="12" font-weight="800" fill="#0E0E14">B</text>
+    <text x="46" y="134" text-anchor="middle" font-family="Inter" font-size="10" fill="#6E707D">循環矢印</text>
+  </g>
+
+  <!-- direct + applied pill preview -->
+  <text x="32" y="300" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="800" fill="#6E707D">直販（中立）</text>
+  <g transform="translate(60,318)">
+    <rect x="-14" y="-14" width="120" height="86" rx="14" fill="#F6F6F8" stroke="#ECECF1" stroke-width="1.5"/>
+    <g transform="translate(22,10) scale(2.5)" stroke="#6E707D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6.5" y="6.5" width="11" height="11" rx="3"/>
+    </g>
+    <text x="46" y="84" text-anchor="middle" font-family="Inter" font-size="10" fill="#6E707D">単一角丸</text>
+  </g>
+
+  <text x="210" y="300" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="800" fill="#0E0E14">適用後ピル（icon＋小ラベル）</text>
+  <!-- referral pill -->
+  <g transform="translate(210,318)">
+    <rect width="78" height="24" rx="12" fill="#EDEBFC"/>
+    <g transform="translate(8,6) scale(0.5)" stroke="#4733E6" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/><path d="M7.6 12h6.9M12.3 9.3 14.9 12l-2.6 2.7"/></g>
+    <text x="34" y="16" font-family="Inter" font-size="11" font-weight="700" fill="#4733E6">紹介</text>
+  </g>
+  <!-- cooperation pill -->
+  <g transform="translate(300,318)">
+    <rect width="78" height="24" rx="12" fill="#E5EFEC"/>
+    <g transform="translate(8,6) scale(0.5)" stroke="#3F7D72" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="12" r="5"/><circle cx="14.5" cy="12" r="5"/></g>
+    <text x="34" y="16" font-family="Inter" font-size="11" font-weight="700" fill="#3F7D72">協力</text>
+  </g>
+  <!-- direct pill -->
+  <g transform="translate(390,318)">
+    <rect width="78" height="24" rx="12" fill="#F6F6F8"/>
+    <g transform="translate(8,6) scale(0.5)" stroke="#6E707D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="3"/></g>
+    <text x="34" y="16" font-family="Inter" font-size="11" font-weight="700" fill="#6E707D">直販</text>
+  </g>
+</svg>

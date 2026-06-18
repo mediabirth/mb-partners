@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-// フロンティアの配下招待リンク発行（?f=自分 で自動紐づけ）
+// フロンティアのチーム招待リンク発行（?f=自分 で自動紐づけ）
 export default function FrontierInvite() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -23,7 +23,7 @@ export default function FrontierInvite() {
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
       <b style={{ fontSize: '.82rem', display: 'block', marginBottom: 4 }}>パートナーを招待</b>
-      <p style={{ fontSize: '.64rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>このリンクから登録した方はあなたの配下に自動で紐づきます（12ヶ月間オーバーライド対象）。</p>
+      <p style={{ fontSize: '.64rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>このリンクから登録した方はあなたのチームに自動で紐づきます（12ヶ月間オーバーライド対象）。</p>
       <div className="fld" style={{ marginBottom: 8 }}>
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="招待する方のメール" type="email"
           style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.82rem' }} />

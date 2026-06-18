@@ -96,20 +96,31 @@ export type CreateEventParams = {
 export async function createCalendarEvent(
   access_token: string,
   params: CreateEventParams
-): Promise<string> {
+): Promise<{ id: string; meetingUrl: string | null }> {
+  // 空メールの attendee は Google がエラーにするため除外
+  const attendees = [
+    params.partnerEmail ? { email: params.partnerEmail, displayName: params.partnerName } : null,
+    params.clientEmail  ? { email: params.clientEmail,  displayName: params.clientName  } : null,
+  ].filter(Boolean)
+
+  // Google Meet を自動生成（conferenceData.createRequest + conferenceDataVersion=1）
+  const requestId = `mb-${globalThis.crypto.randomUUID()}`
   const event = {
     summary: params.summary,
     description: params.description ?? '',
     start: { dateTime: params.startAt.toISOString(), timeZone: 'Asia/Tokyo' },
     end:   { dateTime: params.endAt.toISOString(),   timeZone: 'Asia/Tokyo' },
-    attendees: [
-      { email: params.partnerEmail, displayName: params.partnerName },
-      { email: params.clientEmail,  displayName: params.clientName  },
-    ],
+    attendees,
     reminders: { useDefault: true },
+    conferenceData: {
+      createRequest: {
+        requestId,
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    },
   }
 
-  const res = await fetch(`${GCAL_BASE}/calendars/primary/events?sendUpdates=all`, {
+  const res = await fetch(`${GCAL_BASE}/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${access_token}`,
@@ -119,7 +130,11 @@ export async function createCalendarEvent(
   })
   if (!res.ok) throw new Error(`Create event failed: ${await res.text()}`)
   const data = await res.json()
-  return data.id as string
+  const meetingUrl: string | null =
+    data.hangoutLink
+    ?? data.conferenceData?.entryPoints?.find((e: { entryPointType?: string; uri?: string }) => e.entryPointType === 'video')?.uri
+    ?? null
+  return { id: data.id as string, meetingUrl }
 }
 
 // ── 空き枠算出 ──────────────────────────────────────────────────────────────

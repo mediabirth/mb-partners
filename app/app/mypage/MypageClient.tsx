@@ -1,6 +1,8 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import ProfileHeader from '@/components/ui/ProfileHeader'
+import AvatarEditor from '@/components/ui/AvatarEditor'
 
 type Bank = {
   bank_name?: string; branch_name?: string
@@ -88,42 +90,12 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
         </div>
       </div>
 
-      {/* Avatar + name row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 13, margin: '0 20px 16px' }}>
-        <div style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }} onClick={() => fileRef.current?.click()}>
-          <span style={{
-            width: 56, height: 56, borderRadius: '50%',
-            background: avatar ? 'transparent' : avatarColor,
-            backgroundImage: avatar ? `url(${avatar})` : undefined,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.25rem', fontWeight: 700,
-          }}>
-            {!avatar && name[0]}
-          </span>
-          <span style={{
-            position: 'absolute', right: -2, bottom: -2,
-            width: 20, height: 20, borderRadius: '50%',
-            background: '#fff', border: '1px solid var(--line)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 1px 4px rgba(0,0,0,.15)',
-          }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--txt)" strokeWidth="2">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          </span>
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatar} />
-        <div>
-          <b style={{ fontSize: '.95rem' }}>{name}</b>
-          <div style={{ marginTop: 4 }}>
-            <span className="chip chip-referral" style={{ fontFamily: 'Inter', letterSpacing: '.08em' }}>
-              {partnerCode}
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* F-4：プロフィールヘッダー（3サーフェス共通）＋本人アバター編集（アップロード/イニシャル）。 */}
+      <ProfileHeader
+        avatar={<AvatarEditor name={name} color={avatarColor} src={avatar} size={56} endpoint="/api/app/avatar" />}
+        name={name}
+        badges={<span className="chip chip-referral" style={{ fontFamily: 'Inter', letterSpacing: '.08em' }}>{partnerCode}</span>}
+      />
 
       {!editing ? (
         /* View mode */
@@ -159,7 +131,6 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
           <div style={{ margin: '4px 20px' }}>
             <button onClick={() => setEditing(true)} className="btn btn-p" style={{ width: '100%' }}>
               編集する
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }}/>
             </button>
           </div>
         </>
@@ -199,7 +170,6 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
 
             <button onClick={save} className="btn btn-p" style={{ width: '100%', marginTop: 4 }}>
               保存する
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }}/>
             </button>
             <button onClick={() => setEditing(false)} className="btn btn-g" style={{ width: '100%' }}>
               キャンセル

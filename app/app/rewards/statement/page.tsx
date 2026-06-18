@@ -49,7 +49,11 @@ export default async function StatementPage() {
       deals: mDeals.map(d => ({
         date: new Date(d.fixed_month ?? d.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' }),
         name: `${d.customer_name} / ${d.services?.name ?? ''}`,
-        channel: d.channel === 'referral' ? '紹介' : '営業',
+        // 区分は現行タクソノミ：関わり方（紹介/協力/直販）。override行は「統括報酬」。
+        channel: d.channel === 'referral' ? '紹介'
+          : d.channel === 'cooperation' ? '協力'
+          : d.channel === 'override' ? '統括報酬'
+          : '直販',
         amount: d.amount,
       })),
       gross, wh, net, isPaid,

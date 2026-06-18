@@ -22,7 +22,7 @@ export async function getDealWithEvents(supabase: SupabaseClient, dealId: string
   const [dealRes, eventsRes] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, customer_name, channel, source, status, amount, fixed_month, consent, meeting_at, created_at, internal_memo, service_id, menu_id, reward_snapshot, services(id, name, subtitle, icon, color), service_menus(id, name, ref_type, ref_value, ref_trigger, ref_months)')
+      .select('id, customer_name, channel, source, status, amount, fixed_month, consent, meeting_at, created_at, internal_memo, service_id, menu_id, reward_snapshot, services(id, name, subtitle, icon, color, logo_path), service_menus(id, name, ref_type, ref_value, ref_trigger, ref_months)')
       .eq('id', dealId)
       .eq('partner_id', partnerId)
       .single(),
@@ -93,10 +93,12 @@ export async function getAllDealsWithEvents(supabase: SupabaseClient, dealId: st
 }
 
 export async function getPartnersWithProfiles(supabase: SupabaseClient) {
-  const { data } = await supabase
-    .from('partners')
-    .select('id, code, status, tax_type, created_at, kyc_verified_at, profiles(name, email, color, avatar_url, role)')
-    .order('created_at', { ascending: false })
+  const sel = 'id, code, status, tax_type, created_at, kyc_verified_at, is_frontier, frontier_id, profiles(name, email, color, avatar_url, role)'
+  // 直営業基盤：MB直営(is_system)はパートナー一覧から除外。is_system列が無い(DDL前)は従来どおり全件にフォールバック。
+  const filtered = await supabase.from('partners').select(sel).eq('is_system', false).order('created_at', { ascending: false })
+  const data = filtered.error
+    ? (await supabase.from('partners').select(sel).order('created_at', { ascending: false })).data
+    : filtered.data
   return (data ?? []) as unknown as PartnerRow[]
 }
 
@@ -145,14 +147,15 @@ export async function getPartnerWithDeals(supabase: SupabaseClient, userId: stri
 
 // Optimized: events by userId via double inner join (no need for partnerId → enables full parallelism)
 export async function getRecentEventsByUserId(supabase: SupabaseClient, userId: string) {
+  // ステータスタグを常に出せるよう、各イベントに案件の状態・顧客・サービスを同梱（読取のみ・ロジック不変）。
   const { data } = await supabase
     .from('deal_events')
-    .select('id, body, created_at, deal_id, deals!inner(partners!inner(profile_id))')
+    .select('id, body, created_at, deal_id, deals!inner(status, customer_name, customer_type, company_name, contact_name, channel, services(name, icon, color, logo_path), partners!inner(profile_id))')
     .eq('visible_to_partner', true)
     .eq('deals.partners.profile_id', userId)
     .order('created_at', { ascending: false })
     .limit(8)
-  return (data ?? []).map(({ id, body, created_at, deal_id }: any) => ({ id, body, created_at, deal_id }))
+  return (data ?? []).map(({ id, body, created_at, deal_id, deals }: any) => ({ id, body, created_at, deal_id, deal: deals }))
 }
 
 // Optimized: events via inner join on partner_id (avoids needing dealIds first)

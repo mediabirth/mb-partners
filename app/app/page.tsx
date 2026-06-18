@@ -4,12 +4,10 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
+import StatusPill from '@/components/ui/StatusPill'
+import { dealStatus } from '@/lib/status'
 import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
-
-const STATUS_LABEL: Record<string, string> = {
-  received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
-}
 
 export const runtime = 'edge'
 
@@ -51,6 +49,29 @@ export default async function AppPage() {
     .filter(d => d.meeting_at && new Date(d.meeting_at).getTime() >= now.getTime())
     .sort((a, b) => new Date(a.meeting_at!).getTime() - new Date(b.meeting_at!).getTime())
 
+  // P2: 進行中の協力案件で未完了の「手動」タスク（やることに控えめ表示・自動タスクは出さない）。best-effort。
+  const coopActiveIds = active.filter(d => d.channel === 'cooperation').map(d => d.id)
+  // 対象（案件）ごとに「次にやるべき1件」へ集約。複数タスクは残数バッジで表現（データ/ゲートは無改修＝表示集約のみ）。
+  let pendingTasks: { id: string; deal_id: string; label: string; remaining: number }[] = []
+  if (coopActiveIds.length) {
+    try {
+      const { createServiceRoleClient } = await import('@/lib/supabase/server')
+      const admin = await createServiceRoleClient()
+      const { data } = await admin
+        .from('deal_tasks')
+        .select('id, deal_id, label, kind, done, sort')
+        .in('deal_id', coopActiveIds).eq('kind', 'manual').eq('done', false)
+        .order('sort')
+      const byDeal = new Map<string, { id: string; deal_id: string; label: string; remaining: number }>()
+      for (const t of (data ?? []) as { id: string; deal_id: string; label: string }[]) {
+        const ex = byDeal.get(t.deal_id)
+        if (ex) ex.remaining++                                  // 同一案件の追加タスクは残数に集約
+        else byDeal.set(t.deal_id, { id: t.id, deal_id: t.deal_id, label: t.label, remaining: 0 })
+      }
+      pendingTasks = [...byDeal.values()].slice(0, 5)
+    } catch { /* best-effort（テーブル未作成なら空） */ }
+  }
+
   // ⑨ 動機づけ: 次回振込までの進捗＋やさしい励まし
   const daysToPay   = Math.max(0, Math.ceil((nextPayDate.getTime() - now.getTime()) / 86_400_000))
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
@@ -63,9 +84,6 @@ export default async function AppPage() {
       : active.length > 0
         ? 'いい調子です。進行中の案件が成約すると報酬になります。'
         : '次の紹介で、新しい報酬が生まれます。'
-
-  // Todo: deals waiting for partner action (received status)
-  const todos = deals.filter(d => d.status === 'received').slice(0, 3)
 
   // Recent feed
   const dealMap = Object.fromEntries(deals.map(d => [d.id, d]))
@@ -115,10 +133,19 @@ export default async function AppPage() {
       {/* R2-C: フロンティア導線（is_frontier のみ） */}
       {(partner as { is_frontier?: boolean }).is_frontier && (
         <Link href="/app/frontier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 20px 0', background: 'linear-gradient(120deg,var(--blue-dk),#2a1fb0)', color: '#fff', borderRadius: 14, padding: '14px 16px', textDecoration: 'none' }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>👑</span>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {/* Hub マーク（単色フラット・2×2グリッドの世界観） */}
+            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+              <rect x="19" y="19" width="10" height="10" rx="3" fill="#fff"/>
+              <rect x="6"  y="6"  width="8" height="8" rx="2.5" stroke="#fff" strokeWidth="2.4"/>
+              <rect x="34" y="6"  width="8" height="8" rx="2.5" stroke="#fff" strokeWidth="2.4"/>
+              <rect x="6"  y="34" width="8" height="8" rx="2.5" stroke="#fff" strokeWidth="2.4"/>
+              <rect x="34" y="34" width="8" height="8" rx="2.5" stroke="#fff" strokeWidth="2.4"/>
+            </svg>
+          </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '.82rem', fontWeight: 800 }}>フロンティア ダッシュボード</div>
-            <div style={{ fontSize: '.62rem', opacity: .85, marginTop: 1 }}>配下のオーバーライドと招待を管理</div>
+            <div style={{ fontSize: '.62rem', opacity: .85, marginTop: 1 }}>あなたのチームのオーバーライドと招待を管理</div>
           </div>
           <span style={{ fontSize: '1rem', opacity: .9 }}>›</span>
         </Link>
@@ -161,10 +188,10 @@ export default async function AppPage() {
       </div>
       )}
 
-      {/* Todos */}
+      {/* やること：今後の商談スケジュールのみ（受付済みは「最近の動き」に集約） */}
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>やること</h2>
+          <h2 className="ty-h2">やること</h2>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
           {/* C2③ 商談予定（日時順） */}
@@ -186,39 +213,45 @@ export default async function AppPage() {
               <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
             </Link>
           ))}
-          {todos.length === 0 && upcomingMeetings.length === 0 ? (
+
+          {/* P2: 進行中の協力案件で未完了の手動タスク（控えめ・報酬額は出さない） */}
+          {pendingTasks.map(t => {
+            const d = dealMap[t.deal_id]
+            return (
+              <Link key={`task-${t.id}`} href={`/app/cases/${t.deal_id}`} className="row-hover lift" style={{
+                display: 'flex', gap: 11, padding: '13px 14px', borderBottom: '1px solid var(--line)', textDecoration: 'none', alignItems: 'center',
+              }}>
+                <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-bg)', color: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.label}
+                  </div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
+                    {d ? customerHonorific(d) : '協力案件'}{d?.services?.name ? ` · ${d.services.name}` : ''}
+                  </div>
+                </div>
+                {t.remaining > 0 && (
+                  <span style={{ flexShrink: 0, fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 8px' }}>他{t.remaining}件</span>
+                )}
+                <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
+              </Link>
+            )
+          })}
+
+          {upcomingMeetings.length === 0 && pendingTasks.length === 0 && (
             <p style={{ padding: '16px 14px', fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>
-              現在、対応待ちの案件はありません。
+              今後の商談予定はありません。
             </p>
-          ) : todos.map(d => (
-            <Link key={d.id} href={`/app/cases/${d.id}`} className="row-hover lift" style={{
-              display: 'flex', gap: 11, padding: '13px 14px',
-              borderBottom: '1px solid var(--line)', textDecoration: 'none',
-              alignItems: 'center',
-            }}>
-              <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--amber-bg)', color: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
-                </svg>
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {customerHonorific(d)} — 受付済み
-                </div>
-                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
-                  {d.services?.name} · {new Date(d.created_at).toLocaleDateString('ja')}
-                </div>
-              </div>
-              <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
-            </Link>
-          ))}
+          )}
         </div>
       </div>
 
       {/* Recent activity */}
       <div style={{ padding: '22px 20px 6px', paddingTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>最近の動き</h2>
+          <h2 className="ty-h2">最近の動き</h2>
           <Link href="/app/cases" style={{ fontSize: '.66rem', color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>案件へ →</Link>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
@@ -228,24 +261,21 @@ export default async function AppPage() {
               「紹介する」ボタンから案件を登録してみましょう。
             </p>
           ) : recentEvents.slice(0, 5).map(e => {
-            const deal = dealMap[e.deal_id]
+            const deal = (e as { deal?: typeof dealMap[string] }).deal ?? dealMap[e.deal_id]
             return (
+              /* ② アイコン＋名前＋状態のみ・1行（長文/冗長な日時は排除） */
               <Link key={e.id} href={`/app/cases/${e.deal_id}`} className="row-hover lift" style={{
                 display: 'flex', gap: 11, padding: '12px 14px',
                 borderBottom: '1px solid var(--line)', textDecoration: 'none',
                 alignItems: 'center',
               }}>
-                {deal?.services && (
-                  <ServiceAvatar logoPath={deal.services.logo_path} icon={deal.services.icon} color={deal.services.color} name={deal.services.name} size={30} />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.72rem', color: 'var(--txt)', lineHeight: 1.55, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    <b>{deal ? customerHonorific(deal) : ''}</b> — {e.body}
-                  </div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 2 }}>
-                    {new Date(e.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </div>
+                {deal?.services
+                  ? <ServiceAvatar logoPath={deal.services.logo_path} icon={deal.services.icon} color={deal.services.color} name={deal.services.name} size={30} />
+                  : deal && <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
+                <div style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {deal ? customerHonorific(deal) : ''}
                 </div>
+                {deal && <StatusPill size="sm" {...dealStatus(deal.status)} />}
                 <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
               </Link>
             )

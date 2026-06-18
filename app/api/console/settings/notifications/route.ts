@@ -41,5 +41,14 @@ export async function PUT(req: NextRequest) {
   const svc = await createServiceRoleClient()
   const { data, error } = await svc.from('notification_settings').upsert(patch, { onConflict: 'id' }).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ settings: data })
+
+  // QR: 月間目標（運営取り分）。monthly_target 列が未追加(DDL前)でも通知設定保存を壊さないよう分離した best-effort。
+  let settings = data as Record<string, unknown>
+  if ('monthly_target' in body) {
+    const raw = body.monthly_target
+    const val = raw === null || raw === '' ? null : Math.max(0, Math.round(Number(raw)) || 0)
+    const { data: upd, error: tErr } = await svc.from('notification_settings').update({ monthly_target: val }).eq('id', 1).select('*').single()
+    if (!tErr && upd) settings = upd as Record<string, unknown>
+  }
+  return NextResponse.json({ settings })
 }

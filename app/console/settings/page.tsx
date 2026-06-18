@@ -3,18 +3,12 @@ import { useState, useEffect } from 'react'
 import ConsoleNav from '@/components/ConsoleNav'
 import LogoutButton from '@/components/LogoutButton'
 import ConsoleCalendarCard from '@/components/ConsoleCalendarCard'
+import MembersSection from './MembersSection'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type AdminUser = { id: string; name: string; email: string; role: string; color: string }
 type AuditLog  = { id: string; actor_name: string; category: string; target: string; action: string; created_at: string }
 
 const AUDIT_CATEGORIES = ['', '案件', '支払', '配信', '権限', '問い合わせ'] as const
-
-const ROLE_LABELS: Record<string, string> = {
-  owner: 'オーナー', manager: 'マネージャー', staff: 'スタッフ',
-  admin: '管理者', viewer: '閲覧者',
-}
-const PRIVILEGED_ROLES = ['owner', 'manager', 'admin']
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -67,24 +61,12 @@ export default function SettingsPage() {
   const [evtNewDeal, setEvtNewDeal]           = useState(true)
   const [evtStatus, setEvtStatus]             = useState(true)
   const [evtPayout, setEvtPayout]             = useState(true)
+  const [monthlyTarget, setMonthlyTarget]     = useState('')   // QR: 月間目標（運営取り分）
   const [notifSaving, setNotifSaving]         = useState(false)
-  const [me, setMe]                           = useState<AdminUser | null>(null)
-  const [inviteEmail, setInviteEmail]         = useState('')
-  const [inviteRole, setInviteRole]           = useState<'admin' | 'viewer'>('viewer')
   const [toast, setToast]                     = useState('')
   const [auditLogs, setAuditLogs]             = useState<AuditLog[]>([])
   const [auditCategory, setAuditCategory]     = useState('')
   const [auditLoading, setAuditLoading]       = useState(true)
-
-  // Current logged-in admin — replaces the old ADMIN_MOCK placeholder.
-  useEffect(() => {
-    fetch('/api/console/me')
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (d?.id) setMe({ id: d.id, name: d.name ?? '', email: d.email ?? '', role: d.role ?? '', color: d.color ?? '#4733E6' }) })
-      .catch(() => {})
-  }, [])
-
-  const admins: AdminUser[] = me ? [me] : []
 
   // ⑤ Load persisted notification settings (Slack ON/OFF + per-event).
   useEffect(() => {
@@ -98,6 +80,7 @@ export default function SettingsPage() {
         setEvtNewDeal(s.notify_new_deal ?? true)
         setEvtStatus(s.notify_status_change ?? true)
         setEvtPayout(s.notify_payout ?? true)
+        if (s.monthly_target != null) setMonthlyTarget(String(s.monthly_target))
       })
       .catch(() => {})
   }, [])
@@ -146,6 +129,7 @@ export default function SettingsPage() {
           notify_new_deal: evtNewDeal,
           notify_status_change: evtStatus,
           notify_payout: evtPayout,
+          monthly_target: monthlyTarget.trim() === '' ? null : Number(monthlyTarget.replace(/[,，\s]/g, '')),
         }),
       })
       showToast(res.ok ? '通知設定を保存しました' : '保存に失敗しました')
@@ -155,13 +139,6 @@ export default function SettingsPage() {
       setNotifSaving(false)
     }
   }
-  function inviteAdmin(e: React.FormEvent) {
-    e.preventDefault()
-    if (!inviteEmail) return
-    showToast(`招待メールを送信しました: ${inviteEmail}`)
-    setInviteEmail('')
-  }
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
@@ -174,57 +151,33 @@ export default function SettingsPage() {
 
         <div className="stagger" style={{ padding: '30px 28px', maxWidth: 720 }}>
 
-          {/* 支払サイクルは「月末締め翌月末払い」固定（UIは撤去） */}
-
-          {/* 管理者管理 */}
-          <SectionCard title="管理者管理">
-            <div style={{ marginBottom: 16 }}>
-              {admins.length === 0 ? (
-                <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>読み込み中…</p>
-              ) : admins.map((a, i) => {
-                const privileged = PRIVILEGED_ROLES.includes(a.role)
-                const isMe = me?.id === a.id
-                return (
-                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < admins.length - 1 ? '1px solid #F2F2F6' : undefined }}>
-                    <span style={{ width: 32, height: 32, borderRadius: '50%', background: a.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem', fontWeight: 700, flexShrink: 0 }}>{a.name ? a.name[0] : ''}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {a.name}
-                        {isMe && (
-                          <span style={{ fontSize: '.55rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, background: 'var(--blue-bg2)', color: 'var(--blue)' }}>あなた</span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{a.email}</div>
-                    </div>
-                    <span style={{ fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: privileged ? 'var(--blue-bg)' : 'var(--bg2)', color: privileged ? 'var(--blue)' : 'var(--muted2)' }}>
-                      {ROLE_LABELS[a.role] ?? a.role}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <form onSubmit={inviteAdmin} style={{ display: 'flex', gap: 8 }}>
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
-                placeholder="招待するメールアドレス"
-                style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.8rem' }}
-              />
-              <select
-                value={inviteRole}
-                onChange={e => setInviteRole(e.target.value as 'admin' | 'viewer')}
-                style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.8rem', background: '#fff' }}
-              >
-                <option value="admin">管理者</option>
-                <option value="viewer">閲覧者</option>
-              </select>
-              <button type="submit" className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 14px', flexShrink: 0 }}>招待</button>
-            </form>
+          {/* MBメンバー（内部・案件のMB担当）— サイドバーから統合 */}
+          <SectionCard title="MBメンバー（管理者）">
+            <MembersSection />
           </SectionCard>
+
+          {/* 支払サイクルは「月末締め翌月末払い」固定（UIは撤去） */}
+          {/* BR-C2: 「管理者管理」は MBメンバー（管理者）と同一対象の二重管理だったため統合・撤去。 */}
 
           {/* 3. カレンダー連携（②③ MB運営カレンダー） */}
           <ConsoleCalendarCard />
+
+          {/* QR: ダッシュボード月間目標 */}
+          <SectionCard title="ダッシュボード">
+            <RowItem label="月間目標（運営取り分）" desc="ダッシュボードのヒーローに進捗バーを表示します。未設定なら前月比のみ。">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'var(--muted2)', fontSize: '.8rem' }}>¥</span>
+                <input
+                  inputMode="numeric"
+                  value={monthlyTarget}
+                  onChange={e => setMonthlyTarget(e.target.value)}
+                  placeholder="例: 500000"
+                  style={{ width: 140, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'Inter', fontSize: '.82rem', textAlign: 'right' }}
+                />
+              </div>
+            </RowItem>
+            <button onClick={saveNotif} disabled={notifSaving} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
+          </SectionCard>
 
           {/* 4. 通知設定 */}
           <SectionCard title="通知設定">

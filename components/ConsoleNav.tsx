@@ -75,7 +75,8 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
   const { identity, badges, ready } = useConsoleSession()
   const acctName  = identity?.name  ?? ''
   const acctColor = identity?.color ?? '#4733E6'
-  const acctEmail = identity?.email ?? ''
+  const ROLE_JP: Record<string, string> = { owner: 'オーナー', manager: 'マネージャー', admin: '管理者', viewer: '閲覧者' }
+  const acctRole  = identity?.role ? (ROLE_JP[identity.role] ?? identity.role) : ''
 
   return (
     <>
@@ -156,14 +157,12 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
             </>
           ) : (
             <>
-              <span style={{ width: 28, height: 28, borderRadius: '50%', background: acctColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.66rem', fontWeight: 700, flexShrink: 0 }}>
-                {acctName ? acctName[0] : ''}
+              <span style={{ width: 30, height: 30, borderRadius: '50%', background: acctColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem', fontWeight: 700, flexShrink: 0 }}>
+                {acctName ? acctName[0] : '—'}
               </span>
-              <span style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ display: 'block', fontSize: '.74rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctName || '—'}</span>
-                {acctEmail && (
-                  <span style={{ display: 'block', fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctEmail}</span>
-                )}
+              <span style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', lineHeight: 1.25 }}>
+                <span style={{ fontSize: '.74rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctName || '—'}</span>
+                <span style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctRole || 'メンバー'}</span>
               </span>
             </>
           )}

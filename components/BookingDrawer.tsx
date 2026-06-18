@@ -10,13 +10,16 @@ type Day = { date: string; label: string; weekday?: string; count?: number; slot
  * 確定で /api/deals/[id]/meeting に保存（meeting_at / calendar_event_id）。
  * 外部遷移・新規タブは使わない。
  */
-export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed }: {
+export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail, onClose, onConfirmed }: {
   dealId?: string | null
   // 予約確定の瞬間に deal を作成して dealId を返す（協力の自分で予約用）
   createDeal?: () => Promise<string | null>
+  // 顧客メール（任意・確認/リマインド送付用）。フォーム入力があれば prefill。
+  defaultCustomerEmail?: string | null
   onClose: () => void
   onConfirmed?: (startAt: string) => void
 }) {
+  const [custEmail, setCustEmail] = useState(defaultCustomerEmail ?? '')
   const [days, setDays]       = useState<Day[]>([])
   const [selDate, setSelDate] = useState<string | null>(null)
   const [selSlot, setSelSlot] = useState<Slot | null>(null)
@@ -52,7 +55,7 @@ export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed
       if (!id) { setError('対象の案件が見つかりません'); return }
       const res = await fetch(`/api/deals/${id}/meeting`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ start_at: slot.start, end_at: slot.end }),
+        body: JSON.stringify({ start_at: slot.start, end_at: slot.end, customer_email: custEmail.trim() || undefined }),
       })
       if (!res.ok) { setError('保存に失敗しました'); return }
       setDoneAt(slot.start)
@@ -130,6 +133,16 @@ export default function BookingDrawer({ dealId, createDeal, onClose, onConfirmed
                   </button>
                 )
               })}
+            </div>
+            {/* 顧客メール（任意）— 入力すると確認・リマインドをお客様にも送信。未入力ならスキップ。 */}
+            <div style={{ marginTop: 14 }}>
+              <label style={{ display: 'block', fontSize: '.64rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>顧客メールアドレス（任意）</label>
+              <input
+                type="email" value={custEmail} onChange={e => setCustEmail(e.target.value)}
+                placeholder="customer@example.com" autoComplete="off"
+                style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.82rem' }}
+              />
+              <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '4px 2px 0', lineHeight: 1.5 }}>入力すると、予約確認・前日/直前のリマインドをお客様にもお送りします。</p>
             </div>
             {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 12 }}>{error}</p>}
             {/* 確定 */}

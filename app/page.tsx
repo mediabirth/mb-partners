@@ -23,5 +23,8 @@ export default async function RootPage() {
     redirect('/app')
   }
 
+  // C-1: 業務委託先（vendor）は専用ポータルへ。console/app には入れない。
+  if (profile?.role === 'vendor') redirect('/vendor')
+
   redirect('/console')
 }

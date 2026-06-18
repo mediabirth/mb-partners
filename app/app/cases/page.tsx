@@ -3,9 +3,11 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
+import ServiceAvatar from '@/components/ServiceAvatar'
+import ChannelMark from '@/components/ChannelMark'
 
 const STATUS_LABEL: Record<string, string> = {
-  received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
+  received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済', lost: '不成立',
 }
 // ⑥ 段階ステッパー（4段）
 const RAIL_STEPS = ['受付', '対応中', '成約', '支払済']
@@ -54,26 +56,36 @@ export default async function CasesPage({
   const result = await getPartnerWithDeals(supabase, user.id)
   if (!result) redirect('/login')
   const { partner, deals } = result
-  const { f = 'all' } = await searchParams
+  const { f = 'active' } = await searchParams
 
+  // 3タブ：進行中(受付+対応中) / 完了(成約+支払済) / 不成立(lost)。不成立は進行中から除外。
   const filtered = deals.filter(d => {
-    if (f === 'active') return ['received', 'in_progress'].includes(d.status)
-    if (f === 'done')   return ['confirmed', 'paid'].includes(d.status)
-    return true
+    if (f === 'done') return ['confirmed', 'paid'].includes(d.status)
+    if (f === 'lost') return d.status === 'lost'
+    return ['received', 'in_progress'].includes(d.status)  // active（既定）
   })
+
+  // L2: 明細件数（"+N"用）。service role で安全に集計（best-effort・テーブル未作成なら空）。
+  const itemCounts: Record<string, number> = {}
+  try {
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const admin = await createServiceRoleClient()
+    const { data } = await admin.from('deal_items').select('deal_id').in('deal_id', filtered.map(d => d.id))
+    for (const r of (data ?? []) as { deal_id: string }[]) itemCounts[r.deal_id] = (itemCounts[r.deal_id] ?? 0) + 1
+  } catch { /* best-effort */ }
 
   return (
     <div className="page-anim">
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>案件</h2>
+          <h2 className="ty-h2">案件</h2>
           <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{filtered.length}件</span>
         </div>
       </div>
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 4, margin: '0 20px 16px' }}>
-        {[['all', 'すべて'], ['active', '進行中'], ['done', '完了']].map(([val, lbl]) => (
+        {[['active', '進行中'], ['done', '完了'], ['lost', '不成立']].map(([val, lbl]) => (
           <Link key={val} href={`/app/cases?f=${val}`} style={{
             flex: 1, textAlign: 'center', textDecoration: 'none',
             padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
@@ -115,25 +127,40 @@ export default async function CasesPage({
                     padding: '14px 15px 13px', marginBottom: 10,
                   }}
                 >
-                  {/* Line 1 — 誰を/どの企業を + channel chip (left), 報酬 (right, concise) */}
+                  {/* Line 1 — ⑤サービスアバター + お客様名 + ⑥関わり方マーク (left), 報酬 (right, concise) */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                      <b style={{ fontSize: '.9rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+                      {d.services
+                        ? <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={30} />
+                        : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
+                      {/* お客様名：中字・縮小 */}
+                      <b style={{ fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                         {customerHonorific(d)}
                       </b>
-                      <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`} style={{ flexShrink: 0 }}>
-                        {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '直販'}
-                      </span>
+                      {!d.services && (
+                        <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
+                      )}
+                      {(itemCounts[d.id] ?? 0) > 1 && (
+                        <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
+                      )}
+                      <span style={{ flexShrink: 0 }}><ChannelMark channel={d.channel} /></span>
                     </div>
-                    {d.amount > 0 && (
-                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.96rem', fontWeight: 800, color: d.status === 'paid' ? 'var(--green)' : 'var(--txt)', letterSpacing: '-.012em' }}>
+                    {d.status === 'lost' ? (
+                      <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
+                    ) : d.amount > 0 && (
+                      /* 金額：副次情報として縮小＋軽色 */
+                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.8rem', fontWeight: 700, color: d.status === 'paid' ? 'var(--green)' : 'var(--muted2)', letterSpacing: '-.012em' }}>
                         ¥{d.amount.toLocaleString()}
                       </span>
                     )}
                   </div>
 
-                  {/* 段階ステッパー */}
-                  <StatusStepper step={step} />
+                  {/* 段階ステッパー（不成立は見送りメッセージ） */}
+                  {d.status === 'lost' ? (
+                    <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 10 }}>この案件は不成立（見送り）となりました。</p>
+                  ) : (
+                    <StatusStepper step={step} />
+                  )}
                 </Link>
               )
             })}

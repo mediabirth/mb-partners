@@ -22,7 +22,7 @@ export async function notifySlack(text: string): Promise<void> {
       body: JSON.stringify({
         text,
         username: 'MB Partners',
-        icon_url: 'https://mb-partners.app/icon-192.png',
+        icon_url: 'https://mb-partners.app/icon-512.png',
       }),
     })
   } catch {

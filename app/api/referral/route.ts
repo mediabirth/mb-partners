@@ -64,6 +64,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create deal' }, { status: 500 })
     }
 
+    // L1: 明細1行を同時生成（best-effort・外見不変。deals.amount = SUM(deal_items.amount) を維持）。
+    try {
+      const { createDealItem, dealItemKind } = await import('@/lib/deal-items')
+      await createDealItem(supabase, {
+        deal_id: deal.id, service_id: link.service_id, menu_id: menu?.id ?? null,
+        kind: dealItemKind('referral', menu as { ref_type?: string } | null), amount, base_amount: null,
+      })
+    } catch { /* best-effort */ }
+
     // Get partner profile for notifications
     const { data: partner } = await supabase
       .from('partners')
@@ -97,6 +106,15 @@ export async function POST(req: NextRequest) {
     }
 
     await notifySlackEvent('new_deal', `🆕 新規案件（紹介）: ${customerName} — ${service?.name ?? link.service_id}（${partner?.code ?? ''}）`)
+
+    // Batch B ①: 運営メール（Slackは既存のnew_dealゲート送信を流用・二重送信しない）。best-effort。
+    try {
+      const { sendOpsEmail } = await import('@/lib/notify')
+      await sendOpsEmail(
+        `【MB Partners】新規案件（紹介）: ${customerName}`,
+        `新規案件が登録されました。\n・関わり方：紹介\n・お客さま：${customerName}\n・サービス：${service?.name ?? link.service_id}\n・パートナー：${partner?.code ?? '—'}`,
+      )
+    } catch { /* best-effort */ }
 
     // Audit log
     await supabase.from('audit_logs').insert({

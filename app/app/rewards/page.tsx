@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
+import ChannelMark from '@/components/ChannelMark'
 import CountUp from '@/components/CountUp'
+import RewardHero from '@/components/ui/RewardHero'
 import BankChangeSection from './BankChangeSection'
 import { withholdingTax } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
@@ -41,31 +43,16 @@ export default async function RewardsPage() {
 
   return (
     <div>
-      {/* Summary card (dark) */}
-      <div style={{
-        margin: '18px 20px 0',
-        background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)',
-        borderRadius: 18, padding: '24px 22px 18px', color: '#fff',
-      }}>
-        <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>
-          {new Date().getFullYear()} Total
-        </div>
-        <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.5rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.022em', lineHeight: 1.05 }}>
-          <span style={{ fontSize: '1.04rem', fontWeight: 600, opacity: .78, marginRight: 4 }}>¥</span>
-          <CountUp value={totalGross} />
-        </div>
-        <div style={{ display: 'flex', gap: 18, marginTop: 15, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)' }}>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>
-            支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}><CountUp value={paidGross} format="yen" /></b>
-          </div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>
-            未払(確定)<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}><CountUp value={confirmedGross} format="yen" /></b>
-          </div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>
-            成約数<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}><CountUp value={totalDeals} />件</b>
-          </div>
-        </div>
-      </div>
+      {/* F-4：報酬ヒーロー（vendor と同一の見え方）。計算は紹介報酬のまま・表示のみ統一。 */}
+      <RewardHero
+        label={`報酬 ${new Date().getFullYear()} 合計`}
+        amount={totalGross}
+        items={[
+          { key: 'paid', label: '支払済', value: paidGross, format: 'yen' },
+          { key: 'confirmed', label: '未払(確定)', value: confirmedGross, format: 'yen' },
+          { key: 'count', label: '成約数', value: totalDeals, suffix: '件' },
+        ]}
+      />
 
       {/* Statement buttons */}
       <div style={{ display: 'flex', gap: 8, margin: '14px 20px 0' }}>
@@ -108,12 +95,10 @@ export default async function RewardsPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontWeight: 600 }}>{customerHonorific(d)}</span>
-                      <span className={`chip ${d.channel === 'cooperation' ? 'chip-cooperation' : d.channel === 'referral' ? 'chip-referral' : 'chip-direct'}`}>
-                        {d.channel === 'referral' ? '紹介' : d.channel === 'cooperation' ? '協力' : '営業'}
-                      </span>
+                      <ChannelMark channel={d.channel} />
                     </div>
                     <div style={{ fontSize: '.59rem', color: 'var(--muted)', marginTop: 1 }}>
-                      {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約・確定' : d.status === 'in_progress' ? '対応中' : '受付'}
+                      {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約・確定' : d.status === 'lost' ? '不成立' : d.status === 'in_progress' ? '対応中' : '受付'}
                     </div>
                   </div>
                 </div>

@@ -8,7 +8,7 @@ import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
-type Step = 'service' | 'menu' | 'form'
+type Step = 'service' | 'menu' | 'form' | 'consult'
 
 function fmtRefAmount(m: MenuRow) {
   if (m.ref_type === 'fixed') return `¥${Number(m.ref_value).toLocaleString()}`
@@ -54,8 +54,12 @@ export default function ReferPage() {
   const [companyName, setCompanyName]     = useState('')
   const [contactName, setContactName]     = useState('')
   const [phone, setPhone]                 = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   const [memo, setMemo]                   = useState('')
   const [consent, setConsent]             = useState(false)
+  // L3: 相談（サービス未定）起票用
+  const [consultNote, setConsultNote]     = useState('')
+  const [consultCoop, setConsultCoop]     = useState(false)
   const [token, setToken]                 = useState<string | null>(null)
   const [partnerCode, setPartnerCode]     = useState<string | null>(null)
   const [copied, setCopied]               = useState(false)
@@ -141,6 +145,7 @@ export default function ReferPage() {
     } else {
       fd.set('customerName', customerName)
     }
+    fd.set('customerEmail', customerEmail.trim()) // 任意：確認/リマインドの顧客送付に使用
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -164,6 +169,29 @@ export default function ReferPage() {
     })
   }
 
+  // L3: 相談（サービス未定）の起票
+  function handleConsultSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    const ce = customerError(); if (ce) { setError(ce); return }
+    if (!consent) { setError('顧客の同意確認が必要です'); return }
+    const fd = new FormData()
+    fd.set('serviceId', '')
+    fd.set('menuId', '')
+    applyCustomerFields(fd)
+    fd.set('phone', phone)
+    fd.set('memo', consultNote)
+    fd.set('channel', consultCoop ? 'cooperation' : 'referral')
+    fd.set('isConsultation', '1')
+    startTransition(async () => {
+      try {
+        const res = await submitPartnerReferral(fd)
+        if (res?.dealId) setDealId(res.dealId)
+        setDone(true)
+      } catch (err: any) { setError(err.message ?? '起票に失敗しました') }
+    })
+  }
+
   // 協力「自分で予約」: 予約確定の瞬間に協力deal を作成して dealId を返す（同意内包）
   async function coopCreateDeal(): Promise<string | null> {
     const ce = customerError(); if (ce) { setError(ce); return null }
@@ -181,7 +209,8 @@ export default function ReferPage() {
     setDone(false); setStep('service'); setShowSelfBook(false)
     setSelSvc(null); setSelMenu(null); setCoopMode(false)
     setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName('')
-    setPhone(''); setMemo(''); setConsent(false); setError('')
+    setPhone(''); setCustomerEmail(''); setMemo(''); setConsent(false); setError('')
+    setConsultNote(''); setConsultCoop(false)
     setToken(null); setShowQR(false); setDealId(null); setShowBooking(false); setBookedAt(null)
   }
 
@@ -222,7 +251,7 @@ export default function ReferPage() {
         </div>
 
         {showBooking && dealId && (
-          <BookingDrawer dealId={dealId} onClose={() => setShowBooking(false)} onConfirmed={(at) => setBookedAt(at)} />
+          <BookingDrawer dealId={dealId} defaultCustomerEmail={customerEmail} onClose={() => setShowBooking(false)} onConfirmed={(at) => setBookedAt(at)} />
         )}
       </div>
     )
@@ -260,7 +289,75 @@ export default function ReferPage() {
                 </button>
               )
             })}
+
+            {/* L3: サービス未定で相談として起票 */}
+            <button onClick={() => setStep('consult')} className="lift"
+              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px dashed var(--line)', borderRadius: 16, padding: '14px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 13 }}>
+              <span style={{ width: 44, height: 44, borderRadius: 12, background: '#fff', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--muted2)' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.86rem', fontWeight: 800 }}>サービスが決まっていない</div>
+                <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>まず「相談」として起票。面談でサービスを決めます。</div>
+              </div>
+              <span style={{ color: 'var(--muted)', fontSize: '.95rem', flexShrink: 0 }}>›</span>
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* ── L3: 相談（サービス未定）の起票フォーム ───────────────────── */}
+      {step === 'consult' && (
+        <div className="page-anim">
+          <button onClick={() => setStep('service')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.7rem', color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>← サービス選択</button>
+          <div style={{ padding: '10px 20px 6px' }}>
+            <div className="eyebrow">相談として起票</div>
+            <h2 style={{ fontSize: '.96rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>サービス未定のお客さまを起票</h2>
+            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>関わり方だけ選び、内容は面談で詰めます。サービス・金額は後から運営が確定します。</p>
+          </div>
+          <form onSubmit={handleConsultSubmit} style={{ padding: '4px 20px 24px' }}>
+            <div className="fld">
+              <label>関わり方</label>
+              <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 4 }}>
+                {[['ref', '紹介'], ['coop', '協力']].map(([v, l]) => (
+                  <button type="button" key={v} onClick={() => setConsultCoop(v === 'coop')} style={{ flex: 1, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, padding: '9px 2px', borderRadius: 8, color: (v === 'coop') === consultCoop ? 'var(--txt)' : 'var(--muted2)', background: (v === 'coop') === consultCoop ? '#fff' : 'transparent', boxShadow: (v === 'coop') === consultCoop ? '0 2px 8px rgba(14,14,20,.08)' : 'none' }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="fld">
+              <label>お客様区分</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[['individual', '個人'], ['corporate', '法人']].map(([v, l]) => (
+                  <button type="button" key={v} onClick={() => setCustomerType(v as 'individual' | 'corporate')} style={{ flex: 1, border: `1.5px solid ${customerType === v ? 'var(--blue)' : 'var(--line)'}`, borderRadius: 9, padding: '9px 2px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.76rem', fontWeight: 700, background: customerType === v ? 'var(--blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            {customerType === 'individual' ? (
+              <div className="fld"><label>お客様のお名前 <span style={{ color: 'var(--red)' }}>*</span></label>
+                <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" /></div>
+            ) : (
+              <>
+                <div className="fld"><label>会社名 <span style={{ color: 'var(--red)' }}>*</span></label>
+                  <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" /></div>
+                <div className="fld"><label>ご担当者名（任意）</label>
+                  <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" /></div>
+              </>
+            )}
+            <div className="fld"><label>相談内容（何を迷っているか）</label>
+              <textarea value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} placeholder="例：集客と採用、どちらから着手すべきか迷っている 等" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.85rem', resize: 'vertical' }} /></div>
+            <div className="fld"><label>連絡先（任意）</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" /></div>
+            <div className="fld"><label>顧客メールアドレス（任意）</label>
+              <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, margin: '4px 0 12px' }}>
+              <input type="checkbox" id="consultConsent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 15, height: 15 }} />
+              <label htmlFor="consultConsent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}><b>お客さまの同意を確認しました（必須）</b></label>
+            </div>
+            {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
+            <button type="submit" disabled={pending || !consent} className="btn btn-p lift" style={{ width: '100%' }}>
+              {pending ? '送信中…' : '相談として起票する'}
+            </button>
+          </form>
         </div>
       )}
 
@@ -429,6 +526,11 @@ export default function ReferPage() {
                 <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" />
               </div>
               <div className="fld">
+                <label>顧客メールアドレス（任意）</label>
+                <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" />
+                <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '4px 2px 0', lineHeight: 1.5 }}>ご入力いただくと、商談予約の確認・リマインドをお客様にもお送りします。</p>
+              </div>
+              <div className="fld">
                 <label>メモ（任意）</label>
                 <input value={memo} onChange={e => setMemo(e.target.value)} placeholder={coopMode ? '担当可能なエリア・スケジュール等' : '7月に引越し希望 など'} />
               </div>
@@ -450,6 +552,7 @@ export default function ReferPage() {
           {showSelfBook && (
             <BookingDrawer
               createDeal={coopCreateDeal}
+              defaultCustomerEmail={customerEmail}
               onClose={() => setShowSelfBook(false)}
               onConfirmed={(at) => { setShowSelfBook(false); setBookedAt(at); setDone(true) }}
             />

@@ -7,12 +7,13 @@
  * requires the sending domain (mb-partners.app) to be verified in Resend with
  * SPF / DKIM / DMARC DNS records, otherwise Resend rejects the send.
  */
-const FROM = 'MB Partners <noreply@mb-partners.app>'
+import { MAIL_FROM as FROM } from './mail-from'
+
 const SUPPORT = 'support@mb-partners.app'
 
 const LOGO_BAR =
 `<div style="padding:20px 0;text-align:center">
-  <img src="https://mb-partners.app/icon-192.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:9px" />
+  <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:9px" />
   <span style="font-weight:800;font-size:17px;vertical-align:middle;margin-left:9px">MB <span style="color:#4733E6">Partners</span></span>
 </div>`
 
@@ -82,6 +83,7 @@ export async function sendReceiptEmail(params: {
   serviceName?: string | null
   menuName?: string | null
   meetingAt?: string | null
+  meetingUrl?: string | null
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
@@ -101,6 +103,8 @@ export async function sendReceiptEmail(params: {
     ...(meeting ? [['商談日時', meeting] as [string, string]] : []),
   ]
 
+  const meetLineText = params.meetingUrl ? `\n▼ オンライン会議（Google Meet）\n${params.meetingUrl}\n` : ''
+
   const subject = `【MB Partners】${kindLabel}を受け付けました`
   const text =
 `${name} 様
@@ -108,11 +112,13 @@ export async function sendReceiptEmail(params: {
 ${kindLabel}を受け付けました。内容は以下のとおりです。
 
 ${rows.map(([k, v]) => `・${k}：${v}`).join('\n')}
-
+${meetLineText}
 ▼ この後の流れ
 1. MBが内容を確認します
 2. お客さまへ商談・ご提案
 3. 成約で報酬が発生（月末締め・翌月末払い）
+
+※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。紹介の有効期間は90日です。
 
 ご不明な点は ${SUPPORT} までお問い合わせください。
 — MB Partners 運営事務局`
@@ -126,9 +132,14 @@ ${rows.map(([k, v]) => `・${k}：${v}`).join('\n')}
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:18px">
       ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:90px">${k}</td><td style="padding:6px 0;font-weight:600">${v}</td></tr>`).join('')}
     </table>
+    ${params.meetingUrl ? `<div style="background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;color:#6E707D;margin-bottom:6px">オンライン会議（Google Meet）</div>
+      <a href="${params.meetingUrl}" style="color:#2563EB;font-weight:700;word-break:break-all">${params.meetingUrl}</a>
+    </div>` : ''}
     <div style="background:#fff;border-radius:10px;padding:14px 16px">
       <div style="font-size:12px;font-weight:700;color:#4733E6;margin-bottom:8px">この後の流れ</div>
       <div style="font-size:13px;color:#41414E">1. MBが内容を確認 → 2. 商談・ご提案 → 3. 成約で報酬（月末締め・翌月末払い）</div>
+      <div style="font-size:12px;color:#6E707D;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。紹介の有効期間は90日です。</div>
     </div>
   </div>
   <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
@@ -182,7 +193,7 @@ ${params.url}
   const html =
 `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
   <div style="padding:24px 0;text-align:center">
-    <img src="https://mb-partners.app/icon-192.png" alt="MB Partners" width="44" height="44" style="display:inline-block;vertical-align:middle;border-radius:10px" />
+    <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="44" height="44" style="display:inline-block;vertical-align:middle;border-radius:10px" />
     <span style="font-weight:800;font-size:18px;vertical-align:middle;margin-left:10px">MB <span style="color:#4733E6">Partners</span></span>
   </div>
   <div style="background:#F6F6F8;border-radius:14px;padding:28px 24px">

@@ -57,8 +57,11 @@ export async function submitPartnerReferral(formData: FormData) {
   const contactName  = (formData.get('contactName') as string) || ''
   const customerName = (formData.get('customerName') as string) || (customerType === 'corporate' ? companyName : '')
   const phone        = formData.get('phone') as string
+  const customerEmail = ((formData.get('customerEmail') as string) || '').trim()
   const memo         = formData.get('memo') as string
   const channel      = (formData.get('channel') as string) || 'referral'
+  // L3: 相談案件（サービス未定で起票）。service_id=null・明細ゼロ・is_consultation=true。
+  const isConsultation = formData.get('isConsultation') === '1'
 
   if (!customerName) throw new Error('お客様情報は必須です')
 
@@ -94,8 +97,8 @@ export async function submitPartnerReferral(formData: FormData) {
     .from('deals')
     .insert({
       partner_id: partner.id,
-      service_id: serviceId,
-      menu_id: menuId || null,
+      service_id: isConsultation ? null : serviceId,
+      menu_id: isConsultation ? null : (menuId || null),
       customer_name: customerName,
       customer_type: customerType,
       company_name: customerType === 'corporate' ? (companyName || null) : null,
@@ -104,15 +107,53 @@ export async function submitPartnerReferral(formData: FormData) {
       source: 'partner_form',
       status: 'received',
       consent: true,
-      amount,
-      reward_snapshot: menu ?? null,
-      internal_memo: [phone && `TEL: ${phone}`, memo].filter(Boolean).join('\n') || null,
+      amount: isConsultation ? 0 : amount,
+      reward_snapshot: isConsultation ? null : (menu ?? null),
+      internal_memo: [isConsultation && '【相談（サービス未定）】', phone && `TEL: ${phone}`, memo].filter(Boolean).join('\n') || null,
       created_by: user.id,
     })
     .select('id')
     .single()
 
   if (error) throw error
+
+  // L3: 相談マーカー（is_consultation 列が未追加(DDL前)でも作成を壊さない best-effort）。
+  if (isConsultation) {
+    const { error: cErr } = await supabase.from('deals').update({ is_consultation: true }).eq('id', deal!.id)
+    if (cErr) { /* 列未追加 等は無視 */ }
+  }
+
+  // B-2: 顧客メールを保存（任意）。customer_email 列が未追加(DDL前)でも deal 作成を壊さないよう
+  // 本体insertとは分離した best-effort update（列なし時はエラーを無視）。
+  if (customerEmail) {
+    const { error: emailErr } = await supabase.from('deals').update({ customer_email: customerEmail }).eq('id', deal!.id)
+    if (emailErr) { /* 列未追加(DDL前) 等は無視 — 表示/通知のみ */ }
+  }
+
+  // L3: 相談案件は明細ゼロ・タスクなしで起票（面談後に運営が明細追加→そのとき service/タスクを割当）。
+  if (!isConsultation) {
+    // L1: 明細1行を同時生成（外見不変・内部のみ。deals.amount = SUM(deal_items.amount) を作成時点で満たす）。
+    try {
+      const { createServiceRoleClient } = await import('@/lib/supabase/server')
+      const { createDealItem, dealItemKind } = await import('@/lib/deal-items')
+      const admin = await createServiceRoleClient()
+      await createDealItem(admin, {
+        deal_id: deal!.id, service_id: serviceId, menu_id: menuId || null,
+        kind: dealItemKind(channel, menu as { ref_type?: string; coop_type?: string } | null),
+        amount, base_amount: null,
+      })
+    } catch { /* best-effort */ }
+
+    // P: 協力dealはテンプレから対応タスクを実体化（best-effort・テーブル未作成なら no-op）。
+    if (channel === 'cooperation') {
+      try {
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        const { instantiateDealTasks } = await import('@/lib/coop-tasks')
+        const admin = await createServiceRoleClient()
+        await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, channel })
+      } catch { /* best-effort */ }
+    }
+  }
 
   // Deal event
   await supabase.from('deal_events').insert({
@@ -122,7 +163,16 @@ export async function submitPartnerReferral(formData: FormData) {
     created_by: user.id,
   })
 
-  await notifySlackEvent('new_deal', `🆕 新規案件（${channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
+  await notifySlackEvent('new_deal', `🆕 新規案件（${isConsultation ? '相談・サービス未定／' : ''}${channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
+
+  // Batch B ①: 運営メール（Slackは既存のnew_dealゲート送信を流用・二重送信しない）。best-effort。
+  try {
+    const { sendOpsEmail } = await import('@/lib/notify')
+    await sendOpsEmail(
+      `【MB Partners】新規案件（${isConsultation ? '相談・サービス未定' : channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}`,
+      `新規案件が登録されました。${isConsultation ? '\n・種別：相談（サービス未定）' : ''}\n・関わり方：${channel === 'cooperation' ? '協力' : '紹介'}\n・お客さま：${customerName}\n・登録：${profile?.name ?? 'パートナー'}`,
+    )
+  } catch { /* best-effort */ }
 
   // Audit log
   await supabase.from('audit_logs').insert({

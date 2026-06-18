@@ -24,6 +24,7 @@ export async function GET(req: Request) {
     supabase
       .from('partners')
       .select('id, code, profiles(name, email)')
+      .eq('is_system', false)   // 直営業基盤：MB直営は検索結果から除外
       .or(`code.ilike.%${q}%`)
       .limit(5),
     supabase
@@ -70,6 +71,7 @@ export async function GET(req: Request) {
     const partnersByProfile = await supabase
       .from('partners')
       .select('id, code, profiles(name, email)')
+      .eq('is_system', false)   // 直営業基盤：MB直営は検索結果から除外
       .in('profile_id', profileIds)
       .limit(5)
     for (const p of partnersByProfile.data ?? []) {

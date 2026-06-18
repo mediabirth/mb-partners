@@ -100,16 +100,15 @@ export default function LoginPage() {
             fontSize: '1.55rem', fontWeight: 900, lineHeight: 1.45,
             margin: '10px 0', animation: 'up .5s .26s both',
           }}>
-            つなぐだけでも、<br />
-            売り切るまでも。<br />
-            <em style={{ fontStyle: 'normal', color: 'var(--blue)' }}>選ぶのはあなた。</em>
+            あなたの紹介が、<br />
+            <em style={{ fontStyle: 'normal', color: 'var(--blue)' }}>次の出会いをつくる。</em>
           </h1>
 
           <p style={{
-            fontSize: '.75rem', color: 'var(--muted2)', lineHeight: 1.8,
+            fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.8,
             marginBottom: 26, animation: 'up .5s .34s both',
           }}>
-            案件ごとに「関わり方」と報酬を選べる、<br />Media Birth公式パートナープログラム。
+            ご縁を、成果に。
           </p>
 
           <div style={{ animation: 'up .5s .42s both' }}>

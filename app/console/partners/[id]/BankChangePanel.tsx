@@ -84,14 +84,14 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
       {/* Pending */}
       {pending.map(req => (
         <div key={req.id} style={{
-          border: '2px solid #D98914',
+          border: '2px solid var(--amber)',
           borderRadius: 12,
           padding: '16px 18px',
           marginBottom: 14,
           background: '#FFFBF2',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <span style={{ fontSize: '.72rem', fontWeight: 700, color: '#A06914' }}>⏳ 承認待ち</span>
+            <span style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--amber)' }}>⏳ 承認待ち</span>
             <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
               {new Date(req.created_at).toLocaleString('ja-JP')}
             </span>
@@ -118,7 +118,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
                 <button
                   onClick={() => handleAction(req.id, 'reject')}
                   disabled={loading === req.id + 'reject'}
-                  style={{ flex: 1, padding: '9px', background: '#E64733', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '9px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {loading === req.id + 'reject' ? '処理中...' : '却下を確定'}
                 </button>
@@ -135,13 +135,13 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
               <button
                 onClick={() => handleAction(req.id, 'approve')}
                 disabled={loading === req.id + 'approve'}
-                style={{ flex: 1, padding: '9px', background: '#15917E', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '9px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 {loading === req.id + 'approve' ? '処理中...' : '✓ 承認する'}
               </button>
               <button
                 onClick={() => setRejectTarget(req.id)}
-                style={{ flex: 1, padding: '9px', background: 'none', border: '1px solid #E64733', color: '#E64733', borderRadius: 8, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '9px', background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 8, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 ✕ 却下する
               </button>
@@ -168,7 +168,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{
                   fontSize: '.66rem', fontWeight: 700,
-                  color: req.status === 'approved' ? '#15917E' : '#E64733',
+                  color: req.status === 'approved' ? 'var(--green)' : 'var(--red)',
                 }}>
                   {req.status === 'approved' ? '✓ 承認済み' : '✕ 却下済み'}
                 </span>
@@ -181,7 +181,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
                 <BankRow label="変更後" info={req.new_bank} />
               </div>
               {req.reject_reason && (
-                <div style={{ marginTop: 8, fontSize: '.66rem', color: '#B91C1C' }}>
+                <div style={{ marginTop: 8, fontSize: '.66rem', color: 'var(--red)' }}>
                   却下理由: {req.reject_reason}
                 </div>
               )}
