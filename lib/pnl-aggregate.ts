@@ -35,61 +35,65 @@ export type PnlAggregate = {
 
 /** 成約(confirmed/paid)案件を対象に、案件別の正確なP&L行を返す。 */
 export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregate> {
-  // ① 案件本体（P&L列込み・段階フォールバック）
+  // ① 案件本体（P&L列込み・段階フォールバック）。他クエリと結果依存が無い → 取得のみ並列化。
   const SEL = 'id, customer_name, channel, status, amount, fixed_month, created_at, partner_id'
-  let deals: Record<string, unknown>[] | null = null
-  let r = await admin.from('deals').select(`${SEL}, director_id, other_cost`).in('status', ['confirmed', 'paid'])
-  deals = r.data as Record<string, unknown>[] | null
-  if (!deals) { r = await admin.from('deals').select(SEL).in('status', ['confirmed', 'paid']); deals = r.data as Record<string, unknown>[] | null }
-  deals = deals ?? []
+  const dealsP: Promise<Record<string, unknown>[]> = (async () => {
+    const r = await admin.from('deals').select(`${SEL}, director_id, other_cost`).in('status', ['confirmed', 'paid'])
+    let d = r.data as Record<string, unknown>[] | null
+    if (!d) { const r2 = await admin.from('deals').select(SEL).in('status', ['confirmed', 'paid']); d = r2.data as Record<string, unknown>[] | null }
+    return d ?? []
+  })()
+  // best-effort 読取：テーブル/列未適用での throw を null に畳む（従来 try/catch と同義）。クエリ・select は不変。
+  const safe = (p: PromiseLike<{ data: unknown }>) => Promise.resolve(p).then(r => r, () => ({ data: null as unknown }))
+  const itemsP     = safe(admin.from('deal_items').select('deal_id, revenue'))
+  const assignsP   = safe(admin.from('delivery_assignments').select('id, deal_id, delivery_id, base_fee, deliveries(name)'))
+  const expensesP  = safe(admin.from('expense_claims').select('delivery_assignment_id, amount, status'))
+  const assigns2P  = safe(admin.from('delivery_assignments').select('id, deal_id, delivery_id'))
+  const expenses2P = safe(admin.from('expense_claims').select('delivery_assignment_id, amount, status'))
+  const partnersP  = safe(admin.from('partners').select('id, frontier_id, frontier_linked_at'))
+  const profilesP  = safe(admin.from('profiles').select('id, name').neq('role', 'partner'))
+
+  // 逐次 await の waterfall を1回の Promise.all へ。各クエリは独立・共有可変状態なし。
+  // 以降の集計（map構築）は従来と同一の順序・同一ロジックで実行＝結果(表示額)は完全一致。
+  const [deals, itemsRes, assignsRes, expensesRes, assigns2Res, expenses2Res, partnersRes, profilesRes] = await Promise.all([
+    dealsP, itemsP, assignsP, expensesP, assigns2P, expenses2P, partnersP, profilesP,
+  ])
 
   // ② 明細（受注額/売上）
   const itemsByDeal: Record<string, { revenue: number | null }[]> = {}
-  try {
-    const { data } = await admin.from('deal_items').select('deal_id, revenue')
-    for (const it of (data ?? []) as Array<{ deal_id: string; revenue: number | null }>) {
-      (itemsByDeal[it.deal_id] ??= []).push({ revenue: it.revenue ?? null })
-    }
-  } catch { /* 列未追加 → 受注額不明 */ }
+  for (const it of (itemsRes.data ?? []) as Array<{ deal_id: string; revenue: number | null }>) {
+    (itemsByDeal[it.deal_id] ??= []).push({ revenue: it.revenue ?? null })
+  }
 
   // ③ デリバリー割当（委託費）＋ ④ 承認済経費
   const assignToDeal: Record<string, string> = {}
   const feeByDeal: Record<string, number> = {}
   const vendorByDeal: Record<string, Record<string, { fee: number; expense: number }>> = {}
   const deliveryName: Record<string, string> = {}
-  try {
-    const { data } = await admin.from('delivery_assignments').select('id, deal_id, delivery_id, base_fee, deliveries(name)')
-    for (const a of (data ?? []) as Array<{ id: string; deal_id: string; delivery_id: string | null; base_fee: number; deliveries: { name: string } | null }>) {
-      assignToDeal[a.id] = a.deal_id
-      feeByDeal[a.deal_id] = (feeByDeal[a.deal_id] ?? 0) + (a.base_fee ?? 0)
-      if (a.delivery_id) {
-        if (a.deliveries?.name) deliveryName[a.delivery_id] = a.deliveries.name
-        const vmap = (vendorByDeal[a.deal_id] ??= {})
-        const v = (vmap[a.delivery_id] ??= { fee: 0, expense: 0 })
-        v.fee += a.base_fee ?? 0
-      }
+  for (const a of (assignsRes.data ?? []) as Array<{ id: string; deal_id: string; delivery_id: string | null; base_fee: number; deliveries: { name: string } | null }>) {
+    assignToDeal[a.id] = a.deal_id
+    feeByDeal[a.deal_id] = (feeByDeal[a.deal_id] ?? 0) + (a.base_fee ?? 0)
+    if (a.delivery_id) {
+      if (a.deliveries?.name) deliveryName[a.delivery_id] = a.deliveries.name
+      const vmap = (vendorByDeal[a.deal_id] ??= {})
+      const v = (vmap[a.delivery_id] ??= { fee: 0, expense: 0 })
+      v.fee += a.base_fee ?? 0
     }
-  } catch { /* テーブル未作成 → 0 */ }
+  }
 
   const approvedExpenseByDeal: Record<string, number> = {}
-  try {
-    const { data } = await admin.from('expense_claims').select('delivery_assignment_id, amount, status')
-    for (const e of (data ?? []) as Array<{ delivery_assignment_id: string; amount: number; status: string }>) {
-      if (e.status !== 'approved') continue
-      const dealId = assignToDeal[e.delivery_assignment_id]
-      if (!dealId) continue
-      approvedExpenseByDeal[dealId] = (approvedExpenseByDeal[dealId] ?? 0) + (e.amount ?? 0)
-      // vendor別の経費は割当→delivery_id を辿る（assign の delivery_id は別途）。下で補完。
-    }
-  } catch { /* テーブル未作成 → 0 */ }
+  for (const e of (expensesRes.data ?? []) as Array<{ delivery_assignment_id: string; amount: number; status: string }>) {
+    if (e.status !== 'approved') continue
+    const dealId = assignToDeal[e.delivery_assignment_id]
+    if (!dealId) continue
+    approvedExpenseByDeal[dealId] = (approvedExpenseByDeal[dealId] ?? 0) + (e.amount ?? 0)
+  }
 
   // 経費を vendor別に帰属（割当id→delivery_id を引くため再走査）
-  try {
-    const { data: das } = await admin.from('delivery_assignments').select('id, deal_id, delivery_id')
+  {
     const assignDelivery: Record<string, { dealId: string; deliveryId: string | null }> = {}
-    for (const a of (das ?? []) as Array<{ id: string; deal_id: string; delivery_id: string | null }>) assignDelivery[a.id] = { dealId: a.deal_id, deliveryId: a.delivery_id }
-    const { data: exps } = await admin.from('expense_claims').select('delivery_assignment_id, amount, status')
-    for (const e of (exps ?? []) as Array<{ delivery_assignment_id: string; amount: number; status: string }>) {
+    for (const a of (assigns2Res.data ?? []) as Array<{ id: string; deal_id: string; delivery_id: string | null }>) assignDelivery[a.id] = { dealId: a.deal_id, deliveryId: a.delivery_id }
+    for (const e of (expenses2Res.data ?? []) as Array<{ delivery_assignment_id: string; amount: number; status: string }>) {
       if (e.status !== 'approved') continue
       const link = assignDelivery[e.delivery_assignment_id]
       if (!link?.deliveryId) continue
@@ -97,23 +101,17 @@ export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregat
       const v = (vmap[link.deliveryId] ??= { fee: 0, expense: 0 })
       v.expense += e.amount ?? 0
     }
-  } catch { /* 同上 */ }
+  }
 
   // ⑤ フロンティアoverride 用の partner link
   const partnerLink: Record<string, { frontier_id?: string | null; frontier_linked_at?: string | null }> = {}
-  try {
-    const { data } = await admin.from('partners').select('id, frontier_id, frontier_linked_at')
-    for (const p of (data ?? []) as Array<{ id: string; frontier_id: string | null; frontier_linked_at: string | null }>) {
-      partnerLink[p.id] = { frontier_id: p.frontier_id, frontier_linked_at: p.frontier_linked_at }
-    }
-  } catch { /* 列未追加 → override 0 */ }
+  for (const p of (partnersRes.data ?? []) as Array<{ id: string; frontier_id: string | null; frontier_linked_at: string | null }>) {
+    partnerLink[p.id] = { frontier_id: p.frontier_id, frontier_linked_at: p.frontier_linked_at }
+  }
 
   // ⑥ MB担当名
   const directorName: Record<string, string> = {}
-  try {
-    const { data } = await admin.from('profiles').select('id, name').neq('role', 'partner')
-    for (const p of (data ?? []) as Array<{ id: string; name: string }>) directorName[p.id] = p.name
-  } catch { /* 名前なしでも id で集計可 */ }
+  for (const p of (profilesRes.data ?? []) as Array<{ id: string; name: string }>) directorName[p.id] = p.name
 
   const rows: DealPnl[] = deals.map(d => {
     const id = d.id as string
