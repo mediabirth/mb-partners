@@ -12,7 +12,7 @@ import DeliveryProgress from './DeliveryProgress'
 
 type Deal = {
   id: string; customer_name: string; channel: string; source: string
-  customer_type?: string | null; company_name?: string | null; contact_name?: string | null
+  customer_type?: string | null; company_name?: string | null; contact_name?: string | null; contact_title?: string | null
   status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
   lost_at?: string | null; lost_reason?: string | null; lost_note?: string | null
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; effective_kind?: string; gate_reason?: string } | null
@@ -805,6 +805,14 @@ export default function DealsPage() {
                   <span style={{ fontWeight: 700, textAlign: 'right' }}>{v}</span>
                 </div>
               ))}
+
+              {/* ②c B2B: 法人の部署・役職を additive 表示（無い場合は非表示＝従来通り） */}
+              {selected.contact_title && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
+                  <span style={{ color: 'var(--muted2)' }}>部署・役職</span>
+                  <span style={{ fontWeight: 700, textAlign: 'right' }}>{selected.contact_title}</span>
+                </div>
+              )}
 
               {/* F-1: フェーズ／流入経路バッジ ＋ プロジェクト実行ステータス（お金に非干渉の独立メタデータ） */}
               {(() => {
