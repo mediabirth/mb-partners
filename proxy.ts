@@ -69,27 +69,32 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-  // 検証済み user.id を信頼ヘッダで下流へ伝播 → 入口 layout/page は getUser を再実行せず往復を1回に。
-  // response を requestHeaders で再構築し、refresh 済 cookie を引き継ぐ（認証の意味＝getUser検証は不変）。
-  if (user) {
-    requestHeaders.set(UID_HEADER, user.id)
+  // バッチ2：毎リクエストの getUser（Supabase Auth への往復）を getClaims（ローカルJWT検証）へ。
+  // getClaims は内部で getSession を呼ぶ＝期限切れ時は refresh_token で更新し SSR setAll で cookie を書き戻す
+  // （リフレッシュ機構は維持）。検証は ES256/JWKS を crypto.subtle でローカル署名検証＝毎リクエストの往復なし。
+  // 期限切れ/不正トークンは getClaims が弾き claims=null → 未ログイン扱いで既存ログインへ redirect（挙動不変）。
+  const { data: claimsRes } = await supabase.auth.getClaims()
+  const claims = (claimsRes?.claims ?? null) as { sub?: string; app_metadata?: { role?: string } } | null
+  const uid = claims?.sub ?? null
+  // 検証済み uid を信頼ヘッダで下流へ伝播（spoofing対策＝受信時の x-mb-uid strip は上で実施済）。
+  if (uid) {
+    requestHeaders.set(UID_HEADER, uid)
     const carried = response.cookies.getAll()
     response = NextResponse.next({ request: { headers: requestHeaders } })
     carried.forEach((c) => response.cookies.set(c))
   }
-  // B2: role を JWT/app_metadata クレームから読む（あればDB問い合わせ不要）。無ければ profiles 参照へ。
+  // role は JWT/app_metadata クレームから（claims 内）。無ければ profiles 参照へ（従来と同一）。
   async function roleOf(): Promise<string | null> {
-    if (!user) return null
-    const claimRole = (user.app_metadata as { role?: string } | undefined)?.role
+    if (!uid) return null
+    const claimRole = claims?.app_metadata?.role
     if (claimRole) return claimRole
-    const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const { data } = await supabase.from('profiles').select('role').eq('id', uid).single()
     return data?.role ?? null
   }
 
   // ── /app/** — partner portal ────────────────────────────────────────────────
   if (pathname.startsWith('/app')) {
-    if (!user) return NextResponse.redirect(new URL('/login', request.url))
+    if (!uid) return NextResponse.redirect(new URL('/login', request.url))
     const role = await roleOf()
     if (role && role !== 'partner') {
       return isAppHost ? xConsole('/console') : NextResponse.redirect(new URL('/console', request.url))
@@ -99,7 +104,7 @@ export async function proxy(request: NextRequest) {
 
   // ── /console/** — admin console ────────────────────────────────────────────
   if (pathname.startsWith('/console') && !pathname.startsWith('/console/login')) {
-    if (!user) return NextResponse.redirect(new URL('/console/login', request.url))
+    if (!uid) return NextResponse.redirect(new URL('/console/login', request.url))
     const role = await roleOf()
     if (role === 'partner') {
       return isConsoleHost ? xApp('/app') : NextResponse.redirect(new URL('/app', request.url))
@@ -109,12 +114,12 @@ export async function proxy(request: NextRequest) {
 
   // ── /vendor/** — vendor ポータル（ページ側でも role 検証。ここでは未ログインを login へ）──
   if (pathname.startsWith('/vendor') && !pathname.startsWith('/vendor/login') && !pathname.startsWith('/vendor/accept')) {
-    if (!user) return NextResponse.redirect(new URL('/vendor/login', request.url))
+    if (!uid) return NextResponse.redirect(new URL('/vendor/login', request.url))
     return response
   }
 
   // ── Already-logged-in: redirect away from login pages ─────────────────────
-  if (pathname === '/login' && user) {
+  if (pathname === '/login' && uid) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
