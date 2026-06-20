@@ -76,6 +76,7 @@ export default function ReferPage() {
   const [customerName, setCustomerName]   = useState('')
   const [companyName, setCompanyName]     = useState('')
   const [contactName, setContactName]     = useState('')
+  const [contactTitle, setContactTitle]   = useState('') // ②a 法人: 部署・役職（任意・additive）
   const [phone, setPhone]                 = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
   const [memo, setMemo]                   = useState('')
@@ -176,6 +177,7 @@ export default function ReferPage() {
     if (customerType === 'corporate') {
       fd.set('companyName', companyName)
       fd.set('contactName', contactName)
+      fd.set('contactTitle', contactTitle) // ②a 部署・役職（法人時のみ・任意）
       fd.set('customerName', companyName) // 一覧等の後方互換: 表示主体=会社名
     } else {
       fd.set('customerName', customerName)
@@ -243,7 +245,7 @@ export default function ReferPage() {
   function resetForNext() {
     setDone(false); setStep('service'); setShowSelfBook(false)
     setSelSvc(null); setSelMenu(null); setCoopMode(false)
-    setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName('')
+    setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName(''); setContactTitle('')
     setPhone(''); setCustomerEmail(''); setMemo(''); setConsent(false); setError('')
     setConsultNote(''); setConsultCoop(false)
     setToken(null); setShowQR(false); setDealId(null); setShowBooking(false); setBookedAt(null)
@@ -376,6 +378,8 @@ export default function ReferPage() {
                   <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" /></div>
                 <div className="fld"><label>ご担当者名（任意）</label>
                   <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" /></div>
+                <div className="fld"><label>部署・役職（任意）</label>
+                  <input value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" /></div>
               </>
             )}
             <div className="fld"><label>相談内容（何を迷っているか）</label>
@@ -562,6 +566,10 @@ export default function ReferPage() {
                   <div className="fld">
                     <label>ご担当者名（任意）</label>
                     <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" />
+                  </div>
+                  <div className="fld">
+                    <label>部署・役職（任意）</label>
+                    <input value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" />
                   </div>
                 </>
               )}
