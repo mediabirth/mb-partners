@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
@@ -20,8 +21,24 @@ export const runtime = 'edge'
 export default async function ConsolePage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
   const uid = await getCachedUid()
   if (!uid) redirect('/console/login')
-  const supabase = await createClient()
   const { m: mParam } = await searchParams
+  // シェル(ConsoleNav)を即描画。重いデータ本体(deal_events ネスト結合 + pnl-aggregate ほか)は Suspense の後ろで stream。
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
+      <ConsoleNav />
+      <ConsoleMain>
+        <Suspense fallback={<ConsoleDashboardSkeleton />}>
+          <ConsoleDashboardBody uid={uid} m={mParam} />
+        </Suspense>
+      </ConsoleMain>
+    </div>
+  )
+}
+
+// 重いデータ取得＋集計＋本体描画を「そのまま移設」した async サーバコンポーネント。
+// ★お金の値・計算・集計・select・filter・sort・通貨整形は一切変更していない（Promise.all〜JSXは元のまま）。
+async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: string }) {
+  const supabase = await createClient()
 
   // owner認証では nested partners.profiles が RLS で null → service role で読取（/console は middleware でガード済）
   const admin = await createServiceRoleClient()
@@ -231,10 +248,7 @@ export default async function ConsolePage({ searchParams }: { searchParams: Prom
   } catch { /* 未作成 */ }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
-      <ConsoleNav />
-
-      <ConsoleMain>
+    <>
         {/* Top bar */}
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -575,7 +589,29 @@ export default async function ConsolePage({ searchParams }: { searchParams: Prom
             )}
           </div>
         </div>
-      </ConsoleMain>
+    </>
+  )
+}
+
+// 偽数字を出さない灰色スケルトン（P&L/KPI 領域の高さを確保しレイアウトシフトを抑制）。
+function ConsoleDashboardSkeleton() {
+  return (
+    <div aria-busy="true">
+      <div style={{ borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="skeleton" style={{ width: 170, height: 22, borderRadius: 6 }} />
+        <div className="skeleton" style={{ width: 130, height: 30, borderRadius: 8 }} />
+      </div>
+      <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
+        <div className="skeleton" style={{ height: 140, borderRadius: 16, marginBottom: 18 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
+          {[0, 1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 96, borderRadius: 14 }} />)}
+        </div>
+        <div className="skeleton" style={{ height: 210, borderRadius: 14, marginBottom: 18 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
+          <div className="skeleton" style={{ height: 170, borderRadius: 14 }} />
+          <div className="skeleton" style={{ height: 170, borderRadius: 14 }} />
+        </div>
+      </div>
     </div>
   )
 }
