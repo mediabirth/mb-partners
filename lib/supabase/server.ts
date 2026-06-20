@@ -40,6 +40,16 @@ export const getCachedUser = cache(async () => {
   return user
 })
 
+// Deduplicated per-request: layout + page + resolveVendor が同一行の profiles 読取を共有（RLSは無改修）。
+// anon クライアント（本人セッション・RLS適用）で自分の profiles を1回だけ取得。取得列・値は従来と同一。
+export const getCachedProfile = cache(async () => {
+  const user = await getCachedUser()
+  if (!user) return null
+  const supabase = await createClient()
+  const { data } = await supabase.from('profiles').select('name, role, color').eq('id', user.id).single()
+  return data as { name: string | null; role: string | null; color: string | null } | null
+})
+
 export async function createServiceRoleClient() {
   const { createClient } = await import('@supabase/supabase-js')
   return createClient(

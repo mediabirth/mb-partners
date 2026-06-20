@@ -4,17 +4,18 @@
  * vendor ロール限定（未ログイン/非vendorは /vendor/login へ）。認証・RLS・隔離・セッション分離は無改修。
  */
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getCachedUser, getCachedProfile } from '@/lib/supabase/server'
 import VendorNav from '@/components/VendorNav'
 import SurfaceShell from '@/components/ui/SurfaceShell'
 
 export const runtime = 'edge'
 
 export default async function VendorAppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // 認可判定は不変（user無し→login／role!=='vendor'→login）。getUser/profiles をリクエスト内で
+  // page(resolveVendor) と共有（getCachedUser/getCachedProfile）＝往復削減のみ。取得値は従来と同一。
+  const user = await getCachedUser()
   if (!user) redirect('/vendor/login')
-  const { data: profile } = await supabase.from('profiles').select('name, role, color').eq('id', user.id).single()
+  const profile = await getCachedProfile()
   if (!profile || profile.role !== 'vendor') redirect('/vendor/login')
 
   return (
