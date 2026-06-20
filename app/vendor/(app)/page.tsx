@@ -14,6 +14,21 @@ function fmtPeriod(p: string): string {
   return m ? `${Number(m[2])}月` : p
 }
 
+// Step3：取得済みタイムスタンプ(n.at)を相対表記に整形（新規取得なし・表示のみ）。
+function relTime(at: string): string {
+  const t = new Date(at).getTime()
+  if (!t || Number.isNaN(t)) return ''
+  const diff = Date.now() - t
+  if (diff < 0) return ''
+  const d = Math.floor(diff / 86400000)
+  if (d >= 1) return `${d}日前`
+  const h = Math.floor(diff / 3600000)
+  if (h >= 1) return `${h}時間前`
+  const m = Math.floor(diff / 60000)
+  if (m >= 1) return `${m}分前`
+  return 'たった今'
+}
+
 export default async function VendorHome() {
   const b = await loadVendorBundle()
   if (!b) redirect('/vendor/login')
@@ -137,16 +152,21 @@ export default async function VendorHome() {
         <p style={{ padding: '4px 20px 20px', fontSize: '.7rem', color: 'var(--muted2)' }}>まだ動きはありません。</p>
       ) : (
         <div>
-          {notifs.map(n => (
+          {notifs.map(n => {
+            const rel = relTime(n.at)
+            return (
             <Link key={n.id} href={n.href ?? '/vendor/inbox'} className="row-hover lift" style={{ display: 'flex', gap: 11, padding: '12px 20px', borderBottom: '1px solid var(--line)', textDecoration: 'none', alignItems: 'center' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: NOTIF_DOT[n.icon] ?? 'var(--blue)', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.sub}</div>
               </div>
-              <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
+              {/* Step3：取得済みなら相対時刻を右に。チェブロンは位置統一 */}
+              {rel && <span style={{ fontSize: '.58rem', color: 'var(--muted)', flexShrink: 0 }}>{rel}</span>}
+              <span style={{ color: 'var(--muted)', fontSize: '.75rem', flexShrink: 0 }}>›</span>
             </Link>
-          ))}
+            )
+          })}
         </div>
       )}
       {/* BR-DIAG2：版数スタンプ（本番 vendor が新ビルドを描画しているかの決定的証拠）。 */}
