@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient, getCachedUser } from '@/lib/supabase/server'
+import { createClient, getCachedUid } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
 import SurfaceShell from '@/components/ui/SurfaceShell'
 import PageTransition from '@/components/PageTransition'
@@ -10,14 +10,14 @@ import SWRProvider from '@/components/SWRProvider'
 export const runtime = 'edge'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCachedUser()
-  if (!user) redirect('/login')
+  const uid = await getCachedUid()
+  if (!uid) redirect('/login')
 
   const supabase = await createClient()
   const { data: profile } = await supabase
     .from('profiles')
     .select('name, color')
-    .eq('id', user.id)
+    .eq('id', uid)
     .single()
 
   // BR-V3：シェル chrome は単一ソース SurfaceShell。差分はルート/名前/色/ナビ config のみ。

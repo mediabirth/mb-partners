@@ -11,6 +11,10 @@ export type Surface = 'console' | 'app' | 'vendor'
 
 export const SURFACE_HEADER = 'x-mb-surface'
 
+// proxy(middleware) が getUser で検証済みの user.id を下流へ伝播する信頼ヘッダ。
+// proxy は受信時にクライアント由来の同名ヘッダを必ず delete してから検証済み値を set する（偽装不可）。
+export const UID_HEADER = 'x-mb-uid'
+
 export function surfaceFor(host: string | null | undefined, pathname: string | null | undefined): Surface {
   const h = (host ?? '').toLowerCase()
   if (h.startsWith('console.')) return 'console'

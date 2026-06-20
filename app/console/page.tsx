@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
 import { getAllDeals } from '@/lib/supabase/queries'
 import { loadProjectPnl, sumMonth } from '@/lib/pnl-aggregate'
 import ConsoleNav from '@/components/ConsoleNav'
@@ -18,15 +18,15 @@ import { PROJECT_STATUSES, INTAKE_LABEL } from '@/lib/phase'
 export const runtime = 'edge'
 
 export default async function ConsolePage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+  const uid = await getCachedUid()
+  if (!uid) redirect('/console/login')
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/console/login')
   const { m: mParam } = await searchParams
 
   // owner認証では nested partners.profiles が RLS で null → service role で読取（/console は middleware でガード済）
   const admin = await createServiceRoleClient()
   const [profileRes, deals, recentEventsRes, pnl] = await Promise.all([
-    supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, role, color').eq('id', uid).single(),
     getAllDeals(admin),
     admin.from('deal_events')
       .select('id, body, created_at, deal_id, deals(customer_name, customer_type, company_name, contact_name, service_id, channel, partners(profiles(name)))')

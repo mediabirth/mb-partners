@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient, getCachedUser } from '@/lib/supabase/server'
+import { createClient, getCachedUid } from '@/lib/supabase/server'
 import { getPartnerWithDeals, getRecentEventsByUserId } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
@@ -12,15 +12,15 @@ import { customerHonorific } from '@/lib/customer'
 export const runtime = 'edge'
 
 export default async function AppPage() {
-  const user = await getCachedUser()
-  if (!user) redirect('/login')
+  const uid = await getCachedUid()
+  if (!uid) redirect('/login')
   const supabase = await createClient()
 
   // Single parallel round: partner+deals combined query + events by userId
   // (avoids needing partner.id before fetching events)
   const [partnerResult, recentEvents] = await Promise.all([
-    getPartnerWithDeals(supabase, user.id),
-    getRecentEventsByUserId(supabase, user.id),
+    getPartnerWithDeals(supabase, uid),
+    getRecentEventsByUserId(supabase, uid),
   ])
   // If no partner record, go to root — root page routes admins to /console.
   // Redirecting to /login here would loop: login→/app→/login for admins.

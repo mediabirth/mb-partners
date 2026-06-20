@@ -13,7 +13,7 @@
  */
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { surfaceFor, cookieNameFor, SURFACE_HEADER } from '@/lib/supabase/surface'
+import { surfaceFor, cookieNameFor, SURFACE_HEADER, UID_HEADER } from '@/lib/supabase/surface'
 
 const APP_HOST = 'mb-partners.app'
 const CONSOLE_HOST = 'console.mb-partners.app'
@@ -29,6 +29,8 @@ export async function proxy(request: NextRequest) {
   const name = cookieNameFor(surface)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set(SURFACE_HEADER, surface)
+  // spoofing 防止：クライアント由来の x-mb-uid を必ず除去（後段で検証済み値のみ set する）。
+  requestHeaders.delete(UID_HEADER)
   const passthrough = () => NextResponse.next({ request: { headers: requestHeaders } })
 
   const xConsole = (p: string) => NextResponse.redirect(`https://${CONSOLE_HOST}${p}`)
@@ -68,6 +70,14 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  // 検証済み user.id を信頼ヘッダで下流へ伝播 → 入口 layout/page は getUser を再実行せず往復を1回に。
+  // response を requestHeaders で再構築し、refresh 済 cookie を引き継ぐ（認証の意味＝getUser検証は不変）。
+  if (user) {
+    requestHeaders.set(UID_HEADER, user.id)
+    const carried = response.cookies.getAll()
+    response = NextResponse.next({ request: { headers: requestHeaders } })
+    carried.forEach((c) => response.cookies.set(c))
+  }
   // B2: role を JWT/app_metadata クレームから読む（あればDB問い合わせ不要）。無ければ profiles 参照へ。
   async function roleOf(): Promise<string | null> {
     if (!user) return null
