@@ -193,7 +193,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
     received: shodanDeals.filter(d => d.status === 'received').length,
     inProgress: shodanDeals.filter(d => d.status === 'in_progress').length,
     won: shodanDeals.filter(d => ['confirmed', 'paid'].includes(d.status)).length,
-    lost: shodanDeals.filter(d => d.status === 'lost').length,
+    lost: shodanDeals.filter(d => (d.status as string) === 'lost').length,
   }
   const shodanTotal = shodanDeals.length
   const winRateAll = shodanTotal > 0 ? Math.round((funnel.won / shodanTotal) * 100) : 0
