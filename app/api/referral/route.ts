@@ -8,7 +8,8 @@ export const runtime = 'edge'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { token, customerName, phone, memo, via } = body
+    // ③ B2B 任意項目を additive 受領（帰属insert には不使用＝後段の best-effort update のみで保存）。
+    const { token, customerName, phone, memo, via, companyName, contactName, contactTitle, customerEmail, customerType } = body
 
     if (!token || !customerName) {
       return NextResponse.json({ error: 'token and customerName are required' }, { status: 400 })
@@ -62,6 +63,21 @@ export async function POST(req: NextRequest) {
     if (dealErr || !deal) {
       console.error('deal insert error', dealErr)
       return NextResponse.json({ error: 'Failed to create deal' }, { status: 500 })
+    }
+
+    // ③ 信頼ランディングのB2B任意項目を additive 保存（帰属insertは上記で完了・不変＝この別updateは
+    //    partner_id/channel/source/consent/amount に一切触れない）。列未追加でも作成を壊さない best-effort。
+    {
+      const b2b: Record<string, unknown> = {}
+      if (customerType === 'corporate') b2b.customer_type = 'corporate'
+      if (companyName)  b2b.company_name  = companyName
+      if (contactName)  b2b.contact_name  = contactName
+      if (contactTitle) b2b.contact_title = contactTitle
+      if (customerEmail) b2b.customer_email = customerEmail
+      if (Object.keys(b2b).length) {
+        const { error: b2bErr } = await supabase.from('deals').update(b2b).eq('id', deal.id)
+        if (b2bErr) { /* 列未追加(DDL前) 等は無視 — 表示メタのみ */ }
+      }
     }
 
     // L1: 明細1行を同時生成（best-effort・外見不変。deals.amount = SUM(deal_items.amount) を維持）。
