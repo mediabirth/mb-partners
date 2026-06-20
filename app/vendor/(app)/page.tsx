@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import ServiceAvatar from '@/components/ServiceAvatar'
 import { loadVendorBundle, deriveVendorNotifs } from '@/lib/vendor-data'
 import StatusPill from '@/components/ui/StatusPill'
 import { dealStatus } from '@/lib/status'
@@ -107,17 +106,20 @@ export default async function VendorHome() {
         {projects.length === 0 ? (
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', padding: '4px 2px 16px' }}>進行中のプロジェクトはありません。</p>
         ) : projects.slice(0, 4).map(({ a, pending, nextMs }) => {
-          const svc = a.deal?.services
           return (
             <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {svc ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={30} /> : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={30} />}
+                {/* Step2：頭文字アバター（角丸11px・薄紫#EEEDFE / 文字#3C3489・40px、会社/案件名の先頭文字） */}
+                <span style={{ width: 40, height: 40, borderRadius: 11, background: '#EEEDFE', color: '#3C3489', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter', fontWeight: 800, fontSize: '1rem', lineHeight: 1, flexShrink: 0, userSelect: 'none' }}>{(a.deal?.customer_name ?? '案件').trim().charAt(0) || '案'}</span>
                 <b style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{a.deal?.customer_name ?? '案件'}</b>
                 <StatusPill size="sm" {...dealStatus(a.deal?.status ?? '')} />
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <span>未完タスク <b style={{ color: pending > 0 ? 'var(--blue)' : 'var(--muted2)' }}>{pending}</b></span>
-                <span>次のマイルストーン: <b style={{ color: 'var(--txt)' }}>{nextMs ? nextMs.title : '—'}</b>{nextMs?.due_date ? ` (${nextMs.due_date.slice(5)})` : ''}</span>
+                {/* Step2：未設定は裸の「—」をやめ tertiary 色で「マイルストーン未設定」 */}
+                {nextMs
+                  ? <span>次のマイルストーン: <b style={{ color: 'var(--txt)' }}>{nextMs.title}</b>{nextMs.due_date ? ` (${nextMs.due_date.slice(5)})` : ''}</span>
+                  : <span style={{ color: 'var(--muted)' }}>マイルストーン未設定</span>}
               </div>
             </Link>
           )
