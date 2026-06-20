@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const { data: link } = await supabase
     .from('referral_links')
-    .select('service_id')
+    .select('service_id, partner_id')
     .eq('token', token)
     .single()
 
@@ -22,5 +22,18 @@ export async function GET(req: NextRequest) {
     supabase.from('service_menus').select('name, ref_type, ref_value, example_ref').eq('service_id', link.service_id).order('sort').limit(1),
   ])
 
-  return NextResponse.json({ service, menu: menus?.[0] ?? null })
+  // 紹介者名（信頼ランディングの「{紹介者名}様からのご紹介です」表示用・read-only）。
+  // ★帰属には一切不使用（帰属は POST /api/referral の link.partner_id のまま）。取得失敗時は null フォールバック。
+  let referrerName: string | null = null
+  try {
+    if (link.partner_id) {
+      const { data: partner } = await supabase.from('partners').select('profile_id').eq('id', link.partner_id).single()
+      if (partner?.profile_id) {
+        const { data: prof } = await supabase.from('profiles').select('name').eq('id', partner.profile_id).single()
+        referrerName = prof?.name ?? null
+      }
+    }
+  } catch { /* 表示用のみ・失敗は無視 */ }
+
+  return NextResponse.json({ service, menu: menus?.[0] ?? null, referrerName })
 }
