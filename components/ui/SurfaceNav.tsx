@@ -8,7 +8,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode, type CSSProperties } from 'react'
 
-export type NavItem = { href: string; label: string; icon: ReactNode; rootExact?: boolean }
+// href があれば Link 遷移、onClick のみならモーダル等を開くタブ（ルートを持たない導線）。
+// app は全項目 href のみ＝この拡張の影響を受けない（後方互換・乖離不能性を維持）。
+export type NavItem = { href?: string; label: string; icon: ReactNode; rootExact?: boolean; onClick?: () => void }
 
 /** 中央 FAB（app=リンク／vendor=アクション）。円・グラデ・寸法は単一ソース。 */
 export function NavFab({ href, onClick, label, children }: { href?: string; onClick?: () => void; label?: string; children: ReactNode }) {
@@ -30,18 +32,25 @@ export default function SurfaceNav({ left, right, fab, unreadHref }: {
     if (!unreadHref) return
     fetch('/api/notifications/unread').then(r => r.json()).then(d => setHasUnread((d.count ?? 0) > 0)).catch(() => {})
   }, [path, unreadHref])
-  const active = (it: NavItem) => it.rootExact ? path === it.href : path.startsWith(it.href)
+  // href の無い（onClick）項目はルートを持たないため非アクティブ扱い。
+  const active = (it: NavItem) => it.href ? (it.rootExact ? path === it.href : path.startsWith(it.href)) : false
 
   const Item = (it: NavItem) => {
     const on = active(it)
-    return (
-      <Link key={it.href} href={it.href} className={`snav-item${on ? ' is-active' : ''}`} style={{ color: on ? 'var(--blue)' : 'var(--muted)', fontWeight: on ? 700 : 400 }}>
+    const inner = (
+      <>
         {on && <span className="snav-active-bar" />}
         <span className="snav-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">{it.icon}</svg></span>
         {it.label}
         {unreadHref === it.href && hasUnread && <span className="snav-bdg" />}
-      </Link>
+      </>
     )
+    const cls = `snav-item${on ? ' is-active' : ''}`
+    const css: CSSProperties = { color: on ? 'var(--blue)' : 'var(--muted)', fontWeight: on ? 700 : 400 }
+    // href→Link 遷移 / onClick→button（モーダル等の既存導線）。寸法・タップ領域・safe-area は同一(.snav-item)。
+    return it.href
+      ? <Link key={it.href} href={it.href} className={cls} style={css}>{inner}</Link>
+      : <button key={it.label} type="button" onClick={it.onClick} aria-label={it.label} className={cls} style={{ ...css, fontFamily: 'inherit', background: 'none', border: 'none', cursor: 'pointer' }}>{inner}</button>
   }
 
   return (
