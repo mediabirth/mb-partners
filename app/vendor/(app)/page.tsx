@@ -9,6 +9,12 @@ import { BUILD_STAMP } from '@/lib/build-stamp'
 export const runtime = 'edge'
 const NOTIF_DOT: Record<string, string> = { ok: 'var(--green)', ng: 'var(--red)', pay: 'var(--green)', freeze: 'var(--blue)', assign: 'var(--blue)' }
 
+// period（"2026-06" 等）を "6月" に。形式が違えば原文のまま（表示整形のみ）。
+function fmtPeriod(p: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(p)
+  return m ? `${Number(m[2])}月` : p
+}
+
 export default async function VendorHome() {
   const b = await loadVendorBundle()
   if (!b) redirect('/vendor/login')
@@ -39,20 +45,35 @@ export default async function VendorHome() {
   const unpaid = b.payouts.filter(p => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0)
   const notifs = deriveVendorNotifs(b).slice(0, 4)
 
+  // Step1 表示用の再配置のみ（新規取得なし／金額の値・計算・クエリは無改修）。
+  // 対象月＝未払いがあればその直近期、無ければ直近期。pendingTotal は既存ヒーローと同一集計。
+  const unpaidPayouts = b.payouts.filter(p => p.status === 'unpaid')
+  const targetPeriod = (unpaidPayouts[0] ?? b.payouts[0])?.period ?? null
+  const pendingTotal = projects.reduce((s, p) => s + p.pending, 0)
+
   return (
     <div className="page-anim">
-      {/* ヘッダ：進行中プロジェクト（プロジェクト中心・お金は控えめ） */}
-      <div style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', borderRadius: 18, padding: '22px 22px 18px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      {/* Step1：支払予定を主役にしたヒーロー。上端＝theme-color(#4733E6) と一致させ継ぎ目を消す。
+          金額/件数の値・計算・クエリは無改修（既存値の再配置のみ）。装飾円は overflow:hidden 内に収容。 */}
+      <div style={{ margin: '18px 20px 0', background: 'linear-gradient(155deg,#4733E6 0%,#3A28CE 100%)', borderRadius: 18, padding: '20px 22px 16px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: -60, top: -60, width: 200, height: 200, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%', animation: 'spin 30s linear infinite' }} />
           <div style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%', animation: 'spin 20s linear infinite reverse' }} />
         </div>
-        <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>進行中プロジェクト</div>
-        <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.022em', lineHeight: 1.05 }}>{active.length}<span style={{ fontSize: '1rem', fontWeight: 600, opacity: .8, marginLeft: 4 }}>件</span></div>
+        {/* ① 小キャプション「支払予定 · 対象月」＋状態チップ */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+          <span style={{ fontSize: '.6rem', opacity: .9 }}>支払予定{targetPeriod ? ` · ${fmtPeriod(targetPeriod)}` : ''}</span>
+          <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{unpaid > 0 ? '未払い' : '支払済'}</span>
+        </div>
+        {/* ② 大きな金額（既存の支払予定額をそのまま・/vendor/rewards へ遷移） */}
+        <Link href="/vendor/rewards" style={{ display: 'block', textDecoration: 'none', color: '#fff', marginTop: 6, position: 'relative', zIndex: 1 }}>
+          <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.022em', lineHeight: 1.05, fontFeatureSettings: '"tnum"' }}>¥{unpaid.toLocaleString()}</span>
+        </Link>
+        {/* ③ 区切り線 ④ 3チップ（担当案件 / 未完タスク / 要対応） */}
         <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>未完タスク<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{projects.reduce((s, p) => s + p.pending, 0)}件</b></div>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>担当案件<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{b.assignments.length}件</b></div>
-          <Link href="/vendor/rewards" style={{ fontSize: '.6rem', opacity: .85, textDecoration: 'none', color: '#fff' }}>未払い 支払予定<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{unpaid.toLocaleString()}</b></Link>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>未完タスク<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{pendingTotal}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>要対応<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{todoList.length}件</b></div>
         </div>
       </div>
 
