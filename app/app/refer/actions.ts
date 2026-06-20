@@ -55,6 +55,7 @@ export async function submitPartnerReferral(formData: FormData) {
   const customerType = ((formData.get('customerType') as string) || 'individual') as 'individual' | 'corporate'
   const companyName  = (formData.get('companyName') as string) || ''
   const contactName  = (formData.get('contactName') as string) || ''
+  const contactTitle = (formData.get('contactTitle') as string) || '' // ②b 法人: 部署・役職（任意・additive）
   const customerName = (formData.get('customerName') as string) || (customerType === 'corporate' ? companyName : '')
   const phone        = formData.get('phone') as string
   const customerEmail = ((formData.get('customerEmail') as string) || '').trim()
@@ -128,6 +129,12 @@ export async function submitPartnerReferral(formData: FormData) {
   if (customerEmail) {
     const { error: emailErr } = await supabase.from('deals').update({ customer_email: customerEmail }).eq('id', deal!.id)
     if (emailErr) { /* 列未追加(DDL前) 等は無視 — 表示/通知のみ */ }
+  }
+
+  // ②b: 法人の部署・役職を保存（任意・additive）。contact_title 列が未追加でも deal 作成を壊さない best-effort。
+  if (customerType === 'corporate' && contactTitle) {
+    const { error: titleErr } = await supabase.from('deals').update({ contact_title: contactTitle }).eq('id', deal!.id)
+    if (titleErr) { /* 列未追加(DDL前) 等は無視 */ }
   }
 
   // L3: 相談案件は明細ゼロ・タスクなしで起票（面談後に運営が明細追加→そのとき service/タスクを割当）。
