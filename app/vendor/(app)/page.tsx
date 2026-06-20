@@ -91,23 +91,28 @@ export default async function VendorHome() {
         </div>
       </div>
 
-      {/* 今やること */}
-      {todoList.length > 0 && (
-        <>
-          <div style={{ padding: '20px 20px 8px' }}><h2 className="ty-h2">今やること</h2></div>
-          <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
-            {todoList.map(t => (
-              <Link key={t.key} href={t.href} className="row-hover lift" style={{ display: 'flex', gap: 11, padding: '13px 14px', borderBottom: '1px solid #F2F2F6', textDecoration: 'none', color: 'var(--txt)', alignItems: 'center' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.dot, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.sub}</div>
-                </div>
-                <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
-              </Link>
-            ))}
-          </div>
-        </>
+      {/* 今やること（Step4：空でもセクションは消さず静かな空状態カードを表示。判定は既存配列lengthのみ） */}
+      <div style={{ padding: '20px 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h2 className="ty-h2">今やること</h2>
+        {todoList.length > 1 && (
+          <span style={{ fontSize: '.55rem', fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: 'var(--blue-bg)', color: 'var(--blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todoList.length}</span>
+        )}
+      </div>
+      {todoList.length === 0 ? (
+        <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '18px 16px', textAlign: 'center', fontSize: '.7rem', color: 'var(--muted2)' }}>対応が必要な項目はありません</div>
+      ) : (
+        <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
+          {todoList.map(t => (
+            <Link key={t.key} href={t.href} className="row-hover lift" style={{ display: 'flex', gap: 11, padding: '13px 14px', borderBottom: '1px solid #F2F2F6', textDecoration: 'none', color: 'var(--txt)', alignItems: 'center' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.dot, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.sub}</div>
+              </div>
+              <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
+            </Link>
+          ))}
+        </div>
       )}
 
       {/* 進行中プロジェクト */}
