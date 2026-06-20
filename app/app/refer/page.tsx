@@ -10,6 +10,29 @@ import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from 
 
 type Step = 'service' | 'menu' | 'form' | 'consult'
 
+// ── 紹介リンクのB2B共有 文面テンプレ（1箇所に集約・後で編集可能）──────────────
+// 事業者向けの丁寧な日本語ビジネス紹介文。{url} に表示中の partner 固有リンク(/r/…)が入る。
+// リンクの生成・保存は無改修（既存 linkUrl をそのまま共有するだけ）。
+const SHARE_TEMPLATE = {
+  mailSubject: 'ご事業に役立つ専門サービスのご紹介',
+  mailBody: (url: string) => [
+    'お世話になっております。',
+    '',
+    '貴社のご事業に役立つ可能性のある専門サービスをご紹介いたします。',
+    'MB Partners が課題に合わせて最適な専門家・サービスをご提案し、商談から成約まで一貫してサポートいたします。',
+    '',
+    '下記より詳細をご確認のうえ、お気軽にお問い合わせください。',
+    url,
+    '',
+    '何卒よろしくお願い申し上げます。',
+  ].join('\n'),
+  lineText: (url: string) => [
+    '貴社のご事業に役立つ専門サービスのご紹介です。',
+    'MB Partners が最適な専門家をご提案し、成約までサポートいたします。',
+    url,
+  ].join('\n'),
+}
+
 function fmtRefAmount(m: MenuRow) {
   if (m.ref_type === 'fixed') return `¥${Number(m.ref_value).toLocaleString()}`
   return `${m.ref_value}%${m.ref_base ? ` (${m.ref_base})` : ''}`
@@ -125,6 +148,18 @@ export default function ReferPage() {
     navigator.clipboard?.writeText(`${location.origin}/book/${partnerCode}`).then(() => {
       setBookingCopied(true); setTimeout(() => setBookingCopied(false), 2000)
     })
+  }
+
+  // B2B共有導線：表示中の紹介リンク(linkUrl=/r/…)を共有インテントで送る（生成・保存は無改修）。
+  function shareEmail() {
+    if (!linkUrl) return
+    const href = `mailto:?subject=${encodeURIComponent(SHARE_TEMPLATE.mailSubject)}&body=${encodeURIComponent(SHARE_TEMPLATE.mailBody(linkUrl))}`
+    window.location.href = href
+  }
+  function shareLine() {
+    if (!linkUrl) return
+    const href = `https://line.me/R/share?text=${encodeURIComponent(SHARE_TEMPLATE.lineText(linkUrl))}`
+    window.open(href, '_blank', 'noopener')
   }
 
   // ⑦ 顧客属性のバリデーション＋FormData組み立て（customer_name は表示用に会社名/氏名を入れる）
@@ -458,6 +493,15 @@ export default function ReferPage() {
                     {copied ? 'COPIED' : 'COPY'}
                   </button>
                 </div>
+                {/* B2B共有導線：メール(主導線・先頭/目立つ)＋LINE。共有対象は表示中の紹介リンク linkUrl(/r/…)。QRは現状維持。 */}
+                <button onClick={shareEmail} className="btn btn-p lift" style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+                  メールで送る
+                </button>
+                <button onClick={shareLine} className="lift" style={{ width: '100%', minHeight: 44, background: '#06C755', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.07.7.2.8.5.07.27.05.7.02.97l-.13.8c-.04.24-.2.94.82.51 1.02-.43 5.5-3.24 7.5-5.55C20.6 14.9 22 13.1 22 11c0-4.4-4.5-8-10-8z"/></svg>
+                  LINEで送る
+                </button>
                 <button onClick={() => setShowQR(v => !v)} className="btn btn-p lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
                 {showQR && <QRModal linkUrl={linkUrl} onClose={() => setShowQR(false)} />}
               </>
