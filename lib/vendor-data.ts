@@ -34,61 +34,58 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     admin.from('deliveries').select('id, name, kind').eq('id', v.deliveryId).maybeSingle(),
   ])
 
-  // V-1 の delivery_brief を同梱（列未追加でも壊さないよう staged）。
-  let rawAssigns: Record<string, unknown>[] | null = null
-  ;({ data: rawAssigns } = await admin
-    .from('delivery_assignments')
-    .select('id, base_fee, assigned_at, deals(id, customer_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
-    .eq('delivery_id', v.deliveryId)
-    .order('assigned_at', { ascending: false }))
-  if (!rawAssigns) {
-    ;({ data: rawAssigns } = await admin
+  // 【perf】3サーフェスのうち vendor だけ逐次await の waterfall で残っていた取得を、console/app と同じ並列方式へ。
+  // クエリ文字列・select・order・map はすべて不変（取得結果は同一）。実行のみ並列化して往復段数を ~6→2 に短縮。
+  // throw時に null を返すヘルパ（best-effort テーブルの耐性を維持しつつ Promise.all を rejectさせない）。
+  const q = (p: PromiseLike<{ data: unknown }>) =>
+    Promise.resolve(p).then(r => (r.data as Record<string, unknown>[] | null), () => null)
+
+  // 並列ステップ1：assignments(delivery_id) と payouts(delivery_id) は相互独立 → 同時実行。
+  const assignmentsP: Promise<Record<string, unknown>[] | null> = (async () => {
+    // V-1 の delivery_brief を同梱（列未追加でも壊さないよう staged フォールバック）。
+    let raw = (await admin
       .from('delivery_assignments')
-      .select('id, base_fee, assigned_at, deals(id, customer_name, status, created_at, services(name, icon, color, logo_path))')
+      .select('id, base_fee, assigned_at, deals(id, customer_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
-      .order('assigned_at', { ascending: false }))
-  }
+      .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
+    if (!raw) {
+      raw = (await admin
+        .from('delivery_assignments')
+        .select('id, base_fee, assigned_at, deals(id, customer_name, status, created_at, services(name, icon, color, logo_path))')
+        .eq('delivery_id', v.deliveryId)
+        .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
+    }
+    return raw
+  })()
+  const payoutsP = admin
+    .from('delivery_payout_items')
+    .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at')
+    .eq('delivery_id', v.deliveryId)
+    .order('period', { ascending: false })
+
+  const [rawAssigns, payoutsRes] = await Promise.all([assignmentsP, payoutsP])
+  const pos = payoutsRes.data
+
   const assignments: VAssign[] = (rawAssigns ?? []).map((a: Record<string, unknown>) => {
     const deal = (a.deals as VAssign['deal']) ?? null
     return { id: a.id as string, base_fee: (a.base_fee as number) ?? 0, assigned_at: (a.assigned_at as string) ?? null, brief: deal?.delivery_brief ?? null, deal }
   })
 
   const assignIds = assignments.map(a => a.id)
-  // V-2: 実行構造（タスク/マイルストーン）・成果物・進捗メモ/フラグを割当ごとに（best-effort）。
-  let tasks: VTask[] = [], deliverables: VDeliverable[] = [], updates: VUpdate[] = []
+  // 並列ステップ2：tasks / deliverables / updates / expenses は assignIds のみ依存 → 同時実行（best-effort）。
+  let tasks: VTask[] = [], deliverables: VDeliverable[] = [], updates: VUpdate[] = [], expenses: VExpense[] = []
   if (assignIds.length) {
-    try {
-      const { data } = await admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').in('delivery_assignment_id', assignIds).order('sort', { ascending: true })
-      tasks = (data ?? []).map((t: Record<string, unknown>) => ({ id: t.id as string, assignment_id: t.delivery_assignment_id as string, title: t.title as string, type: t.type as string, needs_deliverable: !!t.needs_deliverable, due_date: (t.due_date as string) ?? null, sort: (t.sort as number) ?? 0, status: t.status as string, done_at: (t.done_at as string) ?? null }))
-    } catch { /* 未作成 */ }
-    try {
-      const { data } = await admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, file_path, note, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })
-      deliverables = (data ?? []).map((d: Record<string, unknown>) => ({ id: d.id as string, assignment_id: d.delivery_assignment_id as string, task_id: (d.task_id as string) ?? null, file_name: (d.file_name as string) ?? null, note: (d.note as string) ?? null, created_at: (d.created_at as string) ?? null, has_file: !!d.file_path }))
-    } catch { /* 未作成 */ }
-    try {
-      const { data } = await admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })
-      updates = (data ?? []).map((u: Record<string, unknown>) => ({ id: u.id as string, assignment_id: u.delivery_assignment_id as string, kind: u.kind as string, body: u.body as string, status: (u.status as string) ?? null, created_at: (u.created_at as string) ?? null }))
-    } catch { /* 未作成 */ }
+    const [tData, dData, uData, eData] = await Promise.all([
+      q(admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').in('delivery_assignment_id', assignIds).order('sort', { ascending: true })),
+      q(admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, file_path, note, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
+      q(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
+      q(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, status, evidence_path, created_at, approved_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
+    ])
+    tasks = (tData ?? []).map((t: Record<string, unknown>) => ({ id: t.id as string, assignment_id: t.delivery_assignment_id as string, title: t.title as string, type: t.type as string, needs_deliverable: !!t.needs_deliverable, due_date: (t.due_date as string) ?? null, sort: (t.sort as number) ?? 0, status: t.status as string, done_at: (t.done_at as string) ?? null }))
+    deliverables = (dData ?? []).map((d: Record<string, unknown>) => ({ id: d.id as string, assignment_id: d.delivery_assignment_id as string, task_id: (d.task_id as string) ?? null, file_name: (d.file_name as string) ?? null, note: (d.note as string) ?? null, created_at: (d.created_at as string) ?? null, has_file: !!d.file_path }))
+    updates = (uData ?? []).map((u: Record<string, unknown>) => ({ id: u.id as string, assignment_id: u.delivery_assignment_id as string, kind: u.kind as string, body: u.body as string, status: (u.status as string) ?? null, created_at: (u.created_at as string) ?? null }))
+    expenses = (eData ?? []).map((e: Record<string, unknown>) => ({ id: e.id as string, assignment_id: e.delivery_assignment_id as string, kind: e.kind as string, amount: (e.amount as number) ?? 0, status: e.status as string, has_evidence: !!e.evidence_path, created_at: (e.created_at as string) ?? null, approved_at: (e.approved_at as string) ?? null }))
   }
-  let expenses: VExpense[] = []
-  if (assignIds.length) {
-    const { data: exps } = await admin
-      .from('expense_claims')
-      .select('id, delivery_assignment_id, kind, amount, status, evidence_path, created_at, approved_at')
-      .in('delivery_assignment_id', assignIds)
-      .order('created_at', { ascending: false })
-    expenses = (exps ?? []).map((e: Record<string, unknown>) => ({
-      id: e.id as string, assignment_id: e.delivery_assignment_id as string, kind: e.kind as string,
-      amount: (e.amount as number) ?? 0, status: e.status as string, has_evidence: !!e.evidence_path,
-      created_at: (e.created_at as string) ?? null, approved_at: (e.approved_at as string) ?? null,
-    }))
-  }
-
-  const { data: pos } = await admin
-    .from('delivery_payout_items')
-    .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at')
-    .eq('delivery_id', v.deliveryId)
-    .order('period', { ascending: false })
 
   return {
     userId: v.userId,
