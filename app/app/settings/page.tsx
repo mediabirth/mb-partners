@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import SettingsScreen from '@/components/ui/SettingsScreen'
+import LineLinkCard from '@/components/LineLinkCard'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export default function SettingsPage() {
         { title: 'メール通知', desc: '重要なお知らせをメールでお届けします', state: 'on' },
         { title: 'プッシュ通知', desc: '今後のアップデートで対応予定です', state: 'soon' },
       ]}
+      extra={<LineLinkCard />}
       logout={<button onClick={logout} className="btn btn-g" style={{ width: '100%', marginTop: 0 }}>ログアウト</button>}
     />
   )

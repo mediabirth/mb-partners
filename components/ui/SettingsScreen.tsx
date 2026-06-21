@@ -9,10 +9,11 @@ import { BUILD_STAMP } from '@/lib/build-stamp'
 export type SettingsLink = { href: string; label: string }
 export type SettingsNoti = { title: string; desc: string; state: 'on' | 'soon' }
 
-export default function SettingsScreen({ links, notifications, logout }: {
+export default function SettingsScreen({ links, notifications, logout, extra }: {
   links: SettingsLink[]
   notifications: SettingsNoti[]
   logout: React.ReactNode
+  extra?: React.ReactNode // additive: surface 固有の追加カード（app=LINE連携 等）。未指定なら何も出ない（vendor不変）。
 }) {
   return (
     <div className="page-anim">
@@ -40,6 +41,8 @@ export default function SettingsScreen({ links, notifications, logout }: {
       <div style={{ margin: '0 20px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
         {notifications.map((n, i) => <NotiRow key={n.title} title={n.title} desc={n.desc} state={n.state} last={i === notifications.length - 1} />)}
       </div>
+
+      {extra}
 
       <div style={{ margin: '4px 20px 8px' }}>{logout}</div>
       {/* BR-DIAG2：版数スタンプ（app/vendor 共通の SettingsScreen に表示＝両面で同一ビルドを確認）。 */}
