@@ -15,7 +15,7 @@ export default function LineLinkCard() {
     fetch('/api/line/status').then(r => r.json()).then(d => setLinked(!!d.linked)).catch(() => setLinked(false))
     try {
       const p = new URLSearchParams(window.location.search).get('line')
-      if (p === 'linked') setToast('LINEと連携しました')
+      if (p === 'success' || p === 'linked') setToast('LINEと連携しました')
       else if (p === 'error') setToast('連携に失敗しました。時間をおいて再度お試しください')
       if (p) window.history.replaceState({}, '', window.location.pathname)
     } catch { /* noop */ }
