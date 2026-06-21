@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import ServiceIcon from '@/components/ServiceIcon'
+import { trackFunnel } from '@/lib/funnel-client'
 
 type LinkInfo = {
   service: { id: string; name: string; subtitle: string | null; icon: string; color: string }
@@ -31,6 +32,8 @@ export default function ReferralLandingPage() {
   const [error, setError]       = useState('')
 
   useEffect(() => {
+    // ⑤ ランディング閲覧を計測（非ブロッキング・後追い・帰属/info取得には一切触れない）。
+    trackFunnel('landing_view', { token })
     fetch(`/api/referral/info?token=${token}`)
       .then(r => r.json())
       .then(d => {

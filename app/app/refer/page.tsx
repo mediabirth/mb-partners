@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import BookingDrawer from '@/components/BookingDrawer'
 import PushOptIn from '@/components/PushOptIn'
+import { trackFunnel } from '@/lib/funnel-client'
 import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
@@ -141,6 +142,7 @@ export default function ReferPage() {
   }
 
   function copyLink() {
+    trackFunnel('share', { channel: 'copy', token }) // ⑤ 計測(非ブロッキング・後追い)
     navigator.clipboard?.writeText(`${location.origin}/r/${token}`).then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000)
     })
@@ -155,11 +157,13 @@ export default function ReferPage() {
   // B2B共有導線：表示中の紹介リンク(linkUrl=/r/…)を共有インテントで送る（生成・保存は無改修）。
   function shareEmail() {
     if (!linkUrl) return
+    trackFunnel('share', { channel: 'mail', token }) // ⑤ 計測(非ブロッキング・後追い)
     const href = `mailto:?subject=${encodeURIComponent(SHARE_TEMPLATE.mailSubject)}&body=${encodeURIComponent(SHARE_TEMPLATE.mailBody(linkUrl))}`
     window.location.href = href
   }
   function shareLine() {
     if (!linkUrl) return
+    trackFunnel('share', { channel: 'line', token }) // ⑤ 計測(非ブロッキング・後追い)
     const href = `https://line.me/R/share?text=${encodeURIComponent(SHARE_TEMPLATE.lineText(linkUrl))}`
     window.open(href, '_blank', 'noopener')
   }
@@ -512,7 +516,7 @@ export default function ReferPage() {
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.07.7.2.8.5.07.27.05.7.02.97l-.13.8c-.04.24-.2.94.82.51 1.02-.43 5.5-3.24 7.5-5.55C20.6 14.9 22 13.1 22 11c0-4.4-4.5-8-10-8z"/></svg>
                   LINEで送る
                 </button>
-                <button onClick={() => setShowQR(v => !v)} className="btn btn-p lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
+                <button onClick={() => { if (!showQR) trackFunnel('share', { channel: 'qr', token }); setShowQR(v => !v) }} className="btn btn-p lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
                 {showQR && <QRModal linkUrl={linkUrl} onClose={() => setShowQR(false)} />}
               </>
             ) : !coopMode ? (
