@@ -19,6 +19,15 @@ const STATUS_STEP: Record<string, number> = {
 const PARTNER_STAGE: Record<string, string> = {
   received: '受付', in_progress: 'MB対応中', confirmed: '成約', paid: '成約（入金済）', lost: '見送り',
 }
+// ②A-2：in_progress を review_stage(表示専用メタ)で細分化。未設定は従来「MB対応中」にフォールバック。
+function partnerStageLabel(status: string, reviewStage?: string | null): string {
+  if (status === 'in_progress') {
+    if (reviewStage === 'review') return '稟議中'
+    if (reviewStage === 'negotiating') return '商談中'
+    return 'MB対応中'
+  }
+  return PARTNER_STAGE[status] ?? status
+}
 function fmtDate(s?: string | null): string {
   if (!s) return '—'
   const d = new Date(s)
@@ -176,7 +185,7 @@ export default async function CasesPage({
 
                   {/* ②A 現在の段階（パートナー視点ラベル）＋紹介日／最終更新（read-only・金額なし） */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 11, paddingTop: 10, borderTop: '1px solid #F4F4F7', fontSize: '.58rem', color: 'var(--muted2)' }}>
-                    <span style={{ fontWeight: 800, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--blue)' }}>現在：{PARTNER_STAGE[d.status] ?? d.status}</span>
+                    <span style={{ fontWeight: 800, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--blue)' }}>現在：{partnerStageLabel(d.status, (d as { review_stage?: string | null }).review_stage)}</span>
                     <span style={{ color: 'var(--line)' }}>|</span>
                     <span>紹介 {fmtDate(d.created_at)}</span>
                     <span style={{ color: 'var(--line)' }}>|</span>

@@ -130,7 +130,7 @@ export async function getPartnerWithDeals(supabase: SupabaseClient, userId: stri
       id, code, status, tax_type, bank, is_frontier,
       deals:deals!partner_id(
         id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount,
-        menu_id, fixed_month, consent, meeting_at, created_at, updated_at, service_id,
+        menu_id, fixed_month, consent, meeting_at, created_at, updated_at, service_id, review_stage,
         services(id, name, subtitle, icon, color, logo_path),
         service_menus(name)
       )
