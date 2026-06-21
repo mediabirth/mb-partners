@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getPartnersWithProfiles, getAllDeals } from '@/lib/supabase/queries'
+import { partnerTier } from '@/lib/tier'
 import ConsoleNav from '@/components/ConsoleNav'
 import ApprovalPanel from './ApprovalPanel'
 import DeliveryRow from './DeliveryRow'
@@ -22,7 +23,7 @@ type URow = {
   kind: 'referral' | 'frontier' | 'delivery'
   id: string; href?: string
   name: string; email: string; color: string | null; avatar_url: string | null
-  code: string; tax: string; deals: number | null; activeDeals: number; reward: number | null; kyc: boolean
+  code: string; tax: string; deals: number | null; activeDeals: number; reward: number | null; kyc: boolean; won: number
   statusPill: { tone: Tone; children: string }
 }
 
@@ -47,6 +48,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const dealCount = (pid: string) => deals.filter(d => d.partners?.id === pid).length
   const activeDealCount = (pid: string) => deals.filter(d => d.partners?.id === pid && ['received', 'in_progress'].includes(d.status)).length
   const partnerReward = (pid: string) => deals.filter(d => d.partners?.id === pid && ['paid', 'confirmed'].includes(d.status)).reduce((s, d) => s + (d.amount || 0), 0)
+  // Wave3-③A：確定成約数(ティア算出用・認知のみ・read-only)。
+  const wonCount = (pid: string) => deals.filter(d => d.partners?.id === pid && ['paid', 'confirmed'].includes(d.status)).length
 
   type P = typeof partners[number] & { is_frontier?: boolean }
   const isRealPartner = (p: P) => !INTERNAL_CODES.has(p.code) && (p.profiles?.role ?? 'partner') === 'partner'
@@ -66,13 +69,13 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
     name: p.profiles?.name ?? '—', email: p.profiles?.email ?? '', color: p.profiles?.color ?? null,
     avatar_url: (p.profiles as { avatar_url?: string | null } | null)?.avatar_url ?? null,
     code: p.code, tax: p.tax_type === 'individual' ? '個人' : '法人',
-    deals: dealCount(p.id), activeDeals: activeDealCount(p.id), reward: partnerReward(p.id), kyc: !!p.kyc_verified_at,
+    deals: dealCount(p.id), activeDeals: activeDealCount(p.id), reward: partnerReward(p.id), kyc: !!p.kyc_verified_at, won: wonCount(p.id),
     statusPill: partnerStatus(p.status),
   })
   const deliveryRow = (d: typeof deliveries[number]): URow => ({
     kind: 'delivery', id: d.id, href: undefined,
     name: d.name, email: d.contact_email ?? '', color: null, avatar_url: null,
-    code: '—', tax: d.kind ?? '—', deals: null, activeDeals: 0, reward: null, kyc: false,
+    code: '—', tax: d.kind ?? '—', deals: null, activeDeals: 0, reward: null, kyc: false, won: 0,
     statusPill: { tone: d.active ? 'success' : 'neutral', children: d.active ? '有効' : '無効' },
   })
   const allRows: URow[] = [...externalPartners.map(partnerRow), ...deliveries.map(deliveryRow)]
@@ -102,7 +105,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <Avatar name={r.name || r.code} color={r.color} src={r.avatar_url} size={34} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <span style={{ fontWeight: 700, fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                  {/* Wave3-③A ティアバッジ(認知のみ・read-only・列追加なし) */}
+                  {(() => { const t = partnerTier(r.won); return <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: t.color, background: t.bg, borderRadius: 6, padding: '2px 6px' }}>{t.label}</span> })()}
+                </div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {r.email || '—'}{r.kyc && <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 600 }}>✓ KYC</span>}
                 </div>
