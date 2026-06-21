@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { signState, authorizeUrl } from '@/lib/line-login'
 
-// L-B：LINE連携の開始（ログイン済み partner 本人のみ）。state(署名)＋nonce(CSRF cookie)を発行し LINE authorize へ。
-// ★ログイン手段ではない：未ログインは弾く。既存認証/ログイン経路は不変。
+// L-B：LINE連携の開始（ログイン済み partner 本人のみ）。
+// CSRF/リプレイ対策はサーバ側 single-use nonce（line_oauth_nonces）に保存。state は署名済(partnerId内包・偽造不可)。
+// ★ログイン手段ではない：未ログインは弾く。既存認証/ログイン経路・Cookie semantics は不変。
 export const runtime = 'nodejs'
 
 export async function GET() {
@@ -17,10 +18,13 @@ export async function GET() {
 
   const nonce = crypto.randomBytes(16).toString('hex')
   const exp = Date.now() + 10 * 60 * 1000
-  const state = signState(partner.id, nonce, exp)
 
+  // サーバ側に nonce を保存（single-use・10分失効）。callback はこれを consume して検証する（Cookie非依存）。
+  const admin = await createServiceRoleClient()
+  await admin.from('line_oauth_nonces').insert({ nonce, partner_id: partner.id, expires_at: new Date(exp).toISOString() })
+
+  const state = signState(partner.id, nonce, exp)
   const res = NextResponse.redirect(authorizeUrl(state))
-  // CSRF double-submit 用 nonce（httpOnly・10分）。
-  res.cookies.set('line_oauth_nonce', nonce, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 600 })
+  res.headers.set('Referrer-Policy', 'no-referrer')
   return res
 }
