@@ -50,6 +50,8 @@ export default function ReferralLandingPage() {
     const person = contactName.trim()
     const company = companyName.trim()
     if (!person) { setError('ご担当者名（お名前）を入力してください'); return }
+    // Batch B（クライアント送信gateの追加のみ・payload/サーバ insert は不変）：メールか電話のどちらか必須。
+    if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかをご入力ください'); return }
     if (!consent) { setError('同意確認が必要です'); return }
     setSubmitting(true)
     try {
@@ -190,12 +192,13 @@ export default function ReferralLandingPage() {
               <label>部署・役職（任意）</label>
               <input value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" style={{ minHeight: 44 }} />
             </div>
+            <p style={{ fontSize: '.6rem', color: 'var(--blue-dk)', fontWeight: 600, margin: '0 2px 6px' }}>※ メールか電話のいずれかは必須です</p>
             <div className="fld">
-              <label>電話番号（任意）</label>
+              <label>電話番号</label>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" style={{ minHeight: 44 }} />
             </div>
             <div className="fld">
-              <label>メールアドレス（任意）</label>
+              <label>メールアドレス</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="contact@example.com" autoComplete="off" style={{ minHeight: 44 }} />
             </div>
             <div className="fld">
