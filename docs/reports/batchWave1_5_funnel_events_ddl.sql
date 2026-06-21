@@ -16,3 +16,6 @@ create index if not exists funnel_events_created_idx on public.funnel_events(cre
 create index if not exists funnel_events_type_idx on public.funnel_events(event_type);
 create index if not exists funnel_events_dedup_idx on public.funnel_events(dedup_hash);
 alter table public.funnel_events enable row level security;
+-- psql作成テーブルは service_role の GRANT が無いと PostgREST/supabase-js から permission denied。
+-- service_role のみ付与（anon/authenticated は RLS 0ポリシーで遮断・GRANT不要）。
+grant all on public.funnel_events to service_role;
