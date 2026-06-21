@@ -175,9 +175,6 @@ export default function ReferralLandingPage() {
           <div style={{ fontSize: '.78rem', fontWeight: 800, marginBottom: 4 }}>お問い合わせ内容</div>
           <p style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 16 }}>
             下記をご入力のうえ送信してください。担当者より追ってご連絡いたします。
-            {info?.menu?.example_ref && (
-              <><br/><span style={{ color: 'var(--blue)', fontWeight: 600 }}>{info.menu.example_ref}</span></>
-            )}
           </p>
 
           <form onSubmit={handleSubmit}>
