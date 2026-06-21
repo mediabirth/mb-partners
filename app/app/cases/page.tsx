@@ -77,6 +77,11 @@ export default async function CasesPage({
   const { partner, deals } = result
   const { f = 'active' } = await searchParams
 
+  // ②B 確定報酬の累計（確定=confirmed/paid の deals.amount＝あなたの報酬・既存計算済み値の読み取り集計のみ。再計算なし）。
+  const confirmedRewardTotal = deals
+    .filter((d: { status: string }) => ['confirmed', 'paid'].includes(d.status))
+    .reduce((s: number, d: { amount?: number }) => s + (d.amount || 0), 0)
+
   // 3タブ：進行中(受付+対応中) / 完了(成約+支払済) / 不成立(lost)。不成立は進行中から除外。
   const filtered = deals.filter(d => {
     if (f === 'done') return ['confirmed', 'paid'].includes(d.status)
@@ -102,6 +107,13 @@ export default async function CasesPage({
         </div>
         {/* ②A 帰属の安心感：これは“あなたの紹介”であることを明示 */}
         <p style={{ fontSize: '.63rem', color: 'var(--muted2)', margin: '0 2px', lineHeight: 1.6 }}>あなたが紹介した案件の進捗です。各案件が今どの段階かを確認できます。</p>
+      </div>
+
+      {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計） */}
+      <div style={{ margin: '6px 20px 14px', background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>
+        <div style={{ fontSize: '.58rem', opacity: .9, letterSpacing: '.04em', fontWeight: 700 }}>確定報酬の累計</div>
+        <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}>¥{confirmedRewardTotal.toLocaleString()}</div>
+        <div style={{ fontSize: '.56rem', opacity: .82, marginTop: 3 }}>成約・支払済の案件で確定した、あなたの報酬の合計です。</div>
       </div>
 
       {/* Filter tabs */}
@@ -168,12 +180,12 @@ export default async function CasesPage({
                     </div>
                     {d.status === 'lost' ? (
                       <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
-                    ) : d.amount > 0 && (
-                      /* 金額：副次情報として縮小＋軽色 */
-                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.8rem', fontWeight: 700, color: d.status === 'paid' ? 'var(--green)' : 'var(--muted2)', letterSpacing: '-.012em' }}>
-                        ¥{d.amount.toLocaleString()}
+                    ) : ['confirmed', 'paid'].includes(d.status) && d.amount > 0 ? (
+                      /* ②B 確定報酬：成約/支払済(確定)のみ表示・あなたの報酬(既存計算済み値を読むだけ)。案件金額(MB受注総額)は出さない */
+                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.78rem', fontWeight: 700, color: 'var(--green)', letterSpacing: '-.012em' }}>
+                        報酬 ¥{d.amount.toLocaleString()}
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* 段階ステッパー（不成立は見送りメッセージ） */}
