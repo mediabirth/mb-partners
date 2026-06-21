@@ -10,11 +10,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Channel, NotifyPayload, NotifyResult } from './types'
 import { inboxChannel } from './inbox'
 import { webpushChannel } from './webpush'
+import { lineChannel } from './line'
 
 export type { Channel, NotifyPayload, NotifyResult } from './types'
 
-// 登録済みチャネル。inbox(永続) + webpush。LINE/Email を後付けする場合はここに追加（例: lineChannel）。
-const channels: Channel[] = [inboxChannel, webpushChannel]
+// 登録済みチャネル。inbox(永続) + webpush + line。各チャネルは enabledFor で自分の有効/無効を判定し、
+// 無効なら skip（line は紐付けゼロの間 false＝安全にスキップ・他チャネルに無影響）。
+const channels: Channel[] = [inboxChannel, webpushChannel, lineChannel]
 
 /** partner の有効な全チャネルへ payload を配信。お金・案件状態には触れない。 */
 export async function notify(
