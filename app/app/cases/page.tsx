@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
+import { nextPayoutDate } from '@/lib/payout'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import ChannelMark from '@/components/ChannelMark'
 
@@ -32,6 +33,21 @@ function fmtDate(s?: string | null): string {
   if (!s) return '—'
   const d = new Date(s)
   return Number.isNaN(d.getTime()) ? '—' : `${d.getMonth() + 1}/${d.getDate()}`
+}
+// ②B深化(b) 報酬の根拠（reward_snapshot を読むだけ・再計算しない）。率 or 固定。
+function rewardBasis(snap: unknown): string {
+  if (!snap || typeof snap !== 'object') return ''
+  const s = snap as { rate?: number; base_label?: string; ref_type?: string; reward_type?: string }
+  if (typeof s.rate === 'number' && s.rate > 0) return `${s.base_label ?? '成約額'}の${s.rate}%`
+  if (s.ref_type === 'fixed' || s.reward_type === 'fixed') return '固定報酬'
+  return ''
+}
+// ②B深化(a) 未払いの支払予定（既存 lib/payout の翌月末規約・表示用ラベル。お金計算ではない）。
+function payoutLabel(fixedMonth?: string | null): string {
+  const base = fixedMonth ? new Date(fixedMonth) : new Date()
+  if (Number.isNaN(base.getTime())) return '翌月末'
+  const d = nextPayoutDate(base)
+  return `${d.getFullYear()}年${d.getMonth() + 1}月末`
 }
 
 // 4段ステッパー（旧実装の段階表示に回帰）。完了段は塗り、現在段は強調。
@@ -78,9 +94,11 @@ export default async function CasesPage({
   const { f = 'active' } = await searchParams
 
   // ②B 確定報酬の累計（確定=confirmed/paid の deals.amount＝あなたの報酬・既存計算済み値の読み取り集計のみ。再計算なし）。
-  const confirmedRewardTotal = deals
-    .filter((d: { status: string }) => ['confirmed', 'paid'].includes(d.status))
-    .reduce((s: number, d: { amount?: number }) => s + (d.amount || 0), 0)
+  // ②B深化(a) 支払済(paid)/未払い(confirmed) に分割（status を読むだけ・payout/frozenには触れない）。
+  const sumBy = (st: string[]) => deals.filter((d: { status: string }) => st.includes(d.status)).reduce((s: number, d: { amount?: number }) => s + (d.amount || 0), 0)
+  const paidRewardTotal = sumBy(['paid'])
+  const unpaidRewardTotal = sumBy(['confirmed'])
+  const confirmedRewardTotal = paidRewardTotal + unpaidRewardTotal
 
   // 3タブ：進行中(受付+対応中) / 完了(成約+支払済) / 不成立(lost)。不成立は進行中から除外。
   const filtered = deals.filter(d => {
@@ -109,11 +127,14 @@ export default async function CasesPage({
         <p style={{ fontSize: '.63rem', color: 'var(--muted2)', margin: '0 2px', lineHeight: 1.6 }}>あなたが紹介した案件の進捗です。各案件が今どの段階かを確認できます。</p>
       </div>
 
-      {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計） */}
+      {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計）＋(a)支払済/未払い分割 */}
       <div style={{ margin: '6px 20px 14px', background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>
         <div style={{ fontSize: '.58rem', opacity: .9, letterSpacing: '.04em', fontWeight: 700 }}>確定報酬の累計</div>
         <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}>¥{confirmedRewardTotal.toLocaleString()}</div>
-        <div style={{ fontSize: '.56rem', opacity: .82, marginTop: 3 }}>成約・支払済の案件で確定した、あなたの報酬の合計です。</div>
+        <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.25)' }}>
+          <div style={{ fontSize: '.56rem', opacity: .85 }}>支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{paidRewardTotal.toLocaleString()}</b></div>
+          <div style={{ fontSize: '.56rem', opacity: .85 }}>未払い（翌月末払い見込み）<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{unpaidRewardTotal.toLocaleString()}</b></div>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -193,6 +214,18 @@ export default async function CasesPage({
                     <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 10 }}>この案件は不成立（見送り）となりました。</p>
                   ) : (
                     <StatusStepper step={step} />
+                  )}
+
+                  {/* ②B深化 (a)支払状況／予定 ＋ (b)報酬の根拠（確定=confirmed/paid のみ・既存値を読むだけ） */}
+                  {['confirmed', 'paid'].includes(d.status) && d.amount > 0 && (
+                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: '.58rem' }}>
+                      {d.status === 'paid'
+                        ? <span style={{ fontWeight: 800, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 999, padding: '2px 9px' }}>支払済</span>
+                        : <span style={{ fontWeight: 800, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 999, padding: '2px 9px' }}>未払い · {payoutLabel((d as { fixed_month?: string | null }).fixed_month)}払い見込み</span>}
+                      {rewardBasis((d as { reward_snapshot?: unknown }).reward_snapshot) && (
+                        <span style={{ color: 'var(--muted2)' }}>報酬の根拠：{rewardBasis((d as { reward_snapshot?: unknown }).reward_snapshot)}</span>
+                      )}
+                    </div>
                   )}
 
                   {/* ②A 現在の段階（パートナー視点ラベル）＋紹介日／最終更新（read-only・金額なし） */}
