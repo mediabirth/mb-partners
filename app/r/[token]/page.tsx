@@ -213,7 +213,7 @@ export default function ReferralLandingPage() {
             {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
             <button type="submit" disabled={submitting || !consent}
-              className="btn btn-p" style={{ width: '100%', minHeight: 48, fontSize: '.85rem' }}>
+              className="btn btn-p" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
               {submitting ? '送信中…' : '無料で相談する'}
             </button>
             <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>
