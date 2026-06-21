@@ -230,6 +230,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  // ④b: 成約「確定コミット後」に勝ち通知を fire-and-forget（内部nodejsエンドポイント→inbox+Web Push fan-out）。
+  // ★状態遷移（遷移前≠confirmed）時のみ＝多重送信防止。読み取りのみで status/お金/帰属は不変。
+  // ★通知失敗は成約処理を絶対に壊さない（try/catchで握りつぶし・ロールバックさせない）。
+  if (confirming && ctx?.status !== 'confirmed') {
+    try {
+      await fetch(`${new URL(req.url).origin}/api/internal/deal-won`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${process.env.CRON_SECRET ?? ''}` },
+        body: JSON.stringify({ dealId: id }),
+        signal: AbortSignal.timeout(4000),
+      })
+    } catch { /* 通知失敗は成約を壊さない（fire-and-forget・握りつぶし） */ }
+  }
+
   return NextResponse.json({ deal })
 }
 
