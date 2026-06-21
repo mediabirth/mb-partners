@@ -15,6 +15,16 @@ const STATUS_STEP: Record<string, number> = {
   received: 0, in_progress: 1, confirmed: 2, paid: 3,
 }
 
+// Wave2-②A：パートナー視点の段階ラベル（既存 status を“読み取って”表示するだけ・status値/遷移/お金は不変更）。
+const PARTNER_STAGE: Record<string, string> = {
+  received: '受付', in_progress: 'MB対応中', confirmed: '成約', paid: '成約（入金済）', lost: '見送り',
+}
+function fmtDate(s?: string | null): string {
+  if (!s) return '—'
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? '—' : `${d.getMonth() + 1}/${d.getDate()}`
+}
+
 // 4段ステッパー（旧実装の段階表示に回帰）。完了段は塗り、現在段は強調。
 function StatusStepper({ step }: { step: number }) {
   return (
@@ -77,10 +87,12 @@ export default async function CasesPage({
   return (
     <div className="page-anim">
       <div style={{ padding: '22px 20px 6px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
           <h2 className="ty-h2">案件</h2>
           <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{filtered.length}件</span>
         </div>
+        {/* ②A 帰属の安心感：これは“あなたの紹介”であることを明示 */}
+        <p style={{ fontSize: '.63rem', color: 'var(--muted2)', margin: '0 2px', lineHeight: 1.6 }}>あなたが紹介した案件の進捗です。各案件が今どの段階かを確認できます。</p>
       </div>
 
       {/* Filter tabs */}
@@ -161,6 +173,15 @@ export default async function CasesPage({
                   ) : (
                     <StatusStepper step={step} />
                   )}
+
+                  {/* ②A 現在の段階（パートナー視点ラベル）＋紹介日／最終更新（read-only・金額なし） */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 11, paddingTop: 10, borderTop: '1px solid #F4F4F7', fontSize: '.58rem', color: 'var(--muted2)' }}>
+                    <span style={{ fontWeight: 800, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--blue)' }}>現在：{PARTNER_STAGE[d.status] ?? d.status}</span>
+                    <span style={{ color: 'var(--line)' }}>|</span>
+                    <span>紹介 {fmtDate(d.created_at)}</span>
+                    <span style={{ color: 'var(--line)' }}>|</span>
+                    <span>最終更新 {fmtDate(d.updated_at)}</span>
+                  </div>
                 </Link>
               )
             })}
