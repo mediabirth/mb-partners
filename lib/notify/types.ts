@@ -1,7 +1,7 @@
 /** Wave1-④a：通知ディスパッチャの共有型（循環import回避のため分離）。 */
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type NotifyPayload = { title: string; body?: string; url?: string; tag?: string }
+export type NotifyPayload = { title: string; body?: string; url?: string; tag?: string; ref?: { type: string; [k: string]: unknown } | null }
 
 export type Channel = {
   name: string
