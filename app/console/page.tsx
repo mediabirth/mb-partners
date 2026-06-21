@@ -257,6 +257,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Link href="/console/funnel" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>📈 ファネル</Link>
+            <Link href="/console/reactivate" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>🔔 再活性化</Link>
             <Link href="/console/analytics" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>📊 詳細分析</Link>
             <GlobalSearchClient />
           </div>
