@@ -98,7 +98,7 @@ export async function GET() {
   // N失注メタ + L2明細 + A1 P&L(revenue/director_id/other_cost)。列/テーブル未作成なら段階 fallback。
   let { data: deals } = await admin
     .from('deals')
-    .select(`${SEL_BASE}, delivery_brief, intake_type, project_status, lost_at, lost_reason, lost_note, director_id, other_cost, deal_items(id, service_id, kind, amount, base_amount, revenue, sort, services(name))`)
+    .select(`${SEL_BASE}, delivery_brief, intake_type, project_status, review_stage, lost_at, lost_reason, lost_note, director_id, other_cost, deal_items(id, service_id, kind, amount, base_amount, revenue, sort, services(name))`)
     .order('created_at', { ascending: false })
   if (!deals) {
     ;({ data: deals } = await admin

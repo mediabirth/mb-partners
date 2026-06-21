@@ -32,6 +32,7 @@ type Deal = {
   // F-1: 流入経路・フェーズ・プロジェクト実行ステータス（お金には非干渉の独立メタデータ）
   intake_type?: string | null
   project_status?: string | null
+  review_stage?: string | null // ②A-2: 稟議ステージ(表示専用メタ・status非接触)
   _phase?: 'shodan' | 'project'
 }
 
@@ -328,6 +329,18 @@ export default function DealsPage() {
       const data = await res.json().catch(() => ({}))
       if (res.ok && !data.needsMigration) { await refreshDeals(selected.id); showToast('プロジェクト状態を更新しました') }
       else if (data.needsMigration) showToast('project_status列のDB適用が必要です（batchF1 DDL）')
+      else showToast(data.error ?? '保存に失敗しました')
+    } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
+  }
+  // ②A-2: 稟議ステージ更新（隔離ルート /review-stage）。★status enum・confirmed遷移・reward/frozen/payout/pnl・④b発火に一切触れない。
+  async function saveReviewStage(rs: string | null) {
+    if (!selected) return
+    setItemBusy(true)
+    try {
+      const res = await fetch(`/api/console/deals/${selected.id}/review-stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ review_stage: rs }) })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && !data.needsMigration) { await refreshDeals(selected.id); showToast('稟議ステージを更新しました') }
+      else if (data.needsMigration) showToast('review_stage列のDB適用が必要です')
       else showToast(data.error ?? '保存に失敗しました')
     } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
   }
@@ -834,6 +847,19 @@ export default function DealsPage() {
                           style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 700, background: '#fff', color: PROJECT_STATUS_STYLE[selected.project_status ?? '']?.c ?? 'var(--txt)' }}>
                           <option value="">未設定</option>
                           {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {/* ②A-2: 稟議ステージ（in_progress時のみ・表示専用メタ・お金/confirmed非接触の隔離更新でpartnerに細分化表示） */}
+                    {selected.status === 'in_progress' && (
+                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700 }}>稟議ステージ</span>
+                        <select value={selected.review_stage ?? ''} disabled={itemBusy}
+                          onChange={e => saveReviewStage(e.target.value === '' ? null : e.target.value)}
+                          style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 700, background: '#fff', color: 'var(--txt)' }}>
+                          <option value="">未設定（MB対応中）</option>
+                          <option value="negotiating">商談中</option>
+                          <option value="review">稟議中</option>
                         </select>
                       </div>
                     )}
