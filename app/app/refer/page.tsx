@@ -608,6 +608,16 @@ export default function ReferPage() {
               </button>
             </form>
           </div>
+
+          {/* ── AI紹介文ドラフト（補助・併設）。既存の共有導線/SHARE_TEMPLATEは無改修。 ── */}
+          <div style={{ margin: '12px 20px 0' }}>
+            <AiIntroPanel
+              defaultContact={customerType === 'corporate' ? companyName : customerName}
+              defaultService={selSvc.name}
+              defaultNeed={memo}
+            />
+          </div>
+
           <div style={{ height: 24 }} />
 
           {/* 協力「自分で予約」: 予約確定で協力deal作成＋商談予約を同時実行 */}
@@ -657,6 +667,133 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
       )}
       {cond && <p style={{ fontSize: '.61rem', color: 'var(--muted2)', margin: '7px 0 0', lineHeight: 1.5 }}>※ {cond}</p>}
     </button>
+  )
+}
+
+// AI紹介文ドラフト：紹介先へ送る文面の“下書き”を生成する補助パネル。
+// ★紹介の作成・帰属・お金には一切関与しない。既存の共有導線(COPY/QR/メール/LINE)とは独立。
+// APIキー未設定(disabled)なら何も表示しない。生成結果は編集可能・コピーのみ。
+function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: {
+  defaultContact: string; defaultService: string; defaultNeed: string
+}) {
+  const [enabled, setEnabled] = useState<boolean | null>(null) // null=判定中
+  const [open, setOpen]       = useState(false)
+  const [contact, setContact] = useState(defaultContact)
+  const [need, setNeed]       = useState(defaultNeed)
+  const [service, setService] = useState(defaultService)
+  const [tone, setTone]       = useState('丁寧')
+  const [draft, setDraft]     = useState('')
+  const [busy, setBusy]       = useState(false)
+  const [err, setErr]         = useState('')
+  const [copied, setCopied]   = useState(false)
+
+  // 機能の有効判定（APIキー設定有無）。未設定 or 未認証ならパネル非表示。
+  useEffect(() => {
+    let alive = true
+    fetch('/api/ai/draft-intro')
+      .then(r => r.ok ? r.json() : { enabled: false })
+      .then(j => { if (alive) setEnabled(!!j.enabled) })
+      .catch(() => { if (alive) setEnabled(false) })
+    return () => { alive = false }
+  }, [])
+
+  async function generate() {
+    setErr(''); setBusy(true); setCopied(false)
+    try {
+      const res = await fetch('/api/ai/draft-intro', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ contact, need, service, tone }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (j?.disabled) { setEnabled(false); return }
+      if (!res.ok) { setErr(j?.error || '生成に失敗しました。時間をおいて再度お試しください。'); return }
+      setDraft(j.draft || '')
+    } catch {
+      setErr('通信に失敗しました。時間をおいて再度お試しください。')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function copyDraft() {
+    if (!draft) return
+    navigator.clipboard?.writeText(draft).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  if (!enabled) return null // 判定中(null)・無効(false)は非表示
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="lift"
+        style={{ width: '100%', background: '#fff', border: '1px dashed var(--line)', borderRadius: 13, padding: '13px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}>
+        <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--blue)' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z"/></svg>
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: '.8rem', fontWeight: 800 }}>AIで紹介文を作る</span>
+          <span style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>相手とニーズを入れると、送る文面の下書きを作成します。</span>
+        </span>
+        <span style={{ color: 'var(--muted)', fontSize: '.9rem', flexShrink: 0 }}>›</span>
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '16px 18px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <span style={{ color: 'var(--blue)', display: 'flex' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z"/></svg>
+        </span>
+        <b style={{ fontSize: '.8rem', fontWeight: 800 }}>AIで紹介文を作る</b>
+        <button type="button" onClick={() => setOpen(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.66rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
+      </div>
+      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>下書きの“たたき台”です。送る前に必ず内容をご確認・編集ください。</p>
+
+      <div className="fld">
+        <label>紹介先の相手（企業・担当者）</label>
+        <input value={contact} onChange={e => setContact(e.target.value)} placeholder="例：株式会社〇〇 山田様" />
+      </div>
+      <div className="fld">
+        <label>相手の課題・ニーズ</label>
+        <textarea value={need} onChange={e => setNeed(e.target.value)} rows={2} placeholder="例：採用がうまくいかず、母集団形成に課題がある"
+          style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.85rem', resize: 'vertical' }} />
+      </div>
+      <div className="fld">
+        <label>紹介したいサービス（任意）</label>
+        <input value={service} onChange={e => setService(e.target.value)} placeholder="例：採用支援サービス" />
+      </div>
+      <div className="fld">
+        <label>トーン（任意）</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {['丁寧', 'カジュアル', 'フォーマル'].map(t => (
+            <button type="button" key={t} onClick={() => setTone(t)}
+              style={{ flex: 1, padding: '8px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer',
+                border: `1.5px solid ${tone === t ? 'var(--blue)' : 'var(--line)'}`,
+                background: tone === t ? 'var(--blue)' : '#fff', color: tone === t ? '#fff' : 'var(--txt)' }}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      <button type="button" onClick={generate} disabled={busy} className="btn btn-p lift" style={{ width: '100%', marginTop: 2 }}>
+        {busy ? '生成中…' : (draft ? '作り直す' : '生成する')}
+      </button>
+      {err && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '10px 0 0', lineHeight: 1.6 }}>{err}</p>}
+
+      {draft && (
+        <div style={{ marginTop: 14 }}>
+          <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>生成結果（編集できます）</label>
+          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={8}
+            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontFamily: 'inherit', fontSize: '.82rem', lineHeight: 1.7, resize: 'vertical' }} />
+          <button type="button" onClick={copyDraft} className="lift"
+            style={{ width: '100%', marginTop: 8, minHeight: 44, background: copied ? 'var(--green)' : 'var(--bg2)', color: copied ? '#fff' : 'var(--txt)', border: '1px solid var(--line)', borderRadius: 9, fontFamily: 'inherit', fontWeight: 700, fontSize: '.82rem', cursor: 'pointer' }}>
+            {copied ? 'コピーしました' : 'コピーする'}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
