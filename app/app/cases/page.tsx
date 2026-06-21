@@ -4,6 +4,7 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
 import { nextPayoutDate } from '@/lib/payout'
+import { partnerTier } from '@/lib/tier'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import ChannelMark from '@/components/ChannelMark'
 
@@ -100,6 +101,10 @@ export default async function CasesPage({
   const unpaidRewardTotal = sumBy(['confirmed'])
   const confirmedRewardTotal = paidRewardTotal + unpaidRewardTotal
 
+  // Wave3-③A ティア（認知のみ・read-only）：確定成約数から算出。お金/報酬率には一切影響しない。
+  const wonCount = deals.filter((d: { status: string }) => ['confirmed', 'paid'].includes(d.status)).length
+  const tier = partnerTier(wonCount)
+
   // 3タブ：進行中(受付+対応中) / 完了(成約+支払済) / 不成立(lost)。不成立は進行中から除外。
   const filtered = deals.filter(d => {
     if (f === 'done') return ['confirmed', 'paid'].includes(d.status)
@@ -134,6 +139,27 @@ export default async function CasesPage({
         <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.25)' }}>
           <div style={{ fontSize: '.56rem', opacity: .85 }}>支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{paidRewardTotal.toLocaleString()}</b></div>
           <div style={{ fontSize: '.56rem', opacity: .85 }}>未払い（翌月末払い見込み）<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{unpaidRewardTotal.toLocaleString()}</b></div>
+        </div>
+      </div>
+
+      {/* Wave3-③A ティア（認知のみ・read-only・報酬には影響しない） */}
+      <div style={{ margin: '0 20px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ flexShrink: 0, width: 46, height: 46, borderRadius: 13, background: tier.bg, color: tier.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '.62rem', textAlign: 'center', lineHeight: 1.2 }}>{tier.label}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <b style={{ fontSize: '.86rem' }}>{tier.label}</b>
+            <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>成約 {wonCount}件</span>
+          </div>
+          {tier.nextLabel ? (
+            <>
+              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3 }}>{tier.nextLabel}まで あと<b style={{ color: tier.color }}>{tier.remaining}</b>成約</div>
+              <div style={{ height: 6, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden', marginTop: 6 }}>
+                <div style={{ width: `${tier.nextMin ? Math.min(100, Math.round((wonCount / tier.nextMin) * 100)) : 100}%`, height: '100%', background: tier.color, borderRadius: 4 }} />
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: '.62rem', color: tier.color, fontWeight: 700, marginTop: 3 }}>最高ティアに到達しています 🎉</div>
+          )}
         </div>
       </div>
 
