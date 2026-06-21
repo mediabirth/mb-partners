@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import BookingDrawer from '@/components/BookingDrawer'
+import PushOptIn from '@/components/PushOptIn'
 import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
@@ -275,6 +276,11 @@ export default function ReferPage() {
             ✓ 商談 {new Date(bookedAt).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
           </p>
         )}
+
+        {/* ④a: 初回紹介の完了直後にソフト前置きで通知許可を取得（受け取る時のみネイティブ許可） */}
+        <div style={{ width: '100%', maxWidth: 320, marginBottom: 4, display: 'flex', justifyContent: 'center' }}>
+          <PushOptIn />
+        </div>
 
         {/* 次の一歩 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
