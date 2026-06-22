@@ -43,7 +43,7 @@ export default function MembersSection() {
         <button onClick={invite} disabled={busy} className="btn btn-p" style={{ fontSize: '.74rem', padding: '8px 16px' }}>メンバーを招待</button>
       </div>
       {loading ? <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>読み込み中…</p> : list.length === 0 ? (
-        <p style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>メンバーがいません。</p>
+        <p style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>メンバーがいません。招待したメンバーがここに表示されます。</p>
       ) : (
         <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
           {list.map((m, i) => (

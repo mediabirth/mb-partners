@@ -84,6 +84,7 @@ export default function ConsoleInquiriesPage() {
             padding: '48px 20px', textAlign: 'center', color: 'var(--muted2)', fontSize: '.82rem',
           }}>
             問い合わせはありません。
+            <div style={{ fontSize: '.66rem', color: 'var(--muted)', marginTop: 7, lineHeight: 1.6 }}>パートナーからの新しい問い合わせがここに表示されます。</div>
           </div>
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 880 }}>

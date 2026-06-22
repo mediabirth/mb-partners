@@ -228,7 +228,7 @@ export default function SettingsPage() {
             {auditLoading ? (
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>読み込み中…</p>
             ) : auditLogs.length === 0 ? (
-              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>ログがありません</p>
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>ログがありません。設定変更や承認などの操作がここに記録・表示されます。</p>
             ) : (
               <div>
                 {auditLogs.map((log, i) => (
