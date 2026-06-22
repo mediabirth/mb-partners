@@ -121,7 +121,15 @@ function DeliverableUploader({ assignmentId, tasks, onDone, onError }: { assignm
   }
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px' }}>
-      <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} disabled={busy} style={{ fontSize: '.66rem', width: '100%', marginBottom: 8 }} />
+      {/* V-c1：素のfile inputをドロップゾーン風ラベルに（input の name/onChange/ref/挙動は不変・display:noneで内包）。 */}
+      <label style={{ display: 'block', border: `1.5px dashed ${file ? 'var(--blue)' : 'var(--line)'}`, borderRadius: 10, padding: '14px 12px', textAlign: 'center', cursor: busy ? 'not-allowed' : 'pointer', background: file ? 'var(--blue-bg2)' : 'var(--bg2)', marginBottom: 8, transition: 'border-color .15s, background .15s' }}>
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} disabled={busy} style={{ display: 'none' }} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '.72rem', fontWeight: 700, color: file ? 'var(--txt)' : 'var(--blue)', maxWidth: '100%' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" style={{ flexShrink: 0 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file ? file.name : 'ファイルを選択（画像・PDF）'}</span>
+        </span>
+        {file && <span style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted2)', marginTop: 4 }}>タップで変更</span>}
+      </label>
       {tasks.length > 0 && (
         <select value={taskId} onChange={e => setTaskId(e.target.value)} disabled={busy} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff', marginBottom: 8 }}>
           <option value="">対象タスク（任意）</option>
@@ -129,7 +137,8 @@ function DeliverableUploader({ assignmentId, tasks, onDone, onError }: { assignm
         </select>
       )}
       <input value={note} onChange={e => setNote(e.target.value)} placeholder="メモ（任意）" disabled={busy} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: '.72rem', marginBottom: 8 }} />
-      <button onClick={submit} disabled={busy || !file} className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }}>{busy ? 'アップロード中…' : '成果物を提出'}</button>
+      {/* V-c2：見た目のみ。disabled条件(busy||!file)・onClick・送信処理は不変。無効時=明確なグレー、有効時=ブランド濃色ソリッド。 */}
+      <button onClick={submit} disabled={busy || !file} className="btn btn-p" style={{ width: '100%', justifyContent: 'center', ...((busy || !file) ? { background: 'var(--bg2)', color: 'var(--muted2)', border: '1px solid var(--line)', opacity: 1 } : {}) }}>{busy ? 'アップロード中…' : '成果物を提出'}</button>
     </div>
   )
 }
@@ -156,7 +165,8 @@ function UpdatePoster({ assignmentId, onDone, onError }: { assignmentId: string;
         ))}
       </div>
       <textarea value={body} onChange={e => setBody(e.target.value)} rows={2} placeholder={kind === 'flag' ? '困っていること・ブロッカーを記入' : '進捗を記入'} disabled={busy} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.74rem', resize: 'vertical', marginBottom: 8 }} />
-      <button onClick={submit} disabled={busy || !body.trim()} className="btn btn-g" style={{ width: '100%', justifyContent: 'center' }}>{busy ? '送信中…' : '投稿する'}</button>
+      {/* V-c2：有効時=ブランド濃色ソリッド(btn-p)、無効時=明確なグレー。disabled条件(busy||!body.trim())・onClick・送信処理は不変。 */}
+      <button onClick={submit} disabled={busy || !body.trim()} className="btn btn-p" style={{ width: '100%', justifyContent: 'center', ...((busy || !body.trim()) ? { background: 'var(--bg2)', color: 'var(--muted2)', border: '1px solid var(--line)', opacity: 1 } : {}) }}>{busy ? '送信中…' : '投稿する'}</button>
     </div>
   )
 }
