@@ -1,9 +1,9 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 
-// SYNAPSE 再構成：まず“自分専用CRM”。紹介履歴(read-only)＋私的台帳(synapse_contacts)を1リストにマージ。
-// その上に 分析サマリー／SYNAPSEからの問いかけ／次の一手（紹介文を作る）。AIヒアリングは“追加”の補助に降格。
-// ★紹介履歴は read-only（page で getPartnerWithDeals）。保存/更新/削除は synapse_contacts のみ（本人スコープAPI）。お金/帰属/通知は非接触。
+// SYNAPSE 画面の作り直し：2ゾーン（① SYNAPSEからの提案 ② あなたの人脈）に集約。
+// バックエンド（enrich/contacts/紹介履歴read/Feature C）は流用。重複を排し、何に使えるかが一目で伝わる構成。
+// ★紹介履歴は read-only（page で getPartnerWithDeals）。書込は synapse_contacts のみ（本人スコープAPI）。お金/帰属/通知は非接触。
 
 export type SynapseContact = {
   id: string
@@ -23,7 +23,6 @@ type Reading = { service: string; why: string; angle: string }
 type ThreadMsg =
   | { role: 'user'; text: string }
   | { role: 'synapse'; reply: string; reading: Reading | null; crossRef: string | null; question: string | null; draft: DraftFields | null; savedId?: string }
-type Nudge = { id: string; kind: 'followup' | 'dormant' | 'seed'; title: string; body: string; contactId: string | null; contactName: string | null }
 
 type Editing = { id?: string; source: string; name: string; company: string; industry: string; role: string; relationship: string; needs: string; notes: string; suggested_service: string; suggested_angle: string }
 const EMPTY: Editing = { source: 'manual', name: '', company: '', industry: '', role: '', relationship: '', needs: '', notes: '', suggested_service: '', suggested_angle: '' }
@@ -32,86 +31,35 @@ const toEditing = (c: SynapseContact): Editing => ({ id: c.id, source: c.source,
 const STATUS_TONE: Record<string, { c: string; bg: string }> = {
   進行: { c: 'var(--blue)', bg: 'var(--blue-bg)' }, 成約: { c: 'var(--green)', bg: 'var(--green-bg)' }, 支払済: { c: 'var(--muted2)', bg: 'var(--bg2)' },
 }
-const NUDGE_META: Record<string, { label: string; color: string }> = {
-  followup: { label: 'フォロー', color: 'var(--blue)' }, dormant: { label: 'まだ動ける', color: 'var(--amber)' }, seed: { label: '新しい種', color: 'var(--green)' },
-}
 const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
 export default function SynapseClient({ initialContacts, referred, aiEnabled }: { initialContacts: SynapseContact[]; referred: ReferredEntry[]; aiEnabled: boolean }) {
   const [prospects, setProspects] = useState<SynapseContact[]>(initialContacts)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'referred' | 'prospect'>('all')
-  // 会話（降格・「会った人を追加」内）
   const [showAdd, setShowAdd] = useState(false)
   const [thread, setThread] = useState<ThreadMsg[]>([])
-  const [input, setInput] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [threadErr, setThreadErr] = useState('')
-  const [editing, setEditing] = useState<Editing | null>(null)
-  const [editErr, setEditErr] = useState(''); const [editBusy, setEditBusy] = useState(false)
+  const [input, setInput] = useState(''); const [busy, setBusy] = useState(false); const [threadErr, setThreadErr] = useState('')
+  const [editing, setEditing] = useState<Editing | null>(null); const [editErr, setEditErr] = useState(''); const [editBusy, setEditBusy] = useState(false)
   const [intro, setIntro] = useState<{ text: string } | null>(null); const [introBusy, setIntroBusy] = useState(false)
-  const [nudges, setNudges] = useState<Nudge[]>([]); const [nudgesOpen, setNudgesOpen] = useState(false)
   const [enrichBusy, setEnrichBusy] = useState(false); const [enrichErr, setEnrichErr] = useState('')
-  const [dormantOnly, setDormantOnly] = useState(false)
 
-  // 未読み＝困りごとあり・読み未設定・未処理。読みの自動付与の対象。
+  // 提案＝読みのある見込み×未行動（新しい順）。未読み＝困りごと有・読み無・未処理。
+  const proposals = useMemo(() => prospects.filter(c => c.suggested_service && !c.acted_at).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()), [prospects])
   const unreadCount = useMemo(() => prospects.filter(c => c.needs && !c.suggested_service && !c.enriched_at).length, [prospects])
 
-  // T1：読みの自動付与（会話不要・一括）。生成済みはキャッシュ＝再実行で対象外。
-  async function runEnrich() {
-    if (enrichBusy) return
-    setEnrichBusy(true); setEnrichErr('')
-    try {
-      const res = await fetch('/api/synapse/enrich', { method: 'POST' })
-      const j = await res.json().catch(() => ({}))
-      if (j?.disabled) { setEnrichErr('読みの自動付与は現在ご利用いただけません。'); return }
-      if (!res.ok) { setEnrichErr(j?.error || '生成に失敗しました'); return }
-      const updated = (j.updated ?? []) as SynapseContact[]
-      if (updated.length) {
-        const byId = Object.fromEntries(updated.map(u => [u.id, u]))
-        setProspects(prev => prev.map(c => byId[c.id] ?? c))
-      }
-    } catch { setEnrichErr('通信に失敗しました') } finally { setEnrichBusy(false) }
-  }
-
-  useEffect(() => {
-    if (!aiEnabled) return
-    let alive = true
-    fetch('/api/synapse/nudges').then(r => r.ok ? r.json() : { nudges: [] }).then(j => { if (alive) setNudges(Array.isArray(j.nudges) ? j.nudges : []) }).catch(() => {})
-    return () => { alive = false }
-  }, [aiEnabled])
-
-  // ── 分析サマリー（軽量・一目） ──
-  const summary = useMemo(() => {
-    const ind: Record<string, number> = {}
-    for (const c of prospects) if (c.industry) ind[c.industry] = (ind[c.industry] ?? 0) + 1
-    for (const r of referred) if (r.service) ind[r.service] = (ind[r.service] ?? 0) + 1
-    const topInd = Object.entries(ind).sort((a, b) => b[1] - a[1])[0] ?? null
-    const dormant = prospects.filter(c => c.needs && !c.acted_at).length
-    return { referred: referred.length, prospect: prospects.length, topInd, dormant }
-  }, [prospects, referred])
-
-  // T2「今日の一手」：読みあり×未行動×新しい順 の上位3件（決定的選定）。空なら非表示。
-  const todaysMoves = useMemo(() =>
-    prospects.filter(c => c.suggested_service && !c.acted_at)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 3),
-    [prospects])
-
-  // ── 統合リスト（紹介済み＋見込み）→ 絞り込み・検索・新しい順 ──
+  // 人脈一覧（紹介済み＋見込み）→ 区分・検索・新しい順。
   type Entry = { key: string; kind: 'referred' | 'prospect'; name: string; company: string | null; date: string; ref?: ReferredEntry; c?: SynapseContact }
   const entries = useMemo(() => {
     const ref: Entry[] = referred.map(r => ({ key: 'd' + r.id, kind: 'referred', name: r.name, company: r.company, date: r.date, ref: r }))
     const pro: Entry[] = prospects.map(c => ({ key: 'c' + c.id, kind: 'prospect', name: c.name ?? c.company ?? '名称未設定', company: c.company, date: c.created_at, c }))
     let list = filter === 'referred' ? ref : filter === 'prospect' ? pro : [...ref, ...pro]
-    // T3：動いていない（困りごとあり×未行動）だけに絞る。
-    if (dormantOnly) list = list.filter(e => e.kind === 'prospect' && e.c!.needs && !e.c!.acted_at)
     const q = search.trim()
     if (q) list = list.filter(e => (`${e.name} ${e.company ?? ''} ${e.c?.industry ?? ''} ${e.ref?.service ?? ''}`).includes(q))
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [referred, prospects, filter, search, dormantOnly])
+  }, [referred, prospects, filter, search])
 
-  // ── 操作（synapse_contacts のみ・本人スコープAPI） ──
+  // ── 操作（synapse_contacts のみ・本人スコープAPI／Feature C 紹介文） ──
   async function send() {
     const text = input.trim(); if (!text) { setThreadErr('話す内容を入力してください'); return }
     const next: ThreadMsg[] = [...thread, { role: 'user', text }]
@@ -152,6 +100,18 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
       setIntro({ text: j.draft || '生成できませんでした' })
     } catch { setIntro({ text: '通信に失敗しました' }) } finally { setIntroBusy(false) }
   }
+  async function runEnrich() {
+    if (enrichBusy) return
+    setEnrichBusy(true); setEnrichErr('')
+    try {
+      const res = await fetch('/api/synapse/enrich', { method: 'POST' })
+      const j = await res.json().catch(() => ({}))
+      if (j?.disabled) { setEnrichErr('提案の生成は現在ご利用いただけません。'); return }
+      if (!res.ok) { setEnrichErr(j?.error || '生成に失敗しました'); return }
+      const updated = (j.updated ?? []) as SynapseContact[]
+      if (updated.length) { const byId = Object.fromEntries(updated.map(u => [u.id, u])); setProspects(prev => prev.map(c => byId[c.id] ?? c)) }
+    } catch { setEnrichErr('通信に失敗しました') } finally { setEnrichBusy(false) }
+  }
   async function saveManual() {
     if (!editing) return
     const payload = { name: editing.name, company: editing.company, industry: editing.industry, role: editing.role, relationship: editing.relationship, needs: editing.needs, notes: editing.notes, suggested_service: editing.suggested_service, suggested_angle: editing.suggested_angle, source: editing.source }
@@ -169,10 +129,6 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
     if (!confirm('この見込みを削除しますか？')) return
     try { const res = await fetch(`/api/synapse/contacts/${id}`, { method: 'DELETE' }); if (res.ok) setProspects(prev => prev.filter(c => c.id !== id)) } catch { /* noop */ }
   }
-  function preloadNudge(n: Nudge) {
-    setShowAdd(true); setThread([{ role: 'synapse', reply: n.body, reading: null, crossRef: null, question: null, draft: null }]); setThreadErr(''); setInput('')
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
 
   const efld = (label: string, key: keyof Editing, placeholder = '', textarea = false) => (
     <div style={{ marginBottom: 10 }}>
@@ -183,75 +139,92 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
     </div>
   )
 
+  const ProposalCard = ({ c }: { c: SynapseContact }) => (
+    <div style={{ background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '13px 15px', marginBottom: 9 }}>
+      <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, ...oneLine }}>{[c.name, c.company].filter(Boolean).join('・') || '相手'}</div>
+      <div style={{ fontSize: '.84rem', fontWeight: 800, color: 'var(--txt)', lineHeight: 1.4, margin: '3px 0 7px', ...oneLine }}>{c.needs || '困りごと未記録'}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 9 }}>
+        <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '2px 8px', flexShrink: 0 }}>{c.suggested_service}</span>
+        {c.suggested_angle && <span style={{ flex: 1, minWidth: 0, fontSize: '.62rem', color: 'var(--blue-dk)', fontWeight: 600, ...oneLine }}>{c.suggested_angle}</span>}
+      </div>
+      <button onClick={() => makeIntro(c.company || c.name || '相手の方', c.needs || '', c.suggested_service!, c.id)} className="btn btn-p lift" style={{ width: '100%', padding: '9px' }}>紹介文を作る</button>
+    </div>
+  )
+
   return (
-    <div style={{ padding: '8px 0 24px' }}>
-      {/* ── T2「今日の一手」：読みのある見込みの上位を ready-to-act で（開いて5秒で次の動き） ── */}
-      {todaysMoves.length > 0 && (
-        <div style={{ padding: '8px 20px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 8px' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z" strokeLinejoin="round" /></svg>
-            <h2 className="ty-h2" style={{ margin: 0 }}>今日の一手</h2>
-          </div>
-          {todaysMoves.map(c => (
-            <div key={c.id} style={{ background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 13, padding: '12px 14px', marginBottom: 8 }}>
-              <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', lineHeight: 1.4, ...oneLine }}>{c.needs || c.name || '相手'}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '2px 8px' }}>{c.suggested_service}</span>
-                {c.suggested_angle && <span style={{ flex: 1, minWidth: 0, fontSize: '.62rem', color: 'var(--blue-dk)', fontWeight: 600, ...oneLine }}>{c.suggested_angle}</span>}
-              </div>
-              <button onClick={() => makeIntro(c.company || c.name || '相手の方', c.needs || '', c.suggested_service!, c.id)} className="btn btn-p lift" style={{ width: '100%', marginTop: 9, padding: '9px' }}>紹介文を作る</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── T1：読みの自動付与トリガ（未読みがある時だけ・1つ） ── */}
-      {unreadCount > 0 && (
-        <div style={{ padding: '14px 20px 0' }}>
-          <button onClick={runEnrich} disabled={enrichBusy} className="lift" style={{ width: '100%', background: '#fff', border: '1.5px solid var(--blue)', borderRadius: 12, padding: '12px', cursor: enrichBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.76rem', fontWeight: 800, color: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            {enrichBusy ? 'SYNAPSEが読みを出しています…' : <>未読みの見込み <b style={{ fontFamily: 'Inter' }}>{unreadCount}</b> 件に読みを出す →</>}
-          </button>
-          {enrichErr && <p style={{ fontSize: '.64rem', color: 'var(--red)', margin: '7px 0 0' }}>{enrichErr}</p>}
-        </div>
-      )}
-
-      {/* ── 分析サマリー（軽量・一目） ── */}
+    <div style={{ padding: '6px 0 24px' }}>
+      {/* ══ ゾーン①：SYNAPSEからの提案 ══ */}
       <div style={{ padding: '8px 20px 0' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[{ l: '紹介済み', v: `${summary.referred}件`, c: 'var(--green)', act: false }, { l: '見込み', v: `${summary.prospect}件`, c: 'var(--blue)', act: false }, { l: '動いていない', v: `${summary.dormant}件`, c: 'var(--amber)', act: true }].map(s => {
-            // T3：動いていない→該当でフィルタ（行き止まりにしない）。
-            const onClick = s.act ? () => { setDormantOnly(v => !v); setFilter('prospect'); setSearch(''); if (typeof window !== 'undefined') window.scrollTo({ top: 9999, behavior: 'smooth' }) } : undefined
-            const active = s.act && dormantOnly
-            return (
-              <button key={s.l} onClick={onClick} disabled={!s.act} className={s.act ? 'lift' : undefined} style={{ flex: 1, background: active ? 'var(--amber-bg)' : '#fff', border: `1px solid ${active ? 'var(--amber)' : 'var(--line)'}`, borderRadius: 12, padding: '10px 10px', textAlign: 'center', cursor: s.act ? 'pointer' : 'default', fontFamily: 'inherit' }}>
-                <div style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: s.c, letterSpacing: '-.02em' }}>{s.v}</div>
-                <div style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 600, marginTop: 1 }}>{s.l}{s.act && summary.dormant > 0 ? (active ? ' ✓' : ' →') : ''}</div>
-              </button>
-            )
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 9px' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2zM9 21h6M10 19h4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <h2 className="ty-h2" style={{ margin: 0 }}>SYNAPSEからの提案</h2>
         </div>
-        {summary.topInd && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 7, paddingLeft: 2 }}>多い領域：<b style={{ color: 'var(--txt)' }}>{summary.topInd[0]}</b>（{summary.topInd[1]}件）</div>}
+
+        {proposals.length > 0 ? (
+          <>
+            {proposals.map(c => <ProposalCard key={c.id} c={c} />)}
+            {unreadCount > 0 && (
+              <button onClick={runEnrich} disabled={enrichBusy} className="lift" style={{ width: '100%', background: '#fff', border: '1px solid var(--blue)', borderRadius: 11, padding: '10px', cursor: enrichBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 800, color: 'var(--blue)' }}>{enrichBusy ? 'SYNAPSEが考えています…' : `ほか ${unreadCount}人分の提案を出す →`}</button>
+            )}
+          </>
+        ) : unreadCount > 0 ? (
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 16px', textAlign: 'center' }}>
+            <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 12 }}>{unreadCount}人の見込みがいます。SYNAPSEが「この人にはこれを紹介できる」を考えます。</p>
+            <button onClick={runEnrich} disabled={enrichBusy} className="btn btn-p lift" style={{ width: '100%' }}>{enrichBusy ? 'SYNAPSEが考えています…' : `${unreadCount}人分の提案を出す`}</button>
+            {enrichErr && <p style={{ fontSize: '.64rem', color: 'var(--red)', marginTop: 8 }}>{enrichErr}</p>}
+          </div>
+        ) : (
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '22px 18px', textAlign: 'center' }}>
+            <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8 }}>会った人を追加すると、SYNAPSEが<br /><b style={{ color: 'var(--txt)' }}>「この人にはこれを紹介できる」</b>と提案します。</p>
+          </div>
+        )}
+        {enrichErr && proposals.length > 0 && <p style={{ fontSize: '.64rem', color: 'var(--red)', marginTop: 8 }}>{enrichErr}</p>}
       </div>
 
-      {/* ── SYNAPSEからの問いかけ（1行フック・畳む） ── */}
-      {nudges.length > 0 && (
-        <div style={{ padding: '14px 20px 0' }}>
-          {(nudgesOpen ? nudges : nudges.slice(0, 1)).map(n => {
-            const meta = NUDGE_META[n.kind] ?? NUDGE_META.seed
-            return (
-              <button key={n.id} onClick={() => preloadNudge(n)} className="row-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 13px', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--txt)', marginBottom: 7 }}>
-                <span style={{ fontSize: '.48rem', fontWeight: 800, color: '#fff', background: meta.color, borderRadius: 5, padding: '2px 6px', flexShrink: 0 }}>{meta.label}</span>
-                <span style={{ flex: 1, fontSize: '.68rem', fontWeight: 600, ...oneLine }}>{n.body}</span>
-                <span style={{ color: 'var(--blue)', fontSize: '.7rem', flexShrink: 0 }}>›</span>
-              </button>
-            )
-          })}
-          {nudges.length > 1 && <button onClick={() => setNudgesOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: '2px 2px' }}>{nudgesOpen ? '閉じる' : `ほか${nudges.length - 1}件の問いかけ`}</button>}
+      {/* ══ ゾーン②：あなたの人脈 ══ */}
+      <div style={{ padding: '22px 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 2px 9px' }}>
+          <h2 className="ty-h2" style={{ margin: 0 }}>あなたの人脈</h2>
+          <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 600 }}>{referred.length + prospects.length}人</span>
         </div>
-      )}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="名前・会社で検索" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.76rem', marginBottom: 8 }} />
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          {([['all', 'すべて'], ['referred', '紹介済み'], ['prospect', '見込み']] as const).map(([v, l]) => (
+            <button key={v} onClick={() => setFilter(v)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${filter === v ? 'var(--blue)' : 'var(--line)'}`, background: filter === v ? 'var(--blue)' : '#fff', color: filter === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+          ))}
+        </div>
 
-      {/* ── 会った人を追加（AIヒアリング/手入力＝控えめ導線） ── */}
-      <div style={{ padding: '14px 20px 0' }}>
+        {entries.length === 0 ? (
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '26px 18px', textAlign: 'center' }}>
+            <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8 }}>{search ? '該当する人がいません。' : 'ここに、あなたが紹介した人と見込みが並びます。\n下の「会った人を追加」から始めましょう。'}</p>
+          </div>
+        ) : entries.map(e => e.kind === 'referred' ? (
+          // 紹介済み：1行＋補助（read-only）
+          <div key={e.key} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 13px', marginBottom: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <b style={{ flex: 1, fontSize: '.78rem', fontWeight: 700, ...oneLine }}>{e.name}</b>
+              {e.ref!.status && <span style={{ fontSize: '.52rem', fontWeight: 800, color: (STATUS_TONE[e.ref!.status] ?? STATUS_TONE['支払済']).c, background: (STATUS_TONE[e.ref!.status] ?? STATUS_TONE['支払済']).bg, borderRadius: 6, padding: '2px 8px', flexShrink: 0 }}>{e.ref!.status}</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, fontSize: '.6rem', color: 'var(--muted2)' }}>
+              <span style={{ ...oneLine }}>{e.ref!.service ?? '案件'}</span>
+              {e.ref!.amount != null && e.ref!.amount > 0 && <span className="tnum" style={{ fontWeight: 700, color: 'var(--txt)', fontFamily: 'Inter', flexShrink: 0 }}>¥{e.ref!.amount.toLocaleString()}</span>}
+              <span style={{ marginLeft: 'auto', flexShrink: 0 }}>{(e.date || '').slice(0, 7)}</span>
+            </div>
+          </div>
+        ) : (
+          // 見込み：1行＋困りごと要約（タップで編集）
+          <button key={e.key} onClick={() => setEditing(toEditing(e.c!))} className="row-hover" style={{ display: 'block', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 13px', marginBottom: 7, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--txt)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <b style={{ flex: 1, fontSize: '.78rem', fontWeight: 700, ...oneLine }}>{e.name}</b>
+              <span style={{ fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>見込み</span>
+            </div>
+            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 3, ...oneLine }}>{e.c!.needs || '困りごと未記録'}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* ══ 会った人を追加（控えめな1導線） ══ */}
+      <div style={{ padding: '20px 20px 0' }}>
         {!showAdd ? (
           <div style={{ display: 'flex', gap: 8 }}>
             {aiEnabled && <button onClick={() => setShowAdd(true)} className="lift" style={{ flex: 1, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '11px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, color: 'var(--blue-dk)' }}>＋ 会った人を追加（SYNAPSEに話す）</button>}
@@ -281,7 +254,7 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
                     {(m.reading || m.draft) && (
                       <div style={{ display: 'flex', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
                         {m.reading && <button onClick={() => makeIntro(m.draft?.company || m.draft?.name || '相手の方', m.draft?.needs || '', m.reading!.service)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>紹介文を作る</button>}
-                        {m.draft && (m.savedId ? <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--green)', alignSelf: 'center' }}>✓ 保存しました</span> : <button onClick={() => saveFromThread(i)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: '#fff', border: '1px solid var(--blue)', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>台帳に保存</button>)}
+                        {m.draft && (m.savedId ? <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--green)', alignSelf: 'center' }}>✓ 保存しました</span> : <button onClick={() => saveFromThread(i)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: '#fff', border: '1px solid var(--blue)', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>人脈に保存</button>)}
                       </div>
                     )}
                   </div>
@@ -299,76 +272,16 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
         )}
       </div>
 
-      {/* ── 検索＋区分フィルタ ── */}
-      <div style={{ padding: '18px 20px 0' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="名前・会社で検索" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '10px 13px', fontFamily: 'inherit', fontSize: '.78rem', marginBottom: 9 }} />
-        <div style={{ display: 'flex', gap: 6 }}>
-          {([['all', 'すべて'], ['referred', '紹介済み'], ['prospect', '見込み']] as const).map(([v, l]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ flex: 1, padding: '7px 0', borderRadius: 8, fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${filter === v ? 'var(--blue)' : 'var(--line)'}`, background: filter === v ? 'var(--blue)' : '#fff', color: filter === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 統合リスト（コンパクト） ── */}
-      <div style={{ padding: '14px 20px 0' }}>
-        {entries.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '30px 18px', textAlign: 'center' }}>
-            <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8 }}>{search ? '該当する相手がいません。' : 'ここに紹介した方・見込みが集まります。\n上の「会った人を追加」から始めましょう。'}</p>
-          </div>
-        ) : entries.map(e => e.kind === 'referred' ? (
-          // 紹介済み：ステータス中心・read-only
-          <div key={e.key} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '11px 14px', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <b style={{ flex: 1, fontSize: '.8rem', fontWeight: 700, ...oneLine }}>{e.name}</b>
-              {e.ref!.status && <span style={{ fontSize: '.54rem', fontWeight: 800, color: (STATUS_TONE[e.ref!.status] ?? STATUS_TONE['支払済']).c, background: (STATUS_TONE[e.ref!.status] ?? STATUS_TONE['支払済']).bg, borderRadius: 6, padding: '2px 8px', flexShrink: 0 }}>{e.ref!.status}</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
-              {e.ref!.service && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{e.ref!.service}</span>}
-              {e.ref!.amount != null && e.ref!.amount > 0 && <span className="tnum" style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--txt)', fontFamily: 'Inter' }}>¥{e.ref!.amount.toLocaleString()}</span>}
-              <span style={{ marginLeft: 'auto', fontSize: '.54rem', color: 'var(--muted2)' }}>{(e.date || '').slice(0, 7)}</span>
-            </div>
-          </div>
-        ) : (
-          // 見込み：困りごと主役→読み＋切り口→一手→名前・会社（従）
-          <div key={e.key} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '12px 14px', marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--txt)', lineHeight: 1.4, ...oneLine }}>{e.c!.needs || e.name}</div>
-              </div>
-              <span style={{ fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>見込み</span>
-            </div>
-            {e.c!.suggested_service ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '2px 8px' }}>{e.c!.suggested_service}</span>
-                {e.c!.suggested_angle && <span style={{ flex: 1, minWidth: 0, fontSize: '.62rem', color: 'var(--blue-dk)', fontWeight: 600, ...oneLine }}>{e.c!.suggested_angle}</span>}
-              </div>
-            ) : null}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-              {e.c!.suggested_service
-                ? <button onClick={() => makeIntro(e.c!.company || e.c!.name || '相手の方', e.c!.needs || '', e.c!.suggested_service!, e.c!.id)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>紹介文を作る</button>
-                : e.c!.enriched_at
-                  ? <span style={{ fontSize: '.6rem', color: 'var(--muted)', fontWeight: 600 }}>今は適合なし（後で繋がります）</span>
-                  : <button onClick={() => preloadNudge({ id: 'c', kind: 'seed', title: '', body: `${e.name}（${e.c!.needs || '困りごと未記録'}）について相談したい`, contactId: null, contactName: null })} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: 'none', border: '1px solid var(--blue)', borderRadius: 8, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>相談する</button>}
-              {e.c!.acted_at && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--green)' }}>✓ 対応済み</span>}
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                <button onClick={() => setEditing(toEditing(e.c!))} style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', background: 'none', border: '1px solid var(--line)', borderRadius: 6, padding: '3px 7px', cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>
-                <button onClick={() => remove(e.c!.id)} style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', background: 'none', border: '1px solid var(--line)', borderRadius: 6, padding: '3px 7px', cursor: 'pointer', fontFamily: 'inherit' }}>削除</button>
-              </span>
-            </div>
-            <div style={{ marginTop: 8, paddingTop: 7, borderTop: '1px solid #F2F2F6', fontSize: '.6rem', color: 'var(--muted2)', ...oneLine }}>
-              {[e.name, e.c!.company, e.c!.industry].filter(Boolean).join('・') || '名称未設定'}
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* 手入力／編集モーダル */}
       {editing && (
         <div onClick={ev => { if (ev.target === ev.currentTarget) setEditing(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(3px)', zIndex: 120, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div style={{ background: '#fff', width: '100%', maxWidth: 430, borderRadius: '16px 16px 0 0', padding: '18px 18px calc(20px + env(safe-area-inset-bottom))', maxHeight: '88vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <b style={{ fontSize: '.86rem', fontWeight: 800 }}>{editing.id ? '見込みを編集' : '手入力で追加'}</b>
-              <button onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                {editing.id && <button onClick={() => { const id = editing.id!; setEditing(null); remove(id) }} style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>削除</button>}
+                <button onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
+              </div>
             </div>
             {efld('困りごと・求めていること', 'needs', 'ECの新規立ち上げ人材', true)}
             {efld('お名前', 'name', '佐藤 太郎')}

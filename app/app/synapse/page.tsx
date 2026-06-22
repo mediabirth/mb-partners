@@ -46,10 +46,10 @@ export default async function SynapsePage() {
   return (
     <div className="page-anim">
       <div style={{ padding: '20px 20px 4px' }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>SYNAPSE · あなた専用のCRM</div>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>SYNAPSE</div>
         <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em' }}>つながりの台帳</h1>
         <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
-          あなたが紹介した方と、これからの見込みを一覧に。SYNAPSEが傾向と“次の一手”を添えます（あなた専用・運営や他のパートナーには共有されません）。
+          繋いだ人を覚えていて、次に誰へ何を紹介すべきかを教えます。（あなた専用・運営や他のパートナーには共有されません）
         </p>
       </div>
       <SynapseClient initialContacts={contacts} referred={referred} aiEnabled={aiEnabled} />
