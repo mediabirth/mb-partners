@@ -172,30 +172,42 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
       ) : (
         <div style={{ padding: '0 20px' }}>
           {contacts.map(c => (
-            <div key={c.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <span style={{ width: 38, height: 38, borderRadius: 11, background: '#EEEDFE', color: '#3C3489', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter', fontWeight: 800, fontSize: '.95rem', flexShrink: 0, userSelect: 'none' }}>{(c.name || c.company || '？').trim().charAt(0)}</span>
+            <div key={c.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
+              {/* 主役：困りごと・ニーズ（ニーズ起点のカード） */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <b style={{ fontSize: '.84rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name || '（名前未設定）'}</b>
-                    {c.source === 'interview' && <span style={{ fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>AI</span>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2zM9 21h6M10 19h4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    <span style={{ fontSize: '.54rem', fontWeight: 800, letterSpacing: '.08em', color: 'var(--blue)' }}>困りごと・ニーズ</span>
                   </div>
-                  {(c.company || c.role || c.industry) && (
-                    <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2 }}>{[c.company, c.role, c.industry].filter(Boolean).join('・')}</div>
-                  )}
+                  {c.needs
+                    ? <div style={{ fontSize: '.9rem', fontWeight: 800, color: 'var(--txt)', lineHeight: 1.5, letterSpacing: '-.01em' }}>{c.needs}</div>
+                    : <div style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--muted)' }}>困りごとは未記録（編集で追記できます）</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button onClick={() => setDraft(toDraft(c))} style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--blue)', background: 'none', border: '1px solid var(--line)', borderRadius: 7, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>
-                  <button onClick={() => remove(c.id)} style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', background: 'none', border: '1px solid var(--line)', borderRadius: 7, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>削除</button>
+                  <button onClick={() => setDraft(toDraft(c))} aria-label="編集" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--blue)', background: 'none', border: '1px solid var(--line)', borderRadius: 7, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>
+                  <button onClick={() => remove(c.id)} aria-label="削除" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', background: 'none', border: '1px solid var(--line)', borderRadius: 7, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>削除</button>
                 </div>
               </div>
-              {(c.relationship || c.needs || c.notes) && (
-                <div style={{ marginTop: 9, paddingTop: 9, borderTop: '1px solid #F2F2F6', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {c.relationship && <div style={{ fontSize: '.64rem', color: 'var(--txt)' }}><span style={{ color: 'var(--muted2)' }}>関係性：</span>{c.relationship}</div>}
-                  {c.needs && <div style={{ fontSize: '.64rem', color: 'var(--txt)' }}><span style={{ color: 'var(--muted2)' }}>困りごと：</span>{c.needs}</div>}
-                  {c.notes && <div style={{ fontSize: '.62rem', color: 'var(--muted2)', lineHeight: 1.6 }}>{c.notes}</div>}
+
+              {/* 従：誰か（名前・会社・役職）＋ 業種/関係性タグ */}
+              <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid #F2F2F6', display: 'flex', alignItems: 'center', gap: 9 }}>
+                <span style={{ width: 30, height: 30, borderRadius: 9, background: '#EEEDFE', color: '#3C3489', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter', fontWeight: 800, fontSize: '.78rem', flexShrink: 0, userSelect: 'none' }}>{(c.name || c.company || '？').trim().charAt(0)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <b style={{ fontSize: '.74rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name || '（名前未設定）'}</b>
+                    {c.source === 'interview' && <span style={{ fontSize: '.48rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 5, padding: '1px 5px', flexShrink: 0 }}>AI</span>}
+                  </div>
+                  {(c.company || c.role) && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[c.company, c.role].filter(Boolean).join('・')}</div>}
+                </div>
+              </div>
+              {(c.industry || c.relationship) && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  {c.industry && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>業種 {c.industry}</span>}
+                  {c.relationship && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{c.relationship}</span>}
                 </div>
               )}
+              {c.notes && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.6, marginTop: 8 }}>{c.notes}</div>}
             </div>
           ))}
         </div>
