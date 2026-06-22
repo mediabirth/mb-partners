@@ -15,7 +15,7 @@ export default async function SynapsePage() {
   const supabase = await createClient()
   const { data } = await supabase
     .from('synapse_contacts')
-    .select('id, name, company, industry, role, relationship, needs, notes, source, created_at, updated_at')
+    .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, source, created_at, updated_at')
     .order('created_at', { ascending: false })
 
   const contacts = (data ?? []) as SynapseContact[]
@@ -27,7 +27,7 @@ export default async function SynapsePage() {
         <div className="eyebrow" style={{ marginBottom: 6 }}>SYNAPSE · あなただけの台帳</div>
         <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em' }}>つながりの台帳</h1>
         <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>
-          あなたが出会った方を、あなただけの場所に。ここに記録した内容は、あなた専用です（運営や他のパートナーには共有されません）。
+          出会った方のことを話すと、SYNAPSEが合いそうなMBサービスと“刺さる切り口”を返します。記録した内容はあなた専用です（運営や他のパートナーには共有されません）。
         </p>
       </div>
       <SynapseClient initialContacts={contacts} aiEnabled={aiEnabled} />
