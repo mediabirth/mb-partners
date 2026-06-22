@@ -13,11 +13,13 @@ export type SynapseContact = {
   suggested_service: string | null; suggested_angle: string | null
   acted_at: string | null; enriched_at: string | null
   url: string | null; company_size: string | null; scanned_at: string | null
+  entity_type: string | null; phone: string | null; address: string | null
+  demand_summary: string | null; demand_tags: string[] | null
   source: string; created_at: string; updated_at: string
 }
 export type ReferredEntry = {
   id: string; name: string; company: string | null; service: string | null
-  status: string; statusKey: string; amount: number | null; date: string
+  status: string; statusKey: string; amount: number | null; date: string; entity: 'individual' | 'corporate'
 }
 
 type DraftFields = { name: string | null; company: string | null; industry: string | null; role: string | null; relationship: string | null; needs: string | null; notes: string | null }
@@ -32,23 +34,26 @@ const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden',
 
 export default function SynapseClient({ initialContacts, referred, aiEnabled }: { initialContacts: SynapseContact[]; referred: ReferredEntry[]; aiEnabled: boolean }) {
   const [prospects, setProspects] = useState<SynapseContact[]>(initialContacts)
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<'all' | 'referred' | 'prospect'>('all')
+  // 個人/法人タブ（検索なし・roster再設計）。
+  const [entityTab, setEntityTab] = useState<'corporate' | 'individual'>('corporate')
   const [showAdd, setShowAdd] = useState(false)
   const [thread, setThread] = useState<ThreadMsg[]>([])
   const [input, setInput] = useState(''); const [busy, setBusy] = useState(false); const [threadErr, setThreadErr] = useState('')
   const [adding, setAdding] = useState<null | { name: string; company: string; needs: string }>(null); const [addErr, setAddErr] = useState(''); const [addBusy, setAddBusy] = useState(false)
   const [intro, setIntro] = useState<{ text: string } | null>(null); const [introBusy, setIntroBusy] = useState(false)
 
-  type Entry = { key: string; kind: 'referred' | 'prospect'; name: string; company: string | null; date: string; ref?: ReferredEntry; c?: SynapseContact }
-  const entries = useMemo(() => {
-    const ref: Entry[] = referred.map(r => ({ key: 'd' + r.id, kind: 'referred', name: r.name, company: r.company, date: r.date, ref: r }))
-    const pro: Entry[] = prospects.map(c => ({ key: 'c' + c.id, kind: 'prospect', name: c.name ?? c.company ?? '名称未設定', company: c.company, date: c.created_at, c }))
-    let list = filter === 'referred' ? ref : filter === 'prospect' ? pro : [...ref, ...pro]
-    const q = search.trim()
-    if (q) list = list.filter(e => (`${e.name} ${e.company ?? ''} ${e.c?.industry ?? ''} ${e.ref?.service ?? ''}`).includes(q))
-    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [referred, prospects, filter, search])
+  type Entry = { key: string; kind: 'referred' | 'prospect'; name: string; company: string | null; date: string; entity: 'individual' | 'corporate'; ref?: ReferredEntry; c?: SynapseContact }
+  // 見込みの個人/法人：entity_type 優先、無ければ会社の有無で推定。
+  const prospectEntity = (c: SynapseContact): 'individual' | 'corporate' => c.entity_type === 'individual' ? 'individual' : c.entity_type === 'corporate' ? 'corporate' : (c.company ? 'corporate' : 'individual')
+  const counts = useMemo(() => {
+    const all: Entry[] = [
+      ...referred.map(r => ({ key: 'd' + r.id, kind: 'referred' as const, name: r.name, company: r.company, date: r.date, entity: r.entity, ref: r })),
+      ...prospects.map(c => ({ key: 'c' + c.id, kind: 'prospect' as const, name: c.name ?? c.company ?? '名称未設定', company: c.company, date: c.created_at, entity: prospectEntity(c), c })),
+    ]
+    return { all, corporate: all.filter(e => e.entity === 'corporate').length, individual: all.filter(e => e.entity === 'individual').length }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referred, prospects])
+  const entries = useMemo(() => counts.all.filter(e => e.entity === entityTab).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [counts, entityTab])
 
   async function send() {
     const text = input.trim(); if (!text) { setThreadErr('話す内容を入力してください'); return }
@@ -104,15 +109,11 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
         </button>
       </div>
 
-      {/* 検索（スリム）＋区分チップ */}
-      <div style={{ padding: '0 20px 6px' }}>
-        <div style={{ position: 'relative', marginBottom: 8 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" strokeLinecap="round" /></svg>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="名前・会社で検索" style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 12px 8px 32px', fontFamily: 'inherit', fontSize: '.74rem', background: 'var(--bg2)' }} />
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {([['all', 'すべて'], ['referred', '紹介済み'], ['prospect', '見込み']] as const).map(([v, l]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ padding: '5px 13px', borderRadius: 999, fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', border: 'none', background: filter === v ? 'var(--blue)' : 'var(--bg2)', color: filter === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+      {/* 個人/法人タブ（検索なし） */}
+      <div style={{ padding: '0 20px 2px' }}>
+        <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 3 }}>
+          {([['corporate', `法人 ${counts.corporate}`], ['individual', `個人 ${counts.individual}`]] as const).map(([v, l]) => (
+            <button key={v} onClick={() => setEntityTab(v)} style={{ flex: 1, padding: '8px 2px', borderRadius: 8, fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', border: 'none', background: entityTab === v ? '#fff' : 'transparent', color: entityTab === v ? 'var(--txt)' : 'var(--muted2)', boxShadow: entityTab === v ? '0 1px 4px rgba(14,14,20,.1)' : 'none' }}>{l}</button>
           ))}
         </div>
       </div>
@@ -120,11 +121,11 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
       {/* リスト：区切り線の密な行 */}
       <div style={{ marginTop: 6 }}>
         {entries.length === 0 ? (
-          <p style={{ padding: '30px 20px', textAlign: 'center', fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{search ? '該当する人がいません。' : 'ここに、あなたが繋いだ人・これから繋ぐ人が並びます。\n右上の「＋追加」から始めましょう。'}</p>
+          <p style={{ padding: '30px 20px', textAlign: 'center', fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{`この区分にはまだいません。\n右上の「＋追加」から登録できます。`}</p>
         ) : entries.map(e => {
           const status = e.kind === 'prospect' ? '見込み' : e.ref!.status
           const sub = e.kind === 'prospect'
-            ? ([e.c!.industry, e.c!.needs].filter(Boolean).join('・') || '困りごと未記録')
+            ? ([e.c!.industry, e.c!.company_size].filter(Boolean).join('・') || e.c!.company || '未取得（URLで補完できます）')
             : (e.ref!.service ?? '案件')
           // 見込み→詳細ページ。紹介済み→既存フロー(再度紹介・deep-link)。
           const href = e.kind === 'prospect' ? `/app/synapse/${e.c!.id}` : '/app/refer'
