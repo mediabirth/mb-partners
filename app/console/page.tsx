@@ -36,7 +36,8 @@ export default async function ConsolePage({ searchParams }: { searchParams: Prom
 }
 
 // 重いデータ取得＋集計＋本体描画を「そのまま移設」した async サーバコンポーネント。
-// ★お金の値・計算・集計・select・filter・sort・通貨整形は一切変更していない（Promise.all〜JSXは元のまま）。
+// ★お金の値・計算・集計・select・filter・sort・通貨整形は一切変更していない（Promise.all〜算出は元のまま）。
+//   B3：この関数内の“データ算出”は不変。変更したのは return 直下の JSX レイアウト（情報設計）のみ。
 async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: string }) {
   const supabase = await createClient()
 
@@ -247,6 +248,11 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
     }
   } catch { /* 未作成 */ }
 
+  // ── B3：表示専用の前処理（金額・件数の再計算はしない／既存配列をフィルタ・スライスするだけ）。
+  const visibleServiceRows = serviceRows.filter(s => s.name !== '—')   // 空サービス名(—)行は非表示
+  const firstTrendIdx = trend.findIndex(t => t.value !== 0)
+  const visibleTrend = firstTrendIdx <= 0 ? trend : trend.slice(firstTrendIdx)  // 先頭の0月を畳む（寂しさ回避）
+
   return (
     <>
         {/* Top bar */}
@@ -266,9 +272,9 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
         {/* Content */}
         <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
 
-          {/* ヒーロー：今月のMB粗利（正確）＋前月比＋月間目標進捗 */}
+          {/* ① ヒーロー：今月のMB粗利（正確）＋前月比＋月間目標進捗 */}
           <div className="page-anim shine card-hover" style={{
-            position: 'relative', borderRadius: 16, padding: '22px 26px', marginBottom: 18,
+            position: 'relative', borderRadius: 16, padding: '22px 26px', marginBottom: 16,
             background: 'linear-gradient(120deg, var(--blue) 0%, var(--blue-dk) 100%)',
             color: '#fff', overflow: 'hidden', boxShadow: '0 10px 30px rgba(71,51,230,.22)',
           }}>
@@ -301,9 +307,16 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </div>
           </div>
 
+          {/* 最重要KPI（ヒーロー直下に集約・3指標。重複を作らない＝対応中見込みは下のパイプラインへ） */}
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
+            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の成約数`} value={curWon} suffix="件" icon="deal" accent="var(--blue)" delta={{ cur: curWon, prev: prevWon }} />
+            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の総受注額`} value={cur.revenue} format="yen" icon="yen" accent="var(--green)" delta={{ cur: cur.revenue, prev: prev.revenue }} />
+            <KpiCard label="成約率（成約÷受付・当月）" value={winRate ?? 0} suffix="%" icon="deal" accent="var(--amber)" sub={`成約 ${curWon} / 受付 ${curIntake} 件`} />
+          </div>
+
           {/* ⑥ 受注額未入力の透明性バナー */}
           {missingDeals.length > 0 && (
-            <Link href="/console/deals" className="lift" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--amber-bg)', border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 16px', marginBottom: 18, textDecoration: 'none', color: '#7A5A14' }}>
+            <Link href="/console/deals" className="lift" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--amber-bg)', border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 16px', marginBottom: 22, textDecoration: 'none', color: '#7A5A14' }}>
               <span style={{ fontSize: '1rem' }}>⚠️</span>
               <span style={{ flex: 1, fontSize: '.72rem', lineHeight: 1.6 }}>
                 <b>受注額未入力 {missingDeals.length}件</b> の成約案件があります。粗利は入力済の範囲で正確です（未入力分は売上が過小評価されます）。クリックで案件一覧へ。
@@ -312,19 +325,9 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </Link>
           )}
 
-          {/* 本質KPI 4枚 */}
-          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
-            <KpiCard label="今月成約数" value={curWon} suffix="件" icon="deal" accent="var(--blue)" delta={{ cur: curWon, prev: prevWon }} />
-            <KpiCard label="今月の総受注額" value={cur.revenue} format="yen" icon="yen" accent="var(--green)" delta={{ cur: cur.revenue, prev: prev.revenue }} />
-            <KpiCard label="成約率（成約÷受付）" value={winRate ?? 0} suffix="%" icon="deal" accent="var(--amber)" sub={`${curWon} / ${curIntake} 件`} />
-            <KpiCard label="対応中パイプライン" value={pipeline} format="yen" icon="yen" accent="var(--muted2)" sub="来月見込み（対応中の見込み額）" />
-          </div>
-
-          {/* ③ お金の内訳（今月）：受注額 → 各コスト → 残るMB粗利 */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 18 }}>
-            <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>お金の内訳（{isCurrentMonth ? '今月' : selMonthLabel}）</b>
-            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>受注額から出ていくお金を引いて、残るMB粗利</div>
-            {/* 受注額 */}
+          {/* ② お金の内訳（今月）：受注額 → 各コスト → 残るMB粗利 */}
+          <SectionTitle title="お金の内訳" subtitle={`${isCurrentMonth ? '今月' : selMonthLabel}・受注額から出ていくお金を引いて、残るMB粗利`} />
+          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <WaterRow label="総受注額" val={cur.revenue} pct={100} color="var(--green)" head />
             {costLines.map((c, i) => (
               <WaterRow key={i} label={c.label} val={c.val} pct={Math.round((c.val / barBase) * 100)} color={c.color} minus />
@@ -334,12 +337,16 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </div>
           </div>
 
-          {/* F-3b ②③④：商談パイプライン / プロジェクト実行 / 流入経路（プロジェクトモデルの次元） */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
-            {/* ② 商談パイプライン */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>商談パイプライン</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>商談ステージ別の件数・見込み額（成約前）</div>
+          {/* ③ パイプライン（受注前の見込み・平均・商談ステージを1セクションに集約） */}
+          <SectionTitle title="パイプライン" subtitle="受注前の見込み額と平均（成約前のヘルス）。意味の違う金額はラベルで区別" />
+          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+            <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
+              <StatCard label="対応中の見込み" value={`¥${pipeline.toLocaleString()}`} accent="blue" sub="商談中のみ（来月見込み）" />
+              <StatCard label="パイプライン金額" value={`¥${pipelineAmount.toLocaleString()}`} accent="amber" sub="受付＋商談中の見込み額" />
+              <StatCard label="平均受注額" value={`¥${avgRevenue.toLocaleString()}`} accent="green" sub={`成約 ${wonCountAll} 件の平均`} />
+            </div>
+            <div style={{ borderTop: '1px solid #F2F2F6', paddingTop: 12 }}>
+              <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>商談ステージ別（件数・見込み額）</div>
               {shodanStages.map((s, i) => (
                 <Link key={s.key} href={`/console/deals`} className="lift" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < shodanStages.length - 1 ? '1px solid #F2F2F6' : 'none', textDecoration: 'none', color: 'var(--txt)' }}>
                   <StatusPill {...dealStatus(s.key)} />
@@ -348,55 +355,18 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                 </Link>
               ))}
             </div>
-
-            {/* ④ 流入経路の内訳 */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>流入経路の内訳</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>紹介・協力／直営業（件数・受注額）</div>
-              {intakeBreak.map((b, i) => (
-                <div key={b.intake} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < intakeBreak.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
-                  <StatusPill {...intakePill(b.intake)} />
-                  <span style={{ flex: 1, fontFamily: 'Inter', fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-.02em' }}>{b.count}<span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 600, marginLeft: 3 }}>件</span></span>
-                  <span className="tnum" style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)' }}>受注 ¥{b.revenue.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* ③ プロジェクト実行：project_status 分布 */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div>
-                <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>プロジェクト実行</b>
-                <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>実行中プロジェクトの状態分布（成約後）</div>
+          {/* ④ 成約・ファネル（成約率＋流入経路を同セクションに集約） */}
+          <SectionTitle title="成約・ファネル" subtitle="商談→成約の歩留まりと、流入経路ごとの成果。当月成約率（上のKPI）とは別指標" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
+            {/* 商談→成約ファネル（全体成約率を見出しに集約＝重複表示を1回に） */}
+            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                <b style={{ fontSize: '.84rem' }}>商談 → 成約 ファネル</b>
+                <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>全体成約率 <b style={{ fontFamily: 'Inter', fontSize: '.92rem', color: 'var(--green)' }}>{winRateAll}%</b></span>
               </div>
-              <span style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 800, color: 'var(--muted2)' }}>計 {projectsTotal} 件</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
-              {projectDist.map(p => {
-                const pill = projectStatusPill(p.ps)
-                return (
-                  <Link key={p.ps} href={`/console/deals`} className="lift" style={{ textDecoration: 'none', color: 'var(--txt)', background: 'var(--bg2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Inter', fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1 }}>{p.count}</div>
-                    <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>{pill && <StatusPill size="sm" {...pill} />}</div>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* BR-C3：成約分析・KPI（成約率/ファネル/平均受注額/サービス別・流入別 成約率＋受注額）。読取のみ。 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
-            <StatCard label="全体 成約率" value={winRateAll} unit="%" accent="green" sub={`成約 ${funnel.won} / 商談化 ${shodanTotal} 件`} />
-            <StatCard label="平均受注額" value={`¥${avgRevenue.toLocaleString()}`} accent="blue" sub={`成約 ${wonCountAll} 件の平均`} />
-            <StatCard label="パイプライン金額" value={`¥${pipelineAmount.toLocaleString()}`} accent="amber" sub="受付・商談中の見込み額" />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
-            {/* 商談→成約ファネル */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>商談 → 成約 ファネル</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>紹介・協力の商談化件数を基準（直営業は商談を経ないため除外）</div>
+              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>成約 {funnel.won} / 商談化 {shodanTotal} 件（成約÷商談化・直営業は商談を経ないため除外）</div>
               {([['受付', funnel.received, 'var(--amber)'], ['商談中', funnel.inProgress, 'var(--blue)'], ['成約', funnel.won, 'var(--green)'], ['不成立', funnel.lost, 'var(--muted2)']] as const).map(([label, n, color]) => {
                 const w = shodanTotal > 0 ? Math.round((n / shodanTotal) * 100) : 0
                 return (
@@ -411,9 +381,9 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               })}
             </div>
 
-            {/* 流入経路別 成約率＋受注額 */}
+            {/* 流入経路（件数・受注額・成約率を1ブロックに統合） */}
             <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>流入経路別 成約率・受注額</b>
+              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>流入経路（件数・受注額・成約率）</b>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>紹介・協力／直営業の強み・弱み</div>
               {intakeRate.map((r, i) => (
                 <div key={r.intake} style={{ padding: '9px 0', borderBottom: i < intakeRate.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
@@ -428,12 +398,11 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </div>
           </div>
 
-          {/* サービス別 成約率＋受注額 */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 18 }}>
-            <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>サービス別 成約率・受注額</b>
-            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>受注額の大きい順（上位）</div>
-            {serviceRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>データがありません。</p> : serviceRows.map((s, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr auto', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: i < serviceRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
+          {/* ⑤ サービス別 成約率・受注額（空の「—」サービス行は非表示） */}
+          <SectionTitle title="サービス別 成約率・受注額" subtitle="受注額の大きい順（上位）" />
+          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
+            {visibleServiceRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>データがありません。</p> : visibleServiceRows.map((s, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr auto', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: i < visibleServiceRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
                 <span style={{ fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}<span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 5 }}>{s.won}/{s.total}件</span></span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ flex: 1, height: 5, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><div style={{ width: `${s.rate}%`, height: '100%', background: 'var(--green)', borderRadius: 4 }} /></div>
@@ -444,89 +413,31 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             ))}
           </div>
 
-          {/* ④ ディメンション別：MB担当別 / デリバリー別 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>MB担当別の粗利</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>{isCurrentMonth ? '今月' : selMonthLabel}の成約・担当別</div>
-              {directorRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>該当データがありません。</p> : directorRows.map((d, i) => {
-                const w = Math.round((Math.max(0, d.margin) / Math.max(1, directorRows[0].margin)) * 100)
-                return (
-                  <div key={i} style={{ padding: '7px 0', borderBottom: i < directorRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ fontSize: '.72rem', fontWeight: 600 }}>{d.name} <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400 }}>· {d.count}件</span></span>
-                      <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 700, color: d.margin >= 0 ? 'var(--txt)' : 'var(--red)' }}>¥{d.margin.toLocaleString()}</span>
-                    </div>
-                    <div style={{ height: 5, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><div style={{ width: `${w}%`, height: '100%', background: 'var(--blue)', borderRadius: 4 }} /></div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>デリバリー別の原価</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>{isCurrentMonth ? '今月' : selMonthLabel}の委託費＋承認済経費</div>
-              {vendorRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>デリバリー委託はありません。</p> : vendorRows.map((v, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < vendorRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
-                  <span style={{ fontSize: '.72rem', fontWeight: 600, minWidth: 0 }}>{v.name}</span>
-                  <span style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexShrink: 0 }}>
-                    <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>委託費 <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--txt)' }}>¥{v.fee.toLocaleString()}</b></span>
-                    <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>経費 <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--txt)' }}>¥{v.expense.toLocaleString()}</b></span>
-                    <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 700, color: 'var(--amber)' }}>¥{v.total.toLocaleString()}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ⑥ 要対応アラート：差戻し経費・期日超過・課題フラグ・受注額未入力（各行→当該案件詳細） */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden', marginBottom: 18 }}>
-            <div style={{ padding: '15px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <b style={{ fontSize: '.84rem' }}>要対応アラート{alerts.length > 0 && <span style={{ color: 'var(--red)', marginLeft: 6 }}>{alerts.length}</span>}</b>
-              <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>クリックで該当案件へ</span>
-            </div>
-            {alerts.length === 0 ? (
-              <p style={{ padding: '18px', fontSize: '.72rem', color: 'var(--muted2)', textAlign: 'center' }}>対応が必要な項目はありません。すべて順調です。</p>
-            ) : (
-              <div className="stagger">
-                {alerts.slice(0, 12).map((a, i) => (
-                  <Link key={i} href={`/console/deals?deal=${a.dealId}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '11px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
-                    <StatusPill size="sm" tone={a.tone}>{a.type}</StatusPill>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.detail}</span>
-                    <span style={{ color: 'var(--muted)', fontSize: '.72rem', flexShrink: 0 }}>›</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
-            {/* 月次推移：直近6ヶ月のMB粗利 */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-              <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 4 }}>MB粗利の推移</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>直近6ヶ月（プロジェクトP&L集計）</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 130 }}>
-                {trend.map((t, i) => {
-                  const h = Math.max(3, Math.round((Math.max(0, t.value) / trendMax) * 110))
-                  const isLast = i === trend.length - 1
-                  return (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <span className="tnum" style={{ fontSize: '.52rem', color: 'var(--muted2)', fontFamily: 'Inter' }}>{Math.abs(t.value) >= 1000 ? `${Math.round(t.value / 1000)}k` : t.value}</span>
-                      <div className="bar-grow" style={{ width: '100%', maxWidth: 30, height: h, borderRadius: '6px 6px 0 0', background: isLast ? 'var(--blue)' : 'var(--blue-bg)' }} />
-                      <span style={{ fontSize: '.56rem', color: isLast ? 'var(--blue)' : 'var(--muted2)', fontWeight: isLast ? 700 : 400 }}>{t.label}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* 要対応：停滞案件＋直近の商談 */}
+          {/* ⑥ 要対応（アラート＋停滞＋直近商談を1セクションに統合）＋最近の動き */}
+          <SectionTitle title="要対応・最近の動き" subtitle="対応が必要な項目と、直近のアクティビティ" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
+            {/* 要対応（統合）：アラート → 停滞中 → 直近の商談 */}
             <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ padding: '15px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <b style={{ fontSize: '.84rem' }}>要対応</b>
-                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
+                <b style={{ fontSize: '.84rem' }}>要対応{alerts.length > 0 && <span style={{ color: 'var(--red)', marginLeft: 6 }}>{alerts.length}</span>}</b>
+                <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>クリックで該当案件へ</span>
               </div>
-              <div style={{ padding: '12px 18px 6px' }}>
+              {/* アラート（差戻し経費・期日超過・課題フラグ・受注額未入力） */}
+              {alerts.length === 0 ? (
+                <p style={{ padding: '14px 18px', fontSize: '.7rem', color: 'var(--muted2)' }}>対応が必要なアラートはありません。</p>
+              ) : (
+                <div className="stagger">
+                  {alerts.slice(0, 12).map((a, i) => (
+                    <Link key={i} href={`/console/deals?deal=${a.dealId}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '11px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
+                      <StatusPill size="sm" tone={a.tone}>{a.type}</StatusPill>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.detail}</span>
+                      <span style={{ color: 'var(--muted)', fontSize: '.72rem', flexShrink: 0 }}>›</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {/* 停滞中（7日以上動きなし） */}
+              <div style={{ padding: '12px 18px 6px', borderTop: '1px solid #F2F2F6' }}>
                 <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>停滞中（7日以上動きなし）{stalled.length > 0 && <span style={{ color: 'var(--amber)' }}> · {stalled.length}件</span>}</div>
                 {stalled.length === 0 ? (
                   <p style={{ fontSize: '.66rem', color: 'var(--muted2)', padding: '2px 0 8px' }}>停滞している案件はありません。</p>
@@ -541,6 +452,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                   )
                 })}
               </div>
+              {/* 直近の商談 */}
               <div style={{ padding: '8px 18px 14px', borderTop: '1px solid #F2F2F6' }}>
                 <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', margin: '4px 0 6px' }}>直近の商談</div>
                 {upcomingMeetings.length === 0 ? (
@@ -560,36 +472,116 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                 })}
               </div>
             </div>
+
+            {/* 最近の動き */}
+            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 18px', borderBottom: '1px solid var(--line)' }}>
+                <b style={{ fontSize: '.84rem' }}>最近の動き</b>
+                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
+              </div>
+              {(recentEvents ?? []).length === 0 ? (
+                <p style={{ padding: '16px 18px', fontSize: '.72rem', color: 'var(--muted2)' }}>まだ記録がありません</p>
+              ) : (
+                <div className="stagger">
+                  {(recentEvents ?? []).map((e: any) => (
+                    <Link key={e.id} href={`/console/deals?deal=${e.deal_id}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '12px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
+                      <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: 'var(--muted)', width: 34 }}>
+                        {new Date(e.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                      </span>
+                      <b style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {e.deals ? customerHonorific(e.deals) : ''}
+                      </b>
+                      {e.deals?.channel && <ChannelMark channel={e.deals.channel} showLabel={false} />}
+                      {dealById[e.deal_id]?.partners?.profiles?.name && (
+                        <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap' }}>担当: {dealById[e.deal_id]!.partners!.profiles!.name}</span>
+                      )}
+                      <span style={{ color: 'var(--muted)', fontSize: '.72rem' }}>›</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* 最近の動き */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 18px', borderBottom: '1px solid var(--line)' }}>
-              <b style={{ fontSize: '.84rem' }}>最近の動き</b>
-              <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
+          {/* ⑦ MB粗利の推移（データのある月から表示） */}
+          <SectionTitle title="MB粗利の推移" subtitle="プロジェクトP&L集計（データのある月から）" />
+          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: 140 }}>
+              {visibleTrend.map((t, i) => {
+                const h = Math.max(3, Math.round((Math.max(0, t.value) / trendMax) * 110))
+                const isLast = i === visibleTrend.length - 1
+                return (
+                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <span className="tnum" style={{ fontSize: '.52rem', color: 'var(--muted2)', fontFamily: 'Inter' }}>{Math.abs(t.value) >= 1000 ? `${Math.round(t.value / 1000)}k` : t.value}</span>
+                    <div className="bar-grow" style={{ width: '100%', maxWidth: 40, height: h, borderRadius: '6px 6px 0 0', background: isLast ? 'var(--blue)' : 'var(--blue-bg)' }} />
+                    <span style={{ fontSize: '.56rem', color: isLast ? 'var(--blue)' : 'var(--muted2)', fontWeight: isLast ? 700 : 400 }}>{t.label}</span>
+                  </div>
+                )
+              })}
             </div>
-            {(recentEvents ?? []).length === 0 ? (
-              <p style={{ padding: '16px 18px', fontSize: '.72rem', color: 'var(--muted2)' }}>まだ記録がありません</p>
-            ) : (
-              <div className="stagger">
-                {(recentEvents ?? []).map((e: any) => (
-                  <Link key={e.id} href={`/console/deals?deal=${e.deal_id}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '12px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
-                    <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: 'var(--muted)', width: 34 }}>
-                      {new Date(e.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
-                    </span>
-                    <b style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {e.deals ? customerHonorific(e.deals) : ''}
-                    </b>
-                    {e.deals?.channel && <ChannelMark channel={e.deals.channel} showLabel={false} />}
-                    {dealById[e.deal_id]?.partners?.profiles?.name && (
-                      <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap' }}>担当: {dealById[e.deal_id]!.partners!.profiles!.name}</span>
-                    )}
-                    <span style={{ color: 'var(--muted)', fontSize: '.72rem' }}>›</span>
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
+
+          {/* ⑧ 詳細（格下げ・折りたたみ）：プロジェクト実行（1行サマリー）＋MB担当別粗利＋デリバリー別原価 */}
+          <details className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 8 }}>
+            <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '14px 20px', fontSize: '.82rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>詳細（プロジェクト実行・MB担当別・デリバリー別）</span>
+              <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 600 }}>クリックで展開</span>
+            </summary>
+            <div style={{ padding: '4px 20px 20px' }}>
+              {/* プロジェクト実行：1行サマリーに圧縮（ロジック・件数は不変） */}
+              <div style={{ padding: '8px 0 14px', borderBottom: '1px solid #F2F2F6' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <b style={{ fontSize: '.74rem' }}>プロジェクト実行</b>
+                  <span style={{ fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 800, color: 'var(--muted2)' }}>計 {projectsTotal} 件</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {projectDist.map(p => {
+                    const pill = projectStatusPill(p.ps)
+                    return (
+                      <Link key={p.ps} href={`/console/deals`} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--bg2)', borderRadius: 999, padding: '4px 10px', textDecoration: 'none', color: 'var(--txt)' }}>
+                        {pill && <StatusPill size="sm" {...pill} />}
+                        <b style={{ fontFamily: 'Inter', fontSize: '.74rem' }}>{p.count}</b>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+              {/* MB担当別 / デリバリー別 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 14 }}>
+                <div>
+                  <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2 }}>MB担当別の粗利</b>
+                  <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 12 }}>{isCurrentMonth ? '今月' : selMonthLabel}の成約・担当別</div>
+                  {directorRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>該当データがありません。</p> : directorRows.map((d, i) => {
+                    const w = Math.round((Math.max(0, d.margin) / Math.max(1, directorRows[0].margin)) * 100)
+                    return (
+                      <div key={i} style={{ padding: '7px 0', borderBottom: i < directorRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <span style={{ fontSize: '.72rem', fontWeight: 600 }}>{d.name} <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400 }}>· {d.count}件</span></span>
+                          <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 700, color: d.margin >= 0 ? 'var(--txt)' : 'var(--red)' }}>¥{d.margin.toLocaleString()}</span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><div style={{ width: `${w}%`, height: '100%', background: 'var(--blue)', borderRadius: 4 }} /></div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div>
+                  <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2 }}>デリバリー別の原価</b>
+                  <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 12 }}>{isCurrentMonth ? '今月' : selMonthLabel}の委託費＋承認済経費</div>
+                  {vendorRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>デリバリー委託はありません。</p> : vendorRows.map((v, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < vendorRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
+                      <span style={{ fontSize: '.72rem', fontWeight: 600, minWidth: 0 }}>{v.name}</span>
+                      <span style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexShrink: 0 }}>
+                        <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>委託費 <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--txt)' }}>¥{v.fee.toLocaleString()}</b></span>
+                        <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>経費 <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--txt)' }}>¥{v.expense.toLocaleString()}</b></span>
+                        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 700, color: 'var(--amber)' }}>¥{v.total.toLocaleString()}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
     </>
   )
@@ -605,8 +597,8 @@ function ConsoleDashboardSkeleton() {
       </div>
       <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
         <div className="skeleton" style={{ height: 140, borderRadius: 16, marginBottom: 18 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
-          {[0, 1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 96, borderRadius: 14 }} />)}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
+          {[0, 1, 2].map(i => <div key={i} className="skeleton" style={{ height: 96, borderRadius: 14 }} />)}
         </div>
         <div className="skeleton" style={{ height: 210, borderRadius: 14, marginBottom: 18 }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
@@ -614,6 +606,16 @@ function ConsoleDashboardSkeleton() {
           <div className="skeleton" style={{ height: 170, borderRadius: 14 }} />
         </div>
       </div>
+    </div>
+  )
+}
+
+// B3：セクション見出し（情報設計の階層・余白用。表示専用・数値計算なし）。
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div style={{ margin: '4px 2px 10px' }}>
+      <h2 style={{ fontSize: '.82rem', fontWeight: 900, letterSpacing: '-.01em' }}>{title}</h2>
+      {subtitle && <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>{subtitle}</p>}
     </div>
   )
 }
