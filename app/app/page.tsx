@@ -283,20 +283,6 @@ export default async function AppPage() {
         </div>
       </div>
 
-      {/* SYNAPSE Phase 0：私的“つながり台帳”への控えめな入口（既存ナビは不変・additive）。 */}
-      <div style={{ padding: '18px 20px 0' }}>
-        <Link href="/app/synapse" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
-          <span style={{ width: 38, height: 38, borderRadius: 11, background: 'var(--blue-bg2)', color: 'var(--blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="6" cy="6" r="2.4" /><circle cx="18" cy="9" r="2.4" /><circle cx="9" cy="18" r="2.4" /><path d="M8 7l8 1.5M7.6 16l1.2-7.5M11 18l5-7" /></svg>
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: '.82rem', fontWeight: 800 }}>つながりの台帳（SYNAPSE）</span>
-            <span style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>あなただけの私的な台帳。出会った方を記録できます。</span>
-          </span>
-          <span style={{ color: 'var(--muted)', fontSize: '.9rem', flexShrink: 0 }}>›</span>
-        </Link>
-      </div>
-
       <div style={{ height: 12 }} />
     </div>
   )

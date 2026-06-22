@@ -6,13 +6,14 @@
 import React from 'react'
 import Link from 'next/link'
 
-export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name, color, nav, children }: {
+export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name, color, nav, headerExtra, children }: {
   homeHref: string
   mypageHref: string
   settingsHref: string
   name: string | null
   color: string | null
   nav: React.ReactNode
+  headerExtra?: React.ReactNode // surface固有の追加ヘッダー導線（app=SYNAPSE等）。未指定なら何も出ない（vendor不変）。
   children: React.ReactNode
 }) {
   const initial = (name ?? '').trim().charAt(0) || 'M'
@@ -31,6 +32,7 @@ export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name,
             <b style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.95rem' }}>MB <span style={{ color: 'var(--blue)' }}>Partners</span></b>
           </Link>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {headerExtra}
             <Link href={mypageHref} aria-label={name ?? 'プロフィール'} style={{ textDecoration: 'none' }}>
               <span style={{ width: 36, height: 36, borderRadius: '50%', background: color ?? 'var(--blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.86rem', fontWeight: 700, flexShrink: 0 }}>{initial}</span>
             </Link>
