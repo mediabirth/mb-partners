@@ -2,9 +2,9 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
-// SYNAPSE 名簿化（N1/N4）：トップは“つながりの名簿”を主役に。知能（読み/取込/提案）は各行の詳細ページへ。
+// SYNAPSE 一覧（確定モック synapse_list_compact 準拠）：枠なし・区切り線の密なリスト。
 // ★紹介履歴は read-only（page で getPartnerWithDeals）。書込は synapse_contacts のみ（本人スコープAPI）。
-// ★再度紹介＝既存フロー（/app/refer）へのディープリンクのみ＝money/帰属/deals書込は新設しない。
+// ★再度紹介＝/app/refer への deep-link のみ（行内には出さず詳細へ集約）。お金/帰属/deals書込は新設しない。
 
 export type SynapseContact = {
   id: string
@@ -26,9 +26,8 @@ type ThreadMsg =
   | { role: 'user'; text: string }
   | { role: 'synapse'; reply: string; reading: Reading | null; crossRef: string | null; question: string | null; draft: DraftFields | null; savedId?: string }
 
-const STATUS_TONE: Record<string, { c: string; bg: string }> = {
-  進行: { c: 'var(--blue)', bg: 'var(--blue-bg)' }, 成約: { c: 'var(--green)', bg: 'var(--green-bg)' }, 支払済: { c: 'var(--muted2)', bg: 'var(--bg2)' },
-}
+// ステータス文字色：見込み=info／進行=secondary／成約=success／支払済=tertiary。
+const STATUS_COLOR: Record<string, string> = { 見込み: 'var(--blue)', 進行: 'var(--amber)', 成約: 'var(--green)', 支払済: 'var(--muted2)' }
 const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
 export default function SynapseClient({ initialContacts, referred, aiEnabled }: { initialContacts: SynapseContact[]; referred: ReferredEntry[]; aiEnabled: boolean }) {
@@ -51,7 +50,6 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [referred, prospects, filter, search])
 
-  // ── SYNAPSEに話す（追加用・任意）。Feature C 紹介文。──
   async function send() {
     const text = input.trim(); if (!text) { setThreadErr('話す内容を入力してください'); return }
     const next: ThreadMsg[] = [...thread, { role: 'user', text }]
@@ -97,114 +95,111 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
   }
 
   return (
-    <div style={{ padding: '6px 0 24px' }}>
-      {/* ══ つながりの名簿（主役） ══ */}
-      <div style={{ padding: '8px 20px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 2px 9px' }}>
-          <h2 className="ty-h2" style={{ margin: 0 }}>あなたのつながり</h2>
-          <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 600 }}>{referred.length + prospects.length}人</span>
+    <div style={{ padding: '4px 0 24px' }}>
+      {/* 見出し「あなたのつながり（人数）」＋ ＋追加 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 10px' }}>
+        <h1 style={{ fontSize: '1.05rem', fontWeight: 900, letterSpacing: '-.01em' }}>あなたのつながり <span style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)' }}>{referred.length + prospects.length}</span></h1>
+        <button onClick={() => { setAdding({ name: '', company: '', needs: '' }); setAddErr('') }} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '8px 13px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 800 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>追加
+        </button>
+      </div>
+
+      {/* 検索（スリム）＋区分チップ */}
+      <div style={{ padding: '0 20px 6px' }}>
+        <div style={{ position: 'relative', marginBottom: 8 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4-4" strokeLinecap="round" /></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="名前・会社で検索" style={{ width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '8px 12px 8px 32px', fontFamily: 'inherit', fontSize: '.74rem', background: 'var(--bg2)' }} />
         </div>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="名前・会社で検索" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.76rem', marginBottom: 8 }} />
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
           {([['all', 'すべて'], ['referred', '紹介済み'], ['prospect', '見込み']] as const).map(([v, l]) => (
-            <button key={v} onClick={() => setFilter(v)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${filter === v ? 'var(--blue)' : 'var(--line)'}`, background: filter === v ? 'var(--blue)' : '#fff', color: filter === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+            <button key={v} onClick={() => setFilter(v)} style={{ padding: '5px 13px', borderRadius: 999, fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', border: 'none', background: filter === v ? 'var(--blue)' : 'var(--bg2)', color: filter === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
           ))}
         </div>
+      </div>
 
+      {/* リスト：区切り線の密な行 */}
+      <div style={{ marginTop: 6 }}>
         {entries.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '26px 18px', textAlign: 'center' }}>
-            <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8 }}>{search ? '該当する人がいません。' : 'ここに、あなたが繋いだ人・これから繋ぐ人が並びます。\n下の「会った人を追加」から始めましょう。'}</p>
-          </div>
-        ) : entries.map(e => e.kind === 'referred' ? (
-          // 紹介済み：1行＋補助（read-only）＋再度紹介（既存フローへ）
-          <div key={e.key} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 13px', marginBottom: 7 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <b style={{ flex: 1, fontSize: '.78rem', fontWeight: 700, ...oneLine }}>{e.name}</b>
-              {e.ref!.status && <span style={{ fontSize: '.52rem', fontWeight: 800, color: (STATUS_TONE[e.ref!.status] ?? STATUS_TONE['支払済']).c, background: (STATUS_TONE[e.ref!.status] ?? STATUS_TONE['支払済']).bg, borderRadius: 6, padding: '2px 8px', flexShrink: 0 }}>{e.ref!.status}</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, fontSize: '.6rem', color: 'var(--muted2)' }}>
-              <span style={{ ...oneLine }}>{e.ref!.service ?? '案件'}</span>
-              {e.ref!.amount != null && e.ref!.amount > 0 && <span className="tnum" style={{ fontWeight: 700, color: 'var(--txt)', fontFamily: 'Inter', flexShrink: 0 }}>¥{e.ref!.amount.toLocaleString()}</span>}
-              <Link href="/app/refer" style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '.6rem', fontWeight: 800, color: 'var(--blue)', textDecoration: 'none' }}>再度紹介 →</Link>
-            </div>
-          </div>
-        ) : (
-          // 見込み：タップで詳細ページへ
-          <Link key={e.key} href={`/app/synapse/${e.c!.id}`} className="row-hover lift" style={{ display: 'block', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 13px', marginBottom: 7, textDecoration: 'none', color: 'var(--txt)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <b style={{ flex: 1, fontSize: '.78rem', fontWeight: 700, ...oneLine }}>{e.name}</b>
-              {e.c!.suggested_service
-                ? <span style={{ fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>{e.c!.suggested_service}</span>
-                : <span style={{ fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>見込み</span>}
-              <span style={{ color: 'var(--muted)', fontSize: '.7rem', flexShrink: 0 }}>›</span>
-            </div>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 3, ...oneLine }}>{e.c!.needs || [e.c!.company, e.c!.industry].filter(Boolean).join('・') || '困りごと未記録'}</div>
-          </Link>
-        ))}
-      </div>
-
-      {/* ══ 会った人を追加（控えめな1導線・先に入れておける） ══ */}
-      <div style={{ padding: '20px 20px 0' }}>
-        {!showAdd ? (
-          <div style={{ display: 'flex', gap: 8 }}>
-            {aiEnabled && <button onClick={() => setShowAdd(true)} className="lift" style={{ flex: 1, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '11px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, color: 'var(--blue-dk)' }}>＋ 会った人を追加（SYNAPSEに話す）</button>}
-            <button onClick={() => { setAdding({ name: '', company: '', needs: '' }); setAddErr('') }} className="lift" style={{ flex: aiEnabled ? '0 0 auto' : 1, background: '#fff', border: '1px dashed var(--line)', borderRadius: 12, padding: '11px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, color: 'var(--muted)' }}>手入力</button>
-          </div>
-        ) : (
-          <div style={{ background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '14px 15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <b style={{ fontSize: '.8rem', color: 'var(--blue-dk)' }}>SYNAPSEに話す</b>
-              <button onClick={() => { setShowAdd(false); setThread([]); setThreadErr('') }} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
-            </div>
-            {thread.length === 0 && <p style={{ fontSize: '.62rem', color: '#52529E', margin: '0 0 9px', lineHeight: 1.6 }}>会った方のことを話すと、合いそうなMBサービスと切り口を返します。後で紹介するために、先に名簿へ入れておけます。</p>}
-            {thread.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '2px 0 9px' }}>
-                {thread.map((m, i) => m.role === 'user' ? (
-                  <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '88%', background: 'var(--blue)', color: '#fff', borderRadius: 12, padding: '8px 12px', fontSize: '.72rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.text}</div>
-                ) : (
-                  <div key={i} style={{ alignSelf: 'flex-start', width: '100%' }}>
-                    <div style={{ background: '#fff', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '9px 12px', fontSize: '.72rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.reply}</div>
-                    {m.reading && (
-                      <div style={{ marginTop: 7, background: '#fff', border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '8px 11px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}><span style={{ fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)' }}>読み</span><span style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '1px 7px' }}>{m.reading.service}</span></div>
-                        {m.reading.angle && <div style={{ fontSize: '.64rem', color: 'var(--blue-dk)', fontWeight: 700, lineHeight: 1.5 }}>切り口：{m.reading.angle}</div>}
-                      </div>
-                    )}
-                    {m.crossRef && <div style={{ marginTop: 5, fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.5 }}>🔗 {m.crossRef}</div>}
-                    {(m.reading || m.draft) && (
-                      <div style={{ display: 'flex', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
-                        {m.reading && <button onClick={() => makeIntro(m.draft?.company || m.draft?.name || '相手の方', m.draft?.needs || '', m.reading!.service)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>紹介文を作る</button>}
-                        {m.draft && (m.savedId ? <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--green)', alignSelf: 'center' }}>✓ 名簿に保存</span> : <button onClick={() => saveFromThread(i)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: '#fff', border: '1px solid var(--blue)', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>名簿に保存</button>)}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {busy && <div style={{ alignSelf: 'flex-start', fontSize: '.62rem', color: 'var(--muted2)' }}>SYNAPSEが考えています…</div>}
+          <p style={{ padding: '30px 20px', textAlign: 'center', fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{search ? '該当する人がいません。' : 'ここに、あなたが繋いだ人・これから繋ぐ人が並びます。\n右上の「＋追加」から始めましょう。'}</p>
+        ) : entries.map(e => {
+          const status = e.kind === 'prospect' ? '見込み' : e.ref!.status
+          const sub = e.kind === 'prospect'
+            ? ([e.c!.industry, e.c!.needs].filter(Boolean).join('・') || '困りごと未記録')
+            : (e.ref!.service ?? '案件')
+          // 見込み→詳細ページ。紹介済み→既存フロー(再度紹介・deep-link)。
+          const href = e.kind === 'prospect' ? `/app/synapse/${e.c!.id}` : '/app/refer'
+          return (
+            <Link key={e.key} href={href} className="row-hover" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderTop: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.82rem', fontWeight: 700, ...oneLine }}>{e.name}</div>
+                <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, ...oneLine }}>{sub}</div>
               </div>
-            )}
-            <textarea value={input} onChange={e => setInput(e.target.value)} rows={thread.length === 0 ? 3 : 2} placeholder={thread.length === 0 ? '例：食品メーカーの佐藤部長と会った。新規ECの人材が社内におらず採用に困っているらしい。' : '続けて話す…'} style={{ width: '100%', border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.78rem', resize: 'vertical', marginBottom: 8 }} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={send} disabled={busy} className="btn btn-p lift" style={{ flex: 1 }}>{busy ? '送信中…' : (thread.length === 0 ? 'SYNAPSEに話す' : '続ける')}</button>
-              <button onClick={() => { setAdding({ name: '', company: '', needs: '' }); setAddErr('') }} className="lift" style={{ flexShrink: 0, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: '0 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 700, color: 'var(--muted)' }}>手入力</button>
-            </div>
-            {threadErr && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '8px 0 0' }}>{threadErr}</p>}
-          </div>
-        )}
+              <span style={{ fontSize: '.62rem', fontWeight: 700, color: STATUS_COLOR[status] ?? 'var(--muted2)', flexShrink: 0 }}>{status}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </Link>
+          )
+        })}
+        {entries.length > 0 && <div style={{ borderTop: '1px solid var(--line)' }} />}
       </div>
 
-      {/* 手入力で追加（新規・最小） */}
+      {/* SYNAPSEに話す（控えめ・任意） */}
+      {aiEnabled && (
+        <div style={{ padding: '18px 20px 0' }}>
+          {!showAdd ? (
+            <button onClick={() => setShowAdd(true)} className="lift" style={{ width: '100%', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 11, padding: '11px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.73rem', fontWeight: 700, color: 'var(--blue-dk)' }}>会った人を SYNAPSE に話して追加する</button>
+          ) : (
+            <div style={{ background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '14px 15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <b style={{ fontSize: '.8rem', color: 'var(--blue-dk)' }}>SYNAPSEに話す</b>
+                <button onClick={() => { setShowAdd(false); setThread([]); setThreadErr('') }} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
+              </div>
+              {thread.length === 0 && <p style={{ fontSize: '.62rem', color: '#52529E', margin: '0 0 9px', lineHeight: 1.6 }}>会った方のことを話すと、合いそうなMBサービスと切り口を返します。後で紹介するために、先に名簿へ入れておけます。</p>}
+              {thread.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '2px 0 9px' }}>
+                  {thread.map((m, i) => m.role === 'user' ? (
+                    <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '88%', background: 'var(--blue)', color: '#fff', borderRadius: 12, padding: '8px 12px', fontSize: '.72rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.text}</div>
+                  ) : (
+                    <div key={i} style={{ alignSelf: 'flex-start', width: '100%' }}>
+                      <div style={{ background: '#fff', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '9px 12px', fontSize: '.72rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.reply}</div>
+                      {m.reading && (
+                        <div style={{ marginTop: 7, background: '#fff', border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '8px 11px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}><span style={{ fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)' }}>読み</span><span style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '1px 7px' }}>{m.reading.service}</span></div>
+                          {m.reading.angle && <div style={{ fontSize: '.64rem', color: 'var(--blue-dk)', fontWeight: 700, lineHeight: 1.5 }}>切り口：{m.reading.angle}</div>}
+                        </div>
+                      )}
+                      {m.crossRef && <div style={{ marginTop: 5, fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.5 }}>🔗 {m.crossRef}</div>}
+                      {(m.reading || m.draft) && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
+                          {m.reading && <button onClick={() => makeIntro(m.draft?.company || m.draft?.name || '相手の方', m.draft?.needs || '', m.reading!.service)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>紹介文を作る</button>}
+                          {m.draft && (m.savedId ? <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--green)', alignSelf: 'center' }}>✓ 名簿に保存</span> : <button onClick={() => saveFromThread(i)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: '#fff', border: '1px solid var(--blue)', borderRadius: 8, padding: '6px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>名簿に保存</button>)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {busy && <div style={{ alignSelf: 'flex-start', fontSize: '.62rem', color: 'var(--muted2)' }}>SYNAPSEが考えています…</div>}
+                </div>
+              )}
+              <textarea value={input} onChange={e => setInput(e.target.value)} rows={thread.length === 0 ? 3 : 2} placeholder={thread.length === 0 ? '例：食品メーカーの佐藤部長と会った。新規ECの人材が社内におらず採用に困っているらしい。' : '続けて話す…'} style={{ width: '100%', border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.78rem', resize: 'vertical', marginBottom: 8 }} />
+              <button onClick={send} disabled={busy} className="btn btn-p lift" style={{ width: '100%' }}>{busy ? '送信中…' : (thread.length === 0 ? 'SYNAPSEに話す' : '続ける')}</button>
+              {threadErr && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '8px 0 0' }}>{threadErr}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 追加（最小フォーム） */}
       {adding && (
         <div onClick={ev => { if (ev.target === ev.currentTarget) setAdding(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(3px)', zIndex: 120, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div style={{ background: '#fff', width: '100%', maxWidth: 430, borderRadius: '16px 16px 0 0', padding: '18px 18px calc(20px + env(safe-area-inset-bottom))' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <b style={{ fontSize: '.86rem', fontWeight: 800 }}>会った人を追加</b>
+              <b style={{ fontSize: '.86rem', fontWeight: 800 }}>つながりを追加</b>
               <button onClick={() => setAdding(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
             </div>
             <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>まず名前だけでもOK。あとで詳細ページから会社URLを渡せばSYNAPSEが埋めます。</p>
-            {[['お名前', 'name'], ['会社・組織', 'company'], ['困りごと（任意）', 'needs']].map(([label, key]) => (
+            {([['お名前', 'name'], ['会社・組織', 'company'], ['困りごと（任意）', 'needs']] as const).map(([label, key]) => (
               <div key={key} style={{ marginBottom: 10 }}>
                 <label style={{ display: 'block', fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 4 }}>{label}</label>
-                <input value={(adding as any)[key]} onChange={ev => setAdding(a => a ? { ...a, [key]: ev.target.value } : a)} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.8rem' }} />
+                <input value={adding[key]} onChange={ev => setAdding(a => a ? { ...a, [key]: ev.target.value } : a)} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.8rem' }} />
               </div>
             ))}
             {addErr && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '0 0 8px' }}>{addErr}</p>}
@@ -213,7 +208,7 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
         </div>
       )}
 
-      {/* 紹介文（Feature C）結果モーダル */}
+      {/* 紹介文（Feature C） */}
       {intro && (
         <div onClick={ev => { if (ev.target === ev.currentTarget) setIntro(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(3px)', zIndex: 130, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', width: '100%', maxWidth: 390, borderRadius: 16, padding: '18px 18px' }}>
