@@ -81,7 +81,7 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
       if (!res.ok) { setErr(j?.error || '保存に失敗しました'); return }
       const saved = j.contact as SynapseContact
       setContacts(prev => draft.id ? prev.map(c => c.id === saved.id ? saved : c) : [saved, ...prev])
-      setDraft(null); setTranscript('')
+      setDraft(null); resetChat()
     } catch {
       setErr('保存に失敗しました')
     } finally {
