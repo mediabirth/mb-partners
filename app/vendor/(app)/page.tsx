@@ -65,6 +65,11 @@ export default async function VendorHome() {
   const targetPeriod = (unpaidPayouts[0] ?? b.payouts[0])?.period ?? null
   const pendingTotal = projects.reduce((s, p) => s + p.pending, 0)
 
+  // V-a：ヒーローの表示分岐（既存値・フラグのみ。新たな合計計算はしない／unpaidは既存集計をそのまま使用）。
+  //  due=当月支払予定あり / done=予定0だが支払済履歴あり / none=予定0かつ履歴なし(新規)。
+  const hasPaidHistory = b.payouts.some(p => p.status === 'paid')
+  const payState: 'due' | 'done' | 'none' = unpaid > 0 ? 'due' : (hasPaidHistory ? 'done' : 'none')
+
   return (
     <div className="page-anim">
       {/* Step1：支払予定を主役にしたヒーロー。上端＝theme-color(#4733E6) と一致させ継ぎ目を消す。
@@ -74,15 +79,35 @@ export default async function VendorHome() {
           <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%', animation: 'spin 30s linear infinite' }} />
           <div style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%', animation: 'spin 20s linear infinite reverse' }} />
         </div>
-        {/* ① 小キャプション「支払予定 · 対象月」＋状態チップ */}
+        {/* ① 小キャプション「支払予定 · 対象月」＋状態チップ（履歴なし新規は非表示） */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
           <span style={{ fontSize: '.6rem', opacity: .9 }}>支払予定{targetPeriod ? ` · ${fmtPeriod(targetPeriod)}` : ''}</span>
-          <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{unpaid > 0 ? '未払い' : '支払済'}</span>
+          {payState !== 'none' && (
+            <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
+          )}
         </div>
-        {/* ② 大きな金額（既存の支払予定額をそのまま・/vendor/rewards へ遷移） */}
-        <Link href="/vendor/rewards" style={{ display: 'block', textDecoration: 'none', color: '#fff', marginTop: 6, position: 'relative', zIndex: 1 }}>
-          <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.022em', lineHeight: 1.05, fontFeatureSettings: '"tnum"' }}>¥{unpaid.toLocaleString()}</span>
-        </Link>
+        {/* ② 状態別表示（金額は既存値のまま・再計算なし） */}
+        {payState === 'due' ? (
+          <Link href="/vendor/rewards" style={{ display: 'block', textDecoration: 'none', color: '#fff', marginTop: 6, position: 'relative', zIndex: 1 }}>
+            <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.022em', lineHeight: 1.05, fontFeatureSettings: '"tnum"' }}>¥{unpaid.toLocaleString()}</span>
+          </Link>
+        ) : payState === 'done' ? (
+          /* 予定0＋支払済履歴あり：巨大¥0をやめ安心表示。予定¥0は小さなミュート行に降格。 */
+          <Link href="/vendor/rewards" style={{ display: 'block', textDecoration: 'none', color: '#fff', marginTop: 8, position: 'relative', zIndex: 1 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '1.04rem', fontWeight: 800, letterSpacing: '-.01em' }}>
+              <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </span>
+              今月の支払いは完了しています
+            </span>
+            <span style={{ display: 'block', fontSize: '.58rem', opacity: .72, marginTop: 6 }}>支払予定 ¥{unpaid.toLocaleString()}</span>
+          </Link>
+        ) : (
+          /* 予定0＋履歴なし（新規）：中立表示。 */
+          <div style={{ marginTop: 8, position: 'relative', zIndex: 1 }}>
+            <span style={{ fontSize: '1.0rem', fontWeight: 700, opacity: .95 }}>現在お支払い予定はありません</span>
+          </div>
+        )}
         {/* ③ 区切り線 ④ 3チップ（担当案件 / 未完タスク / 要対応） */}
         <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>担当案件<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{b.assignments.length}件</b></div>
