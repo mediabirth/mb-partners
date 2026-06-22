@@ -36,10 +36,10 @@ export default function InviteFellowCard({ partnerId }: { partnerId: string }) {
         <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', color: 'var(--blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" strokeLinecap="round" /></svg>
         </span>
-        <b style={{ fontSize: '.84rem', fontWeight: 800 }}>仲間を招待する</b>
+        <b style={{ fontSize: '.84rem', fontWeight: 800 }}>MB Partnersへ知り合いを推薦する</b>
       </div>
       <p style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '0 0 12px' }}>
-        信頼できる専門家を、MB Partners にお招きできます。招待は、あなたが築いてきた信頼の証です。
+        MB Partners は完全招待制です。どなたでも始められるものではなく、信頼できる知り合いをあなたから推薦いただけます。推薦は、あなたが築いてきた信頼の証です。
       </p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', borderRadius: 9, padding: '10px 12px', marginBottom: 8 }}>
