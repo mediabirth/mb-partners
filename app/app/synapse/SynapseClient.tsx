@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // SYNAPSE 作り直し（R1/R2/R4）：消えない会話スレッド＋“読み”＋カードの一手。呼称は SYNAPSE に統一。
 // ★保存/紹介文生成は本人スコープのAPI経由。お金・帰属・既存通知には一切触れない。
@@ -35,6 +35,27 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
   // 紹介文（Feature C）インライン結果
   const [intro, setIntro] = useState<{ text: string } | null>(null)
   const [introBusy, setIntroBusy] = useState(false)
+  // P2-3：SYNAPSEからの問いかけ（nudge）。マウント時に取得（本人スコープ・AI無効時は非表示）。
+  type Nudge = { id: string; kind: 'followup' | 'dormant' | 'seed'; title: string; body: string; contactId: string | null; contactName: string | null }
+  const [nudges, setNudges] = useState<Nudge[]>([])
+  useEffect(() => {
+    if (!aiEnabled) return
+    let alive = true
+    fetch('/api/synapse/nudges').then(r => r.ok ? r.json() : { nudges: [] }).then(j => { if (alive) setNudges(Array.isArray(j.nudges) ? j.nudges : []) }).catch(() => {})
+    return () => { alive = false }
+  }, [aiEnabled])
+
+  // nudgeタップ → 会話スレッドをその文脈でプリロード（問いをSYNAPSEの発話として置き、本人が答える形）。
+  function preloadNudge(n: Nudge) {
+    setThread([{ role: 'synapse', reply: n.body, reading: null, crossRef: null, question: null, draft: null }])
+    setThreadErr(''); setInput('')
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  const NUDGE_META: Record<string, { label: string; color: string }> = {
+    followup: { label: 'フォローアップ', color: 'var(--blue)' },
+    dormant: { label: 'まだ動けます', color: 'var(--amber)' },
+    seed: { label: '新しい種', color: 'var(--green)' },
+  }
 
   // ── 会話：送信しても消えない多ターンのスレッド ──
   async function send() {
@@ -136,6 +157,31 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
 
   return (
     <div style={{ padding: '8px 0 24px' }}>
+      {/* ── SYNAPSEからの問いかけ（nudge）：眠っている種を掘り起こす。空/未設定なら非表示 ── */}
+      {nudges.length > 0 && (
+        <div style={{ padding: '10px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 8px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2zM9 21h6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <h2 className="ty-h2" style={{ margin: 0 }}>SYNAPSEからの問いかけ</h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {nudges.map(n => {
+              const meta = NUDGE_META[n.kind] ?? NUDGE_META.seed
+              return (
+                <button key={n.id} onClick={() => preloadNudge(n)} className="card-hover lift" style={{ display: 'block', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--txt)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                    <span style={{ fontSize: '.5rem', fontWeight: 800, letterSpacing: '.06em', color: '#fff', background: meta.color, borderRadius: 6, padding: '2px 7px' }}>{meta.label}</span>
+                    {n.contactName && <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)' }}>{n.contactName}</span>}
+                  </div>
+                  <div style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', lineHeight: 1.6 }}>{n.body}</div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--blue)', fontWeight: 700, marginTop: 6 }}>この問いから話す →</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── SYNAPSE 会話スレッド（消えない・キー未設定なら非表示＝graceful degrade） ── */}
       {aiEnabled && (
         <div style={{ margin: '8px 20px 0', background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
