@@ -44,7 +44,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     if (app.referrer_partner_id) {
       const payload = {
         title: `${app.name}さんが仲間に加わりました`,
-        body: 'あなたの紹介に、心から感謝します。専門家の輪が、あなたの信頼から確かに広がっています。これからもどうぞよろしくお願いします。— MB Partners',
+        body: 'あなたの紹介に、心から感謝します。信頼の輪が、あなたから確かに広がっています。これからもどうぞよろしくお願いします。— MB Partners',
         url: '/app',
         tag: `recognition-${app.id}`,
         ref: { type: 'recognition', application_id: app.id },
