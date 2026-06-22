@@ -8,7 +8,6 @@ import StatusPill from '@/components/ui/StatusPill'
 import { dealStatus } from '@/lib/status'
 import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
-import InviteFellowCard from '@/components/InviteFellowCard'
 
 export const runtime = 'edge'
 
@@ -282,11 +281,6 @@ export default async function AppPage() {
             )
           })}
         </div>
-      </div>
-
-      {/* Feature E（E-1）：仲間（プロ紹介者）を招待する導線（非金銭・/r顧客紹介とは別物）。 */}
-      <div style={{ padding: '16px 0 6px' }}>
-        <InviteFellowCard partnerId={partner.id} />
       </div>
 
       <div style={{ height: 12 }} />
