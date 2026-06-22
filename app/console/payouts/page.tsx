@@ -203,7 +203,8 @@ export default function PayoutsPage() {
           {/* ① 要支払い（主役・最上段） */}
           <div style={{ marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 4px 8px' }}>
-              <h2 style={{ fontSize: '.86rem', fontWeight: 800 }}>要支払い<span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 600, marginLeft: 6 }}>今すぐ振り込む</span></h2>
+              {/* B4: 要支払いが ¥0（対象0件）のときは「今すぐ振り込む」CTAヒントを出さない（押せても無意味なため）。空ステート文言は維持。 */}
+              <h2 style={{ fontSize: '.86rem', fontWeight: 800 }}>要支払い{due.length > 0 && dueTotal > 0 && <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 600, marginLeft: 6 }}>今すぐ振り込む</span>}</h2>
               <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.1rem', fontWeight: 800, color: 'var(--green)' }}>計 {yen(dueTotal)}</span>
             </div>
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>

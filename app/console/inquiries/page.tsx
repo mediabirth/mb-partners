@@ -127,7 +127,7 @@ export default function ConsoleInquiriesPage() {
                       <span style={{
                         fontSize: '.82rem', color: 'var(--txt)', fontWeight: 700, flexShrink: 0,
                       }}>
-                        {inq.partners?.profiles?.name ?? '-'}
+                        {inq.partners?.profiles?.name ?? '(不明)'}
                       </span>
                       <span style={{
                         fontSize: '.74rem', color: 'var(--muted)', fontWeight: 500,

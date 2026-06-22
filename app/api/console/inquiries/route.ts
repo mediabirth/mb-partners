@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export const runtime = 'edge'
 
@@ -15,7 +15,10 @@ export async function GET() {
     .single()
   if (profile?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: inquiries, error } = await supabase
+  // B4: nested partners.profiles は profiles RLS（本人のみSELECT）で owner セッションでは null → 送信者名が「−」化。
+  // 認証/権限ゲートは anon(supabase) のまま。氏名解決のための一覧読取のみ service role（上で owner 確認済）。
+  const admin = await createServiceRoleClient()
+  const { data: inquiries, error } = await admin
     .from('inquiries')
     .select(`
       id, category, subject, status, created_at, updated_at,
