@@ -182,6 +182,9 @@ export default function DealsPage() {
   const [services, setServices]     = useState<Service[]>([])
   const dragItem = useRef<{ id: string; status: string } | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
+  // B2: 0件カラムを細い折りたたみ列に（表示のみ）。ユーザーが手動展開したカラムを保持（永続化不要）。
+  const [expandedEmpty, setExpandedEmpty] = useState<Record<string, boolean>>({})
+  const toggleCol = (key: string) => setExpandedEmpty(p => ({ ...p, [key]: !p[key] }))
   // ② base-amount entry on confirming a rate-based deal
   const [baseModal, setBaseModal] = useState<{ deal: Deal; rate: number; baseLabel: string } | null>(null)
   const [baseInput, setBaseInput] = useState('')
@@ -728,6 +731,9 @@ export default function DealsPage() {
             {PIPELINE_LANES.map((lane, idx) => {
               const laneDeals = filteredDeals.filter(d => !['paid', 'lost'].includes(d.status) && laneKeyOf(d) === lane.key)
               const groupStart = lane.group === 'project' && (idx === 0 || PIPELINE_LANES[idx - 1].group === 'shodan')
+              // B2: 0件カラムは既定で細い折りたたみ列。手動展開中・1件以上なら通常幅（0→1で自動的に通常表示）。
+              const isEmpty = laneDeals.length === 0
+              const collapsed = isEmpty && !expandedEmpty[lane.key]
               return (
                 <div key={lane.key} style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexShrink: 0 }}>
                   {groupStart && <div aria-hidden style={{ width: 1, background: 'var(--line)', alignSelf: 'stretch' }} />}
@@ -735,8 +741,19 @@ export default function DealsPage() {
                     onDragOver={e => onDragOver(e, lane.key)}
                     onDragLeave={onDragLeave}
                     onDrop={e => onDrop(e, lane.key)}
-                    style={{ width: 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: 14, minHeight: 220, border: `1px solid ${dragOverCol === lane.key ? 'var(--blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out)' }}
+                    onClick={collapsed ? () => toggleCol(lane.key) : undefined}
+                    className={collapsed ? 'card-hover' : undefined}
+                    title={collapsed ? 'クリックで展開' : undefined}
+                    style={{ width: collapsed ? 50 : 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: collapsed ? '12px 4px' : 14, minHeight: 220, cursor: collapsed ? 'pointer' : 'default', border: `1px solid ${dragOverCol === lane.key ? 'var(--blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out), width .18s var(--ease-out)' }}
                   >
+                    {collapsed ? (
+                      /* B2: 細い折りたたみ列＝ステージ名(縦書き)＋件数0のみ。大きな空ボックスは出さない。 */
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, height: '100%', minHeight: 196, paddingTop: 2 }}>
+                        <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${lane.tone})`, flexShrink: 0 }} />
+                        <span className="tnum" style={{ fontSize: '.6rem', fontWeight: 800, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, padding: '1px 6px', minWidth: 20, textAlign: 'center' }}>0</span>
+                        <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '.72rem', fontWeight: 800, color: 'var(--muted2)', whiteSpace: 'nowrap', letterSpacing: '.04em' }}>{lane.label}</span>
+                      </div>
+                    ) : (<>
                     {/* レーン見出し：グループ(商談/プロジェクト)＋ステージ名＋件数 */}
                     <div style={{ marginBottom: 12, padding: '2px 2px 0' }}>
                       <p style={{ fontSize: '.5rem', letterSpacing: '.14em', color: 'var(--muted)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 5 }}>{lane.group === 'shodan' ? '商談' : 'プロジェクト'}</p>
@@ -745,12 +762,17 @@ export default function DealsPage() {
                           <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${lane.tone})`, flexShrink: 0 }} />
                           <span style={{ fontSize: '.76rem', fontWeight: 800, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{lane.label}</span>
                         </div>
-                        <span className="tnum" style={{ fontSize: '.64rem', fontWeight: 800, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, padding: '2px 8px', minWidth: 22, textAlign: 'center', flexShrink: 0 }}>{laneDeals.length}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          {isEmpty && (
+                            <button onClick={() => toggleCol(lane.key)} title="畳む" style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 7, cursor: 'pointer', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 800, lineHeight: 1, padding: '3px 6px' }}>‹ 畳む</button>
+                          )}
+                          <span className="tnum" style={{ fontSize: '.64rem', fontWeight: 800, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, padding: '2px 8px', minWidth: 22, textAlign: 'center' }}>{laneDeals.length}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {laneDeals.length === 0 && (
-                      <div style={{ padding: '20px 8px', textAlign: 'center', fontSize: '.6rem', color: 'var(--muted)', border: '1.5px dashed var(--line)', borderRadius: 12, background: '#fff' }}>案件なし</div>
+                    {isEmpty && (
+                      <div style={{ padding: '14px 8px', textAlign: 'center', fontSize: '.58rem', color: 'var(--muted)' }}>ここにドラッグして移動</div>
                     )}
 
                     {laneDeals.map(d => {
@@ -785,6 +807,7 @@ export default function DealsPage() {
                         </div>
                       )
                     })}
+                    </>)}
                   </div>
                 </div>
               )
