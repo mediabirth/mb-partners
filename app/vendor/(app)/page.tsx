@@ -164,10 +164,10 @@ export default async function VendorHome() {
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <span>未完タスク <b style={{ color: pending > 0 ? 'var(--blue)' : 'var(--muted2)' }}>{pending}</b></span>
-                {/* Step2：未設定は裸の「—」をやめ tertiary 色で「マイルストーン未設定」 */}
-                {nextMs
-                  ? <span>次のマイルストーン: <b style={{ color: 'var(--txt)' }}>{nextMs.title}</b>{nextMs.due_date ? ` (${nextMs.due_date.slice(5)})` : ''}</span>
-                  : <span style={{ color: 'var(--muted)' }}>マイルストーン未設定</span>}
+                {/* V-e：マイルストーン未設定のときはテキストを描画しない（未完タスク件数等は不変）。 */}
+                {nextMs && (
+                  <span>次のマイルストーン: <b style={{ color: 'var(--txt)' }}>{nextMs.title}</b>{nextMs.due_date ? ` (${nextMs.due_date.slice(5)})` : ''}</span>
+                )}
               </div>
             </Link>
           )
