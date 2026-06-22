@@ -1,36 +1,58 @@
 import { redirect } from 'next/navigation'
 import { createClient, getCachedUid } from '@/lib/supabase/server'
-import SynapseClient, { type SynapseContact } from './SynapseClient'
+import { getPartnerWithDeals } from '@/lib/supabase/queries'
+import { customerHonorific } from '@/lib/customer'
+import SynapseClient, { type SynapseContact, type ReferredEntry } from './SynapseClient'
 
-// SYNAPSE Phase 0（P0-3）：パートナー“私的”関係資本台帳＋AIヒアリング入口。
-// ★本人のみ。読取は本人セッション(anon)＋RLSで自動スコープ（他人の行は不可視）。
-// ★お金・deals・frontier・/r帰属・既存ナビには一切触れない隔離ルート。
+// SYNAPSE 再構成：まず“自分専用CRM”。本人の紹介履歴(read-only)＋私的台帳(synapse_contacts)を1リストに。
+// ★紹介履歴は完全read-only（getPartnerWithDeals＝anon＋RLSで本人の自分データのみ）。money/deals/帰属に書き込みゼロ。
+// ★synapse_contacts は本人RLS。サービス目録は読むだけ。既存ナビ・3サイト分離は不変。
 export const runtime = 'edge'
+
+// 紹介済み＝進行/成約/支払済（lost は除外）。
+const STATUS_LABEL: Record<string, string> = { received: '進行', in_progress: '進行', confirmed: '成約', paid: '支払済' }
 
 export default async function SynapsePage() {
   const uid = await getCachedUid()
   if (!uid) redirect('/login')
 
-  // RLS（本人のみ）で自動スコープ。partner_id を渡さなくても自分の行だけが返る。
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('synapse_contacts')
-    .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, source, created_at, updated_at')
-    .order('created_at', { ascending: false })
+  // 私的台帳（RLS本人スコープ）＋ 本人の紹介履歴（read-only）を並列取得。
+  const [contactsRes, pwd] = await Promise.all([
+    supabase.from('synapse_contacts')
+      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, source, created_at, updated_at')
+      .order('created_at', { ascending: false }),
+    getPartnerWithDeals(supabase, uid),   // ★read-only：本人の紹介した案件
+  ])
 
-  const contacts = (data ?? []) as SynapseContact[]
+  const contacts = (contactsRes.data ?? []) as SynapseContact[]
+
+  // 紹介履歴を CRM エントリへ（本人の自分データを“読むだけ”・再計算なし）。
+  const referred: ReferredEntry[] = ((pwd?.deals ?? []) as any[])
+    .filter(d => ['received', 'in_progress', 'confirmed', 'paid'].includes(d.status))
+    .map(d => ({
+      id: d.id,
+      name: customerHonorific(d),
+      company: d.company_name ?? null,
+      service: d.services?.name ?? null,
+      status: STATUS_LABEL[d.status] ?? d.status,
+      statusKey: d.status,
+      amount: typeof d.amount === 'number' ? d.amount : null,
+      date: d.fixed_month ?? d.created_at,
+    }))
+
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY
 
   return (
     <div className="page-anim">
-      <div style={{ padding: '20px 20px 6px' }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>SYNAPSE · あなただけの台帳</div>
+      <div style={{ padding: '20px 20px 4px' }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>SYNAPSE · あなた専用のCRM</div>
         <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em' }}>つながりの台帳</h1>
-        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>
-          出会った方のことを話すと、SYNAPSEが合いそうなMBサービスと“刺さる切り口”を返します。記録した内容はあなた専用です（運営や他のパートナーには共有されません）。
+        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
+          あなたが紹介した方と、これからの見込みを一覧に。SYNAPSEが傾向と“次の一手”を添えます（あなた専用・運営や他のパートナーには共有されません）。
         </p>
       </div>
-      <SynapseClient initialContacts={contacts} aiEnabled={aiEnabled} />
+      <SynapseClient initialContacts={contacts} referred={referred} aiEnabled={aiEnabled} />
     </div>
   )
 }
