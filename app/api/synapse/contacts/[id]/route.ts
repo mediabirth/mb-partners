@@ -5,7 +5,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 // ★常に partner_id + id にスコープ＝他人の行には絶対に触れない。お金/deals/frontier 非接触。
 export const runtime = 'edge'
 
-const FIELDS = ['name', 'company', 'industry', 'role', 'relationship', 'needs', 'notes'] as const
+const FIELDS = ['name', 'company', 'industry', 'role', 'relationship', 'needs', 'notes', 'suggested_service', 'suggested_angle'] as const
 
 async function resolvePartnerId(): Promise<string | null> {
   const supabase = await createClient()
@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .update(patch)
       .eq('id', id)
       .eq('partner_id', partnerId)   // 本人の行のみ
-      .select('id, name, company, industry, role, relationship, needs, notes, source, created_at, updated_at')
+      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, source, created_at, updated_at')
       .maybeSingle()
     if (error) return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
     if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
