@@ -34,7 +34,7 @@ export default async function VendorRewards() {
       <div style={{ padding: '18px 20px 6px' }}><h2 className="ty-h2">支払明細</h2></div>
       <div style={{ padding: '0 20px 8px' }}>
         {b.payouts.length === 0 ? (
-          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 0' }}>支払予定はまだありません。MB が支払を確定（凍結）すると表示されます。</p>
+          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 0' }}>支払予定はまだありません。MB が支払を確定すると表示されます。</p>
         ) : b.payouts.map(p => {
           const isPaid = p.status === 'paid'
           return (
@@ -57,7 +57,7 @@ export default async function VendorRewards() {
           )
         })}
       </div>
-      <p style={{ fontSize: '.6rem', color: 'var(--muted)', padding: '0 20px 20px', lineHeight: 1.7 }}>※ 支払予定は MB が支払を確定（凍結）した時点の金額です。承認済の経費が反映されます。</p>
+      <p style={{ fontSize: '.6rem', color: 'var(--muted)', padding: '0 20px 20px', lineHeight: 1.7 }}>※ 支払予定は MB が支払を確定した時点の金額です。承認済の経費が反映されます。</p>
     </div>
   )
 }
