@@ -12,7 +12,7 @@ const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 700
 const FETCH_TIMEOUT_MS = 6000
 const MAX_BYTES = 300_000
-const SELECT = 'id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, source, created_at, updated_at'
+const SELECT = 'id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, source, created_at, updated_at'
 
 async function resolvePartnerId(): Promise<string | null> {
   const supabase = await createClient()
@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
 
     const admin = await createServiceRoleClient()
     // 対象が本人の見込みであることを確認（本人スコープ）。
-    const { data: target } = await admin.from('synapse_contacts').select('id').eq('id', id).eq('partner_id', partnerId).maybeSingle()
+    // 既存値（空欄のみ自動記入のため事実フィールドを読む）。
+    const { data: target } = await admin.from('synapse_contacts').select('id, company, industry, company_size, phone, address, entity_type').eq('id', id).eq('partner_id', partnerId).maybeSingle()
     if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     // レート上限。
@@ -88,22 +89,19 @@ export async function POST(req: NextRequest) {
     const pageText = await fetchText(u)
     if (!pageText) return NextResponse.json({ error: 'ページを取得できませんでした。URLをご確認ください。' }, { status: 422 })
 
-    const { data: svcData } = await admin.from('services').select('name, subtitle, description').eq('active', true).order('sort', { ascending: true })
-    const services = (svcData ?? []) as Array<{ name: string; subtitle: string | null; description: string | null }>
-    const serviceNames = services.map(s => s.name)
-    const catalog = services.map(s => `- ${s.name}（${s.subtitle ?? ''}）: ${(s.description ?? '').slice(0, 100)}`).join('\n')
-
     const SYSTEM_PROMPT = [
-      'あなたは「SYNAPSE」。企業サイトの本文から、その会社の 業種・規模・想定される困りごと を読み取り、MBサービスの適合（読み）を確信がある時だけ付けるコネクターです。',
+      'あなたは「SYNAPSE」。企業サイトの本文から、(1)事実と(2)需要分析 を読み取るアナリストです。',
       '',
-      '【MBサービス目録（この name だけ適合候補にできる。創作禁止）】',
-      catalog,
+      '【出力する内容】',
+      '(1) 事実（本文に書かれている範囲のみ・無ければ null。憶測で断定しない）：',
+      '    company=会社名 / industry=業種(短語) / size=規模(従業員/売上感など短語) / phone=電話番号 / address=住所。',
+      '(2) 需要分析：',
+      '    demand_summary=「この会社は〜。傾向として〜。よって〜という需要があり得る」の形の短い文章（2〜3文）。',
+      '    demand_tags=需要カテゴリの配列（3〜5個・各短語。例：採用強化／EC立ち上げ／DX・業務効率化／ブランド刷新／販路拡大）。',
       '',
-      '【ルール】',
-      '・本文に書かれていることだけから推定。書かれていなければ null（憶測で断定しない）。',
-      '・industry=業種(短語)、size=規模(従業員/売上感など分かる範囲・短語)、needs=想定される困りごと(短い1文)。',
-      '・service は目録の name と完全一致のみ。確信が無ければ service=null, angle=null（無理な当てはめ禁止）。',
-      '出力は次のJSONのみ（前置き・コードフェンス無し）：{"industry":string|null,"size":string|null,"needs":string|null,"service":string|null,"angle":string|null}',
+      '【ガード】本文に基づくこと。情報が不足する場合は tags を減らし、demand_summary に「情報が不足」と正直に書く（捏造しない）。',
+      '出力は次のJSONのみ（前置き・コードフェンス無し）：',
+      '{"company":string|null,"industry":string|null,"size":string|null,"phone":string|null,"address":string|null,"demand_summary":string|null,"demand_tags":string[]}',
     ].join('\n')
     const userMsg = `次の企業サイト本文から読み取ってください。\nURL: ${u.toString()}\n----\n${pageText}\n----`
 
@@ -121,21 +119,27 @@ export async function POST(req: NextRequest) {
     await admin.from('ai_usage').upsert({ partner_id: partnerId, day, count: used + 1 }, { onConflict: 'partner_id,day' })
 
     const str = (v: any, n = 400) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null)
-    const industry = str(parsed.industry, 80)
-    const size = str(parsed.size, 80)
-    const needs = str(parsed.needs, 600)
-    const service = typeof parsed.service === 'string' && serviceNames.includes(parsed.service.trim()) ? parsed.service.trim() : null
-    const angle = service ? str(parsed.angle, 400) : null
-
-    // 既存の値があれば尊重しつつ、空欄を埋める（本人確認できるよう更新後を返す）。url/scanned_at は記録。
-    const patch: Record<string, string | null> = { url: u.toString(), scanned_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-    if (industry) patch.industry = industry
-    if (size) patch.company_size = size
-    if (needs) patch.needs = needs
-    if (service) { patch.suggested_service = service; patch.suggested_angle = angle; patch.enriched_at = new Date().toISOString() }
+    const t = target as any
+    const empty = (v: any) => !(typeof v === 'string' && v.trim())   // 既存が空欄か
+    // (1) 事実：空欄のみ自動記入（既存値は絶対に上書きしない）。
+    const facts = { company: str(parsed.company, 200), industry: str(parsed.industry, 80), size: str(parsed.size, 80), phone: str(parsed.phone, 60), address: str(parsed.address, 300) }
+    const filledFacts: Record<string, string> = {}
+    const patch: Record<string, any> = { url: u.toString(), scanned_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    if (facts.company && empty(t.company)) { patch.company = facts.company; filledFacts.company = facts.company }
+    if (facts.industry && empty(t.industry)) { patch.industry = facts.industry; filledFacts.industry = facts.industry }
+    if (facts.size && empty(t.company_size)) { patch.company_size = facts.size; filledFacts.size = facts.size }
+    if (facts.phone && empty(t.phone)) { patch.phone = facts.phone; filledFacts.phone = facts.phone }
+    if (facts.address && empty(t.address)) { patch.address = facts.address; filledFacts.address = facts.address }
+    // 会社サイトなので法人と推定（entity_type 空欄のみ）。
+    if (empty(t.entity_type)) patch.entity_type = 'corporate'
+    // (2) 需要分析：read-onlyな知能＝常に最新で保存（事実ではないので更新OK）。
+    const demand_summary = str(parsed.demand_summary, 800)
+    const demand_tags = Array.isArray(parsed.demand_tags) ? parsed.demand_tags.filter((x: any) => typeof x === 'string' && x.trim()).map((x: string) => x.trim().slice(0, 40)).slice(0, 5) : []
+    patch.demand_summary = demand_summary
+    patch.demand_tags = demand_tags
 
     const { data: updated } = await admin.from('synapse_contacts').update(patch).eq('id', id).eq('partner_id', partnerId).select(SELECT).maybeSingle()
-    return NextResponse.json({ contact: updated, filled: { industry, size, needs, service, angle } })
+    return NextResponse.json({ contact: updated, filledFacts, demand_summary, demand_tags })
   } catch {
     return NextResponse.json({ error: '解析に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
   }

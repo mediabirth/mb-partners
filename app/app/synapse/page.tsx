@@ -20,7 +20,7 @@ export default async function SynapsePage() {
   // 私的台帳（RLS本人スコープ）＋ 本人の紹介履歴（read-only）を並列取得。
   const [contactsRes, pwd] = await Promise.all([
     supabase.from('synapse_contacts')
-      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, source, created_at, updated_at')
+      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, source, created_at, updated_at')
       .order('created_at', { ascending: false }),
     getPartnerWithDeals(supabase, uid),   // ★read-only：本人の紹介した案件
   ])
@@ -39,6 +39,7 @@ export default async function SynapsePage() {
       statusKey: d.status,
       amount: typeof d.amount === 'number' ? d.amount : null,
       date: d.fixed_month ?? d.created_at,
+      entity: d.customer_type === 'corporate' ? 'corporate' : 'individual',   // 個人/法人タブ用（read-only）
     }))
 
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY
