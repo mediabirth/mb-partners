@@ -42,7 +42,7 @@ function safeUrl(raw: string): URL | null {
   return u
 }
 
-async function fetchText(u: URL): Promise<string | null> {
+async function fetchRaw(u: URL): Promise<string | null> {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
   try {
@@ -51,13 +51,29 @@ async function fetchText(u: URL): Promise<string | null> {
     if (!r.ok || !(ct.includes('text/html') || ct.includes('text/plain') || ct === '')) return null
     const buf = await r.arrayBuffer()
     const bytes = buf.byteLength > MAX_BYTES ? buf.slice(0, MAX_BYTES) : buf
-    const html = new TextDecoder('utf-8', { fatal: false }).decode(bytes)
-    // ざっくりタグ除去＋圧縮（script/style除去）。
-    const text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-    return text.slice(0, 6000) || null
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes)
   } catch { return null } finally { clearTimeout(t) }
+}
+function extractText(html: string): string {
+  return html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+}
+// 会社概要/特商法/アクセス 等の同一ドメインリンクを最大2件抽出（住所堅牢化用・SSRFガードを再適用）。
+const ADDR_HINT = /(会社概要|会社情報|企業情報|会社案内|特定商取引|特商法|アクセス|所在地|プロフィール|about|company|profile|corporate|law|tokusho|sctl|access|location)/i
+function extractAddressLinks(html: string, base: URL): URL[] {
+  const out: URL[] = []; const seen = new Set<string>([base.origin + base.pathname])
+  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]{0,120}?)<\/a>/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html)) && out.length < 2) {
+    const href = m[1]; const inner = m[2].replace(/<[^>]+>/g, '')
+    if (!ADDR_HINT.test(href) && !ADDR_HINT.test(inner)) continue
+    let abs: URL; try { abs = new URL(href, base) } catch { continue }
+    const safe = safeUrl(abs.toString()); if (!safe) continue                       // ★SSRFガード再適用
+    if (safe.hostname.toLowerCase() !== base.hostname.toLowerCase()) continue        // 同一ドメインのみ
+    const key = safe.origin + safe.pathname
+    if (seen.has(key)) continue
+    seen.add(key); out.push(safe)
+  }
+  return out
 }
 
 export async function POST(req: NextRequest) {
@@ -86,8 +102,15 @@ export async function POST(req: NextRequest) {
     const used = usage?.count ?? 0
     if (used >= DAILY_LIMIT) return NextResponse.json({ error: `本日のAI利用上限（${DAILY_LIMIT}回/日）に達しました。明日また自動的にご利用いただけます。` }, { status: 429 })
 
-    const pageText = await fetchText(u)
-    if (!pageText) return NextResponse.json({ error: 'ページを取得できませんでした。URLをご確認ください。' }, { status: 422 })
+    const topHtml = await fetchRaw(u)
+    if (!topHtml) return NextResponse.json({ error: 'ページを取得できませんでした。URLをご確認ください。' }, { status: 422 })
+    // B：会社概要/特商法等の同一ドメインページを最大2件追加取得（住所抽出の堅牢化・SSRFガード再適用）。
+    let pageText = extractText(topHtml).slice(0, 6000)
+    for (const link of extractAddressLinks(topHtml, u)) {
+      const sub = await fetchRaw(link)
+      if (sub) pageText += `\n\n[追加ページ ${link.pathname}]\n${extractText(sub).slice(0, 3000)}`
+    }
+    pageText = pageText.slice(0, 11000)
 
     // サービス目録（read-only）＝推奨サービスの捏造ガード用（完全一致のみ採用）。
     const { data: svcData } = await admin.from('services').select('name, subtitle, description').eq('active', true).order('sort', { ascending: true })
@@ -107,9 +130,9 @@ export async function POST(req: NextRequest) {
       '(1) 事実：',
       '    company=会社名（記載があれば）。',
       '    industry=業種（短語。サイト内容から判断）。',
-      '    size=規模。従業員数・拠点数などの記載があればそれを採用。記載が無くても、サイトの規模感（事業数・実績・採用ページ等）から「推定：小規模（〜10名目安）」「推定：中規模」「推定：大規模」のいずれかを根拠付きで必ず入れる（null禁止）。',
+      '    size=規模の「短い一言ラベルのみ」（例「従業員 約40名」「中規模」「小規模」）。根拠や長文は入れない（根拠は demand_summary 側へ）。記載が無くても短い推定ラベルを必ず入れる（null禁止）。',
       '    phone=電話番号（記載が無ければ null）。',
-      '    address=住所。会社概要・フッター・特定商取引法（特商法）表記・お問い合わせ等から抽出（無ければ null）。',
+      '    address=住所。会社概要・会社情報・特定商取引法（特商法）・アクセス・フッター等の記載から抽出（無ければ null・捏造しない）。',
       '(2) 需要分析：',
       '    demand_summary=「この会社は〜。傾向として〜。よって〜という需要があり得る」の形の短い文章（2〜3文）。',
       '    demand_tags=需要の「キーワード」配列（切り口・3〜5個・各短語。例：採用強化／EC立ち上げ／DX・業務効率化／ブランド刷新／販路拡大）。',
@@ -138,7 +161,7 @@ export async function POST(req: NextRequest) {
     const t = target as any
     const empty = (v: any) => !(typeof v === 'string' && v.trim())   // 既存が空欄か
     // (1) 事実：空欄のみ自動記入（既存値は絶対に上書きしない）。
-    const facts = { company: str(parsed.company, 200), industry: str(parsed.industry, 80), size: str(parsed.size, 80), phone: str(parsed.phone, 60), address: str(parsed.address, 300) }
+    const facts = { company: str(parsed.company, 200), industry: str(parsed.industry, 80), size: str(parsed.size, 30), phone: str(parsed.phone, 60), address: str(parsed.address, 300) }
     const filledFacts: Record<string, string> = {}
     const patch: Record<string, any> = { url: u.toString(), scanned_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     if (facts.company && empty(t.company)) { patch.company = facts.company; filledFacts.company = facts.company }

@@ -105,6 +105,20 @@ export default function ReferPage() {
     })
   }, [])
 
+  // SYNAPSE 引き継ぎ紹介（E）：クエリ（ct/co/nm/phone/memo）で“入力欄の初期値だけ”を補完。
+  // ★送信(submitPartnerReferral)・帰属・金額・バリデーションには一切関与しない。空なら従来どおり空。
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      const ct = q.get('ct'); const co = q.get('co'); const nm = q.get('nm'); const ph = q.get('phone'); const mm = q.get('memo')
+      if (ct === 'corporate' || ct === 'individual') setCustomerType(ct)
+      if (co) setCompanyName(co)
+      if (nm) { if (ct === 'corporate') setContactName(nm); else setCustomerName(nm) }
+      if (ph) setPhone(ph)
+      if (mm) setMemo(mm)
+    } catch { /* noop */ }
+  }, [])
+
   function pickService(svc: ServiceWithMenus) {
     setSelSvc(svc)
     setSelMenu(null)

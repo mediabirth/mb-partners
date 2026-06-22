@@ -17,15 +17,19 @@ export type DetailContact = {
   demand_summary: string | null; demand_tags: string[] | null; recommended_services: string[] | null
   source: string; created_at: string; updated_at: string
 }
+export type HistoryItem = { id: string; label: string; service: string | null; status: string; date: string }
+
+const STATUS_C: Record<string, string> = { 進行: 'var(--amber)', 成約: 'var(--green)', 支払済: 'var(--muted2)', 不成立: 'var(--muted)' }
 
 const FIELDS: Array<[label: string, key: keyof DetailContact, long?: boolean]> = [
   ['会社・組織', 'company'], ['役割・役職', 'role'], ['業種', 'industry'], ['規模', 'company_size'],
   ['電話', 'phone'], ['お名前', 'name'], ['住所', 'address', true], ['メモ', 'notes', true],
 ]
 
-export default function SynapseDetailClient({ contact, aiEnabled }: { contact: DetailContact; aiEnabled: boolean }) {
+export default function SynapseDetailClient({ contact, aiEnabled, history }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[] }) {
   const router = useRouter()
   const [c, setC] = useState<DetailContact>(contact)
+  const [showAllHistory, setShowAllHistory] = useState(false)
   const [edit, setEdit] = useState(false)
   const [form, setForm] = useState<Record<string, string>>(() => ({ entity_type: contact.entity_type ?? 'corporate', ...Object.fromEntries(FIELDS.map(([, k]) => [k, (contact[k] as string) ?? ''])) }))
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
@@ -37,6 +41,17 @@ export default function SynapseDetailClient({ contact, aiEnabled }: { contact: D
   const entityLabel = (c.entity_type === 'individual') ? '個人' : '法人'
   const keywords = Array.isArray(c.demand_tags) ? c.demand_tags : []
   const recos = Array.isArray(c.recommended_services) ? c.recommended_services : []
+
+  // E：このつながりの情報を /app/refer にクエリで引き継ぐ（入力欄の初期値のみ・送信/帰属/money は無改修）。
+  const refParams = new URLSearchParams()
+  refParams.set('ct', c.entity_type === 'individual' ? 'individual' : 'corporate')
+  if (c.company) refParams.set('co', c.company)
+  if (c.name) refParams.set('nm', c.name)
+  if (c.phone) refParams.set('phone', c.phone)
+  const memoCarry = [c.notes, c.industry && `業種：${c.industry}`, c.address && `住所：${c.address}`].filter(Boolean).join(' / ')
+  if (memoCarry) refParams.set('memo', memoCarry.slice(0, 400))
+  const referHref = `/app/refer?${refParams.toString()}`
+  const historyShown = showAllHistory ? history : history.slice(0, 3)
 
   function reflect(nc: DetailContact) { setC(nc); setForm({ entity_type: nc.entity_type ?? 'corporate', ...Object.fromEntries(FIELDS.map(([, k]) => [k, (nc[k] as string) ?? ''])) }) }
   function startEdit() { setForm({ entity_type: c.entity_type ?? 'corporate', ...Object.fromEntries(FIELDS.map(([, k]) => [k, (c[k] as string) ?? ''])) }); setEdit(true); setErr('') }
@@ -112,7 +127,7 @@ export default function SynapseDetailClient({ contact, aiEnabled }: { contact: D
       })()}
 
       {/* 1. 情報＝事実プロフィール（編集トグル・URL欄に小SYNAPSEボタン） */}
-      <div style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
+      <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <b style={{ fontSize: '.82rem', fontWeight: 800 }}>情報</b>
           {edit
@@ -179,7 +194,7 @@ export default function SynapseDetailClient({ contact, aiEnabled }: { contact: D
       </div>
 
       {/* 2. 需要分析（別枠・常時）＝キーワード＋推奨サービスの2段 */}
-      <div style={{ margin: '14px 20px 0', background: '#fff', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
+      <div style={{ margin: '18px 20px 0', background: '#fff', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>需要分析</b>
@@ -206,15 +221,52 @@ export default function SynapseDetailClient({ contact, aiEnabled }: { contact: D
         )}
       </div>
 
-      {/* 3. このつながりを紹介する（既存フローへ・控えめ） */}
-      <div style={{ margin: '14px 20px 0' }}>
-        <Link href="/app/refer" className="lift" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', minHeight: 44, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, textDecoration: 'none', color: 'var(--muted2)', fontWeight: 700, fontSize: '.76rem' }}>このつながりを紹介する →</Link>
+      {/* C. 紹介の履歴（read-only・このつながりに紐づく過去の紹介） */}
+      <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: history.length ? 10 : 0 }}>
+          <b style={{ fontSize: '.82rem', fontWeight: 800 }}>紹介の履歴</b>
+          {history.length > 3 && <button onClick={() => setShowAllHistory(true)} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>すべて見る（{history.length}）</button>}
+        </div>
+        {history.length === 0 ? (
+          <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>まだ紹介の履歴はありません。</p>
+        ) : historyShown.map(h => (
+          <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: '1px solid #F2F2F6' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.service ?? '案件'}</span>
+            <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--muted2)' }}>{(h.date || '').slice(0, 7)}</span>
+            <span style={{ flexShrink: 0, fontSize: '.58rem', fontWeight: 800, color: STATUS_C[h.status] ?? 'var(--muted2)' }}>{h.status}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ） */}
+      <div style={{ margin: '20px 20px 0' }}>
+        <Link href={referHref} className="lift" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', minHeight: 46, background: 'var(--blue)', border: 'none', borderRadius: 12, textDecoration: 'none', color: '#fff', fontWeight: 800, fontSize: '.82rem' }}>このつながりを紹介する</Link>
+        <p style={{ fontSize: '.6rem', color: 'var(--muted2)', textAlign: 'center', marginTop: 8 }}>いまの情報を引き継いで紹介できます。</p>
       </div>
 
       {/* 4. 削除（控えめ） */}
-      <div style={{ padding: '14px 20px 0', textAlign: 'center' }}>
+      <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
         <button onClick={remove} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '.66rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '6px' }}>このつながりを削除</button>
       </div>
+
+      {/* C. すべて見る ポップアップ（全件） */}
+      {showAllHistory && (
+        <div onClick={ev => { if (ev.target === ev.currentTarget) setShowAllHistory(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(3px)', zIndex: 128, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: 430, borderRadius: '16px 16px 0 0', padding: '18px 18px calc(18px + env(safe-area-inset-bottom))', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <b style={{ fontSize: '.86rem', fontWeight: 800 }}>紹介の履歴（{history.length}）</b>
+              <button onClick={() => setShowAllHistory(false)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
+            </div>
+            {history.map(h => (
+              <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: '1px solid #F2F2F6' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.service ?? '案件'}<span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 6 }}>{h.label}</span></span>
+                <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--muted2)' }}>{(h.date || '').slice(0, 7)}</span>
+                <span style={{ flexShrink: 0, fontSize: '.58rem', fontWeight: 800, color: STATUS_C[h.status] ?? 'var(--muted2)' }}>{h.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ④ タグ選択ポップアップ（小・品よく） */}
       {picked && (
