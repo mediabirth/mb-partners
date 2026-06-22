@@ -39,7 +39,7 @@ export default function InviteFellowCard({ partnerId }: { partnerId: string }) {
         <b style={{ fontSize: '.84rem', fontWeight: 800 }}>MB Partnersへ知り合いを推薦する</b>
       </div>
       <p style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '0 0 12px' }}>
-        MB Partners は完全招待制です。どなたでも始められるものではなく、信頼できる知り合いをあなたから推薦いただけます。推薦は、あなたが築いてきた信頼の証です。
+        MB Partners は完全招待制です。あなた自身からはお知り合いを招待いただけます。
       </p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', borderRadius: 9, padding: '10px 12px', marginBottom: 8 }}>
