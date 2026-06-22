@@ -4,7 +4,7 @@
  * 応募は /api/partner-apply に保存するだけ（アカウント作成・auth・お金には一切関与しない）。
  * ★報酬の金額・率はLP上に一切表示しない（面談で個別案内）。既存ブランドトークン流用・新hexなし。
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const SERVICES = [
   { name: 'PRAGMATION', desc: 'DX・AI導入' },
@@ -24,6 +24,9 @@ export default function JoinPage() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+  // Feature E（E-2）：招待リンク /join?ref=<partner_id> の紹介元を捕捉（非金銭・保存はサーバで実在検証）。
+  const [ref, setRef] = useState<string | null>(null)
+  useEffect(() => { try { setRef(new URLSearchParams(window.location.search).get('ref')) } catch { /* noop */ } }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,7 +39,7 @@ export default function JoinPage() {
       const res = await fetch('/api/partner-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, org, expertise, email, phone, message, consent }),
+        body: JSON.stringify({ name, org, expertise, email, phone, message, consent, ref }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error ?? '送信に失敗しました'); return }

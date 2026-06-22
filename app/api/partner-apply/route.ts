@@ -17,6 +17,18 @@ export async function POST(req: NextRequest) {
     if (!email && !phone) return NextResponse.json({ error: 'メールか電話のいずれかをご入力ください' }, { status: 400 })
 
     const admin = await createServiceRoleClient()
+
+    // Feature E（E-2）：?ref=<partner_id> を“紹介元の捕捉”として受理（非金銭・/r帰属やお金には一切関与しない）。
+    // 実在 partner の id のときだけ referrer として保存。無効/未指定なら null。応募者は partner ではないため自己参照は起き得ない。
+    let referrerPartnerId: string | null = null
+    const rawRef = typeof b.ref === 'string' ? b.ref.trim() : ''
+    if (/^[0-9a-fA-F-]{36}$/.test(rawRef)) {
+      try {
+        const { data: refP } = await admin.from('partners').select('id').eq('id', rawRef).maybeSingle()
+        if (refP?.id) referrerPartnerId = refP.id
+      } catch { /* 無効refは黙って null */ }
+    }
+
     const { error } = await admin.from('partner_applications').insert({
       name,
       org: typeof b.org === 'string' ? b.org.trim().slice(0, 200) : null,
@@ -27,6 +39,8 @@ export async function POST(req: NextRequest) {
       consent: b.consent === true,
       source: 'join_lp',
       user_agent: (req.headers.get('user-agent') || '').slice(0, 300) || null,
+      referrer_partner_id: referrerPartnerId,
+      referrer_linked_at: referrerPartnerId ? new Date().toISOString() : null,
     })
     if (error) return NextResponse.json({ error: '送信に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
 
