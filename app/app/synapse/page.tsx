@@ -15,7 +15,7 @@ export default async function SynapsePage() {
   const supabase = await createClient()
   const { data } = await supabase
     .from('synapse_contacts')
-    .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, source, created_at, updated_at')
+    .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, source, created_at, updated_at')
     .order('created_at', { ascending: false })
 
   const contacts = (data ?? []) as SynapseContact[]

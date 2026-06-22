@@ -9,6 +9,7 @@ export type SynapseContact = {
   name: string | null; company: string | null; industry: string | null; role: string | null
   relationship: string | null; needs: string | null; notes: string | null
   suggested_service: string | null; suggested_angle: string | null
+  acted_at: string | null
   source: string; created_at: string; updated_at: string
 }
 
@@ -70,8 +71,18 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
     } catch { setThreadErr('保存に失敗しました') }
   }
 
-  // 紹介文を作る（Feature C /api/ai/draft-intro へ接続）。
-  async function makeIntro(contact: string, need: string, service: string) {
+  // P2-1：行動トラッキング。「紹介文を作る」「対応済みにする」で acted_at を記録（お金とは無関係）。
+  async function markActed(id: string) {
+    try {
+      const res = await fetch(`/api/synapse/contacts/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ acted: true }) })
+      const j = await res.json().catch(() => ({}))
+      if (res.ok && j.contact) setContacts(prev => prev.map(c => c.id === id ? j.contact : c))
+    } catch { /* noop */ }
+  }
+
+  // 紹介文を作る（Feature C /api/ai/draft-intro へ接続）。台帳カード起点なら acted も記録。
+  async function makeIntro(contact: string, need: string, service: string, contactId?: string) {
+    if (contactId) markActed(contactId)
     setIntroBusy(true); setIntro({ text: '' })
     try {
       const res = await fetch('/api/ai/draft-intro', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ contact, need, service, tone: '丁寧' }) })
@@ -217,7 +228,12 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
                     <span style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '1px 7px' }}>{c.suggested_service}</span>
                   </div>
                   {c.suggested_angle && <div style={{ fontSize: '.64rem', color: 'var(--blue-dk)', fontWeight: 700, lineHeight: 1.6 }}>切り口：{c.suggested_angle}</div>}
-                  <button onClick={() => makeIntro(c.company || c.name || '相手の方', c.needs || '', c.suggested_service!)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8 }}>紹介文を作る</button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+                    <button onClick={() => makeIntro(c.company || c.name || '相手の方', c.needs || '', c.suggested_service!, c.id)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>紹介文を作る</button>
+                    {c.acted_at
+                      ? <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)' }}>✓ 対応済み</span>
+                      : <button onClick={() => markActed(c.id)} style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', background: 'none', border: '1px solid var(--line)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>対応済みにする</button>}
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => { setInput(`${c.name || c.company || 'この方'}（${c.needs || '困りごと未記録'}）について相談したい`); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ marginTop: 9, fontSize: '.62rem', fontWeight: 700, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}>SYNAPSEに相談する →</button>
