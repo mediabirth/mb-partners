@@ -33,28 +33,41 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  // AI intake
-  const [transcript, setTranscript] = useState('')
-  const [aiBusy, setAiBusy] = useState(false)
+  // AI intake（会話化）：私的秘書との短いチャット。質問が返れば回答、ドラフトが返れば確認フォームへ。
+  type ChatMsg = { role: 'user' | 'assistant'; content: string }
+  const [chat, setChat] = useState<ChatMsg[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatBusy, setChatBusy] = useState(false)
   const [aiErr, setAiErr] = useState('')
 
-  async function runIntake() {
-    if (!transcript.trim()) { setAiErr('聞き取り内容を入力してください'); return }
-    setAiBusy(true); setAiErr('')
+  async function sendTurn() {
+    const textIn = chatInput.trim()
+    if (!textIn) { setAiErr('内容を入力してください'); return }
+    const nextChat: ChatMsg[] = [...chat, { role: 'user', content: textIn }]
+    setChat(nextChat); setChatInput(''); setChatBusy(true); setAiErr('')
     try {
-      const res = await fetch('/api/synapse/intake', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ transcript }) })
+      const res = await fetch('/api/synapse/intake', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: nextChat }) })
       const j = await res.json().catch(() => ({}))
       if (j?.disabled) { setAiErr('AIヒアリングは現在ご利用いただけません。手入力で追加できます。'); return }
       if (!res.ok) { setAiErr(j?.error || '抽出に失敗しました'); return }
-      const c = j.contact ?? {}
-      // 抽出結果を“確認・編集”フォームに（保存はまだしない）。
-      setDraft({ source: 'interview', name: c.name ?? '', company: c.company ?? '', industry: c.industry ?? '', role: c.role ?? '', relationship: c.relationship ?? '', needs: c.needs ?? '', notes: c.notes ?? '' })
+      if (Array.isArray(j.questions) && j.questions.length > 0) {
+        // 追い質問 → 会話に秘書のメッセージとして積む。
+        setChat([...nextChat, { role: 'assistant', content: j.questions.join('\n') }])
+      } else if (j.draft) {
+        // 十分な信号 → 確認フォーム（保存はまだしない）。会話はリセット。
+        const c = j.draft
+        setDraft({ source: 'interview', name: c.name ?? '', company: c.company ?? '', industry: c.industry ?? '', role: c.role ?? '', relationship: c.relationship ?? '', needs: c.needs ?? '', notes: c.notes ?? '' })
+        setChat([]); setChatInput('')
+      } else {
+        setAiErr('うまく聞き取れませんでした。もう少し具体的にお話しください。')
+      }
     } catch {
       setAiErr('通信に失敗しました')
     } finally {
-      setAiBusy(false)
+      setChatBusy(false)
     }
   }
+  function resetChat() { setChat([]); setChatInput(''); setAiErr('') }
 
   async function save() {
     if (!draft) return
@@ -95,16 +108,30 @@ export default function SynapseClient({ initialContacts, aiEnabled }: { initialC
 
   return (
     <div style={{ padding: '8px 0 24px' }}>
-      {/* AIヒアリング（キー未設定なら非表示＝graceful degrade） */}
+      {/* AIヒアリング＝私的秘書との短い会話（キー未設定なら非表示＝graceful degrade） */}
       {aiEnabled && !draft && (
         <div style={{ margin: '8px 20px 0', background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ color: 'var(--blue)', display: 'flex' }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z" /></svg></span>
-            <b style={{ fontSize: '.82rem', color: 'var(--blue-dk)' }}>AIに整理してもらう</b>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: 'var(--blue)', display: 'flex' }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z" /></svg></span>
+              <b style={{ fontSize: '.82rem', color: 'var(--blue-dk)' }}>AI秘書に話す</b>
+            </div>
+            {chat.length > 0 && <button onClick={resetChat} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>最初から</button>}
           </div>
-          <p style={{ fontSize: '.63rem', color: '#52529E', margin: '0 0 10px', lineHeight: 1.6 }}>最近会った方のことを、思いつくままお話しください。AIが項目に整理します。<b>保存前に必ずご確認・編集いただけます。</b></p>
-          <textarea value={transcript} onChange={e => setTranscript(e.target.value)} rows={3} placeholder="例：先週、知人の紹介で食品メーカーの佐藤部長と会った。新規ECに力を入れたいが社内に人材がいなくて困っているらしい。前職の同僚つながり。" style={{ width: '100%', border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.78rem', resize: 'vertical', marginBottom: 8 }} />
-          <button onClick={runIntake} disabled={aiBusy} className="btn btn-p lift" style={{ width: '100%' }}>{aiBusy ? '整理中…' : 'AIに整理してもらう'}</button>
+          {chat.length === 0
+            ? <p style={{ fontSize: '.63rem', color: '#52529E', margin: '0 0 10px', lineHeight: 1.6 }}>最近会った方のことを、思いつくままお話しください。秘書が少しだけ質問し、項目に整理します。<b>保存前に必ずご確認・編集いただけます。</b></p>
+            : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '4px 0 10px' }}>
+                {chat.map((m, i) => (
+                  <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '88%', background: m.role === 'user' ? 'var(--blue)' : '#fff', color: m.role === 'user' ? '#fff' : 'var(--txt)', border: m.role === 'user' ? 'none' : '1px solid var(--blue-bg)', borderRadius: 12, padding: '8px 12px', fontSize: '.72rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.content}</div>
+                ))}
+                {chatBusy && <div style={{ alignSelf: 'flex-start', fontSize: '.62rem', color: 'var(--muted2)', padding: '2px 4px' }}>秘書が考えています…</div>}
+              </div>
+            )}
+          <textarea value={chatInput} onChange={e => setChatInput(e.target.value)} rows={chat.length === 0 ? 3 : 2}
+            placeholder={chat.length === 0 ? '例：先週、知人の紹介で食品メーカーの佐藤部長と会った。新規ECに力を入れたいが社内に人材がいなくて困っているらしい。' : 'お答えを入力…'}
+            style={{ width: '100%', border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.78rem', resize: 'vertical', marginBottom: 8 }} />
+          <button onClick={sendTurn} disabled={chatBusy} className="btn btn-p lift" style={{ width: '100%' }}>{chatBusy ? '送信中…' : (chat.length === 0 ? '秘書に話す' : '答える')}</button>
           {aiErr && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '8px 0 0' }}>{aiErr}</p>}
         </div>
       )}

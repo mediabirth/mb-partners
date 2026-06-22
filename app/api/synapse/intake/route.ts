@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-// SYNAPSE Phase 0（P0-2）：AIヒアリングintake。会話から“連絡先レコード候補”を構造化抽出して返すだけ。
-// ★保存しない（保存は本人が確認・編集後に /api/synapse/contacts で実行＝人が最終フィルタ）。
-// ★Feature C と同じ基盤：partner-auth必須・ai_usageで1日上限・ANTHROPIC_API_KEY未設定なら{disabled:true}。
-// ★お金・/r帰属・既存通知トリガには一切触れない。web系SDKは使わず Anthropic REST。Node ランタイム。
+// SYNAPSE Phase 0.5（S2）：AIヒアリングの“会話化”。
+// 私的秘書が短い会話で聞き取り → 信号が薄ければ温かい追い質問(1〜2問)、十分ならドラフト(構造化候補)を返す。
+// ★保存しない（保存は本人が確認・編集後に /api/synapse/contacts）。尋問にしない＝質問は最大ラウンドで打ち切り。
+// ★Feature C 基盤：partner-auth必須・ai_usage日次上限・ANTHROPIC_API_KEY未設定なら{disabled:true}・Anthropic REST(Node)。
+// ★お金・/r帰属・既存通知トリガには一切触れない。
 export const runtime = 'nodejs'
 
 const DAILY_LIMIT = 20
+const MAX_QUESTION_ROUNDS = 2   // 追い質問はこのラウンド数で打ち切り、以降は今ある情報でドラフト化。
 // 品質優先で Sonnet。コストを見て 'claude-haiku-4-5-20251001' に差し替え可（この1行のみ）。
 const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 700
 
 const SYSTEM_PROMPT = [
-  'あなたは日本のビジネスパーソンの“私的な秘書”です。パートナーが「最近会った人・知り合い」について話す内容を聞き取り、',
-  '連絡先レコードの候補を1件、JSONだけで構造化して出力します。',
-  '出力は次のJSONオブジェクトのみ（前置き・解説・コードフェンス無し）：',
-  '{"name": string|null, "company": string|null, "industry": string|null, "role": string|null, "relationship": string|null, "needs": string[], "notes": string|null}',
-  '・分からない項目は null（needs は不明なら空配列）。会話に無い情報を創作しないこと。',
-  '・industry=業種、role=その人の役割/役職、relationship=パートナーとの関係性、needs=その人の困りごと/求めていること（短い日本語の箇条）。',
-  '・notes は補足メモ（任意）。個人の機微情報は最小限に。',
+  'あなたは日本のビジネスパーソンの“私的な秘書”です。パートナーが「最近会った人・知り合い」について話すのを、温かく短く聞き取ります。',
+  '最優先で引き出す信号は「困りごと/ニーズ」「関係性（どう繋がったか）」「業種」。些末な項目（住所・細かい肩書等）は聞きません。',
+  '出力は必ず次のいずれかのJSONのみ（前置き・解説・コードフェンス無し）：',
+  '  追い質問する場合: {"action":"ask","questions":["…","…"]}  ※質問は最大2問・短く温かい口調・尋問にしない。',
+  '  ドラフトを作る場合: {"action":"draft","draft":{"name":string|null,"company":string|null,"industry":string|null,"role":string|null,"relationship":string|null,"needs":string[],"notes":string|null}}',
+  '判断基準：困りごと/ニーズ・関係性・業種のうち2つ以上が分かればドラフトに進む。会話に無い情報は創作しない（不明はnull、needsは空配列）。',
+  '相手が短文・回答を渋っている様子なら、無理に質問せず今ある情報でドラフトにする。',
 ].join('\n')
 
 async function resolvePartnerId(): Promise<string | null> {
@@ -29,6 +31,8 @@ async function resolvePartnerId(): Promise<string | null> {
   const { data: partner } = await supabase.from('partners').select('id').eq('profile_id', user.id).single()
   return partner?.id ?? null
 }
+
+type Msg = { role: 'user' | 'assistant'; content: string }
 
 export async function GET() {
   const partnerId = await resolvePartnerId()
@@ -45,8 +49,11 @@ export async function POST(req: NextRequest) {
     if (!apiKey) return NextResponse.json({ disabled: true })   // graceful degrade
 
     const b = await req.json().catch(() => ({}))
-    const transcript = typeof b.transcript === 'string' ? b.transcript.trim().slice(0, 4000) : ''
-    if (!transcript) return NextResponse.json({ error: '聞き取り内容を入力してください' }, { status: 400 })
+    const messages: Msg[] = (Array.isArray(b.messages) ? b.messages : [])
+      .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+      .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 2000) }))
+      .slice(-12)
+    if (messages.length === 0) return NextResponse.json({ error: '聞き取り内容を入力してください' }, { status: 400 })
 
     // レート上限（Feature C と同じ ai_usage を共用・隔離テーブル）。
     const admin = await createServiceRoleClient()
@@ -57,7 +64,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `本日のAI利用上限（${DAILY_LIMIT}回/日）に達しました。明日また自動的にご利用いただけます。` }, { status: 429 })
     }
 
-    const userMsg = `次の聞き取り内容から、連絡先レコード候補を1件、指定のJSONだけで出力してください。\n\n----\n${transcript}\n----`
+    // 既にAIが質問したラウンド数。上限に達したら以降は必ずドラフト化（尋問防止）。
+    const askedRounds = messages.filter(m => m.role === 'assistant').length
+    const forceDraft = askedRounds >= MAX_QUESTION_ROUNDS
+
+    const transcript = messages.map(m => `${m.role === 'assistant' ? '秘書' : '本人'}: ${m.content}`).join('\n')
+    const userMsg = [
+      'これまでのヒアリング:',
+      transcript,
+      '',
+      forceDraft
+        ? 'これ以上は質問せず、今ある情報だけで必ず action="draft" のJSONを返してください。'
+        : '情報が薄ければ action="ask"（最大2問）、困りごと/関係性/業種のうち2つ以上が分かれば action="draft" のJSONを返してください。',
+    ].join('\n')
+
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
@@ -67,31 +87,34 @@ export async function POST(req: NextRequest) {
     const json: any = await resp.json()
     const text = (Array.isArray(json?.content) ? json.content : []).filter((c: any) => c?.type === 'text').map((c: any) => c.text).join('\n').trim()
 
-    // JSON 抽出（コードフェンスや前後テキストが混ざっても拾う）。
     let parsed: any = null
-    try {
-      const m = text.match(/\{[\s\S]*\}/)
-      parsed = m ? JSON.parse(m[0]) : null
-    } catch { parsed = null }
+    try { const m = text.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : null } catch { parsed = null }
     if (!parsed || typeof parsed !== 'object') return NextResponse.json({ error: 'うまく聞き取れませんでした。もう少し具体的にお話しください。' }, { status: 422 })
-
-    const str = (v: any) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 2000) : null)
-    const needsArr = Array.isArray(parsed.needs) ? parsed.needs.filter((x: any) => typeof x === 'string' && x.trim()).map((x: string) => x.trim()).slice(0, 8) : []
-    const contact = {
-      name: str(parsed.name),
-      company: str(parsed.company),
-      industry: str(parsed.industry),
-      role: str(parsed.role),
-      relationship: str(parsed.relationship),
-      needs: needsArr.join('、') || null,   // text 列に格納するため結合（保存前に本人が編集可）
-      notes: str(parsed.notes),
-    }
 
     // 成功時のみ count++。
     await admin.from('ai_usage').upsert({ partner_id: partnerId, day, count: used + 1 }, { onConflict: 'partner_id,day' })
 
-    // 抽出結果を“候補”として返す（保存はしない）。
-    return NextResponse.json({ contact })
+    const str = (v: any) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 2000) : null)
+
+    // 追い質問（上限未満のときのみ）。
+    if (!forceDraft && parsed.action === 'ask' && Array.isArray(parsed.questions)) {
+      const questions = parsed.questions.filter((q: any) => typeof q === 'string' && q.trim()).map((q: string) => q.trim().slice(0, 200)).slice(0, 2)
+      if (questions.length > 0) return NextResponse.json({ questions, round: askedRounds + 1 })
+    }
+
+    // ドラフト（action=draft、または上限到達でフォールバック）。
+    const d = (parsed.action === 'draft' && parsed.draft && typeof parsed.draft === 'object') ? parsed.draft : (parsed.draft ?? {})
+    const needsArr = Array.isArray(d?.needs) ? d.needs.filter((x: any) => typeof x === 'string' && x.trim()).map((x: string) => x.trim()).slice(0, 8) : []
+    const draft = {
+      name: str(d?.name),
+      company: str(d?.company),
+      industry: str(d?.industry),
+      role: str(d?.role),
+      relationship: str(d?.relationship),
+      needs: needsArr.join('、') || null,
+      notes: str(d?.notes),
+    }
+    return NextResponse.json({ draft })
   } catch {
     return NextResponse.json({ error: '抽出に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
   }
