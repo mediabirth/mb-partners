@@ -2,8 +2,8 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
-// SYNAPSE 一覧（簡素化）：個人/法人タブ撤去・検索なし・「話して追加」撤去。
-// 各行＝名前＋個人/法人タグ＋補助1行＋進行中のみステータス。本質的に必要な情報のみ整然と。
+// SYNAPSE 一覧（名簿＝資産）：個人/法人タブ撤去・検索なし・「話して追加」撤去。
+// 各行＝左端に個人/法人タグ＋主(法人=会社名/個人=氏名)＋副(担当者・業種 or 役職・所属)＋chevron。行のステータスタグは撤去。
 // ★紹介履歴 read-only。書込は synapse_contacts のみ（本人スコープAPI）。再度紹介＝/app/refer deep-linkのみ。
 
 export type SynapseContact = {
@@ -18,7 +18,7 @@ export type SynapseContact = {
   source: string; created_at: string; updated_at: string
 }
 export type ReferredEntry = {
-  id: string; name: string; company: string | null; service: string | null
+  id: string; name: string; company: string | null; person: string | null; service: string | null
   status: string; statusKey: string; amount: number | null; date: string; entity: 'individual' | 'corporate'
 }
 
@@ -30,17 +30,21 @@ export default function SynapseClient({ initialContacts, referred }: { initialCo
 
   const prospectEntity = (c: SynapseContact): 'individual' | 'corporate' => c.entity_type === 'individual' ? 'individual' : c.entity_type === 'corporate' ? 'corporate' : (c.company ? 'corporate' : 'individual')
 
-  type Entry = { key: string; kind: 'referred' | 'prospect'; name: string; entity: 'individual' | 'corporate'; sub: string; status: string | null; href: string; date: string }
+  // 名簿行を“資産”に：法人＝会社名(主)＋担当者・業種(副)／個人＝氏名(主)＋役職・所属(副)。左端タグのみ・行からステータス撤去。
+  type Entry = { key: string; kind: 'referred' | 'prospect'; main: string; entity: 'individual' | 'corporate'; sub: string; href: string; date: string }
   const entries = useMemo(() => {
-    const ref: Entry[] = referred.map(r => ({
-      key: 'd' + r.id, kind: 'referred', name: r.name, entity: r.entity, sub: r.service ?? '案件',
-      status: r.status === '進行' ? '進行中' : null,   // 進行中（動いている）時のみステータス
-      href: '/app/refer', date: r.date,
-    }))
+    const ref: Entry[] = referred.map(r => {
+      const corp = r.entity === 'corporate'
+      const main = (corp ? (r.company || r.name) : r.name) || '名称未設定'
+      const sub = (corp ? [r.person, r.service] : [r.service]).filter(Boolean).join('・') || '案件'
+      return { key: 'd' + r.id, kind: 'referred' as const, main, entity: r.entity, sub, href: '/app/refer', date: r.date }
+    })
     const pro: Entry[] = prospects.map(c => {
       const entity = prospectEntity(c)
-      const sub = entity === 'individual' ? ([c.role, c.company].filter(Boolean).join('・') || '—') : (c.industry || c.company || '未取得')
-      return { key: 'c' + c.id, kind: 'prospect' as const, name: c.name ?? c.company ?? '名称未設定', entity, sub, status: null, href: `/app/synapse/${c.id}`, date: c.created_at }
+      const corp = entity === 'corporate'
+      const main = (corp ? (c.company || c.name) : (c.name || c.company)) || '名称未設定'
+      const sub = (corp ? [c.name, c.industry] : [c.role, c.company]).filter(Boolean).join('・') || (corp ? '未取得' : '—')
+      return { key: 'c' + c.id, kind: 'prospect' as const, main, entity, sub, href: `/app/synapse/${c.id}`, date: c.created_at }
     })
     return [...ref, ...pro].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [referred, prospects])
@@ -73,15 +77,13 @@ export default function SynapseClient({ initialContacts, referred }: { initialCo
         ) : (
           <>
             {entries.map(e => (
-              <Link key={e.key} href={e.href} className="row-hover" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 20px', borderTop: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
+              <Link key={e.key} href={e.href} className="row-hover" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 20px', borderTop: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
+                {/* 左端＝個人/法人タグのみ */}
+                <span style={{ flexShrink: 0, width: 34, fontSize: '.5rem', fontWeight: 800, textAlign: 'center', color: e.entity === 'corporate' ? 'var(--blue)' : 'var(--muted2)', background: e.entity === 'corporate' ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 6, padding: '3px 0' }}>{e.entity === 'corporate' ? '法人' : '個人'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: '.82rem', fontWeight: 700, ...oneLine, flexShrink: 1 }}>{e.name}</span>
-                    <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: e.entity === 'corporate' ? 'var(--blue)' : 'var(--muted2)', background: e.entity === 'corporate' ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{e.entity === 'corporate' ? '法人' : '個人'}</span>
-                  </div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 700, ...oneLine }}>{e.main}</div>
                   <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, ...oneLine }}>{e.sub}</div>
                 </div>
-                {e.status && <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--amber)', flexShrink: 0 }}>{e.status}</span>}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </Link>
             ))}

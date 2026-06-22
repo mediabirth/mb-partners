@@ -34,12 +34,13 @@ export default async function SynapsePage() {
       id: d.id,
       name: customerHonorific(d),
       company: d.company_name ?? null,
+      person: d.contact_name ?? null,   // 法人の担当者（副表示・read-only）
       service: d.services?.name ?? null,
       status: STATUS_LABEL[d.status] ?? d.status,
       statusKey: d.status,
       amount: typeof d.amount === 'number' ? d.amount : null,
       date: d.fixed_month ?? d.created_at,
-      entity: d.customer_type === 'corporate' ? 'corporate' : 'individual',   // 個人/法人タブ用（read-only）
+      entity: d.customer_type === 'corporate' ? 'corporate' : 'individual',   // 個人/法人（read-only）
     }))
 
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY

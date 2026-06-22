@@ -95,21 +95,27 @@ export async function POST(req: NextRequest) {
     const serviceNames = services.map(s => s.name)
     const catalog = services.map(s => `- ${s.name}（${s.subtitle ?? ''}）: ${(s.description ?? '').slice(0, 90)}`).join('\n')
 
+    const serviceList = JSON.stringify(serviceNames)   // 推奨サービスはこの配列の文字列のみ（生成時点で目録一致を保証）。
     const SYSTEM_PROMPT = [
       'あなたは「SYNAPSE」。企業サイトの本文から、(1)事実と(2)需要分析 を読み取るアナリストです。',
       '',
-      '【MBサービス目録（recommended_services はこの name だけ・完全一致のみ。創作禁止）】',
+      '【MBサービス目録（参考）】',
       catalog,
+      `【recommended_services に使ってよい文字列（この配列の値そのものだけ・一字一句一致）】 ${serviceList}`,
       '',
       '【出力する内容】',
-      '(1) 事実（本文に書かれている範囲のみ・無ければ null。憶測で断定しない）：',
-      '    company=会社名 / industry=業種(短語) / size=規模(従業員/売上感など短語) / phone=電話番号 / address=住所。',
+      '(1) 事実：',
+      '    company=会社名（記載があれば）。',
+      '    industry=業種（短語。サイト内容から判断）。',
+      '    size=規模。従業員数・拠点数などの記載があればそれを採用。記載が無くても、サイトの規模感（事業数・実績・採用ページ等）から「推定：小規模（〜10名目安）」「推定：中規模」「推定：大規模」のいずれかを根拠付きで必ず入れる（null禁止）。',
+      '    phone=電話番号（記載が無ければ null）。',
+      '    address=住所。会社概要・フッター・特定商取引法（特商法）表記・お問い合わせ等から抽出（無ければ null）。',
       '(2) 需要分析：',
       '    demand_summary=「この会社は〜。傾向として〜。よって〜という需要があり得る」の形の短い文章（2〜3文）。',
       '    demand_tags=需要の「キーワード」配列（切り口・3〜5個・各短語。例：採用強化／EC立ち上げ／DX・業務効率化／ブランド刷新／販路拡大）。',
-      '    recommended_services=上記目録から適合する実在サービス名のみ（0〜3個・確信が無ければ空配列。目録名と完全一致）。',
+      '    recommended_services=上の「使ってよい文字列」配列から選んだ値のみ（0〜3個・確信が無ければ空配列）。配列に無い名称は出力しない。',
       '',
-      '【ガード】本文に基づくこと。情報不足時は tags/services を減らし、demand_summary に「情報が不足」と正直に書く（捏造しない）。',
+      '【ガード】憶測で事実を断定しない（size の推定は根拠を添える）。情報不足時は tags/services を減らし、demand_summary に「情報が不足」と正直に書く。',
       '出力は次のJSONのみ（前置き・コードフェンス無し）：',
       '{"company":string|null,"industry":string|null,"size":string|null,"phone":string|null,"address":string|null,"demand_summary":string|null,"demand_tags":string[],"recommended_services":string[]}',
     ].join('\n')

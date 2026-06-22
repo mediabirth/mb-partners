@@ -94,14 +94,22 @@ export default function SynapseDetailClient({ contact, aiEnabled }: { contact: D
         <Link href="/app/synapse" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 600, textDecoration: 'none' }}>← つながり一覧</Link>
       </div>
 
-      {/* ヘッダー（アバターなし） */}
-      <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name || c.company || '名称未設定'}</h1>
-          {[c.company, c.industry].filter(Boolean).length > 0 && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[c.company, c.industry].filter(Boolean).join('・')}</div>}
-        </div>
-        <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '3px 10px', flexShrink: 0, marginTop: 4 }}>{entityLabel}・見込み</span>
-      </div>
+      {/* ヘッダー（アバターなし・entity_type で主表示を切替：法人=会社名／個人=氏名） */}
+      {(() => {
+        const corp = c.entity_type !== 'individual'
+        const main = corp ? (c.company || c.name) : (c.name || c.company)
+        const subParts = corp ? [c.name, c.industry] : [c.role, c.company]
+        const sub = subParts.filter(Boolean).join('・')
+        return (
+          <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{main || '名称未設定'}</h1>
+              {sub && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+            </div>
+            <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '3px 10px', flexShrink: 0, marginTop: 4 }}>{entityLabel}・見込み</span>
+          </div>
+        )
+      })()}
 
       {/* 1. 情報＝事実プロフィール（編集トグル・URL欄に小SYNAPSEボタン） */}
       <div style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
@@ -211,10 +219,12 @@ export default function SynapseDetailClient({ contact, aiEnabled }: { contact: D
       {/* ④ タグ選択ポップアップ（小・品よく） */}
       {picked && (
         <div onClick={ev => { if (ev.target === ev.currentTarget) setPicked(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.35)', backdropFilter: 'blur(2px)', zIndex: 125, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 0 calc(20px + env(safe-area-inset-bottom))' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', width: 'calc(100% - 40px)', maxWidth: 360, boxShadow: '0 12px 40px rgba(14,14,20,.18)' }}>
-            <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 9 }}>{picked.kind === 'service' ? '推奨サービス' : 'キーワード'}：<b style={{ color: 'var(--txt)' }}>{picked.tag}</b></div>
-            <button onClick={() => makeIntro(picked.tag, picked.kind)} className="btn btn-p lift" style={{ width: '100%' }}>「{picked.tag}」で紹介文を作る</button>
-            <button onClick={() => setPicked(null)} style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.68rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '4px' }}>閉じる</button>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', width: 'calc(100% - 40px)', maxWidth: 340, boxShadow: '0 12px 40px rgba(14,14,20,.18)' }}>
+            <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginBottom: 11 }}>{picked.kind === 'service' ? '推奨サービス' : 'キーワード'}：<b style={{ color: 'var(--txt)' }}>{picked.tag}</b></div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.68rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '7px 10px' }}>閉じる</button>
+              <button onClick={() => makeIntro(picked.tag, picked.kind)} className="lift" style={{ background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>{picked.kind === 'service' ? 'このサービスで紹介文を作る' : 'このキーワードで紹介文を作る'}</button>
+            </div>
           </div>
         </div>
       )}

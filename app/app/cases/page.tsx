@@ -172,6 +172,10 @@ export default async function CasesPage({
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column' }}>
             {filtered.map(d => {
               const step = STATUS_STEP[d.status] ?? 0
+              // ④ 名簿“資産”表示：法人＝会社名(主)＋担当者(副・無ければサービス)／個人＝氏名(主)。表示のみ・金額/件数/status不変。
+              const corp = (d as { customer_type?: string }).customer_type === 'corporate'
+              const mainName = (corp ? (d.company_name || d.customer_name) : (d.customer_name || d.company_name)) || customerHonorific(d)
+              const subName = corp ? (d.contact_name || d.services?.name || '') : (d.services?.name || '')
               return (
                 <Link
                   key={d.id}
@@ -189,17 +193,20 @@ export default async function CasesPage({
                       {d.services
                         ? <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={30} />
                         : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
-                      {/* お客様名：中字・縮小 */}
-                      <b style={{ fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
-                        {customerHonorific(d)}
-                      </b>
-                      {!d.services && (
-                        <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
-                      )}
-                      {(itemCounts[d.id] ?? 0) > 1 && (
-                        <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
-                      )}
-                      <span style={{ flexShrink: 0 }}><ChannelMark channel={d.channel} /></span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: corp ? 'var(--blue)' : 'var(--muted2)', background: corp ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{corp ? '法人' : '個人'}</span>
+                          <b style={{ fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{mainName}</b>
+                          {!d.services && (
+                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
+                          )}
+                          {(itemCounts[d.id] ?? 0) > 1 && (
+                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
+                          )}
+                          <span style={{ flexShrink: 0 }}><ChannelMark channel={d.channel} /></span>
+                        </div>
+                        {subName && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subName}</div>}
+                      </div>
                     </div>
                     {d.status === 'lost' ? (
                       <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
