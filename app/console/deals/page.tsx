@@ -7,7 +7,7 @@ import { customerHonorific } from '@/lib/customer'
 import { computeProjectPnl } from '@/lib/pnl'
 import { phaseOf, PHASE_LABEL, PHASE_STYLE, INTAKE_LABEL, PROJECT_STATUSES, PROJECT_STATUS_STYLE } from '@/lib/phase'
 import StatusPill from '@/components/ui/StatusPill'
-import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill } from '@/lib/status'
+import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill, DEAL_STATUS } from '@/lib/status'
 import DeliveryProgress from './DeliveryProgress'
 
 type Deal = {
@@ -80,6 +80,34 @@ const COLS = [
 ] as const
 
 type Status = typeof COLS[number]['key']
+
+// R-a：案件詳細ビュー用の“読み取り専用”進捗ステッパー。段階・順序・ラベルは lib/status.ts(SSoT)から導出。
+// ★表示のみ：onClick/mutation を一切持たない（status遷移＝不変）。'lost' は本流外なので不成立として別扱い。
+const DEAL_FLOW = ['received', 'in_progress', 'confirmed', 'paid'] as const
+function DealStepper({ status }: { status: string }) {
+  const isLost = status === 'lost'
+  const curIdx = DEAL_FLOW.indexOf(status as typeof DEAL_FLOW[number])
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+        {DEAL_FLOW.map((k, i) => {
+          const done = !isLost && curIdx >= 0 && i <= curIdx
+          const isCur = !isLost && i === curIdx
+          return (
+            <div key={k} style={{ display: 'flex', alignItems: 'flex-start', flex: i < DEAL_FLOW.length - 1 ? 1 : '0 0 auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0, width: 56 }}>
+                <span style={{ width: isCur ? 13 : 10, height: isCur ? 13 : 10, borderRadius: '50%', background: done ? 'var(--blue)' : '#fff', border: `2px solid ${done ? 'var(--blue)' : 'var(--line)'}`, boxShadow: isCur ? '0 0 0 3px var(--blue-bg)' : 'none', marginTop: isCur ? 0 : 1.5, transition: 'all .15s' }} />
+                <span style={{ fontSize: '.54rem', fontWeight: isCur ? 800 : 600, color: isCur ? 'var(--blue)' : 'var(--muted2)', whiteSpace: 'nowrap' }}>{DEAL_STATUS[k].label}</span>
+              </div>
+              {i < DEAL_FLOW.length - 1 && <span aria-hidden style={{ flex: 1, height: 2, borderRadius: 2, background: (!isLost && curIdx > i) ? 'var(--blue)' : 'var(--line)', marginTop: 5 }} />}
+            </div>
+          )
+        })}
+      </div>
+      {isLost && <span style={{ display: 'inline-block', marginTop: 10, fontSize: '.6rem', fontWeight: 800, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '3px 11px' }}>不成立</span>}
+    </div>
+  )
+}
 // QR: ボードはアクティブ3列のみ（成約・確定=入金待ちは残す）。支払済/不成立はアーカイブへ。
 const BOARD_KEYS: string[] = ['received', 'in_progress', 'confirmed']
 // 通常フローは線形（不成立は別操作・再開可能）
@@ -827,6 +855,8 @@ export default function DealsPage() {
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
             <div className="cascade" style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
+              {/* R-a：読み取り専用の進捗ステッパー（現在statusをハイライト・変更導線なし） */}
+              <DealStepper status={selected.status} />
               {[
                 ['サービス', selected.services?.name ?? '相談（サービス未定）'],
                 ['チャネル', selected.channel === 'referral' ? '紹介' : selected.channel === 'direct' ? '直販' : '協力'],
