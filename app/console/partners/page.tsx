@@ -1,7 +1,7 @@
 import type React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getPartnersWithProfiles, getAllDeals } from '@/lib/supabase/queries'
 import { partnerTier } from '@/lib/tier'
 import ConsoleNav from '@/components/ConsoleNav'
@@ -34,9 +34,12 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const { tab: tabParam } = await searchParams
   const filter: Kind = (['referral', 'frontier', 'delivery'] as const).includes(tabParam as Kind) ? tabParam as Kind : 'all'
 
+  // owner/manager 認証では nested partners.profiles が profiles RLS（本人のみSELECT）で null になり氏名が「—」表示になる。
+  // /console は middleware でガード済のため、氏名解決のみ service role で読取（表示専用・お金/deals/権限には不使用）。
+  const admin = await createServiceRoleClient()
   const [profileRes, partners, deals, deliveriesRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
-    getPartnersWithProfiles(supabase),
+    getPartnersWithProfiles(admin),
     getAllDeals(supabase),
     supabase.from('deliveries').select('id, name, kind, contact_email, active, auth_user_id'),
   ])
@@ -93,7 +96,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   ) : (
     <div className="ctable-scroll" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr', padding: '9px 20px', borderBottom: '1px solid var(--line)', background: 'var(--bg2)' }}>
-        {['パートナー', '役職', 'コード', '税区分', '累計成約', '累計報酬(税込)', '状態'].map(h => <span key={h} style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>)}
+        {['パートナー', '区分', 'コード', '税区分', '累計成約', '累計報酬(税込)', '状態'].map(h => <span key={h} style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>)}
       </div>
       {rows.map((r, i) => {
         if (r.kind === 'delivery') {
