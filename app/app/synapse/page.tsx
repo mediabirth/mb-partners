@@ -20,7 +20,7 @@ export default async function SynapsePage() {
   // 私的台帳（RLS本人スコープ）＋ 本人の紹介履歴（read-only）を並列取得。
   const [contactsRes, pwd] = await Promise.all([
     supabase.from('synapse_contacts')
-      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, source, created_at, updated_at')
+      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, source, created_at, updated_at')
       .order('created_at', { ascending: false }),
     getPartnerWithDeals(supabase, uid),   // ★read-only：本人の紹介した案件
   ])

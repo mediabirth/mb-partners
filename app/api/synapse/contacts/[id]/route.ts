@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .update(patch)
       .eq('id', id)
       .eq('partner_id', partnerId)   // 本人の行のみ
-      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, source, created_at, updated_at')
+      .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, source, created_at, updated_at')
       .maybeSingle()
     if (error) return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
     if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
