@@ -510,3 +510,15 @@ body {
     transition-duration: .01ms !important;
   }
 }
+
+/* SYNAPSE: 同心円リングのパルス／拡散（スキャン中・HOMEノードの“動いている”雰囲気）。 */
+@keyframes synPulse { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.14); opacity: .95; } }
+@keyframes synRing  { 0% { transform: scale(.7); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes synSpin  { to { transform: rotate(360deg); } }
+.syn-anim { animation: synPulse 1.6s ease-in-out infinite; }
+.syn-ring { animation: synRing 1.8s ease-out infinite; }
+.syn-spin { animation: synSpin 14s linear infinite; }
+.syn-spin-rev { animation: synSpin 10s linear infinite reverse; }
+@media (prefers-reduced-motion: reduce) {
+  .syn-anim, .syn-ring, .syn-spin, .syn-spin-rev { animation: none !important; }
+}

@@ -96,11 +96,19 @@ export default async function AppPage() {
         background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)',
         borderRadius: 18, padding: '24px 22px 18px', color: '#fff', position: 'relative', overflow: 'hidden',
       }}>
-        {/* Ring decoration */}
+        {/* Ring decoration（微回転・prefers-reduced-motion で静止） */}
         <div style={{ position: 'absolute', right: -60, top: -60, width: 200, height: 200, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%', animation: 'spin 30s linear infinite' }} />
-          <div style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%', animation: 'spin 20s linear infinite reverse' }} />
+          <div className="syn-spin" style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
+          <div className="syn-spin-rev" style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%' }} />
         </div>
+        {/* SYNAPSE ノード：常時パルス＝「探している/動いている」雰囲気。タップで /app/synapse へ。 */}
+        <Link href="/app/synapse" aria-label="SYNAPSE つながりの台帳" style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+          <span style={{ position: 'relative', width: 36, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="syn-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,.5)' }} />
+            <span className="syn-anim" style={{ position: 'absolute', inset: 9, borderRadius: '50%', background: 'rgba(255,255,255,.16)', border: '1px solid rgba(255,255,255,.6)' }} />
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" style={{ position: 'relative' }}><circle cx="6" cy="6" r="2.2" /><circle cx="18" cy="9" r="2.2" /><circle cx="9" cy="18" r="2.2" /><path d="M8 7l8 1.5M7.6 16l1.2-7.5M11 18l5-7" /></svg>
+          </span>
+        </Link>
         <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>
           確定残高
         </div>
