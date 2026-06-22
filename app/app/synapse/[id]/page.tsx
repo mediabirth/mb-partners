@@ -15,7 +15,7 @@ export default async function SynapseDetailPage({ params }: { params: Promise<{ 
   const supabase = await createClient()
   const { data } = await supabase
     .from('synapse_contacts')
-    .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, source, created_at, updated_at')
+    .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, recommended_services, source, created_at, updated_at')
     .eq('id', id)
     .maybeSingle()
 

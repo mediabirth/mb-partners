@@ -12,7 +12,7 @@ const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 700
 const FETCH_TIMEOUT_MS = 6000
 const MAX_BYTES = 300_000
-const SELECT = 'id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, source, created_at, updated_at'
+const SELECT = 'id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, recommended_services, source, created_at, updated_at'
 
 async function resolvePartnerId(): Promise<string | null> {
   const supabase = await createClient()
@@ -89,19 +89,29 @@ export async function POST(req: NextRequest) {
     const pageText = await fetchText(u)
     if (!pageText) return NextResponse.json({ error: 'ページを取得できませんでした。URLをご確認ください。' }, { status: 422 })
 
+    // サービス目録（read-only）＝推奨サービスの捏造ガード用（完全一致のみ採用）。
+    const { data: svcData } = await admin.from('services').select('name, subtitle, description').eq('active', true).order('sort', { ascending: true })
+    const services = (svcData ?? []) as Array<{ name: string; subtitle: string | null; description: string | null }>
+    const serviceNames = services.map(s => s.name)
+    const catalog = services.map(s => `- ${s.name}（${s.subtitle ?? ''}）: ${(s.description ?? '').slice(0, 90)}`).join('\n')
+
     const SYSTEM_PROMPT = [
       'あなたは「SYNAPSE」。企業サイトの本文から、(1)事実と(2)需要分析 を読み取るアナリストです。',
+      '',
+      '【MBサービス目録（recommended_services はこの name だけ・完全一致のみ。創作禁止）】',
+      catalog,
       '',
       '【出力する内容】',
       '(1) 事実（本文に書かれている範囲のみ・無ければ null。憶測で断定しない）：',
       '    company=会社名 / industry=業種(短語) / size=規模(従業員/売上感など短語) / phone=電話番号 / address=住所。',
       '(2) 需要分析：',
       '    demand_summary=「この会社は〜。傾向として〜。よって〜という需要があり得る」の形の短い文章（2〜3文）。',
-      '    demand_tags=需要カテゴリの配列（3〜5個・各短語。例：採用強化／EC立ち上げ／DX・業務効率化／ブランド刷新／販路拡大）。',
+      '    demand_tags=需要の「キーワード」配列（切り口・3〜5個・各短語。例：採用強化／EC立ち上げ／DX・業務効率化／ブランド刷新／販路拡大）。',
+      '    recommended_services=上記目録から適合する実在サービス名のみ（0〜3個・確信が無ければ空配列。目録名と完全一致）。',
       '',
-      '【ガード】本文に基づくこと。情報が不足する場合は tags を減らし、demand_summary に「情報が不足」と正直に書く（捏造しない）。',
+      '【ガード】本文に基づくこと。情報不足時は tags/services を減らし、demand_summary に「情報が不足」と正直に書く（捏造しない）。',
       '出力は次のJSONのみ（前置き・コードフェンス無し）：',
-      '{"company":string|null,"industry":string|null,"size":string|null,"phone":string|null,"address":string|null,"demand_summary":string|null,"demand_tags":string[]}',
+      '{"company":string|null,"industry":string|null,"size":string|null,"phone":string|null,"address":string|null,"demand_summary":string|null,"demand_tags":string[],"recommended_services":string[]}',
     ].join('\n')
     const userMsg = `次の企業サイト本文から読み取ってください。\nURL: ${u.toString()}\n----\n${pageText}\n----`
 
@@ -135,11 +145,18 @@ export async function POST(req: NextRequest) {
     // (2) 需要分析：read-onlyな知能＝常に最新で保存（事実ではないので更新OK）。
     const demand_summary = str(parsed.demand_summary, 800)
     const demand_tags = Array.isArray(parsed.demand_tags) ? parsed.demand_tags.filter((x: any) => typeof x === 'string' && x.trim()).map((x: string) => x.trim().slice(0, 40)).slice(0, 5) : []
+    // 推奨サービスは目録名と完全一致のみ採用（捏造ガード）。
+    const recommended_services = Array.isArray(parsed.recommended_services)
+      ? [...new Set(parsed.recommended_services.filter((x: any) => typeof x === 'string' && serviceNames.includes(x.trim())).map((x: string) => x.trim()))].slice(0, 3)
+      : []
     patch.demand_summary = demand_summary
     patch.demand_tags = demand_tags
+    patch.recommended_services = recommended_services
 
-    const { data: updated } = await admin.from('synapse_contacts').update(patch).eq('id', id).eq('partner_id', partnerId).select(SELECT).maybeSingle()
-    return NextResponse.json({ contact: updated, filledFacts, demand_summary, demand_tags })
+    // ★⑤バグ修正：update 後に必ず本人スコープで再取得して返す（書込→再描画の結線を保証）。
+    await admin.from('synapse_contacts').update(patch).eq('id', id).eq('partner_id', partnerId)
+    const { data: updated } = await admin.from('synapse_contacts').select(SELECT).eq('id', id).eq('partner_id', partnerId).maybeSingle()
+    return NextResponse.json({ contact: updated, filledFacts, demand_summary, demand_tags, recommended_services })
   } catch {
     return NextResponse.json({ error: '解析に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
   }
