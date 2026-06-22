@@ -3,10 +3,10 @@ import Link from 'next/link'
 import { createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
 import ConsoleMain from '@/components/ConsolePageTransition'
+import ActivateApplicationButton from './ActivateApplicationButton'
 
-// B1：外向けLP /join の応募一覧（console専用・読み取りのみ）。
-// ★partner_applications を SELECT するだけ。書込/更新/削除なし。スキーマ/RLSは触らない。
-// ★お金・deals・auth・既存テーブルには一切関与しない。3サイト分離は不変。
+// B1：外向けLP /join の応募一覧（console専用・読み取り）。Feature E(E-3)で「承認＝仲間化」アクションを追加（非金銭）。
+// ★partner_applications のみ。お金・deals・status・frontier・/r帰属には一切関与しない。3サイト分離は不変。
 export const runtime = 'edge'
 
 type Application = {
@@ -20,6 +20,9 @@ type Application = {
   message: string | null
   consent: boolean | null
   source: string | null
+  referrer_partner_id: string | null
+  activated_at: string | null
+  referrer: { code: string | null; profiles: { name: string | null } | null } | null
 }
 
 // created_at(UTC) → JST 表示。
@@ -51,10 +54,10 @@ export default async function ConsoleApplicationsPage() {
 
   const { data } = await admin
     .from('partner_applications')
-    .select('id, created_at, name, org, expertise, email, phone, message, consent, source')
+    .select('id, created_at, name, org, expertise, email, phone, message, consent, source, referrer_partner_id, activated_at, referrer:partners!partner_applications_referrer_partner_id_fkey(code, profiles(name))')
     .order('created_at', { ascending: false })
 
-  const rows = (data ?? []) as Application[]
+  const rows = (data ?? []) as unknown as Application[]
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
@@ -89,6 +92,8 @@ export default async function ConsoleApplicationsPage() {
                       <th style={{ ...TH, minWidth: 220 }}>ひとこと</th>
                       <th style={TH}>同意</th>
                       <th style={TH}>流入元</th>
+                      <th style={TH}>紹介元</th>
+                      <th style={TH}>承認</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -107,6 +112,16 @@ export default async function ConsoleApplicationsPage() {
                             : <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>—</span>}
                         </td>
                         <td style={{ ...TD, color: 'var(--muted2)', fontSize: '.62rem', whiteSpace: 'nowrap' }}>{r.source || '—'}</td>
+                        {/* Feature E：紹介元（招待リンク /join?ref= 経由）。非金銭・表示のみ。 */}
+                        <td style={{ ...TD, whiteSpace: 'nowrap' }}>
+                          {r.referrer?.profiles?.name
+                            ? <span style={{ fontSize: '.64rem', fontWeight: 600 }}>{r.referrer.profiles.name}{r.referrer.code ? <span style={{ color: 'var(--muted2)', fontWeight: 400 }}> ({r.referrer.code})</span> : ''}</span>
+                            : <span style={{ color: 'var(--muted)' }}>—</span>}
+                        </td>
+                        {/* Feature E（E-3）：承認＝仲間化。紹介元があれば賞賛通知を1件（冪等）。お金/status/frontier 非接触。 */}
+                        <td style={TD}>
+                          <ActivateApplicationButton id={r.id} activated={!!r.activated_at} hasReferrer={!!r.referrer_partner_id} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
