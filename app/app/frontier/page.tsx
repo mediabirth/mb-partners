@@ -66,7 +66,7 @@ export default async function FrontierPage() {
     <div className="page-anim" style={{ paddingBottom: 8 }}>
       {/* Hero: 今月のオーバーライド */}
       <div className="shine" style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ fontSize: '.56rem', letterSpacing: '.22em', opacity: .85, textTransform: 'uppercase', marginBottom: 7 }}>This month override</div>
+        <div style={{ fontSize: '.56rem', letterSpacing: '.22em', opacity: .85, textTransform: 'uppercase', marginBottom: 7 }}>今月のオーバーライド</div>
         <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.02em', lineHeight: 1.05 }}>
           <span style={{ fontSize: '1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span><CountUp value={monthOverride} />
         </div>
