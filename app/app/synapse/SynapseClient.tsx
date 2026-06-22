@@ -10,7 +10,7 @@ export type SynapseContact = {
   name: string | null; company: string | null; industry: string | null; role: string | null
   relationship: string | null; needs: string | null; notes: string | null
   suggested_service: string | null; suggested_angle: string | null
-  acted_at: string | null
+  acted_at: string | null; enriched_at: string | null
   source: string; created_at: string; updated_at: string
 }
 export type ReferredEntry = {
@@ -51,6 +51,28 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
   const [editErr, setEditErr] = useState(''); const [editBusy, setEditBusy] = useState(false)
   const [intro, setIntro] = useState<{ text: string } | null>(null); const [introBusy, setIntroBusy] = useState(false)
   const [nudges, setNudges] = useState<Nudge[]>([]); const [nudgesOpen, setNudgesOpen] = useState(false)
+  const [enrichBusy, setEnrichBusy] = useState(false); const [enrichErr, setEnrichErr] = useState('')
+  const [dormantOnly, setDormantOnly] = useState(false)
+
+  // 未読み＝困りごとあり・読み未設定・未処理。読みの自動付与の対象。
+  const unreadCount = useMemo(() => prospects.filter(c => c.needs && !c.suggested_service && !c.enriched_at).length, [prospects])
+
+  // T1：読みの自動付与（会話不要・一括）。生成済みはキャッシュ＝再実行で対象外。
+  async function runEnrich() {
+    if (enrichBusy) return
+    setEnrichBusy(true); setEnrichErr('')
+    try {
+      const res = await fetch('/api/synapse/enrich', { method: 'POST' })
+      const j = await res.json().catch(() => ({}))
+      if (j?.disabled) { setEnrichErr('読みの自動付与は現在ご利用いただけません。'); return }
+      if (!res.ok) { setEnrichErr(j?.error || '生成に失敗しました'); return }
+      const updated = (j.updated ?? []) as SynapseContact[]
+      if (updated.length) {
+        const byId = Object.fromEntries(updated.map(u => [u.id, u]))
+        setProspects(prev => prev.map(c => byId[c.id] ?? c))
+      }
+    } catch { setEnrichErr('通信に失敗しました') } finally { setEnrichBusy(false) }
+  }
 
   useEffect(() => {
     if (!aiEnabled) return
@@ -69,16 +91,25 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
     return { referred: referred.length, prospect: prospects.length, topInd, dormant }
   }, [prospects, referred])
 
+  // T2「今日の一手」：読みあり×未行動×新しい順 の上位3件（決定的選定）。空なら非表示。
+  const todaysMoves = useMemo(() =>
+    prospects.filter(c => c.suggested_service && !c.acted_at)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3),
+    [prospects])
+
   // ── 統合リスト（紹介済み＋見込み）→ 絞り込み・検索・新しい順 ──
   type Entry = { key: string; kind: 'referred' | 'prospect'; name: string; company: string | null; date: string; ref?: ReferredEntry; c?: SynapseContact }
   const entries = useMemo(() => {
     const ref: Entry[] = referred.map(r => ({ key: 'd' + r.id, kind: 'referred', name: r.name, company: r.company, date: r.date, ref: r }))
     const pro: Entry[] = prospects.map(c => ({ key: 'c' + c.id, kind: 'prospect', name: c.name ?? c.company ?? '名称未設定', company: c.company, date: c.created_at, c }))
     let list = filter === 'referred' ? ref : filter === 'prospect' ? pro : [...ref, ...pro]
+    // T3：動いていない（困りごとあり×未行動）だけに絞る。
+    if (dormantOnly) list = list.filter(e => e.kind === 'prospect' && e.c!.needs && !e.c!.acted_at)
     const q = search.trim()
     if (q) list = list.filter(e => (`${e.name} ${e.company ?? ''} ${e.c?.industry ?? ''} ${e.ref?.service ?? ''}`).includes(q))
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [referred, prospects, filter, search])
+  }, [referred, prospects, filter, search, dormantOnly])
 
   // ── 操作（synapse_contacts のみ・本人スコープAPI） ──
   async function send() {
@@ -154,15 +185,50 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
 
   return (
     <div style={{ padding: '8px 0 24px' }}>
+      {/* ── T2「今日の一手」：読みのある見込みの上位を ready-to-act で（開いて5秒で次の動き） ── */}
+      {todaysMoves.length > 0 && (
+        <div style={{ padding: '8px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 8px' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M13 2L3 14h7l-1 8 10-12h-7z" strokeLinejoin="round" /></svg>
+            <h2 className="ty-h2" style={{ margin: 0 }}>今日の一手</h2>
+          </div>
+          {todaysMoves.map(c => (
+            <div key={c.id} style={{ background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 13, padding: '12px 14px', marginBottom: 8 }}>
+              <div style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', lineHeight: 1.4, ...oneLine }}>{c.needs || c.name || '相手'}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '.58rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '2px 8px' }}>{c.suggested_service}</span>
+                {c.suggested_angle && <span style={{ flex: 1, minWidth: 0, fontSize: '.62rem', color: 'var(--blue-dk)', fontWeight: 600, ...oneLine }}>{c.suggested_angle}</span>}
+              </div>
+              <button onClick={() => makeIntro(c.company || c.name || '相手の方', c.needs || '', c.suggested_service!, c.id)} className="btn btn-p lift" style={{ width: '100%', marginTop: 9, padding: '9px' }}>紹介文を作る</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── T1：読みの自動付与トリガ（未読みがある時だけ・1つ） ── */}
+      {unreadCount > 0 && (
+        <div style={{ padding: '14px 20px 0' }}>
+          <button onClick={runEnrich} disabled={enrichBusy} className="lift" style={{ width: '100%', background: '#fff', border: '1.5px solid var(--blue)', borderRadius: 12, padding: '12px', cursor: enrichBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.76rem', fontWeight: 800, color: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            {enrichBusy ? 'SYNAPSEが読みを出しています…' : <>未読みの見込み <b style={{ fontFamily: 'Inter' }}>{unreadCount}</b> 件に読みを出す →</>}
+          </button>
+          {enrichErr && <p style={{ fontSize: '.64rem', color: 'var(--red)', margin: '7px 0 0' }}>{enrichErr}</p>}
+        </div>
+      )}
+
       {/* ── 分析サマリー（軽量・一目） ── */}
       <div style={{ padding: '8px 20px 0' }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          {[{ l: '紹介済み', v: `${summary.referred}件`, c: 'var(--green)' }, { l: '見込み', v: `${summary.prospect}件`, c: 'var(--blue)' }, { l: '動いていない', v: `${summary.dormant}件`, c: 'var(--amber)' }].map(s => (
-            <div key={s.l} style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '10px 10px', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: s.c, letterSpacing: '-.02em' }}>{s.v}</div>
-              <div style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 600, marginTop: 1 }}>{s.l}</div>
-            </div>
-          ))}
+          {[{ l: '紹介済み', v: `${summary.referred}件`, c: 'var(--green)', act: false }, { l: '見込み', v: `${summary.prospect}件`, c: 'var(--blue)', act: false }, { l: '動いていない', v: `${summary.dormant}件`, c: 'var(--amber)', act: true }].map(s => {
+            // T3：動いていない→該当でフィルタ（行き止まりにしない）。
+            const onClick = s.act ? () => { setDormantOnly(v => !v); setFilter('prospect'); setSearch(''); if (typeof window !== 'undefined') window.scrollTo({ top: 9999, behavior: 'smooth' }) } : undefined
+            const active = s.act && dormantOnly
+            return (
+              <button key={s.l} onClick={onClick} disabled={!s.act} className={s.act ? 'lift' : undefined} style={{ flex: 1, background: active ? 'var(--amber-bg)' : '#fff', border: `1px solid ${active ? 'var(--amber)' : 'var(--line)'}`, borderRadius: 12, padding: '10px 10px', textAlign: 'center', cursor: s.act ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                <div style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: s.c, letterSpacing: '-.02em' }}>{s.v}</div>
+                <div style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 600, marginTop: 1 }}>{s.l}{s.act && summary.dormant > 0 ? (active ? ' ✓' : ' →') : ''}</div>
+              </button>
+            )
+          })}
         </div>
         {summary.topInd && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 7, paddingLeft: 2 }}>多い領域：<b style={{ color: 'var(--txt)' }}>{summary.topInd[0]}</b>（{summary.topInd[1]}件）</div>}
       </div>
@@ -280,7 +346,9 @@ export default function SynapseClient({ initialContacts, referred, aiEnabled }: 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
               {e.c!.suggested_service
                 ? <button onClick={() => makeIntro(e.c!.company || e.c!.name || '相手の方', e.c!.needs || '', e.c!.suggested_service!, e.c!.id)} className="lift" style={{ fontSize: '.64rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>紹介文を作る</button>
-                : <button onClick={() => preloadNudge({ id: 'c', kind: 'seed', title: '', body: `${e.name}（${e.c!.needs || '困りごと未記録'}）について相談したい`, contactId: null, contactName: null })} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: 'none', border: '1px solid var(--blue)', borderRadius: 8, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>相談する</button>}
+                : e.c!.enriched_at
+                  ? <span style={{ fontSize: '.6rem', color: 'var(--muted)', fontWeight: 600 }}>今は適合なし（後で繋がります）</span>
+                  : <button onClick={() => preloadNudge({ id: 'c', kind: 'seed', title: '', body: `${e.name}（${e.c!.needs || '困りごと未記録'}）について相談したい`, contactId: null, contactName: null })} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', background: 'none', border: '1px solid var(--blue)', borderRadius: 8, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit' }}>相談する</button>}
               {e.c!.acted_at && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--green)' }}>✓ 対応済み</span>}
               <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                 <button onClick={() => setEditing(toEditing(e.c!))} style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', background: 'none', border: '1px solid var(--line)', borderRadius: 6, padding: '3px 7px', cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>
