@@ -24,30 +24,25 @@ export type ReferredEntry = {
 
 const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
-export default function SynapseClient({ initialContacts, referred }: { initialContacts: SynapseContact[]; referred: ReferredEntry[]; aiEnabled: boolean }) {
+export default function SynapseClient({ initialContacts }: { initialContacts: SynapseContact[]; referred?: ReferredEntry[]; aiEnabled: boolean }) {
   const [prospects, setProspects] = useState<SynapseContact[]>(initialContacts)
   const [adding, setAdding] = useState<null | { name: string; company: string }>(null); const [addErr, setAddErr] = useState(''); const [addBusy, setAddBusy] = useState(false)
 
   const prospectEntity = (c: SynapseContact): 'individual' | 'corporate' => c.entity_type === 'individual' ? 'individual' : c.entity_type === 'corporate' ? 'corporate' : (c.company ? 'corporate' : 'individual')
 
-  // 名簿行を“資産”に：法人＝会社名(主)＋担当者・業種(副)／個人＝氏名(主)＋役職・所属(副)。左端タグのみ・行からステータス撤去。
-  type Entry = { key: string; kind: 'referred' | 'prospect'; main: string; entity: 'individual' | 'corporate'; sub: string; href: string; date: string }
+  // 名簿行を“資産”に：法人＝会社名(主)＋担当者・業種(副)／個人＝氏名(主)＋役職・所属(副)。左端タグのみ。
+  // ★③バグ修正：全行が必ず詳細 /app/synapse/[id] へ遷移するよう統一（個人/法人・状態での誤分岐を排除）。
+  //   紹介済み案件は各つながりの詳細「紹介の履歴」で参照（/app/refer への直行行は廃止＝バグの原因を除去）。
+  type Entry = { key: string; main: string; entity: 'individual' | 'corporate'; sub: string; href: string; date: string }
   const entries = useMemo(() => {
-    const ref: Entry[] = referred.map(r => {
-      const corp = r.entity === 'corporate'
-      const main = (corp ? (r.company || r.name) : r.name) || '名称未設定'
-      const sub = (corp ? [r.person, r.service] : [r.service]).filter(Boolean).join('・') || '案件'
-      return { key: 'd' + r.id, kind: 'referred' as const, main, entity: r.entity, sub, href: '/app/refer', date: r.date }
-    })
-    const pro: Entry[] = prospects.map(c => {
+    return prospects.map(c => {
       const entity = prospectEntity(c)
       const corp = entity === 'corporate'
       const main = (corp ? (c.company || c.name) : (c.name || c.company)) || '名称未設定'
       const sub = (corp ? [c.name, c.industry] : [c.role, c.company]).filter(Boolean).join('・') || (corp ? '未取得' : '—')
-      return { key: 'c' + c.id, kind: 'prospect' as const, main, entity, sub, href: `/app/synapse/${c.id}`, date: c.created_at }
-    })
-    return [...ref, ...pro].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [referred, prospects])
+      return { key: 'c' + c.id, main, entity, sub, href: `/app/synapse/${c.id}`, date: c.created_at }
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [prospects])
 
   async function saveAdd() {
     if (!adding) return

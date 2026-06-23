@@ -57,6 +57,19 @@ async function fetchRaw(u: URL): Promise<string | null> {
 function extractText(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 }
+// ① 日本の住所を“決定的に”抽出（AI非依存）。郵便番号アンカー優先→都道府県起点フォールバック。
+const PREF = '北海道|青森県|岩手県|宮城県|秋田県|山形県|福島県|茨城県|栃木県|群馬県|埼玉県|千葉県|東京都|神奈川県|新潟県|富山県|石川県|福井県|山梨県|長野県|岐阜県|静岡県|愛知県|三重県|滋賀県|京都府|大阪府|兵庫県|奈良県|和歌山県|鳥取県|島根県|岡山県|広島県|山口県|徳島県|香川県|愛媛県|高知県|福岡県|佐賀県|長崎県|熊本県|大分県|宮崎県|鹿児島県|沖縄県'
+function extractAddress(text: string): string | null {
+  // 末尾の TEL/FAX/区切り等で切って住所だけを残す。
+  const clean = (s: string) => s.replace(/\s+/g, ' ').trim().split(/\s*(?:TEL|Tel|tel|電話|FAX|Fax|fax|MAP|地図|アクセス|営業時間|定休日|[／\/｜|])/)[0].trim().slice(0, 200)
+  // 郵便番号（〒123-4567）の直後に続く都道府県起点の住所を優先。
+  const zip = text.match(new RegExp(`〒?\\s?\\d{3}[-－‐]\\d{4}\\s*((?:${PREF})[^。｜|<>　]{4,50})`))
+  if (zip && zip[1]) return clean(zip[1])
+  // フォールバック：都道府県起点パターン。複数候補は最長を採用。
+  const cands = (text.match(new RegExp(`(?:${PREF})[^。｜|<>　\\n]{4,40}`, 'g')) || []).sort((a, b) => b.length - a.length)
+  const best = cands[0]
+  return best ? clean(best) : null
+}
 // 会社概要/特商法/アクセス 等の同一ドメインリンクを最大2件抽出（住所堅牢化用・SSRFガードを再適用）。
 const ADDR_HINT = /(会社概要|会社情報|企業情報|会社案内|特定商取引|特商法|アクセス|所在地|プロフィール|about|company|profile|corporate|law|tokusho|sctl|access|location)/i
 function extractAddressLinks(html: string, base: URL): URL[] {
@@ -161,7 +174,9 @@ export async function POST(req: NextRequest) {
     const t = target as any
     const empty = (v: any) => !(typeof v === 'string' && v.trim())   // 既存が空欄か
     // (1) 事実：空欄のみ自動記入（既存値は絶対に上書きしない）。
-    const facts = { company: str(parsed.company, 200), industry: str(parsed.industry, 80), size: str(parsed.size, 30), phone: str(parsed.phone, 60), address: str(parsed.address, 300) }
+    // 住所は決定的抽出（正規表現）を優先・AI返却はフォールバック。
+    const addrFromText = extractAddress(pageText)
+    const facts = { company: str(parsed.company, 200), industry: str(parsed.industry, 80), size: str(parsed.size, 30), phone: str(parsed.phone, 60), address: addrFromText || str(parsed.address, 300) }
     const filledFacts: Record<string, string> = {}
     const patch: Record<string, any> = { url: u.toString(), scanned_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     if (facts.company && empty(t.company)) { patch.company = facts.company; filledFacts.company = facts.company }

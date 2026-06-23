@@ -238,10 +238,10 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
         ))}
       </div>
 
-      {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ） */}
-      <div style={{ margin: '20px 20px 0' }}>
-        <Link href={referHref} className="lift" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', minHeight: 46, background: 'var(--blue)', border: 'none', borderRadius: 12, textDecoration: 'none', color: '#fff', fontWeight: 800, fontSize: '.82rem' }}>このつながりを紹介する</Link>
-        <p style={{ fontSize: '.6rem', color: 'var(--muted2)', textAlign: 'center', marginTop: 8 }}>いまの情報を引き継いで紹介できます。</p>
+      {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ・控えめなセカンダリ） */}
+      <div style={{ margin: '18px 20px 0', textAlign: 'center' }}>
+        <Link href={referHref} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, textDecoration: 'none', color: 'var(--blue)', fontWeight: 700, fontSize: '.72rem' }}>このつながりを紹介する →</Link>
+        <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 7 }}>いまの情報を引き継いで紹介できます。</p>
       </div>
 
       {/* 4. 削除（控えめ） */}
