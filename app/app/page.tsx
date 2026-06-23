@@ -9,6 +9,7 @@ import { dealStatus } from '@/lib/status'
 import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
 import { synNorm } from '@/lib/synapse-entity'
+import { topSuggestion, type MatchContact } from '@/lib/synapse-match'
 import SynapseCrest from './synapse/SynapseCrest'
 
 export const runtime = 'edge'
@@ -20,10 +21,11 @@ export default async function AppPage() {
 
   // Single parallel round: partner+deals combined query + events by userId
   // (avoids needing partner.id before fetching events)
-  const [partnerResult, recentEvents, synContactsRes] = await Promise.all([
+  const [partnerResult, recentEvents, synContactsRes, synSvcRes] = await Promise.all([
     getPartnerWithDeals(supabase, uid),
     getRecentEventsByUserId(supabase, uid),
-    supabase.from('synapse_contacts').select('name, company'),   // SYNAPSE件数（read-only・本人RLS・money非依存）
+    supabase.from('synapse_contacts').select('id, name, company, industry, entity_type, demand_tags, recommended_services'),  // SYNAPSE（read-only・本人RLS・money非依存）
+    supabase.from('services').select('name').eq('active', true).order('sort', { ascending: true }),                          // 目録 read-only（示唆のサービス候補用）
   ])
   // If no partner record, go to root — root page routes admins to /console.
   // Redirecting to /login here would loop: login→/app→/login for admins.
@@ -31,7 +33,7 @@ export default async function AppPage() {
   const { partner, deals } = partnerResult
 
   // SYNAPSE「つながり」件数＝台帳＋過去に紹介した顧客（deal由来・名寄せ重複除外）。一覧ヒーローの N と一貫・表示のみ。
-  const synContacts = (synContactsRes.data ?? []) as { name: string | null; company: string | null }[]
+  const synContacts = (synContactsRes.data ?? []) as MatchContact[]
   const synLedgerKeys = new Set<string>()
   for (const c of synContacts) for (const k of [synNorm(c.name), synNorm(c.company)]) if (k) synLedgerKeys.add(k)
   const synDealCount = deals
@@ -39,6 +41,13 @@ export default async function AppPage() {
     .filter(d => { const kc = synNorm(d.company_name), kn = synNorm(d.customer_name); return !((kc && synLedgerKeys.has(kc)) || (kn && synLedgerKeys.has(kn))) })
     .length
   const synapseCount = synContacts.length + synDealCount
+
+  // 今日の示唆＝本人台帳のマッチング・エンジンから最高スコア1件（決定的・無ければ中立文）。読取のみ・money非依存。
+  const synCatalog = ((synSvcRes.data ?? []) as Array<{ name: string }>).map(s => s.name).filter(Boolean)
+  const synSuggestion = topSuggestion(synContacts, synCatalog)
+  const synSuggestText = synSuggestion
+    ? `${synSuggestion.focusTitle}：${synSuggestion.candidate.kind === 'service' ? `「${synSuggestion.candidate.title}」を紹介できそう` : `${synSuggestion.candidate.title} とつなげそう`}（${synSuggestion.candidate.reason}）`
+    : '新しいつながりを追加すると、つなぎ方の示唆が増えます。'
 
   // Stats
   const active = deals.filter(d => ['received', 'in_progress'].includes(d.status))
@@ -147,6 +156,25 @@ export default async function AppPage() {
           </div>
         </div>
       </div>
+
+      {/* C: SYNAPSE 専用導線カード（紋章＋件数＋今日の示唆）。表示のみ・read-only・money非依存。タップで /app/synapse。 */}
+      <Link href="/app/synapse" className="card-hover lift" aria-label={`SYNAPSE つながり ${synapseCount}`} style={{ display: 'block', margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--blue-bg2) 70%)', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flexShrink: 0 }}><SynapseCrest size={42} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.5rem', fontWeight: 900, letterSpacing: '.16em', color: 'var(--blue)' }}>SYNAPSE</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 1 }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--blue-dk)', letterSpacing: '-.02em' }}>{synapseCount}</span>
+              <span style={{ fontSize: '.62rem', fontWeight: 800, color: 'var(--muted2)' }}>のつながり</span>
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </div>
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--blue-bg)', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: '#fff', borderRadius: 5, padding: '2px 6px', marginTop: 1 }}>今日の示唆</span>
+          <span style={{ minWidth: 0, fontSize: '.64rem', color: 'var(--txt)', lineHeight: 1.65 }}>{synSuggestText}</span>
+        </div>
+      </Link>
 
       {/* R2-C: フロンティア導線（is_frontier のみ） */}
       {(partner as { is_frontier?: boolean }).is_frontier && (

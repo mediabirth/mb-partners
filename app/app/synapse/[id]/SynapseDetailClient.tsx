@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import SynapseCrest from '../SynapseCrest'
+import type { MatchCandidate } from '@/lib/synapse-match'
 
 // SYNAPSE 詳細＝需要分析モデル（仕上げ）。情報(事実プロフィール+編集トグル+URL欄に小SYNAPSEボタン) → 需要分析(キーワード＋推奨サービスの2段) → タグ→ポップアップ→紹介文(Feature C) → 紹介する(deep-link) → 削除。
 // ★本人スコープAPI。需要分析・タグ・推奨サービス・生成文は read-onlyな知能＝money/attribution/deals は書かない。
@@ -27,7 +28,7 @@ const FIELDS: Array<[label: string, key: keyof DetailContact, long?: boolean]> =
   ['電話', 'phone'], ['お名前', 'name'], ['住所', 'address', true], ['メモ', 'notes', true],
 ]
 
-export default function SynapseDetailClient({ contact, aiEnabled, history }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[] }) {
+export default function SynapseDetailClient({ contact, aiEnabled, history, candidates = [] }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[]; candidates?: MatchCandidate[] }) {
   const router = useRouter()
   const [c, setC] = useState<DetailContact>(contact)
   const [showAllHistory, setShowAllHistory] = useState(false)
@@ -197,6 +198,29 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
         {scanInfo && <div style={{ marginTop: 10, fontSize: '.6rem', color: 'var(--green)', fontWeight: 600, lineHeight: 1.6 }}>{scanInfo}</div>}
         {scanErr && <p style={{ fontSize: '.62rem', color: 'var(--red)', margin: '8px 0 0' }}>{scanErr}</p>}
       </div>
+
+      {/* B：つなげる候補（需要分析の下・候補がある時のみ・最大3・0件は非表示＝沈黙）。理由付き＝なぜこの人/サービス。 */}
+      {candidates.length > 0 && (
+        <div style={{ margin: '18px 20px 0', background: '#fff', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+            <SynapseCrest size={18} />
+            <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>つなげる候補</b>
+          </div>
+          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 11, lineHeight: 1.6 }}>需要の重なりから、高確度のつなぎ方だけを示します。</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {candidates.map((cand, i) => (
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 11, padding: '11px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                  <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: cand.kind === 'service' ? 'var(--green)' : 'var(--blue)', background: cand.kind === 'service' ? 'var(--green-bg)' : 'var(--blue-bg)', borderRadius: 5, padding: '2px 6px' }}>{cand.kind === 'service' ? 'サービス' : '人'}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: '.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cand.title}</span>
+                </div>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>{cand.reason}</div>
+                <button onClick={() => makeIntro(cand.kind === 'service' ? cand.title : (cand.reasons[0] || cand.title), cand.kind === 'service' ? 'service' : 'keyword')} className="lift" style={{ marginTop: 9, background: 'var(--blue-bg2)', color: 'var(--blue)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: '7px 11px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>この切り口で紹介文を作る</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 1. 情報＝事実プロフィール（編集トグル・URL欄に小SYNAPSEボタン） */}
       <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>

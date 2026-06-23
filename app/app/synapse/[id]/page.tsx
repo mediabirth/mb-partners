@@ -3,6 +3,7 @@ import { createClient, getCachedUid } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
 import { inferEntity, synNorm } from '@/lib/synapse-entity'
+import { matchForContact } from '@/lib/synapse-match'
 import SynapseDetailClient, { type DetailContact, type HistoryItem } from './SynapseDetailClient'
 
 // SYNAPSE 資産ページ：つながり1件の詳細（個人/法人を同一体裁・同一機能に統一）。
@@ -74,17 +75,24 @@ export default async function SynapseDetailPage({ params }: { params: Promise<{ 
   }
 
   // ── 台帳由来（従来の編集可詳細） ───────────────────────────────────────────────────
-  const [{ data }, pwd] = await Promise.all([
+  // 本人台帳の全件（マッチング用）＋紹介履歴(SELECT)＋サービス目録(read-only)を並列取得。
+  const [contactsRes, pwd, svcRes] = await Promise.all([
     supabase.from('synapse_contacts')
       .select('id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, recommended_services, source, created_at, updated_at')
-      .eq('id', id).maybeSingle(),
+      .order('created_at', { ascending: false }),
     getPartnerWithDeals(supabase, uid),
+    supabase.from('services').select('name').eq('active', true).order('sort', { ascending: true }),   // 目録 read-only
   ])
-  if (!data) notFound()
-  const c = data as DetailContact
+  const allContacts = (contactsRes.data ?? []) as DetailContact[]
+  const c = allContacts.find(x => x.id === id)
+  if (!c) notFound()
 
   const history = buildHistory((pwd?.deals ?? []) as any[], synNorm(c.company), synNorm(c.name))
 
+  // A/B：つなげる候補（決定的・本人台帳＋目録のみ・最大3・重なりゼロは沈黙）。書込ゼロ。
+  const catalog = ((svcRes.data ?? []) as Array<{ name: string }>).map(s => s.name).filter(Boolean)
+  const candidates = matchForContact(c, allContacts, catalog, 3)
+
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY
-  return <SynapseDetailClient contact={c} aiEnabled={aiEnabled} history={history} />
+  return <SynapseDetailClient contact={c} aiEnabled={aiEnabled} history={history} candidates={candidates} />
 }
