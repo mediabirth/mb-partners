@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import SynapseCrest from '../SynapseCrest'
 
 // SYNAPSE 詳細＝需要分析モデル（仕上げ）。情報(事実プロフィール+編集トグル+URL欄に小SYNAPSEボタン) → 需要分析(キーワード＋推奨サービスの2段) → タグ→ポップアップ→紹介文(Feature C) → 紹介する(deep-link) → 削除。
 // ★本人スコープAPI。需要分析・タグ・推奨サービス・生成文は read-onlyな知能＝money/attribution/deals は書かない。
@@ -41,6 +42,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
   const entityLabel = (c.entity_type === 'individual') ? '個人' : '法人'
   const keywords = Array.isArray(c.demand_tags) ? c.demand_tags : []
   const recos = Array.isArray(c.recommended_services) ? c.recommended_services : []
+  const analyzed = !!(c.demand_summary || keywords.length || recos.length)
 
   // E：このつながりの情報を /app/refer にクエリで引き継ぐ（入力欄の初期値のみ・送信/帰属/money は無改修）。
   const refParams = new URLSearchParams()
@@ -106,7 +108,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
   return (
     <div className="page-anim" style={{ padding: '14px 0 28px' }}>
       <div style={{ padding: '0 20px' }}>
-        <Link href="/app/synapse" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 600, textDecoration: 'none' }}>← つながり一覧</Link>
+        <Link href="/app/synapse" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 600, textDecoration: 'none' }}>← つながり</Link>
       </div>
 
       {/* ヘッダー（アバターなし・entity_type で主表示を切替：法人=会社名／個人=氏名） */}
@@ -126,6 +128,62 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
         )
       })()}
 
+      {/* B2. 主役＝「SYNAPSEの読み」パネル（info背景・最上部）。未分析はCTA／分析中は紋章が灯る／完了でreveal。 */}
+      <div style={{ margin: '16px 20px 0', background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 16, padding: '16px 16px' }}>
+        {scanBusy ? (
+          // 読み取り中：紋章のノードが順に灯る（reduced-motionで静止）
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, padding: '12px 0' }}>
+            <SynapseCrest size={58} scanning />
+            <span style={{ fontSize: '.76rem', fontWeight: 800, color: 'var(--blue-dk)' }}>SYNAPSE が読み取り中…</span>
+            <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>会社情報を読み解いています</span>
+          </div>
+        ) : analyzed ? (
+          // 分析あり：読みが立ち上がる（opacity/translateYのreveal）
+          <div key={c.updated_at} className="syn-reveal">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+              <SynapseCrest size={22} />
+              <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>SYNAPSEの読み</b>
+            </div>
+            {c.demand_summary
+              ? <p style={{ fontSize: '.74rem', color: 'var(--txt)', lineHeight: 1.85 }}>{c.demand_summary}</p>
+              : <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>この会社の需要傾向を読み解きました。下のキーワード／推奨サービスから紹介文を作れます。</p>}
+            {keywords.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...labelStyle, marginBottom: 6 }}>キーワード（需要の切り口）</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {keywords.map(t => <button key={t} onClick={() => setPicked({ tag: t, kind: 'keyword' })} style={tagBtn(picked?.tag === t && picked?.kind === 'keyword', 'var(--blue)', '#fff')}>{t}</button>)}
+                </div>
+              </div>
+            )}
+            {recos.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...labelStyle, marginBottom: 6 }}>推奨サービス（MB）</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {recos.map(t => <button key={t} onClick={() => setPicked({ tag: t, kind: 'service' })} style={tagBtn(picked?.tag === t && picked?.kind === 'service', 'var(--green)', 'var(--green-bg)')}>{t}</button>)}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          // 未分析：このパネル自体を誘導CTAに
+          <div style={{ textAlign: 'center', padding: '6px 0 2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><SynapseCrest size={64} /></div>
+            <b style={{ fontSize: '.84rem', fontWeight: 800, color: 'var(--blue-dk)' }}>まだ読み解いていません</b>
+            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '5px auto 13px', lineHeight: 1.7, maxWidth: 260 }}>会社URLを渡すと、SYNAPSEがこの会社の需要を読み解きます。</p>
+            {aiEnabled ? (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 10, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.78rem', background: '#fff' }} />
+                <button onClick={scan} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>SYNAPSE</button>
+              </div>
+            ) : (
+              <p style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>URL取込は現在ご利用いただけません。</p>
+            )}
+          </div>
+        )}
+        {scanInfo && <div style={{ marginTop: 10, fontSize: '.6rem', color: 'var(--green)', fontWeight: 600, lineHeight: 1.6 }}>{scanInfo}</div>}
+        {scanErr && <p style={{ fontSize: '.62rem', color: 'var(--red)', margin: '8px 0 0' }}>{scanErr}</p>}
+      </div>
+
       {/* 1. 情報＝事実プロフィール（編集トグル・URL欄に小SYNAPSEボタン） */}
       <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -137,23 +195,12 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
 
         {aiEnabled && (
           <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>会社URL</label>
+            <label style={labelStyle}>会社URL{analyzed ? '（再分析）' : ''}</label>
             <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
               <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--line)', borderRadius: 9, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.78rem' }} />
               <button onClick={scan} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
             </div>
-            {/* ③ 読み取り中アニメーション（同心円リングのパルス＋拡散） */}
-            {scanBusy && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 11, padding: '10px 12px', background: 'var(--blue-bg2)', borderRadius: 10 }}>
-                <span style={{ position: 'relative', width: 22, height: 22, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="syn-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px solid var(--blue)' }} />
-                  <span className="syn-anim" style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--blue)' }} />
-                </span>
-                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--blue-dk)' }}>SYNAPSE が読み取り中…</span>
-              </div>
-            )}
-            {scanInfo && <div style={{ marginTop: 7, fontSize: '.6rem', color: 'var(--green)', fontWeight: 600, lineHeight: 1.6 }}>{scanInfo}</div>}
-            {scanErr && <p style={{ fontSize: '.62rem', color: 'var(--red)', margin: '6px 0 0' }}>{scanErr}</p>}
+            {/* 読み取りの状態・結果は上部「SYNAPSEの読み」パネルに表示。 */}
           </div>
         )}
 
@@ -189,34 +236,6 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
             ))}
             {err && <p style={{ gridColumn: '1 / -1', fontSize: '.68rem', color: 'var(--red)', margin: 0 }}>{err}</p>}
             <button onClick={save} disabled={busy} className="btn btn-p lift" style={{ gridColumn: '1 / -1', width: '100%', marginTop: 2 }}>{busy ? '保存中…' : '保存する'}</button>
-          </div>
-        )}
-      </div>
-
-      {/* 2. 需要分析（別枠・常時）＝キーワード＋推奨サービスの2段 */}
-      <div style={{ margin: '18px 20px 0', background: '#fff', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>需要分析</b>
-        </div>
-        {c.demand_summary
-          ? <p style={{ fontSize: '.72rem', color: 'var(--txt)', lineHeight: 1.8 }}>{c.demand_summary}</p>
-          : <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>会社URLを渡して「SYNAPSE」を押すと、この会社の需要傾向を分析します。</p>}
-
-        {keywords.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ ...labelStyle, marginBottom: 6 }}>キーワード（需要の切り口）</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {keywords.map(t => <button key={t} onClick={() => setPicked({ tag: t, kind: 'keyword' })} style={tagBtn(picked?.tag === t && picked?.kind === 'keyword', 'var(--blue)', 'var(--blue-bg2)')}>{t}</button>)}
-            </div>
-          </div>
-        )}
-        {recos.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ ...labelStyle, marginBottom: 6 }}>推奨サービス（MB）</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {recos.map(t => <button key={t} onClick={() => setPicked({ tag: t, kind: 'service' })} style={tagBtn(picked?.tag === t && picked?.kind === 'service', 'var(--green)', 'var(--green-bg)')}>{t}</button>)}
-            </div>
           </div>
         )}
       </div>

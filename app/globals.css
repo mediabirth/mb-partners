@@ -519,6 +519,21 @@ body {
 .syn-ring { animation: synRing 1.8s ease-out infinite; }
 .syn-spin { animation: synSpin 14s linear infinite; }
 .syn-spin-rev { animation: synSpin 10s linear infinite reverse; }
+
+/* SYNAPSE 紋章（ノード＝円・リンク＝線）：低振幅で品よく。ノードは微かに脈打ち、リンクは淡くshimmer。 */
+@keyframes synNode { 0%, 100% { opacity: .5; transform: scale(.82); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes synLink { 0%, 100% { opacity: .2; } 50% { opacity: .65; } }
+.syn-node { transform-box: fill-box; transform-origin: center; animation: synNode 2.8s ease-in-out infinite; }
+.syn-link { animation: synLink 3.2s ease-in-out infinite; }
+/* 読み取り中＝ノードが順に灯る（速く・やや強く） */
+.syn-crest-scan .syn-node { animation-duration: 1.05s; }
+.syn-crest-scan .syn-link { animation-duration: 1.25s; }
+/* 読みが立ち上がる reveal（opacity/translateY）。both で reduced-motion 時も最終状態を保持＝可視。 */
+@keyframes synReveal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+.syn-reveal { animation: synReveal .5s var(--ease-out) both; }
+
 @media (prefers-reduced-motion: reduce) {
   .syn-anim, .syn-ring, .syn-spin, .syn-spin-rev { animation: none !important; }
+  .syn-node, .syn-link { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .syn-reveal { animation: none !important; }
 }
