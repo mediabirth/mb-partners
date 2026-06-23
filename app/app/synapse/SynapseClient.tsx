@@ -19,31 +19,38 @@ export type SynapseContact = {
   source: string; created_at: string; updated_at: string
 }
 export type ReferredEntry = {
-  id: string; name: string; company: string | null; person: string | null; service: string | null
-  status: string; statusKey: string; amount: number | null; date: string; entity: 'individual' | 'corporate'
+  id: string; name: string | null; company: string | null; person: string | null; service: string | null
+  status: string; statusKey: string; date: string; entity: 'individual' | 'corporate'
 }
 
 const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
-export default function SynapseClient({ initialContacts }: { initialContacts: SynapseContact[]; referred?: ReferredEntry[]; aiEnabled: boolean }) {
+export default function SynapseClient({ initialContacts, referred = [] }: { initialContacts: SynapseContact[]; referred?: ReferredEntry[]; aiEnabled: boolean }) {
   const [prospects, setProspects] = useState<SynapseContact[]>(initialContacts)
   const [adding, setAdding] = useState<null | { name: string; company: string }>(null); const [addErr, setAddErr] = useState(''); const [addBusy, setAddBusy] = useState(false)
 
   const prospectEntity = (c: SynapseContact): 'individual' | 'corporate' => c.entity_type === 'individual' ? 'individual' : c.entity_type === 'corporate' ? 'corporate' : (c.company ? 'corporate' : 'individual')
 
-  // 名簿行を“資産”に：法人＝会社名(主)＋担当者・業種(副)／個人＝氏名(主)＋役職・所属(副)。左端タグのみ。
-  // ★③バグ修正：全行が必ず詳細 /app/synapse/[id] へ遷移するよう統一（個人/法人・状態での誤分岐を排除）。
-  //   紹介済み案件は各つながりの詳細「紹介の履歴」で参照（/app/refer への直行行は廃止＝バグの原因を除去）。
+  // 一覧＝台帳(synapse_contacts)＋過去に紹介した顧客(deal由来・重複は集約済み)を統合。
+  // ★B-2：全行が必ず詳細へ。台帳→/app/synapse/[uuid]（編集可）。deal由来→/app/synapse/deal-<dealId>（read-only詳細）。
+  //   /app/refer へ直行する行は作らない（③遷移バグの根絶を維持）。件数経路に money/amount/reward は一切含めない。
   type Entry = { key: string; main: string; entity: 'individual' | 'corporate'; sub: string; href: string; date: string }
   const entries = useMemo(() => {
-    return prospects.map(c => {
+    const ledger: Entry[] = prospects.map(c => {
       const entity = prospectEntity(c)
       const corp = entity === 'corporate'
       const main = (corp ? (c.company || c.name) : (c.name || c.company)) || '名称未設定'
       const sub = (corp ? [c.name, c.industry] : [c.role, c.company]).filter(Boolean).join('・') || (corp ? '未取得' : '—')
       return { key: 'c' + c.id, main, entity, sub, href: `/app/synapse/${c.id}`, date: c.created_at }
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [prospects])
+    })
+    const deals: Entry[] = referred.map(r => {
+      const corp = r.entity === 'corporate'
+      const main = (corp ? (r.company || r.name) : (r.name || r.company)) || '紹介した顧客'
+      const sub = [corp ? r.person : null, r.service].filter(Boolean).join('・') || '紹介済み'
+      return { key: 'd' + r.id, main, entity: r.entity, sub, href: `/app/synapse/deal-${r.id}`, date: r.date }
+    })
+    return [...ledger, ...deals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [prospects, referred])
 
   async function saveAdd() {
     if (!adding) return
