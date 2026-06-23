@@ -1,9 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import SynapseCrest from '../SynapseCrest'
 import type { MatchCandidate } from '@/lib/synapse-match'
+import type { Nudge } from '@/lib/synapse-nudge'
 
 // SYNAPSE 詳細＝需要分析モデル（仕上げ）。情報(事実プロフィール+編集トグル+URL欄に小SYNAPSEボタン) → 需要分析(キーワード＋推奨サービスの2段) → タグ→ポップアップ→紹介文(Feature C) → 紹介する(deep-link) → 削除。
 // ★本人スコープAPI。需要分析・タグ・推奨サービス・生成文は read-onlyな知能＝money/attribution/deals は書かない。
@@ -28,9 +29,14 @@ const FIELDS: Array<[label: string, key: keyof DetailContact, long?: boolean]> =
   ['電話', 'phone'], ['お名前', 'name'], ['住所', 'address', true], ['メモ', 'notes', true],
 ]
 
-export default function SynapseDetailClient({ contact, aiEnabled, history, candidates = [] }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[]; candidates?: MatchCandidate[] }) {
+export default function SynapseDetailClient({ contact, aiEnabled, history, candidates = [], nudge = null }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[]; candidates?: MatchCandidate[]; nudge?: Nudge | null }) {
   const router = useRouter()
   const [c, setC] = useState<DetailContact>(contact)
+  // 一言ナッジの「後で」（localStorage＝本人端末スコープ・DB/money非接触）。
+  const [nudgeHidden, setNudgeHidden] = useState(false)
+  const nudgeKey = nudge ? `syn_nudge_dismissed_${contact.id}_${nudge.kind}` : ''
+  useEffect(() => { if (nudgeKey) { try { if (localStorage.getItem(nudgeKey)) setNudgeHidden(true) } catch { /* noop */ } } }, [nudgeKey])
+  function dismissNudge() { setNudgeHidden(true); try { if (nudgeKey) localStorage.setItem(nudgeKey, '1') } catch { /* noop */ } }
   const [showAllHistory, setShowAllHistory] = useState(false)
   const [edit, setEdit] = useState(false)
   const [form, setForm] = useState<Record<string, string>>(() => ({ entity_type: contact.entity_type ?? 'corporate', ...Object.fromEntries(FIELDS.map(([, k]) => [k, (contact[k] as string) ?? ''])) }))
@@ -129,6 +135,15 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
           </div>
         )
       })()}
+
+      {/* Phase4：一言ナッジ（該当時のみ・控えめ・「後で」で畳める＝localStorage本人端末スコープ）。無ければ非表示＝沈黙。 */}
+      {nudge && !nudgeHidden && (
+        <div style={{ margin: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 9, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '9px 12px' }}>
+          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 5, padding: '2px 6px' }}>先回り</span>
+          <span style={{ flex: 1, minWidth: 0, fontSize: '.64rem', color: 'var(--blue-dk)', fontWeight: 600, lineHeight: 1.5 }}>{nudge.reason}</span>
+          <button onClick={dismissNudge} style={{ flexShrink: 0, background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.6rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>後で</button>
+        </div>
+      )}
 
       {/* B2. 主役＝「SYNAPSEの読み」パネル（info背景・最上部）。未分析はCTA／分析中は紋章が灯る／完了でreveal。 */}
       <div style={{ margin: '16px 20px 0', background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 16, padding: '16px 16px' }}>

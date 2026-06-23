@@ -10,7 +10,9 @@ import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
 import { synNorm } from '@/lib/synapse-entity'
 import { topSuggestion, type MatchContact } from '@/lib/synapse-match'
+import { computeNudges, type NudgeContact } from '@/lib/synapse-nudge'
 import SynapseCrest from './synapse/SynapseCrest'
+import SynapsePreempt, { type PreemptItem } from './synapse/SynapsePreempt'
 
 export const runtime = 'edge'
 
@@ -24,7 +26,7 @@ export default async function AppPage() {
   const [partnerResult, recentEvents, synContactsRes, synSvcRes] = await Promise.all([
     getPartnerWithDeals(supabase, uid),
     getRecentEventsByUserId(supabase, uid),
-    supabase.from('synapse_contacts').select('id, name, company, industry, entity_type, demand_tags, recommended_services'),  // SYNAPSE（read-only・本人RLS・money非依存）
+    supabase.from('synapse_contacts').select('id, name, company, industry, entity_type, demand_tags, recommended_services, updated_at, url, demand_summary, phone'),  // SYNAPSE（read-only・本人RLS・money非依存）
     supabase.from('services').select('name').eq('active', true).order('sort', { ascending: true }),                          // 目録 read-only（示唆のサービス候補用）
   ])
   // If no partner record, go to root — root page routes admins to /console.
@@ -33,7 +35,8 @@ export default async function AppPage() {
   const { partner, deals } = partnerResult
 
   // SYNAPSE「つながり」件数＝台帳＋過去に紹介した顧客（deal由来・名寄せ重複除外）。一覧ヒーローの N と一貫・表示のみ。
-  const synContacts = (synContactsRes.data ?? []) as MatchContact[]
+  type SynRow = MatchContact & NudgeContact & { phone: string | null }
+  const synContacts = (synContactsRes.data ?? []) as SynRow[]
   const synLedgerKeys = new Set<string>()
   for (const c of synContacts) for (const k of [synNorm(c.name), synNorm(c.company)]) if (k) synLedgerKeys.add(k)
   const synDealCount = deals
@@ -48,6 +51,27 @@ export default async function AppPage() {
   const synSuggestText = synSuggestion
     ? `${synSuggestion.focusTitle}：${synSuggestion.candidate.kind === 'service' ? `「${synSuggestion.candidate.title}」を紹介できそう` : `${synSuggestion.candidate.title} とつなげそう`}（${synSuggestion.candidate.reason}）`
     : '新しいつながりを追加すると、つなぎ方の示唆が増えます。'
+
+  // 先回り＝ナッジ・エンジン（決定的・read-only）。新着はサービス目録に created_at が無いため newServiceNames を渡さない＝発火しない（誤発火防止）。
+  const synContactById = new Map(synContacts.map(c => [c.id, c]))
+  const synNudges = computeNudges(synContacts, { nowMs: Date.now(), dormantDays: 90, max: 2 })
+  // ナッジ→/app/refer プリフィル（refer）or 詳細[SYNAPSE]（scan）。プリフィルは入力初期値のみ・送信/帰属/money 無改修。
+  const referHrefFor = (c: SynRow, memo: string) => {
+    const p = new URLSearchParams()
+    p.set('ct', c.entity_type === 'individual' ? 'individual' : 'corporate')
+    if (c.company) p.set('co', c.company)
+    if (c.name) p.set('nm', c.name)
+    if (c.phone) p.set('phone', c.phone)
+    if (memo) p.set('memo', memo.slice(0, 200))
+    return `/app/refer?${p.toString()}`
+  }
+  const preemptItems: PreemptItem[] = []
+  for (const n of synNudges) {
+    const c = synContactById.get(n.contactId)
+    const href = n.action === 'refer' && c ? referHrefFor(c, n.serviceName ?? n.title) : `/app/synapse/${n.contactId}`
+    preemptItems.push({ id: `nd-${n.kind}-${n.contactId}`, badge: '先回り', text: n.reason, href, actionLabel: n.action === 'refer' ? '紹介する' : '読み解く' })
+  }
+  if (synSuggestion) preemptItems.push({ id: `sg-${synSuggestion.focusId}`, badge: '今日の示唆', text: synSuggestText, href: `/app/synapse/${synSuggestion.focusId}`, actionLabel: '見る' })
 
   // Stats
   const active = deals.filter(d => ['received', 'in_progress'].includes(d.status))
@@ -157,9 +181,9 @@ export default async function AppPage() {
         </div>
       </div>
 
-      {/* C: SYNAPSE 専用導線カード（紋章＋件数＋今日の示唆）。表示のみ・read-only・money非依存。タップで /app/synapse。 */}
-      <Link href="/app/synapse" className="card-hover lift" aria-label={`SYNAPSE つながり ${synapseCount}`} style={{ display: 'block', margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--blue-bg2) 70%)', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* C: SYNAPSE 専用導線カード（紋章＋件数＋先回り/今日の示唆）。表示のみ・read-only・money非依存。 */}
+      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--blue-bg2) 70%)', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '14px 16px' }}>
+        <Link href="/app/synapse" className="lift" aria-label={`SYNAPSE つながり ${synapseCount}`} style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'var(--txt)' }}>
           <div style={{ flexShrink: 0 }}><SynapseCrest size={42} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '.5rem', fontWeight: 900, letterSpacing: '.16em', color: 'var(--blue)' }}>SYNAPSE</div>
@@ -169,12 +193,9 @@ export default async function AppPage() {
             </div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </div>
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--blue-bg)', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: '#fff', borderRadius: 5, padding: '2px 6px', marginTop: 1 }}>今日の示唆</span>
-          <span style={{ minWidth: 0, fontSize: '.64rem', color: 'var(--txt)', lineHeight: 1.65 }}>{synSuggestText}</span>
-        </div>
-      </Link>
+        </Link>
+        <SynapsePreempt items={preemptItems} fallback={synSuggestText} />
+      </div>
 
       {/* R2-C: フロンティア導線（is_frontier のみ） */}
       {(partner as { is_frontier?: boolean }).is_frontier && (

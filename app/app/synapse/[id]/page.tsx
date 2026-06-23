@@ -4,6 +4,7 @@ import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
 import { inferEntity, synNorm } from '@/lib/synapse-entity'
 import { matchForContact } from '@/lib/synapse-match'
+import { nudgeForContact } from '@/lib/synapse-nudge'
 import SynapseDetailClient, { type DetailContact, type HistoryItem } from './SynapseDetailClient'
 
 // SYNAPSE 資産ページ：つながり1件の詳細（個人/法人を同一体裁・同一機能に統一）。
@@ -93,6 +94,9 @@ export default async function SynapseDetailPage({ params }: { params: Promise<{ 
   const catalog = ((svcRes.data ?? []) as Array<{ name: string }>).map(s => s.name).filter(Boolean)
   const candidates = matchForContact(c, allContacts, catalog, 3)
 
+  // 詳細の一言ナッジ（該当時のみ・read-only）。新着は newServiceNames を渡さない＝発火しない。
+  const nudge = nudgeForContact(c, { nowMs: Date.now(), dormantDays: 90 })
+
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY
-  return <SynapseDetailClient contact={c} aiEnabled={aiEnabled} history={history} candidates={candidates} />
+  return <SynapseDetailClient contact={c} aiEnabled={aiEnabled} history={history} candidates={candidates} nudge={nudge} />
 }
