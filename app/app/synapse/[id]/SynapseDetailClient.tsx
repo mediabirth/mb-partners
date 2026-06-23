@@ -36,6 +36,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const [url, setUrl] = useState(contact.url ?? '')
   const [scanBusy, setScanBusy] = useState(false); const [scanErr, setScanErr] = useState(''); const [scanInfo, setScanInfo] = useState<string | null>(null)
+  const [rescan, setRescan] = useState(false)   // 分析済みパネル内の「再分析」URL入力の開閉
   const [picked, setPicked] = useState<{ tag: string; kind: 'keyword' | 'service' } | null>(null)
   const [intro, setIntro] = useState<{ text: string } | null>(null); const [introBusy, setIntroBusy] = useState(false)
 
@@ -163,6 +164,19 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
                 </div>
               </div>
             )}
+            {/* B：再分析は読みパネル内に一本化（情報カードのURL欄は廃止）。 */}
+            {aiEnabled && (
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--blue-bg)' }}>
+                {rescan ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', background: '#fff' }} />
+                    <button onClick={scan} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setRescan(true)} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>別のURLで再分析する</button>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           // 未分析：このパネル自体を誘導CTAに
@@ -193,16 +207,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history }: { c
             : <button onClick={startEdit} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>}
         </div>
 
-        {aiEnabled && (
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>会社URL{analyzed ? '（再分析）' : ''}</label>
-            <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
-              <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--line)', borderRadius: 9, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.78rem' }} />
-              <button onClick={scan} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
-            </div>
-            {/* 読み取りの状態・結果は上部「SYNAPSEの読み」パネルに表示。 */}
-          </div>
-        )}
+        {/* B：会社URL＋SYNAPSEボタンは「SYNAPSEの読み」パネルに一本化（情報カードのURL欄は廃止＝二重URL解消）。 */}
 
         {!edit ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>

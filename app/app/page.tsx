@@ -8,6 +8,8 @@ import StatusPill from '@/components/ui/StatusPill'
 import { dealStatus } from '@/lib/status'
 import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
+import { synNorm } from '@/lib/synapse-entity'
+import SynapseCrest from './synapse/SynapseCrest'
 
 export const runtime = 'edge'
 
@@ -18,14 +20,25 @@ export default async function AppPage() {
 
   // Single parallel round: partner+deals combined query + events by userId
   // (avoids needing partner.id before fetching events)
-  const [partnerResult, recentEvents] = await Promise.all([
+  const [partnerResult, recentEvents, synContactsRes] = await Promise.all([
     getPartnerWithDeals(supabase, uid),
     getRecentEventsByUserId(supabase, uid),
+    supabase.from('synapse_contacts').select('name, company'),   // SYNAPSE件数（read-only・本人RLS・money非依存）
   ])
   // If no partner record, go to root — root page routes admins to /console.
   // Redirecting to /login here would loop: login→/app→/login for admins.
   if (!partnerResult) redirect('/')
   const { partner, deals } = partnerResult
+
+  // SYNAPSE「つながり」件数＝台帳＋過去に紹介した顧客（deal由来・名寄せ重複除外）。一覧ヒーローの N と一貫・表示のみ。
+  const synContacts = (synContactsRes.data ?? []) as { name: string | null; company: string | null }[]
+  const synLedgerKeys = new Set<string>()
+  for (const c of synContacts) for (const k of [synNorm(c.name), synNorm(c.company)]) if (k) synLedgerKeys.add(k)
+  const synDealCount = deals
+    .filter(d => ['received', 'in_progress', 'confirmed', 'paid'].includes(d.status))
+    .filter(d => { const kc = synNorm(d.company_name), kn = synNorm(d.customer_name); return !((kc && synLedgerKeys.has(kc)) || (kn && synLedgerKeys.has(kn))) })
+    .length
+  const synapseCount = synContacts.length + synDealCount
 
   // Stats
   const active = deals.filter(d => ['received', 'in_progress'].includes(d.status))
@@ -101,13 +114,10 @@ export default async function AppPage() {
           <div className="syn-spin" style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
           <div className="syn-spin-rev" style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%' }} />
         </div>
-        {/* SYNAPSE ノード：常時パルス＝「探している/動いている」雰囲気。タップで /app/synapse へ。 */}
-        <Link href="/app/synapse" aria-label="SYNAPSE つながりの台帳" style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-          <span style={{ position: 'relative', width: 36, height: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="syn-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,.5)' }} />
-            <span className="syn-anim" style={{ position: 'absolute', inset: 9, borderRadius: '50%', background: 'rgba(255,255,255,.16)', border: '1px solid rgba(255,255,255,.6)' }} />
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" style={{ position: 'relative' }}><circle cx="6" cy="6" r="2.2" /><circle cx="18" cy="9" r="2.2" /><circle cx="9" cy="18" r="2.2" /><path d="M8 7l8 1.5M7.6 16l1.2-7.5M11 18l5-7" /></svg>
-          </span>
+        {/* SYNAPSE 導線：共有紋章（light）＋「SYNAPSE · N」。タップで /app/synapse へ。件数は表示のみ・money非依存。 */}
+        <Link href="/app/synapse" aria-label={`SYNAPSE つながり ${synapseCount}`} style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', padding: '4px 9px 4px 4px', borderRadius: 999, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.18)' }}>
+          <SynapseCrest size={30} tone="light" />
+          <span style={{ fontSize: '.56rem', fontWeight: 800, letterSpacing: '.06em', color: 'rgba(255,255,255,.95)', whiteSpace: 'nowrap' }}>SYNAPSE · {synapseCount}</span>
         </Link>
         <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>
           確定残高

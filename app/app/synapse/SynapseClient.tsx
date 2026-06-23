@@ -34,7 +34,8 @@ export default function SynapseClient({ initialContacts, referred = [] }: { init
   // 一覧＝台帳(synapse_contacts)＋過去に紹介した顧客(deal由来・重複は集約済み)を統合。
   // ★B-2：全行が必ず詳細へ。台帳→/app/synapse/[uuid]（編集可）。deal由来→/app/synapse/deal-<dealId>（read-only詳細）。
   //   /app/refer へ直行する行は作らない（③遷移バグの根絶を維持）。件数経路に money/amount/reward は一切含めない。
-  type Entry = { key: string; main: string; entity: 'individual' | 'corporate'; sub: string; href: string; date: string }
+  // lazy: deal由来＝開くとサーバで台帳化(lazy-create)するため prefetch を無効化（prefetch時の書込を防ぐ）。
+  type Entry = { key: string; main: string; entity: 'individual' | 'corporate'; sub: string; href: string; date: string; lazy?: boolean }
   const entries = useMemo(() => {
     const ledger: Entry[] = prospects.map(c => {
       const entity = prospectEntity(c)
@@ -47,7 +48,7 @@ export default function SynapseClient({ initialContacts, referred = [] }: { init
       const corp = r.entity === 'corporate'
       const main = (corp ? (r.company || r.name) : (r.name || r.company)) || '紹介した顧客'
       const sub = [corp ? r.person : null, r.service].filter(Boolean).join('・') || '紹介済み'
-      return { key: 'd' + r.id, main, entity: r.entity, sub, href: `/app/synapse/deal-${r.id}`, date: r.date }
+      return { key: 'd' + r.id, main, entity: r.entity, sub, href: `/app/synapse/deal-${r.id}`, date: r.date, lazy: true }
     })
     return [...ledger, ...deals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [prospects, referred])
@@ -93,7 +94,7 @@ export default function SynapseClient({ initialContacts, referred = [] }: { init
             const corp = e.entity === 'corporate'
             const dot = corp ? 'var(--blue)' : 'var(--muted2)'
             return (
-              <Link key={e.key} href={e.href} className="row-hover" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 16px', borderTop: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
+              <Link key={e.key} href={e.href} prefetch={e.lazy ? false : undefined} className="row-hover" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 16px', borderTop: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
                 {/* 左端＝区分色のノード点 */}
                 <span style={{ flexShrink: 0, width: 9, height: 9, borderRadius: '50%', background: dot, boxShadow: `0 0 0 3px ${corp ? 'var(--blue-bg)' : 'var(--bg2)'}` }} />
                 <div style={{ flex: 1, minWidth: 0 }}>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { safeUrl, extractText, extractAddress, extractAddressLinks } from '@/lib/synapse-fetch'
 
 // SYNAPSE 名簿化（N3）：会社URLを取得→本文をAIに渡し 業種/規模/想定ニーズ を抽出→該当見込みに自動記入＋提案。
 // ★本人スコープ（.eq partner_id）厳守。サービス目録は読むだけ。お金/deals/帰属/通知は非接触。捏造ガード（目録名一致のみ）。
@@ -22,26 +23,6 @@ async function resolvePartnerId(): Promise<string | null> {
   return partner?.id ?? null
 }
 
-// 基本SSRF対策：http/https のみ、内部/予約アドレスを遮断。
-function safeUrl(raw: string): URL | null {
-  let u: URL
-  try { u = new URL(raw.trim()) } catch { return null }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
-  const host = u.hostname.toLowerCase()
-  if (!host || host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.localhost')) return null
-  if (host.includes(':')) return null // 生IPv6リテラル（::1/fc00 等）を遮断
-  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
-    const p = host.split('.').map(Number)
-    if (p.some(n => n > 255)) return null
-    if (p[0] === 10 || p[0] === 127 || p[0] === 0) return null
-    if (p[0] === 169 && p[1] === 254) return null // link-local＋メタデータ
-    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return null
-    if (p[0] === 192 && p[1] === 168) return null
-    if (p[0] >= 224) return null
-  }
-  return u
-}
-
 async function fetchRaw(u: URL): Promise<string | null> {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
@@ -54,41 +35,6 @@ async function fetchRaw(u: URL): Promise<string | null> {
     return new TextDecoder('utf-8', { fatal: false }).decode(bytes)
   } catch { return null } finally { clearTimeout(t) }
 }
-function extractText(html: string): string {
-  return html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
-}
-// ① 日本の住所を“決定的に”抽出（AI非依存）。郵便番号アンカー優先→都道府県起点フォールバック。
-const PREF = '北海道|青森県|岩手県|宮城県|秋田県|山形県|福島県|茨城県|栃木県|群馬県|埼玉県|千葉県|東京都|神奈川県|新潟県|富山県|石川県|福井県|山梨県|長野県|岐阜県|静岡県|愛知県|三重県|滋賀県|京都府|大阪府|兵庫県|奈良県|和歌山県|鳥取県|島根県|岡山県|広島県|山口県|徳島県|香川県|愛媛県|高知県|福岡県|佐賀県|長崎県|熊本県|大分県|宮崎県|鹿児島県|沖縄県'
-function extractAddress(text: string): string | null {
-  // 末尾の TEL/FAX/区切り等で切って住所だけを残す。
-  const clean = (s: string) => s.replace(/\s+/g, ' ').trim().split(/\s*(?:TEL|Tel|tel|電話|FAX|Fax|fax|MAP|地図|アクセス|営業時間|定休日|[／\/｜|])/)[0].trim().slice(0, 200)
-  // 郵便番号（〒123-4567）の直後に続く都道府県起点の住所を優先。
-  const zip = text.match(new RegExp(`〒?\\s?\\d{3}[-－‐]\\d{4}\\s*((?:${PREF})[^。｜|<>　]{4,50})`))
-  if (zip && zip[1]) return clean(zip[1])
-  // フォールバック：都道府県起点パターン。複数候補は最長を採用。
-  const cands = (text.match(new RegExp(`(?:${PREF})[^。｜|<>　\\n]{4,40}`, 'g')) || []).sort((a, b) => b.length - a.length)
-  const best = cands[0]
-  return best ? clean(best) : null
-}
-// 会社概要/特商法/アクセス 等の同一ドメインリンクを最大2件抽出（住所堅牢化用・SSRFガードを再適用）。
-const ADDR_HINT = /(会社概要|会社情報|企業情報|会社案内|特定商取引|特商法|アクセス|所在地|プロフィール|about|company|profile|corporate|law|tokusho|sctl|access|location)/i
-function extractAddressLinks(html: string, base: URL): URL[] {
-  const out: URL[] = []; const seen = new Set<string>([base.origin + base.pathname])
-  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]{0,120}?)<\/a>/gi
-  let m: RegExpExecArray | null
-  while ((m = re.exec(html)) && out.length < 2) {
-    const href = m[1]; const inner = m[2].replace(/<[^>]+>/g, '')
-    if (!ADDR_HINT.test(href) && !ADDR_HINT.test(inner)) continue
-    let abs: URL; try { abs = new URL(href, base) } catch { continue }
-    const safe = safeUrl(abs.toString()); if (!safe) continue                       // ★SSRFガード再適用
-    if (safe.hostname.toLowerCase() !== base.hostname.toLowerCase()) continue        // 同一ドメインのみ
-    const key = safe.origin + safe.pathname
-    if (seen.has(key)) continue
-    seen.add(key); out.push(safe)
-  }
-  return out
-}
-
 export async function POST(req: NextRequest) {
   try {
     const partnerId = await resolvePartnerId()
@@ -117,13 +63,17 @@ export async function POST(req: NextRequest) {
 
     const topHtml = await fetchRaw(u)
     if (!topHtml) return NextResponse.json({ error: 'ページを取得できませんでした。URLをご確認ください。' }, { status: 422 })
+    // トップは先頭6000字＋末尾2000字（フッター＝住所が集中）を連結。住所抽出のフッター取りこぼしを防ぐ。
+    const topText = extractText(topHtml)
+    let pageText = topText.length > 8000
+      ? `${topText.slice(0, 6000)}\n\n[フッター]\n${topText.slice(-2000)}`
+      : topText
     // B：会社概要/特商法等の同一ドメインページを最大2件追加取得（住所抽出の堅牢化・SSRFガード再適用）。
-    let pageText = extractText(topHtml).slice(0, 6000)
     for (const link of extractAddressLinks(topHtml, u)) {
       const sub = await fetchRaw(link)
       if (sub) pageText += `\n\n[追加ページ ${link.pathname}]\n${extractText(sub).slice(0, 3000)}`
     }
-    pageText = pageText.slice(0, 11000)
+    pageText = pageText.slice(0, 14000)
 
     // サービス目録（read-only）＝推奨サービスの捏造ガード用（完全一致のみ採用）。
     const { data: svcData } = await admin.from('services').select('name, subtitle, description').eq('active', true).order('sort', { ascending: true })
