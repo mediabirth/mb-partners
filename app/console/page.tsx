@@ -93,6 +93,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   const cur  = sumMonth(pnl.rows, selectedYm)
   const prev = sumMonth(pnl.rows, prevYm)
   const mbMargin = cur.mbMargin
+  // 旗艦③：粗利率＝既存の MB粗利／総受注 の表示用比率（新規の金額計算ではない・値の意味を変えない）。
+  const grossRate = cur.revenue > 0 ? Math.round((mbMargin / cur.revenue) * 100) : null
   const curWon = wonCount(selectedYm)
   const prevWon = wonCount(prevYm)
   const curIntake = intakeCount(selectedYm)
@@ -283,10 +285,11 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>{isCurrentMonth ? '今月' : selMonthLabel}のMB粗利（正確・プロジェクトP&L集計）</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.1rem', letterSpacing: '-.02em', marginTop: 6, lineHeight: 1.05 }}>
+                <div style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 600, fontSize: '38px', fontFeatureSettings: '"tnum" 1', letterSpacing: '-.03em', marginTop: 6, lineHeight: 1.05 }}>
                   <span style={{ fontSize: '1.1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span>
                   <CountUp value={mbMargin} />
                 </div>
+                {grossRate != null && <span style={{ fontSize: '.72rem', fontWeight: 800, color: '#86EFAC' }}>▲ 粗利率 {grossRate}%</span>}
                 <span style={{ fontSize: '.72rem', fontWeight: 700, opacity: .92 }}>前月比 <HeroDelta cur={mbMargin} prev={prev.mbMargin} /></span>
               </div>
               {targetPct != null ? (
@@ -330,7 +333,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           {/* ② お金の内訳（今月）：受注額 → 各コスト → 残るMB粗利 */}
           <SectionTitle title="お金の内訳" subtitle={`${isCurrentMonth ? '今月' : selMonthLabel}・受注額から出ていくお金を引いて、残るMB粗利`} />
           <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
-            <WaterRow label="総受注額" val={cur.revenue} pct={100} color="var(--green)" head />
+            <WaterRow label="総受注額" val={cur.revenue} pct={100} color="var(--c-blue)" head />
             {costLines.map((c, i) => (
               <WaterRow key={i} label={c.label} val={c.val} pct={Math.round((c.val / barBase) * 100)} color={c.color} minus />
             ))}
@@ -615,9 +618,9 @@ function ConsoleDashboardSkeleton() {
 // B3：セクション見出し（情報設計の階層・余白用。表示専用・数値計算なし）。
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div style={{ margin: '4px 2px 10px' }}>
-      <h2 style={{ fontSize: '.82rem', fontWeight: 900, letterSpacing: '-.01em' }}>{title}</h2>
-      {subtitle && <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>{subtitle}</p>}
+    <div style={{ margin: '4px 2px 12px', borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+      <h2 style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: 0 }}>{title}</h2>
+      {subtitle && <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>{subtitle}</p>}
     </div>
   )
 }
@@ -632,8 +635,8 @@ function WaterRow({ label, val, pct, color, minus, head, strong }: { label: stri
           {minus && val > 0 ? '−' : ''}¥{Math.abs(val).toLocaleString()}
         </span>
       </div>
-      <div style={{ height: head || strong ? 7 : 5, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: '100%', background: color, borderRadius: 4 }} />
+      <div style={{ height: head || strong ? 9 : 7, borderRadius: 4, background: 'var(--s-2)', overflow: 'hidden' }}>
+        <div className="bar-grow" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: '100%', background: color, borderRadius: 4 }} />
       </div>
     </div>
   )
@@ -689,7 +692,7 @@ function KpiCard({ label, value, suffix, format, icon, accent, alert, delta, sub
       background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700, paddingTop: 4 }}>{label}</div>
+        <div style={{ fontSize: '10px', color: 'var(--t-tertiary)', fontWeight: 700, paddingTop: 4 }}>{label}</div>
         <span style={{
           width: 30, height: 30, borderRadius: 9, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -698,7 +701,7 @@ function KpiCard({ label, value, suffix, format, icon, accent, alert, delta, sub
           <KpiIcon id={icon} />
         </span>
       </div>
-      <div style={{ fontFamily: 'Inter', fontSize: '1.5rem', fontWeight: 800, marginTop: 8, fontFeatureSettings: '"tnum"', letterSpacing: '-.02em', color: numColor }}>
+      <div style={{ fontFamily: 'var(--font-sans), Inter', fontSize: '18px', fontWeight: 700, marginTop: 8, fontFeatureSettings: '"tnum" 1', letterSpacing: '-.02em', color: numColor }}>
         <CountUp value={value} format={format} />
         {suffix && <small style={{ fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 400, marginLeft: 3, color: 'var(--muted2)' }}>{suffix}</small>}
       </div>
