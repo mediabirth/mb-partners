@@ -17,7 +17,7 @@ function ErrorPage({ message }: { message: string }) {
         </svg>
         <h1 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 12 }}>招待リンクエラー</h1>
         <p style={{ fontSize: '.8rem', color: 'var(--muted2)', lineHeight: 1.7 }}>{message}</p>
-        <a href="/login" style={{ marginTop: 24, fontSize: '.75rem', color: 'var(--blue)' }}>
+        <a href="/login" style={{ marginTop: 24, fontSize: '.75rem', color: 'var(--c-blue)' }}>
           ← ログインページへ
         </a>
       </div>

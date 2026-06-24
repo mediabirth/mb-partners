@@ -90,7 +90,7 @@ export default function JoinPage() {
                 '顧客との関係を活かして、新しい収益の柱をつくりたい',
               ].map((t, i) => (
                 <div key={i} style={{ ...card, display: 'flex', gap: 11, alignItems: 'flex-start', padding: '14px 16px' }}>
-                  <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--blue)', fontSize: '.7rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>✓</span>
+                  <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--c-blue)', fontSize: '.7rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>✓</span>
                   <span style={{ fontSize: '.76rem', lineHeight: 1.7, color: 'var(--txt)' }}>{t}</span>
                 </div>
               ))}
@@ -107,7 +107,7 @@ export default function JoinPage() {
                 { n: '3', t: '成果に応じた報酬', d: '成約に応じてパートナー報酬。※具体条件は面談で個別にご案内します。' },
               ].map(s => (
                 <div key={s.n} style={{ ...card, display: 'flex', gap: 13, alignItems: 'flex-start', padding: '15px 16px' }}>
-                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, var(--blue), var(--blue-dk))', color: '#fff', fontSize: '.84rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>{s.n}</span>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', color: '#fff', fontSize: '.84rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>{s.n}</span>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '.84rem', fontWeight: 800 }}>{s.t}</div>
                     <div style={{ fontSize: '.72rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.7 }}>{s.d}</div>
@@ -154,8 +154,8 @@ export default function JoinPage() {
             {done ? (
               <div style={{ ...card, textAlign: 'center', padding: '34px 24px' }}>
                 <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 14 }}>
-                  <circle cx="12" cy="12" r="10" stroke="var(--blue)" strokeWidth="2" />
-                  <path d="M7 12l3.5 3.5L17 8" stroke="var(--blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="12" r="10" stroke="var(--c-blue)" strokeWidth="2" />
+                  <path d="M7 12l3.5 3.5L17 8" stroke="var(--c-blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <h3 style={{ fontSize: '1.02rem', fontWeight: 900, marginBottom: 8 }}>応募を受け付けました</h3>
                 <p style={{ fontSize: '.74rem', color: 'var(--muted2)', lineHeight: 1.8 }}>ありがとうございます。担当者より個別にご案内いたします。</p>
@@ -189,7 +189,7 @@ export default function JoinPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, marginBottom: 14 }}>
-                  <input type="checkbox" id="join-consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 15, height: 15 }} />
+                  <input type="checkbox" id="join-consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }} />
                   <label htmlFor="join-consent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}>
                     <b>Media Birth株式会社からのご連絡に同意します</b>。
                   </label>
@@ -197,7 +197,7 @@ export default function JoinPage() {
 
                 {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
-                <button type="submit" disabled={submitting} className="btn btn-p" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
+                <button type="submit" disabled={submitting} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
                   {submitting ? '送信中…' : '応募する'}
                 </button>
                 <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>

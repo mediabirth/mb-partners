@@ -138,12 +138,12 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                       width: 22, height: 22, borderRadius: '50%',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 10, fontWeight: 700,
-                      background: active ? 'var(--blue)' : done ? 'var(--blue-bg)' : 'var(--bg2)',
-                      color: active ? '#fff' : done ? 'var(--blue)' : 'var(--muted)',
+                      background: active ? 'var(--c-blue)' : done ? 'var(--blue-bg)' : 'var(--bg2)',
+                      color: active ? '#fff' : done ? 'var(--c-blue)' : 'var(--muted)',
                     }}>
                       {done ? '✓' : i + 1}
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? 'var(--blue)' : done ? 'var(--muted2)' : 'var(--muted)' }}>
+                    <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? 'var(--c-blue)' : done ? 'var(--muted2)' : 'var(--muted)' }}>
                       {label}
                     </span>
                   </div>
@@ -181,7 +181,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               {WEEKDAYS.map((w, i) => (
                 <div key={w} style={{
                   textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '3px 0',
-                  color: i === 0 ? 'var(--red)' : i === 6 ? 'var(--blue)' : 'var(--muted2)',
+                  color: i === 0 ? 'var(--red)' : i === 6 ? 'var(--c-blue)' : 'var(--muted2)',
                 }}>{w}</div>
               ))}
             </div>
@@ -204,11 +204,11 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                     disabled={isDisabled}
                     style={{
                       padding: '7px 2px', border: 'none', borderRadius: 8,
-                      background: isSelected ? 'var(--blue)' : isToday ? 'var(--blue-bg2)' : 'transparent',
+                      background: isSelected ? 'var(--c-blue)' : isToday ? 'var(--blue-bg2)' : 'transparent',
                       color: isSelected ? '#fff'
                         : isDisabled ? 'var(--line)'
                         : dow === 0 ? 'var(--red)'
-                        : dow === 6 ? 'var(--blue)'
+                        : dow === 6 ? 'var(--c-blue)'
                         : 'var(--txt)',
                       fontSize: 13, fontWeight: isToday && !isSelected ? 700 : 400,
                       cursor: isDisabled ? 'default' : 'pointer', textAlign: 'center',
@@ -230,7 +230,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
         {step === 'slot' && (
           <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: 20 }}>
             <button onClick={() => setStep('calendar')} style={{
-              background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13,
+              background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: 13,
               cursor: 'pointer', marginBottom: 14, padding: 0, display: 'flex', alignItems: 'center', gap: 4,
             }}>
               ← 日付を変更
@@ -267,7 +267,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                     }}
                     onMouseEnter={e => {
                       ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--blue-bg2)'
-                      ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--blue)'
+                      ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--c-blue)'
                     }}
                     onMouseLeave={e => {
                       ;(e.currentTarget as HTMLButtonElement).style.background = '#fff'
@@ -286,7 +286,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
         {step === 'form' && selectedSlot && (
           <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: 20 }}>
             <button onClick={() => setStep('slot')} style={{
-              background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13,
+              background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: 13,
               cursor: 'pointer', marginBottom: 14, padding: 0,
             }}>
               ← 時間を変更
@@ -296,7 +296,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
             <div style={{ background: 'var(--blue-bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: 'var(--muted2)', marginBottom: 3 }}>予約日時</div>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#1E3A8A' }}>{fmtDateLong(selectedDate)}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--blue)', marginTop: 2 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-blue)', marginTop: 2 }}>
                 {toJST(selectedSlot.start)} 〜 {toJST(selectedSlot.end)}
               </div>
             </div>
@@ -310,8 +310,8 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                 {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
                   <button type="button" key={v} onClick={() => setCustomerType(v)}
                     style={{ flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                      border: `1.5px solid ${customerType === v ? 'var(--blue)' : 'var(--line)'}`,
-                      background: customerType === v ? 'var(--blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
+                      border: `1.5px solid ${customerType === v ? 'var(--c-blue)' : 'var(--line)'}`,
+                      background: customerType === v ? 'var(--c-blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
                     {l}
                   </button>
                 ))}
@@ -360,7 +360,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               onClick={handleSubmit}
               disabled={submitting || !customerValid || !email.trim()}
               style={{
-                width: '100%', padding: '13px', background: 'var(--blue)', color: '#fff',
+                width: '100%', padding: '13px', background: 'var(--c-blue)', color: '#fff',
                 border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15,
                 cursor: submitting || !customerValid || !email.trim() ? 'default' : 'pointer',
                 opacity: submitting || !customerValid || !email.trim() ? 0.6 : 1,
@@ -386,7 +386,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
             <p style={{ color: 'var(--muted2)', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
               {fmtDateLong(selectedDate)}
             </p>
-            <p style={{ color: 'var(--blue)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
+            <p style={{ color: 'var(--c-blue)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
               {selectedSlot ? toJST(selectedSlot.start) : ''} 〜 {selectedSlot ? toJST(selectedSlot.end) : ''}
             </p>
             <p style={{ color: 'var(--muted)', fontSize: 13 }}>

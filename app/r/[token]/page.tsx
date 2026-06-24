@@ -101,8 +101,8 @@ export default function ReferralLandingPage() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: '#E9E9ED', textAlign: 'center' }}>
       <div style={{ background: '#fff', borderRadius: 18, padding: '40px 32px', maxWidth: 380 }}>
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 16 }}>
-          <circle cx="12" cy="12" r="10" stroke="var(--blue)" strokeWidth="2"/>
-          <path d="M7 12l3.5 3.5L17 8" stroke="var(--blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="12" cy="12" r="10" stroke="var(--c-blue)" strokeWidth="2"/>
+          <path d="M7 12l3.5 3.5L17 8" stroke="var(--c-blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         <h2 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 8 }}>受け付けました</h2>
         <p style={{ fontSize: '.74rem', color: 'var(--muted2)', lineHeight: 1.8 }}>
@@ -113,7 +113,7 @@ export default function ReferralLandingPage() {
   )
 
   const referrer = (info?.referrerName ?? '').trim()
-  const accent = info?.service.color || 'var(--blue)'
+  const accent = info?.service.color || 'var(--c-blue)'
 
   return (
     <div style={{ minHeight: '100vh', background: '#E9E9ED', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 20px' }}>
@@ -133,7 +133,7 @@ export default function ReferralLandingPage() {
           {/* 紹介者名（表示のみ・帰属はサーバ側の token のまま不変） */}
           {referrer && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 16, background: 'rgba(255,255,255,.14)', borderRadius: 12, padding: '9px 12px' }}>
-              <span style={{ width: 30, height: 30, borderRadius: '50%', background: '#fff', color: 'var(--blue)', fontWeight: 800, fontSize: '.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ width: 30, height: 30, borderRadius: '50%', background: '#fff', color: 'var(--c-blue)', fontWeight: 800, fontSize: '.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {referrer.charAt(0)}
               </span>
               <span style={{ fontSize: '.78rem', fontWeight: 700 }}>{referrer} 様からのご紹介です</span>
@@ -167,7 +167,7 @@ export default function ReferralLandingPage() {
               { n: '3', t: '成約・着手', d: '一貫サポート' },
             ].map(s => (
               <div key={s.n} style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 11, padding: '11px 6px', textAlign: 'center' }}>
-                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--blue)', fontSize: '.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontFamily: 'Inter' }}>{s.n}</div>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--c-blue)', fontSize: '.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontFamily: 'Inter' }}>{s.n}</div>
                 <div style={{ fontSize: '.63rem', fontWeight: 800 }}>{s.t}</div>
                 <div style={{ fontSize: '.54rem', color: 'var(--muted2)', marginTop: 1 }}>{s.d}</div>
               </div>
@@ -207,7 +207,7 @@ export default function ReferralLandingPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, marginBottom: 14 }}>
-              <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 15, height: 15 }} />
+              <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }} />
               <label htmlFor="consent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}>
                 <b>Media Birth株式会社からのご連絡に同意します</b>。いただいた情報はサービスのご提案にのみ使用します。
               </label>
@@ -216,7 +216,7 @@ export default function ReferralLandingPage() {
             {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
             <button type="submit" disabled={submitting || !consent}
-              className="btn btn-p" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
+              className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
               {submitting ? '送信中…' : '無料で相談する'}
             </button>
             <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>
