@@ -139,10 +139,14 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
           <div style={{ borderTop: '1px solid var(--line)', padding: '12px 24px 16px', background: 'var(--s-0)' }}>
             {/* テンプレ挿入バー */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, position: 'relative' }}>
-              <button type="button" className="ui-btn" onClick={() => setTplOpen(o => !o)} disabled={usableTpls.length === 0} style={{ fontSize: '.62rem', padding: '5px 10px', borderRadius: 7, border: '1px solid var(--line)', background: 'var(--s-1)', cursor: usableTpls.length ? 'pointer' : 'default', color: usableTpls.length ? 'var(--txt)' : 'var(--t-tertiary)' }}>
-                テンプレート{usableTpls.length ? `（${usableTpls.length}）` : '（なし）'}
-              </button>
-              <label className="ui-btn" style={{ fontSize: '.62rem', padding: '5px 10px', borderRadius: 7, border: '1px solid var(--line)', background: 'var(--s-1)', cursor: 'pointer' }}>
+              {usableTpls.length > 0 ? (
+                <button type="button" className="ui-btn ui-btn--secondary" onClick={() => setTplOpen(o => !o)} style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7 }}>
+                  テンプレート（{usableTpls.length}）{tplOpen ? ' ▾' : ' ▸'}
+                </button>
+              ) : (
+                <span style={{ fontSize: '.6rem', color: 'var(--t-tertiary)' }}>テンプレート未登録 <a href="/console/messages/templates" style={{ color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>登録する</a></span>
+              )}
+              <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>
                 画像を添付
                 <input type="file" accept="image/*" onChange={onPickImage} style={{ display: 'none' }} />
               </label>
