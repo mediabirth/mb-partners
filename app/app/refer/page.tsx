@@ -279,7 +279,7 @@ export default function ReferPage() {
       <div className="page-anim" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 380, padding: '40px 28px', textAlign: 'center' }}>
         {/* ⑥ 煽りでなく感謝。控えめなチェック */}
         <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2.2"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="2.2"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
         <h2 style={{ fontSize: '1.12rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-.01em' }}>
           {coopMode ? 'お預かりしました' : 'ご紹介ありがとうございます'}
@@ -302,9 +302,9 @@ export default function ReferPage() {
 
         {/* 次の一歩 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
-          <button onClick={resetForNext} className="btn btn-p lift" style={{ width: '100%' }}>続けて紹介する</button>
+          <button onClick={resetForNext} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>続けて紹介する</button>
           {dealId && !bookedAt && (
-            <button onClick={() => setShowBooking(true)} className="btn btn-g lift" style={{ width: '100%' }}>商談を設定する（任意）</button>
+            <button onClick={() => setShowBooking(true)} className="ui-btn ui-btn--secondary ui-btn--lg lift" style={{ width: '100%' }}>商談を設定する（任意）</button>
           )}
           <button onClick={() => router.push('/app/cases')} style={{ width: '100%', background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 600, padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit' }}>
             案件一覧を見る →
@@ -335,7 +335,7 @@ export default function ReferPage() {
             {services.map(svc => {
               const copy = svc.subtitle || svc.description || ''
               return (
-                <button key={svc.id} onClick={() => pickService(svc)} className="card-hover lift"
+                <button key={svc.id} onClick={() => pickService(svc)} className="card-hover lift ui-card"
                   style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '15px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                     <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={44} />
@@ -389,7 +389,7 @@ export default function ReferPage() {
               <label>お客様区分</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[['individual', '個人'], ['corporate', '法人']].map(([v, l]) => (
-                  <button type="button" key={v} onClick={() => setCustomerType(v as 'individual' | 'corporate')} style={{ flex: 1, border: `1.5px solid ${customerType === v ? 'var(--blue)' : 'var(--line)'}`, borderRadius: 9, padding: '9px 2px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.76rem', fontWeight: 700, background: customerType === v ? 'var(--blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>{l}</button>
+                  <button type="button" key={v} onClick={() => setCustomerType(v as 'individual' | 'corporate')} style={{ flex: 1, border: `1.5px solid ${customerType === v ? 'var(--c-blue)' : 'var(--line)'}`, borderRadius: 9, padding: '9px 2px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.76rem', fontWeight: 700, background: customerType === v ? 'var(--c-blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>{l}</button>
                 ))}
               </div>
             </div>
@@ -407,17 +407,17 @@ export default function ReferPage() {
               </>
             )}
             <div className="fld"><label>相談内容（何を迷っているか）</label>
-              <textarea value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} placeholder="例：集客と採用、どちらから着手すべきか迷っている 等" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.85rem', resize: 'vertical' }} /></div>
+              <textarea className="ui-field" value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} placeholder="例：集客と採用、どちらから着手すべきか迷っている 等" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.85rem', resize: 'vertical' }} /></div>
             <div className="fld"><label>連絡先（任意）</label>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" /></div>
             <div className="fld"><label>顧客メールアドレス（任意）</label>
               <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, margin: '4px 0 12px' }}>
-              <input type="checkbox" id="consultConsent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 15, height: 15 }} />
+              <input type="checkbox" id="consultConsent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }} />
               <label htmlFor="consultConsent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}><b>お客さまの同意を確認しました（必須）</b></label>
             </div>
             {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-            <button type="submit" disabled={pending || !consent} className="btn btn-p lift" style={{ width: '100%' }}>
+            <button type="submit" disabled={pending || !consent} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>
               {pending ? '送信中…' : '相談として起票する'}
             </button>
           </form>
@@ -493,7 +493,7 @@ export default function ReferPage() {
               { n: '3', t: '成約で報酬', d: '翌月末払い' },
             ].map(s => (
               <div key={s.n} style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 8px', textAlign: 'center' }}>
-                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--blue)', fontSize: '.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontFamily: 'Inter' }}>{s.n}</div>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--c-blue)', fontSize: '.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontFamily: 'Inter' }}>{s.n}</div>
                 <div style={{ fontSize: '.64rem', fontWeight: 800 }}>{s.t}</div>
                 <div style={{ fontSize: '.55rem', color: 'var(--muted2)', marginTop: 1 }}>{s.d}</div>
               </div>
@@ -503,7 +503,7 @@ export default function ReferPage() {
           {/* ── 経路B（主役）: リンク/QR・予約リンクを送って本人に進めてもらう ── */}
           <div style={{ margin: '0 20px 12px', background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '.56rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 6, padding: '2px 7px', letterSpacing: '.04em' }}>おすすめ</span>
+              <span style={{ fontSize: '.56rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 6, padding: '2px 7px', letterSpacing: '.04em' }}>おすすめ</span>
               <b style={{ fontSize: '.82rem', color: 'var(--blue-dk)' }}>{coopMode ? '予約リンクを共有する' : 'リンク／QRを送る'}</b>
             </div>
             <p style={{ fontSize: '.64rem', color: '#52529E', margin: '0 0 12px', lineHeight: 1.6 }}>
@@ -517,12 +517,12 @@ export default function ReferPage() {
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: '.7rem', fontFamily: 'Inter', fontWeight: 600 }}>
                     {linkUrl.replace(/^https?:\/\//, '')}
                   </span>
-                  <button onClick={copyLink} style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: copied ? 'var(--green)' : 'var(--blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
+                  <button onClick={copyLink} style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: copied ? 'var(--green)' : 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
                     {copied ? 'COPIED' : 'COPY'}
                   </button>
                 </div>
                 {/* B2B共有導線：メール(主導線・先頭/目立つ)＋LINE。共有対象は表示中の紹介リンク linkUrl(/r/…)。QRは現状維持。 */}
-                <button onClick={shareEmail} className="btn btn-p lift" style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                <button onClick={shareEmail} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
                   メールで送る
                 </button>
@@ -530,7 +530,7 @@ export default function ReferPage() {
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.07.7.2.8.5.07.27.05.7.02.97l-.13.8c-.04.24-.2.94.82.51 1.02-.43 5.5-3.24 7.5-5.55C20.6 14.9 22 13.1 22 11c0-4.4-4.5-8-10-8z"/></svg>
                   LINEで送る
                 </button>
-                <button onClick={() => { if (!showQR) trackFunnel('share', { channel: 'qr', token }); setShowQR(v => !v) }} className="btn btn-p lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
+                <button onClick={() => { if (!showQR) trackFunnel('share', { channel: 'qr', token }); setShowQR(v => !v) }} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
                 {showQR && <QRModal linkUrl={linkUrl} onClose={() => setShowQR(false)} />}
               </>
             ) : !coopMode ? (
@@ -542,7 +542,7 @@ export default function ReferPage() {
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: '.7rem', fontFamily: 'Inter', fontWeight: 600 }}>
                     {bookingUrl.replace(/^https?:\/\//, '')}
                   </span>
-                  <button onClick={copyBooking} style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: bookingCopied ? 'var(--green)' : 'var(--blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
+                  <button onClick={copyBooking} style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: bookingCopied ? 'var(--green)' : 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
                     {bookingCopied ? 'COPIED' : 'COPY'}
                   </button>
                 </div>
@@ -551,7 +551,7 @@ export default function ReferPage() {
                   <span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} /><span style={{ fontSize: '.56rem', color: '#7676B0', fontWeight: 700 }}>または</span><span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} />
                 </div>
                 <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } setError(''); setShowSelfBook(true) }}
-                  className="btn btn-p lift" style={{ width: '100%' }}>自分で予約する</button>
+                  className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>自分で予約する</button>
                 {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
               </>
             )}
@@ -569,8 +569,8 @@ export default function ReferPage() {
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
                     <button type="button" key={v} onClick={() => setCustomerType(v)}
                       style={{ flex: 1, padding: '9px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer',
-                        border: `1.5px solid ${customerType === v ? 'var(--blue)' : 'var(--line)'}`,
-                        background: customerType === v ? 'var(--blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
+                        border: `1.5px solid ${customerType === v ? 'var(--c-blue)' : 'var(--line)'}`,
+                        background: customerType === v ? 'var(--c-blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
                       {l}
                     </button>
                   ))}
@@ -611,13 +611,13 @@ export default function ReferPage() {
                 <input value={memo} onChange={e => setMemo(e.target.value)} placeholder={coopMode ? '担当可能なエリア・スケジュール等' : '7月に引越し希望 など'} />
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 15, height: 15 }}/>
+                <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }}/>
                 <label htmlFor="consent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}>
                   <b>{coopMode ? '自分でこの案件に協力します' : 'お客さまの同意を確認しました'}（必須）</b>
                 </label>
               </div>
               {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-              <button type="submit" disabled={pending || !consent} className="btn btn-p lift" style={{ width: '100%' }}>
+              <button type="submit" disabled={pending || !consent} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>
                 {pending ? '送信中…' : (coopMode ? 'この案件に協力する' : 'この内容で紹介する')}
               </button>
             </form>
@@ -664,7 +664,7 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
   const reward = fixed ? `¥${val.toLocaleString()}` : `${val}%${base ? `・${base}` : ''}`
 
   return (
-    <button onClick={onPick} className="card-hover lift"
+    <button onClick={onPick} className="card-hover lift ui-card"
       style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span className={`chip ${chipCls}`}>{label}</span>
@@ -743,7 +743,7 @@ function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: {
     return (
       <button type="button" onClick={() => setOpen(true)} className="lift"
         style={{ width: '100%', background: '#fff', border: '1px dashed var(--line)', borderRadius: 13, padding: '13px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--blue)' }}>
+        <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--c-blue)' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z"/></svg>
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -758,7 +758,7 @@ function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: {
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '16px 18px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ color: 'var(--blue)', display: 'flex' }}>
+        <span style={{ color: 'var(--c-blue)', display: 'flex' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z"/></svg>
         </span>
         <b style={{ fontSize: '.8rem', fontWeight: 800 }}>AIで紹介文を作る</b>
@@ -772,7 +772,7 @@ function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: {
       </div>
       <div className="fld">
         <label>相手の課題・ニーズ</label>
-        <textarea value={need} onChange={e => setNeed(e.target.value)} rows={2} placeholder="例：採用がうまくいかず、母集団形成に課題がある"
+        <textarea className="ui-field" value={need} onChange={e => setNeed(e.target.value)} rows={2} placeholder="例：採用がうまくいかず、母集団形成に課題がある"
           style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.85rem', resize: 'vertical' }} />
       </div>
       <div className="fld">
@@ -785,13 +785,13 @@ function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: {
           {['丁寧', 'カジュアル', 'フォーマル'].map(t => (
             <button type="button" key={t} onClick={() => setTone(t)}
               style={{ flex: 1, padding: '8px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 700, cursor: 'pointer',
-                border: `1.5px solid ${tone === t ? 'var(--blue)' : 'var(--line)'}`,
-                background: tone === t ? 'var(--blue)' : '#fff', color: tone === t ? '#fff' : 'var(--txt)' }}>{t}</button>
+                border: `1.5px solid ${tone === t ? 'var(--c-blue)' : 'var(--line)'}`,
+                background: tone === t ? 'var(--c-blue)' : '#fff', color: tone === t ? '#fff' : 'var(--txt)' }}>{t}</button>
           ))}
         </div>
       </div>
 
-      <button type="button" onClick={generate} disabled={busy} className="btn btn-p lift" style={{ width: '100%', marginTop: 2 }}>
+      <button type="button" onClick={generate} disabled={busy} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 2 }}>
         {busy ? '生成中…' : (draft ? '作り直す' : '生成する')}
       </button>
       {err && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '10px 0 0', lineHeight: 1.6 }}>{err}</p>}
@@ -799,7 +799,7 @@ function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: {
       {draft && (
         <div style={{ marginTop: 14 }}>
           <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>生成結果（編集できます）</label>
-          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={8}
+          <textarea className="ui-field" value={draft} onChange={e => setDraft(e.target.value)} rows={8}
             style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontFamily: 'inherit', fontSize: '.82rem', lineHeight: 1.7, resize: 'vertical' }} />
           <button type="button" onClick={copyDraft} className="lift"
             style={{ width: '100%', marginTop: 8, minHeight: 44, background: copied ? 'var(--green)' : 'var(--bg2)', color: copied ? '#fff' : 'var(--txt)', border: '1px solid var(--line)', borderRadius: 9, fontFamily: 'inherit', fontWeight: 700, fontSize: '.82rem', cursor: 'pointer' }}>
@@ -844,7 +844,7 @@ function QRModal({ linkUrl, onClose }: { linkUrl: string; onClose: () => void })
         <h3 style={{ fontSize: '.92rem', fontWeight: 900, marginBottom: 4 }}>あなたの紹介QRコード</h3>
         <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 14 }}>{linkUrl.replace(/^https?:\/\//, '')}</p>
         <canvas ref={canvasRef} width={220} height={220} style={{ border: '1px solid var(--line)', borderRadius: 12, marginBottom: 14 }} />
-        <button onClick={saveQR} className="btn btn-p" style={{ width: '100%', padding: 11, fontSize: '.76rem' }}>
+        <button onClick={saveQR} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', padding: 11, fontSize: '.76rem' }}>
           保存する
         </button>
         <div onClick={onClose} style={{ marginTop: 8, fontSize: '.7rem', color: 'var(--muted2)', cursor: 'pointer', fontWeight: 500 }}>閉じる</div>
