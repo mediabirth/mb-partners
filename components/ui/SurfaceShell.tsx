@@ -19,7 +19,7 @@ export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name,
   const initial = (name ?? '').trim().charAt(0) || 'M'
   return (
     <div style={{ background: '#E9E9ED', minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 430, background: '#fff', minHeight: '100dvh', display: 'flex', flexDirection: 'column', boxShadow: '0 0 48px rgba(14,14,20,.12)', position: 'relative' }}>
+      <div style={{ width: '100%', maxWidth: 430, background: 'var(--s-0)', minHeight: '100dvh', display: 'flex', flexDirection: 'column', boxShadow: '0 0 48px rgba(14,14,20,.12)', position: 'relative' }}>
         {/* PWA: standalone の上端ノッチ帯を避ける。padding-top を safe-area と現状(12px)の大きい方に。 */}
         <header style={{ background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(12px)', padding: 'max(12px, env(safe-area-inset-top)) 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, borderBottom: '1px solid var(--line)' }}>
           <Link href={homeHref} aria-label="ホーム" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', color: 'inherit' }}>
@@ -29,12 +29,12 @@ export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name,
               <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" />
               <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
             </svg>
-            <b style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.95rem' }}>MB <span style={{ color: 'var(--blue)' }}>Partners</span></b>
+            <b style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 700, fontSize: '.95rem' }}>MB <span style={{ color: 'var(--c-blue)' }}>Partners</span></b>
           </Link>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {headerExtra}
             <Link href={mypageHref} aria-label={name ?? 'プロフィール'} style={{ textDecoration: 'none' }}>
-              <span style={{ width: 36, height: 36, borderRadius: '50%', background: color ?? 'var(--blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.86rem', fontWeight: 700, flexShrink: 0 }}>{initial}</span>
+              <span style={{ width: 36, height: 36, borderRadius: '50%', background: color ?? 'var(--c-blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.86rem', fontWeight: 700, flexShrink: 0 }}>{initial}</span>
             </Link>
             {/* PWA: hit area を 44×44 に拡張（視覚は 40px の円のまま、外周 padding で確保）。 */}
             <Link href={settingsHref} aria-label="設定" style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'var(--txt)' }}>

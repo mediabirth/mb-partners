@@ -15,7 +15,7 @@ export type NavItem = { href?: string; label: string; icon: ReactNode; rootExact
 /** 中央 FAB（app=リンク／vendor=アクション）。円・グラデ・寸法は単一ソース。 */
 export function NavFab({ href, onClick, label, children }: { href?: string; onClick?: () => void; label?: string; children: ReactNode }) {
   const circle = <span className="snav-fab" style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#5240F2,#3D2BD0)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(71,51,230,.4)' }}>{children}</span>
-  const inner = <>{circle}{label && <span style={{ fontSize: '.52rem', color: 'var(--blue)', fontWeight: 700 }}>{label}</span>}</>
+  const inner = <>{circle}{label && <span style={{ fontSize: '.52rem', color: 'var(--c-blue)', fontWeight: 700 }}>{label}</span>}</>
   const css: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', padding: '0 0 10px', background: 'none', border: 'none', cursor: 'pointer' }
   return href ? <Link href={href} style={css}>{inner}</Link> : <button onClick={onClick} style={css} aria-label={label}>{inner}</button>
 }
@@ -46,7 +46,8 @@ export default function SurfaceNav({ left, right, fab, unreadHref }: {
       </>
     )
     const cls = `snav-item${on ? ' is-active' : ''}`
-    const css: CSSProperties = { color: on ? 'var(--blue)' : 'var(--muted)', fontWeight: on ? 700 : 400 }
+    // 憲法§9：選択=--c-blue／非選択=--t-tertiary（見た目のみ。active判定/href は不変）。
+    const css: CSSProperties = { color: on ? 'var(--c-blue)' : 'var(--t-tertiary)', fontWeight: on ? 700 : 400 }
     // href→Link 遷移 / onClick→button（モーダル等の既存導線）。寸法・タップ領域・safe-area は同一(.snav-item)。
     return it.href
       ? <Link key={it.href} href={it.href} className={cls} style={css}>{inner}</Link>
@@ -59,12 +60,14 @@ export default function SurfaceNav({ left, right, fab, unreadHref }: {
         @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.45}}
         @keyframes navPop{0%{transform:scale(.82)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
         @keyframes navBarIn{from{opacity:0;width:0}to{opacity:1;width:28px}}
-        .snav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 max(10px,env(safe-area-inset-bottom));text-decoration:none;font-family:inherit;font-size:.57rem;transition:color .16s;position:relative;-webkit-tap-highlight-color:transparent}
+        .snav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 max(10px,env(safe-area-inset-bottom));text-decoration:none;font-family:inherit;font-size:.57rem;transition:color .16s cubic-bezier(0.2,0,0,1);position:relative;-webkit-tap-highlight-color:transparent}
+        .snav-item:focus{outline:none}
+        .snav-item:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--c-ring);border-radius:10px}
         .snav-item:active{transform:scale(.88)}
         .snav-item-icon{transition:transform .2s cubic-bezier(.34,1.56,.64,1)}
         .snav-item.is-active .snav-item-icon{animation:navPop .3s cubic-bezier(.34,1.56,.64,1) both}
-        .snav-active-bar{position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:3px;background:var(--blue);border-radius:0 0 3px 3px;animation:navBarIn .22s ease both}
-        .snav-bdg{position:absolute;top:6px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--blue);border:1.5px solid #fff;animation:pulseDot 2.6s ease-in-out infinite}
+        .snav-active-bar{position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:3px;background:var(--c-blue);border-radius:0 0 3px 3px;animation:navBarIn .22s ease both}
+        .snav-bdg{position:absolute;top:6px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--c-blue);border:1.5px solid #fff;animation:pulseDot 2.6s ease-in-out infinite}
         .snav-fab{transition:box-shadow .22s,transform .2s cubic-bezier(.34,1.56,.64,1)}
         .snav-fab:active{transform:scale(.9)!important}
         .snav-fab:hover{box-shadow:0 12px 28px rgba(71,51,230,.5)!important}
