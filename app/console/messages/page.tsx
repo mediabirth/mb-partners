@@ -17,10 +17,18 @@ export default async function ConsoleMessagesPage() {
   const admin = await createServiceRoleClient()
   const [linksRes, msgsRes] = await Promise.all([
     admin.from('partner_line_links').select('partner_id, line_user_id'),
-    admin.from('messages').select('id, created_at, partner_id, customer_email, direction, channel, subject, body, status, error, thread_key').order('created_at', { ascending: true }).limit(2000),
+    admin.from('messages').select('id, created_at, partner_id, customer_email, direction, channel, subject, body, status, error, thread_key, attachments').order('created_at', { ascending: true }).limit(2000),
   ])
   const links = (linksRes.data ?? []) as Array<{ partner_id: string; line_user_id: string }>
   const messages = (msgsRes.data ?? []) as Msg[]
+
+  // 受信画像：private バケットの署名URLを path→url で解決（console表示のみ・公開URLは発行しない）。
+  const signedUrls: Record<string, string> = {}
+  const imgPaths = [...new Set(messages.flatMap(m => (m.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path)))]
+  if (imgPaths.length) {
+    const { data: signed } = await admin.storage.from('message-attachments').createSignedUrls(imgPaths, 3600)
+    for (const s of signed ?? []) { if (s.signedUrl && s.path) signedUrls[s.path] = s.signedUrl }
+  }
 
   // パートナー名解決（service_role・partners→profiles）。
   const partnerIds = [...new Set(links.map(l => l.partner_id))]
@@ -49,13 +57,21 @@ export default async function ConsoleMessagesPage() {
     const key = `email:${addr}`; const last = lastOf(key)
     threads.push({ key, label: m.customer_email, kind: 'customer', customerEmail: m.customer_email, hasLine: false, lastBody: last?.body ?? null, lastAt: last?.created_at ?? null })
   }
+  // 未連携LINE送信者（partner_id=null・thread_key='line:'+userId）も可視化（受信のみ・送信不可）。
+  const seenLine = new Set<string>()
+  for (const m of messages) {
+    if (!m.thread_key.startsWith('line:') || seenLine.has(m.thread_key)) continue
+    seenLine.add(m.thread_key)
+    const last = lastOf(m.thread_key)
+    threads.push({ key: m.thread_key, label: `未連携 LINE (${m.thread_key.slice(5, 13)}…)`, kind: 'unknown', hasLine: true, lastBody: last?.body ?? null, lastAt: last?.created_at ?? null })
+  }
   threads.sort((a, b) => (b.lastAt ?? '').localeCompare(a.lastAt ?? ''))
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <MessagesClient threads={threads} messages={messages} />
+        <MessagesClient threads={threads} messages={messages} signedUrls={signedUrls} />
       </div>
     </div>
   )

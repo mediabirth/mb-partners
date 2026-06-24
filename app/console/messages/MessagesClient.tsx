@@ -3,20 +3,22 @@ import { useState, useMemo } from 'react'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 
+export type Attachment = { type: string; path: string }
 export type Msg = {
   id: string; created_at: string; partner_id: string | null; customer_email: string | null
   direction: 'in' | 'out'; channel: 'line' | 'email'; subject: string | null; body: string | null
   status: string | null; error: string | null; thread_key: string
+  attachments?: Attachment[] | null
 }
 export type ThreadRow = {
-  key: string; label: string; kind: 'partner' | 'customer'
+  key: string; label: string; kind: 'partner' | 'customer' | 'unknown'
   partnerId?: string; customerEmail?: string; hasLine: boolean
   lastBody: string | null; lastAt: string | null
 }
 
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 
-export default function MessagesClient({ threads, messages }: { threads: ThreadRow[]; messages: Msg[] }) {
+export default function MessagesClient({ threads, messages, signedUrls = {} }: { threads: ThreadRow[]; messages: Msg[]; signedUrls?: Record<string, string> }) {
   const [sel, setSel] = useState<string | null>(threads[0]?.key ?? null)
   const [msgs, setMsgs] = useState<Msg[]>(messages)
   const [body, setBody] = useState(''); const [subject, setSubject] = useState('')
@@ -24,6 +26,8 @@ export default function MessagesClient({ threads, messages }: { threads: ThreadR
 
   const thread = threads.find(t => t.key === sel) ?? null
   const channel: 'line' | 'email' = thread?.kind === 'partner' ? 'line' : 'email'
+  // 未連携LINE（kind='unknown'）は送信先userIdを保持しない方針 → 受信表示のみ・送信不可。
+  const canSend = thread?.kind === 'partner' || thread?.kind === 'customer'
   const threadMsgs = useMemo(() => msgs.filter(m => m.thread_key === sel).sort((a, b) => a.created_at.localeCompare(b.created_at)), [msgs, sel])
 
   async function send() {
@@ -76,14 +80,19 @@ export default function MessagesClient({ threads, messages }: { threads: ThreadR
         ) : (<>
           <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--line)', background: 'var(--s-0)' }}>
             <div style={{ fontSize: '.86rem', fontWeight: 800 }}>{thread.label}</div>
-            <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', marginTop: 2 }}>{channel === 'line' ? 'LINE で送信' : 'メールで送信'}・受信表示はLINE/メール連携後に追加</div>
+            <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', marginTop: 2 }}>{thread.kind === 'unknown' ? '未連携の送信者（受信のみ・連携後に返信可能）' : channel === 'line' ? 'LINE で送受信' : 'メールで送受信'}</div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {threadMsgs.length === 0 ? <EmptyState title="まだメッセージはありません" hint="下のボックスから送信できます。" compact />
               : threadMsgs.map(m => (
                 <div key={m.id} style={{ alignSelf: m.direction === 'out' ? 'flex-end' : 'flex-start', maxWidth: '72%' }}>
                   <div style={{ background: m.direction === 'out' ? 'var(--c-blue)' : 'var(--s-2)', color: m.direction === 'out' ? '#fff' : 'var(--txt)', borderRadius: 12, padding: '9px 13px', fontSize: '.76rem', lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {m.subject && <div style={{ fontWeight: 800, marginBottom: 3 }}>{m.subject}</div>}{m.body}
+                    {m.subject && <div style={{ fontWeight: 800, marginBottom: 3 }}>{m.subject}</div>}
+                    {(m.attachments ?? []).filter(a => a.type === 'image' && signedUrls[a.path]).map(a => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <a key={a.path} href={signedUrls[a.path]} target="_blank" rel="noopener noreferrer"><img src={signedUrls[a.path]} alt="受信画像" style={{ display: 'block', maxWidth: 220, maxHeight: 220, borderRadius: 8, marginBottom: m.body ? 4 : 0 }} /></a>
+                    ))}
+                    {m.body}
                   </div>
                   <div style={{ fontSize: '.52rem', color: 'var(--t-tertiary)', marginTop: 3, textAlign: m.direction === 'out' ? 'right' : 'left' }}>
                     {m.channel === 'line' ? 'LINE' : 'メール'}・{fmt(m.created_at)}{m.status === 'failed' && <span style={{ color: 'var(--red)' }}> ・送信失敗</span>}
@@ -91,6 +100,9 @@ export default function MessagesClient({ threads, messages }: { threads: ThreadR
                 </div>
               ))}
           </div>
+          {!canSend ? (
+            <div style={{ borderTop: '1px solid var(--line)', padding: '14px 24px 18px', background: 'var(--s-0)', fontSize: '.66rem', color: 'var(--t-tertiary)' }}>この相手はまだ連携前のため返信できません。LINE連携が完了すると返信できます。</div>
+          ) : (
           <div style={{ borderTop: '1px solid var(--line)', padding: '12px 24px 16px', background: 'var(--s-0)' }}>
             {channel === 'email' && (
               <input className="ui-field" value={subject} onChange={e => setSubject(e.target.value)} placeholder="件名（任意）" style={{ marginBottom: 8 }} />
@@ -101,6 +113,7 @@ export default function MessagesClient({ threads, messages }: { threads: ThreadR
               <Button variant="primary" size="md" busy={busy} disabled={!body.trim()} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
             </div>
           </div>
+          )}
         </>)}
       </div>
     </div>
