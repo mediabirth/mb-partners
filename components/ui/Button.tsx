@@ -1,44 +1,34 @@
-/**
- * F-2 デザインシステム：Button — 3サーフェス共通。BR-0トークンのみ参照。
- * 純プレゼンテーション（挙動・ロジックは持たない）。variant×size で見た目を統一。
- */
-import React from 'react'
+'use client'
+import Link from 'next/link'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
-type Size = 'sm' | 'md' | 'lg'
+// 憲法v1 §8 準拠 Button。primary/secondary/ghost(/danger 後方互換) × sm/md/lg。
+// 4状態（hover/active/focus-visible/disabled）はクラス .ui-btn 系（globals.css）で定義。
+// busy＝内側spinner＋二度押し不可（disabled）。href を渡すと Link（遷移ロジックは呼び出し側不変）。block＝幅100%。
 
-const SIZE: Record<Size, React.CSSProperties> = {
-  sm: { padding: '6px 12px', fontSize: 'var(--fs-cap)', borderRadius: 'var(--radius-sm)' },
-  md: { padding: '9px 16px', fontSize: 'var(--fs-sub)', borderRadius: 'var(--radius-sm)' },
-  lg: { padding: '12px 20px', fontSize: 'var(--fs-body)', borderRadius: 'var(--radius)' },
-}
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
-const VARIANT: Record<Variant, React.CSSProperties> = {
-  primary:   { background: 'var(--blue)', color: '#fff', border: '1px solid var(--blue)' },
-  secondary: { background: '#fff', color: 'var(--txt)', border: '1px solid var(--line)' },
-  ghost:     { background: 'transparent', color: 'var(--muted2)', border: '1px solid transparent' },
-  danger:    { background: 'var(--red)', color: '#fff', border: '1px solid var(--red)' },
-}
-
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: Variant
-  size?: Size
+export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  busy?: boolean
   block?: boolean
+  href?: string
+  prefetch?: boolean
+  children?: ReactNode
 }
 
-export default function Button({ variant = 'primary', size = 'md', block, style, disabled, ...rest }: ButtonProps) {
+export default function Button({ variant = 'primary', size = 'md', busy = false, block, href, prefetch, children, className = '', disabled, style, ...rest }: ButtonProps) {
+  const cls = `ui-btn ui-btn--${variant} ui-btn--${size}${busy ? ' ui-btn--busy' : ''}${className ? ' ' + className : ''}`
+  const blockStyle = block ? { display: 'flex', width: '100%', ...(style || {}) } : style
+  if (href && !disabled && !busy) {
+    return <Link href={href} prefetch={prefetch} className={cls} style={blockStyle}>{children}</Link>
+  }
   return (
-    <button
-      disabled={disabled}
-      style={{
-        fontFamily: 'inherit', fontWeight: 'var(--fw-strong)' as unknown as number,
-        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1,
-        display: block ? 'flex' : 'inline-flex', width: block ? '100%' : undefined,
-        alignItems: 'center', justifyContent: 'center', gap: 6,
-        lineHeight: 1, whiteSpace: 'nowrap', transition: 'opacity .15s var(--ease-out), filter .15s var(--ease-out)',
-        ...SIZE[size], ...VARIANT[variant], ...style,
-      }}
-      {...rest}
-    />
+    <button className={cls} disabled={disabled || busy} aria-disabled={disabled || busy} style={blockStyle} {...rest}>
+      {busy && <span className="ui-btn__spin" aria-hidden="true" />}
+      {children}
+    </button>
   )
 }

@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import SynapseCrest from '../SynapseCrest'
+import Button from '@/components/ui/Button'
+import Tag from '@/components/ui/Tag'
 import type { MatchCandidate } from '@/lib/synapse-match'
 import type { Nudge } from '@/lib/synapse-nudge'
 
@@ -115,7 +117,6 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
   const labelStyle: React.CSSProperties = { fontSize: '.56rem', fontWeight: 700, color: 'var(--muted)', letterSpacing: '.02em' }
   const valStyle: React.CSSProperties = { fontSize: '.78rem', fontWeight: 600, marginTop: 2, lineHeight: 1.5 }
   const inputStyle: React.CSSProperties = { width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.8rem', marginTop: 3 }
-  const tagBtn = (active: boolean, accent: string, bg: string): React.CSSProperties => ({ fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', borderRadius: 999, padding: '5px 12px', border: `1.5px solid ${active ? accent : bg}`, background: active ? accent : bg, color: active ? '#fff' : accent })
 
   return (
     <div className="page-anim" style={{ padding: '14px 0 28px' }}>
@@ -172,7 +173,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
               <div style={{ marginTop: 12 }}>
                 <div style={{ ...labelStyle, marginBottom: 6 }}>キーワード（需要の切り口）</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {keywords.map(t => <button key={t} onClick={() => setPicked({ tag: t, kind: 'keyword' })} style={tagBtn(picked?.tag === t && picked?.kind === 'keyword', 'var(--blue)', '#fff')}>{t}</button>)}
+                  {keywords.map(t => <Tag key={t} selected={picked?.tag === t && picked?.kind === 'keyword'} onClick={() => setPicked({ tag: t, kind: 'keyword' })}>{t}</Tag>)}
                 </div>
               </div>
             )}
@@ -180,7 +181,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
               <div style={{ marginTop: 12 }}>
                 <div style={{ ...labelStyle, marginBottom: 6 }}>推奨サービス（MB）</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {recos.map(t => <button key={t} onClick={() => setPicked({ tag: t, kind: 'service' })} style={tagBtn(picked?.tag === t && picked?.kind === 'service', 'var(--green)', 'var(--green-bg)')}>{t}</button>)}
+                  {recos.map(t => <Tag key={t} accent="green" selected={picked?.tag === t && picked?.kind === 'service'} onClick={() => setPicked({ tag: t, kind: 'service' })}>{t}</Tag>)}
                 </div>
               </div>
             )}
@@ -316,9 +317,9 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
         ))}
       </div>
 
-      {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ・控えめなセカンダリ） */}
+      {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ・憲法Button secondary・遷移ロジック不変） */}
       <div style={{ margin: '18px 20px 0', textAlign: 'center' }}>
-        <Link href={referHref} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, textDecoration: 'none', color: 'var(--blue)', fontWeight: 700, fontSize: '.72rem' }}>このつながりを紹介する →</Link>
+        <Button variant="secondary" size="sm" href={referHref} style={{ borderRadius: 999 }}>このつながりを紹介する →</Button>
         <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 7 }}>いまの情報を引き継いで紹介できます。</p>
       </div>
 

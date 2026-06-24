@@ -61,6 +61,41 @@
   --shadow-sm: 0 1px 2px rgba(14,14,20,.04);
   --shadow:    0 8px 24px rgba(14,14,20,.10);
   --shadow-lg: 0 28px 80px rgba(14,14,20,.12);
+
+  /* ============================================================
+     Design Constitution v1（§1-6）— 単一ソース。既存 --blue 等はここへ alias。
+     ============================================================ */
+  --c-blue:      #4733E6;   /* primary */
+  --c-blue-dk:   #3D2BCC;   /* primary hover（§8） */
+  --c-blue-press:#3525B8;   /* primary active（§8） */
+  --c-blue-2:    #378ADD;   /* info / secondary accent */
+  --c-violet:    #7F77DD;   /* violet accent */
+  --c-ring:      rgba(71,51,230,0.22);   /* focus-visible ring */
+  --c-ring-soft: rgba(71,51,230,0.14);   /* field focus ring */
+  --c-ghost-bg:  rgba(71,51,230,0.07);   /* ghost hover / tag selected bg */
+  --t-primary:   #0A0A0A;
+  --t-secondary: #334155;
+  --t-tertiary:  #94A3B8;
+  --s-0:         #FFFFFF;
+  --s-1:         #F7F8FA;
+  --s-2:         #EEF0F4;
+  --line-2:      rgba(15,23,42,0.12);    /* 強めの境界（新規・非破壊） */
+  --c-hairline:  rgba(15,23,42,0.07);    /* 憲法 --line（既存 --line=#ECECF1 は後方互換で温存） */
+  --c-success:   #1E9E6A;
+  --c-info:      #378ADD;
+  --c-danger:    #D34545;
+  --r-el:        8px;   /* element radius */
+  --r-card:      12px;  /* card radius */
+
+  /* 憲法モーション：個別property・150-200ms・this curve（all禁止・移動2-7px）。 */
+  --ease-std:    cubic-bezier(0.2,0,0,1);
+
+  /* フォント：Inter=英数（tnum/cv05）、Zen=和文見出し。self-host(next/font)。 */
+  --font-sans:    var(--font-inter);
+  --font-display: var(--font-zen);
+
+  /* 既存トークン → 憲法へ alias（値は同一＝非破壊。--c-blue を変えれば一括反映）。 */
+  --blue: var(--c-blue);
 }
 
 /* Extend Tailwind with MBP tokens */
@@ -88,11 +123,12 @@
 *  { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: 'Zen Kaku Gothic New', 'Inter', sans-serif;
+  font-family: var(--font-display), var(--font-sans), 'Zen Kaku Gothic New', 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg2);
   color: var(--txt);
   font-size: 16px;
   font-weight: var(--fw-body);   /* 本文の基準ウェイト（細すぎを防止） */
+  font-feature-settings: 'tnum' 1, 'cv05' 1;   /* 数字は等幅(tnum)・Inter cv05（憲法§1）。金額/数値が揃う。 */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -536,4 +572,115 @@ body {
   .syn-anim, .syn-ring, .syn-spin, .syn-spin-rev { animation: none !important; }
   .syn-node, .syn-link { animation: none !important; opacity: 1 !important; transform: none !important; }
   .syn-reveal { animation: none !important; }
+}
+
+/* ============================================================
+   Design Constitution v1 — 共有プリミティブ（§8-10）
+   4状態（hover/active/focus-visible/disabled）・個別property transition・
+   150-200ms・cubic-bezier(0.2,0,0,1)・移動2-7px。focus-visible はキーボード時のみ。
+   ============================================================ */
+
+/* ── Button ─────────────────────────────────────────────── */
+.ui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: inherit; font-weight: 700; border-radius: var(--r-el);
+  border: 1px solid transparent; cursor: pointer; white-space: nowrap; position: relative;
+  transition: background-color .16s var(--ease-std), border-color .16s var(--ease-std),
+              box-shadow .16s var(--ease-std), color .16s var(--ease-std), transform .12s var(--ease-std);
+}
+.ui-btn:focus { outline: none; }
+.ui-btn:focus-visible { box-shadow: 0 0 0 3px var(--c-ring); }
+.ui-btn[disabled], .ui-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; pointer-events: none; }
+.ui-btn--sm { padding: 7px 12px; font-size: .72rem; }
+.ui-btn--md { padding: 10px 16px; font-size: .8rem; }
+.ui-btn--lg { padding: 13px 20px; font-size: .86rem; }
+.ui-btn--primary   { background: var(--c-blue); color: #fff; }
+.ui-btn--primary:hover   { background: var(--c-blue-dk); }
+.ui-btn--primary:active  { background: var(--c-blue-press); transform: translateY(1px) scale(.99); }
+.ui-btn--secondary { background: var(--s-0); color: var(--c-blue); border-color: var(--line); }
+.ui-btn--secondary:hover  { background: var(--s-1); border-color: var(--line-2); }
+.ui-btn--secondary:active { background: var(--s-2); transform: translateY(1px) scale(.99); }
+.ui-btn--ghost     { background: transparent; color: var(--c-blue); }
+.ui-btn--ghost:hover  { background: var(--c-ghost-bg); }
+.ui-btn--ghost:active { background: var(--c-ghost-bg); transform: translateY(1px) scale(.99); }
+.ui-btn--danger    { background: var(--c-danger); color: #fff; }       /* 後方互換 */
+.ui-btn--danger:hover  { background: #BE3B3B; }
+.ui-btn--danger:active { background: #A93434; transform: translateY(1px) scale(.99); }
+.ui-btn--busy { color: transparent !important; }
+.ui-btn__spin {
+  position: absolute; width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: uiSpin .7s linear infinite;
+}
+.ui-btn--secondary .ui-btn__spin, .ui-btn--ghost .ui-btn__spin { border-color: var(--c-ring); border-top-color: var(--c-blue); }
+@keyframes uiSpin { to { transform: rotate(360deg); } }
+
+/* ── Tag（selectable）─────────────────────────────────────── */
+.ui-tag {
+  display: inline-flex; align-items: center; font-family: inherit; font-size: .62rem; font-weight: 700;
+  border-radius: var(--r-pill, 999px); padding: 5px 12px; cursor: pointer;
+  background: var(--s-0); border: 1.5px solid var(--line); color: var(--t-secondary);
+  transition: background-color .16s var(--ease-std), border-color .16s var(--ease-std), color .16s var(--ease-std);
+}
+.ui-tag:focus { outline: none; }
+.ui-tag:focus-visible { box-shadow: 0 0 0 3px var(--c-ring); }
+.ui-tag:hover { border-color: var(--line-2); }
+.ui-tag--on { background: var(--c-ghost-bg); border-color: var(--c-blue); color: var(--c-blue); }
+.ui-tag--green.ui-tag--on { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+/* ── Field（input）──────────────────────────────────────── */
+.ui-field {
+  width: 100%; font-family: inherit; font-size: .8rem; color: var(--txt);
+  background: var(--s-0); border: 1.5px solid var(--line); border-radius: var(--r-el); padding: 9px 12px;
+  transition: border-color .16s var(--ease-std), box-shadow .16s var(--ease-std);
+}
+.ui-field:hover { border-color: var(--line-2); }
+.ui-field:focus { outline: none; border-color: var(--c-blue); box-shadow: 0 0 0 3px var(--c-ring-soft); }
+.ui-field:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── ListRow ────────────────────────────────────────────── */
+.ui-row {
+  display: flex; align-items: center; gap: 11px; padding: 12px 16px; text-decoration: none; color: var(--txt);
+  transition: background-color .15s var(--ease-std);
+}
+.ui-row:hover { background: var(--s-1); }
+.ui-row__chev { transition: transform .15s var(--ease-std); }
+.ui-row:hover .ui-row__chev { transform: translateX(2px); }
+
+/* ── Card ───────────────────────────────────────────────── */
+.ui-card { background: var(--s-0); border: 1px solid var(--line); border-radius: var(--r-card); }
+
+/* ── Skeleton（shimmer 1.4s）────────────────────────────── */
+.ui-skeleton {
+  position: relative; overflow: hidden; background: var(--s-2); border-radius: var(--r-el);
+}
+.ui-skeleton::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+  animation: uiShimmer 1.4s var(--ease-std) infinite;
+}
+@keyframes uiShimmer { to { transform: translateX(100%); } }
+
+/* ── Sheet（モーダル/ポップアップ）─────────────────────────── */
+.ui-overlay {
+  position: fixed; inset: 0; z-index: 120; display: flex; background: rgba(14,14,20,.4);
+  backdrop-filter: blur(3px); animation: uiOverlayIn .18s var(--ease-std) both;
+}
+.ui-sheet { background: var(--s-0); animation: uiSheetIn .2s var(--ease-std) both; }
+@keyframes uiOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes uiSheetIn { from { opacity: 0; transform: scale(.98) translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── EmptyState ─────────────────────────────────────────── */
+.ui-empty { padding: 28px 20px; text-align: center; color: var(--t-tertiary); font-size: .72rem; line-height: 1.8; }
+
+/* ── ページ遷移 enter / アコーディオン ユーティリティ ───────── */
+.ui-enter { animation: uiEnter .18s var(--ease-std) both; }
+@keyframes uiEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ui-accordion { overflow: hidden; transition: height .18s var(--ease-std), opacity .18s var(--ease-std); }
+
+/* ── reduced-motion：全プリミティブ・モーション無効（最終状態保持）─── */
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn, .ui-tag, .ui-field, .ui-row, .ui-row__chev,
+  .ui-overlay, .ui-sheet, .ui-enter, .ui-accordion { transition: none !important; animation: none !important; }
+  .ui-btn__spin, .ui-skeleton::after { animation: none !important; }
+  .ui-btn:active, .ui-tag:active { transform: none !important; }
 }
