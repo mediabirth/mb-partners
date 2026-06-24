@@ -19,7 +19,7 @@ export default async function VendorMypage() {
   const b = await loadVendorBundle()
   if (!b) redirect('/vendor/login')
   const name = b.profile.name ?? b.delivery.name
-  const color = b.profile.color ?? 'var(--blue)'
+  const color = b.profile.color ?? 'var(--c-blue)'
   const totalFee = b.assignments.reduce((s, a) => s + a.base_fee, 0)
 
   return (
@@ -29,7 +29,7 @@ export default async function VendorMypage() {
         avatar={<AvatarEditor name={name} color={color} src={b.profile.avatar_url} size={56} endpoint="/api/vendor/avatar" />}
         name={name}
         badges={<>
-          <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '2px 10px' }}>MB Partners デリバリー</span>
+          <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '2px 10px' }}>MB Partners デリバリー</span>
           {b.delivery.kind && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>{b.delivery.kind}</span>}
         </>}
       />
@@ -44,7 +44,7 @@ export default async function VendorMypage() {
       </div>
 
       <div style={{ margin: '0 20px 30px' }}>
-        <Link href="/vendor/settings" className="btn btn-g" style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}>設定</Link>
+        <Link href="/vendor/settings" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}>設定</Link>
       </div>
     </div>
   )

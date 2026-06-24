@@ -8,7 +8,7 @@ export const runtime = 'edge'
 
 const ST: Record<string, { label: string; c: string; bg: string }> = {
   received: { label: '受付', c: 'var(--amber)', bg: 'var(--amber-bg)' },
-  in_progress: { label: '対応中', c: 'var(--blue)', bg: 'var(--blue-bg)' },
+  in_progress: { label: '対応中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' },
   confirmed: { label: '成約', c: 'var(--green)', bg: 'var(--green-bg)' },
   paid: { label: '完了', c: 'var(--muted2)', bg: 'var(--bg2)' },
   lost: { label: '見送り', c: 'var(--red)', bg: 'var(--red-bg)' },
@@ -33,7 +33,7 @@ export default async function VendorCases() {
           const st = ST[a.deal?.status ?? ''] ?? { label: a.deal?.status ?? '—', c: 'var(--muted2)', bg: 'var(--bg2)' }
           const svc = a.deal?.services
           return (
-            <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 15px 13px', marginBottom: 10 }}>
+            <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift ui-card" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 15px 13px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
                   {svc ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={30} /> : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={30} />}

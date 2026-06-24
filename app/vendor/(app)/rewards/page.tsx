@@ -38,7 +38,7 @@ export default async function VendorRewards() {
         ) : b.payouts.map(p => {
           const isPaid = p.status === 'paid'
           return (
-            <div key={p.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px', marginBottom: 10 }}>
+            <div key={p.id} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '.84rem', fontWeight: 800 }}>{monthLabel(p.period)}</div>

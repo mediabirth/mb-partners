@@ -49,10 +49,10 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
         return (
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--line)', background: 'var(--blue-bg2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span className="eyebrow" style={{ color: 'var(--blue)' }}>プロジェクト管理</span>
-              <span style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: 'var(--blue)' }}>{pct}<span style={{ fontSize: '.66rem', fontWeight: 600, color: 'var(--muted2)' }}>%</span></span>
+              <span className="eyebrow" style={{ color: 'var(--c-blue)' }}>プロジェクト管理</span>
+              <span style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: 'var(--c-blue)' }}>{pct}<span style={{ fontSize: '.66rem', fontWeight: 600, color: 'var(--muted2)' }}>%</span></span>
             </div>
-            <div style={{ height: 8, borderRadius: 5, background: '#fff', overflow: 'hidden', border: '1px solid var(--blue-bg)' }}><div className="bar-grow" style={{ width: `${pct}%`, height: '100%', background: 'var(--blue)', borderRadius: 5 }} /></div>
+            <div style={{ height: 8, borderRadius: 5, background: '#fff', overflow: 'hidden', border: '1px solid var(--blue-bg)' }}><div className="bar-grow" style={{ width: `${pct}%`, height: '100%', background: 'var(--c-blue)', borderRadius: 5 }} /></div>
             <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6 }}>タスク・マイルストーン {done}/{items.length} 完了 · 実行を進めると報酬につながります</div>
           </div>
         )

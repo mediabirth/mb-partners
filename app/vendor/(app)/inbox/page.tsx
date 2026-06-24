@@ -14,8 +14,8 @@ function Icon({ type }: { type: string }) {
     ok: { bg: 'var(--green-bg)', c: 'var(--green)', d: <path d="M20 6L9 17l-5-5" /> },
     pay: { bg: 'var(--green-bg)', c: 'var(--green)', d: <><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20" /></> },
     ng: { bg: 'var(--red-bg)', c: 'var(--red)', d: <><circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6M9 9l6 6" /></> },
-    freeze: { bg: 'var(--blue-bg)', c: 'var(--blue)', d: <><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20M6 15h4" /></> },
-    assign: { bg: 'var(--blue-bg)', c: 'var(--blue)', d: <path d="M4 6h16M4 12h16M4 18h10" /> },
+    freeze: { bg: 'var(--blue-bg)', c: 'var(--c-blue)', d: <><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20M6 15h4" /></> },
+    assign: { bg: 'var(--blue-bg)', c: 'var(--c-blue)', d: <path d="M4 6h16M4 12h16M4 18h10" /> },
   }
   const m = map[type] ?? map.assign
   return <span style={{ width: 34, height: 34, borderRadius: '50%', background: m.bg, color: m.c, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">{m.d}</svg></span>

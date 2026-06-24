@@ -7,7 +7,7 @@ import { dealStatus } from '@/lib/status'
 import { BUILD_STAMP } from '@/lib/build-stamp'
 
 export const runtime = 'edge'
-const NOTIF_DOT: Record<string, string> = { ok: 'var(--green)', ng: 'var(--red)', pay: 'var(--green)', freeze: 'var(--blue)', assign: 'var(--blue)' }
+const NOTIF_DOT: Record<string, string> = { ok: 'var(--green)', ng: 'var(--red)', pay: 'var(--green)', freeze: 'var(--c-blue)', assign: 'var(--c-blue)' }
 
 // period（"2026-06" 等）を "6月" に。形式が違えば原文のまま（表示整形のみ）。
 function fmtPeriod(p: string): string {
@@ -49,7 +49,7 @@ export default async function VendorHome() {
   for (const a of b.assignments) {
     const tks = tasksOf(a.id)
     for (const t of tks.filter(t => t.type === 'task' && t.status !== 'done').slice(0, 2))
-      todos.push({ key: 't' + t.id, title: t.title, sub: `${a.deal?.customer_name ?? '案件'}${t.due_date ? ` · 期日 ${t.due_date.slice(5)}` : ''}`, href: `/vendor/cases/${a.id}`, dot: 'var(--blue)' })
+      todos.push({ key: 't' + t.id, title: t.title, sub: `${a.deal?.customer_name ?? '案件'}${t.due_date ? ` · 期日 ${t.due_date.slice(5)}` : ''}`, href: `/vendor/cases/${a.id}`, dot: 'var(--c-blue)' })
     for (const t of tks.filter(t => t.needs_deliverable && !b.deliverables.some(d => d.task_id === t.id)).slice(0, 2))
       todos.push({ key: 'd' + t.id, title: `成果物を提出: ${t.title}`, sub: a.deal?.customer_name ?? '案件', href: `/vendor/cases/${a.id}`, dot: 'var(--amber)' })
   }
@@ -121,7 +121,7 @@ export default async function VendorHome() {
       <div style={{ padding: '20px 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
         <h2 className="ty-h2">今やること</h2>
         {todoList.length > 1 && (
-          <span style={{ fontSize: '.55rem', fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: 'var(--blue-bg)', color: 'var(--blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todoList.length}</span>
+          <span style={{ fontSize: '.55rem', fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: 'var(--blue-bg)', color: 'var(--c-blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todoList.length}</span>
         )}
       </div>
       {todoList.length === 0 ? (
@@ -145,7 +145,7 @@ export default async function VendorHome() {
       <div style={{ padding: '22px 20px 8px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <h2 className="ty-h2">進行中プロジェクト</h2>
-          <Link href="/vendor/cases" style={{ fontSize: '.66rem', color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>すべて →</Link>
+          <Link href="/vendor/cases" style={{ fontSize: '.66rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>すべて →</Link>
         </div>
       </div>
       <div style={{ padding: '0 20px' }}>
@@ -153,7 +153,7 @@ export default async function VendorHome() {
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', padding: '4px 2px 16px' }}>進行中のプロジェクトはありません。</p>
         ) : projects.slice(0, 4).map(({ a, pending, nextMs }) => {
           return (
-            <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
+            <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift ui-card" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {/* V-b：担当案件リストと同じサービスバッジ（ServiceAvatar）に統一。タイトル先頭文字（【）表示をやめる。 */}
                 {(() => { const svc = a.deal?.services; return svc
@@ -163,7 +163,7 @@ export default async function VendorHome() {
                 <StatusPill size="sm" {...dealStatus(a.deal?.status ?? '')} />
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <span>未完タスク <b style={{ color: pending > 0 ? 'var(--blue)' : 'var(--muted2)' }}>{pending}</b></span>
+                <span>未完タスク <b style={{ color: pending > 0 ? 'var(--c-blue)' : 'var(--muted2)' }}>{pending}</b></span>
                 {/* V-e：マイルストーン未設定のときはテキストを描画しない（未完タスク件数等は不変）。 */}
                 {nextMs && (
                   <span>次のマイルストーン: <b style={{ color: 'var(--txt)' }}>{nextMs.title}</b>{nextMs.due_date ? ` (${nextMs.due_date.slice(5)})` : ''}</span>
@@ -178,7 +178,7 @@ export default async function VendorHome() {
       <div style={{ padding: '10px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
           <h2 className="ty-h2">最近の動き</h2>
-          <Link href="/vendor/inbox" style={{ fontSize: '.66rem', color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>通知へ →</Link>
+          <Link href="/vendor/inbox" style={{ fontSize: '.66rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>通知へ →</Link>
         </div>
       </div>
       {notifs.length === 0 ? (
@@ -189,7 +189,7 @@ export default async function VendorHome() {
             const rel = relTime(n.at)
             return (
             <Link key={n.id} href={n.href ?? '/vendor/inbox'} className="row-hover lift" style={{ display: 'flex', gap: 11, padding: '12px 20px', borderBottom: '1px solid var(--line)', textDecoration: 'none', alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: NOTIF_DOT[n.icon] ?? 'var(--blue)', flexShrink: 0 }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: NOTIF_DOT[n.icon] ?? 'var(--c-blue)', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.sub}</div>
