@@ -39,6 +39,7 @@ const ITEMS = [
   { href: '/console/payouts',     id: 'payouts',     label: '支払管理',       icon: 'payouts' },
   { href: '/console/broadcasts', id: 'broadcasts', label: '配信',           icon: 'broadcasts' },
   { href: '/console/inquiries', id: 'inquiries',  label: '問い合わせ',     icon: 'inquiries' },
+  { href: '/console/messages',  id: 'messages',   label: 'メッセージ',     icon: 'inquiries' },
   { href: '/console/settings',  id: 'settings',   label: '設定',           icon: 'settings' },
 ]
 

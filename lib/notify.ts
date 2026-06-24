@@ -67,6 +67,7 @@ export async function sendSlack(text: string): Promise<SendResult> {
 /** 任意宛先へメール送信（Resend）。RESEND_API_KEY 未設定 / 宛先なしはスキップ。例外は投げない。 */
 export async function sendEmail(params: {
   to?: string | null; subject: string; text: string; html?: string
+  attachments?: { filename: string; content: string }[]   // additive：base64 content。省略時は従来と完全同一動作（既存呼び出し不変）。
 }): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: 'RESEND_API_KEY 未設定' }
@@ -74,10 +75,12 @@ export async function sendEmail(params: {
   const html = params.html
     ?? brandedEmailHtml({ lead: params.text.split('\n')[0] || params.subject, note: params.text.split('\n').slice(1).join(' ').trim() || undefined })
   try {
+    const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject: params.subject, text: params.text, html }
+    if (params.attachments && params.attachments.length > 0) payload.attachments = params.attachments   // 付与時のみ追加＝既存呼び出しは body byte-unchanged
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [params.to], subject: params.subject, text: params.text, html }),
+      body: JSON.stringify(payload),
     })
     if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
     return { sent: true }
