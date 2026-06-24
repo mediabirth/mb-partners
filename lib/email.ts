@@ -8,6 +8,8 @@
  * SPF / DKIM / DMARC DNS records, otherwise Resend rejects the send.
  */
 import { MAIL_FROM as FROM } from './mail-from'
+import { resolveTemplate } from './notify/template-resolve'
+import { brandedEmailHtml } from './notify'
 
 const SUPPORT = 'support@mb-partners.app'
 
@@ -59,10 +61,14 @@ ${linkLine}
   <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
+  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名は不変。
+  const custom = await resolveTemplate('booking', { name: nm, when, meetingUrl: params.meetingUrl ?? '' })
+  const finalText = custom ?? text
+  const finalHtml = custom ? brandedEmailHtml({ lead: custom }) : html
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [params.to], subject, text, html }),
+      body: JSON.stringify({ from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }),
     })
     if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
     return { sent: true }
@@ -146,11 +152,15 @@ ${meetLineText}
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
 
+  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名/関わり方は不変。
+  const custom = await resolveTemplate('receipt', { name, kind: kindLabel, customer: params.customerName, service: params.serviceName ?? '', meeting: meeting ?? '' })
+  const finalText = custom ?? text
+  const finalHtml = custom ? brandedEmailHtml({ lead: custom }) : html
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [params.to], subject, text, html }),
+      body: JSON.stringify({ from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }),
     })
     if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
     return { sent: true }

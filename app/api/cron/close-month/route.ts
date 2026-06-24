@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { resolveTemplate } from '@/lib/notify/template-resolve'
 
 // Vercel Cron calls this route at schedule defined in vercel.json.
 // Auth: Bearer CRON_SECRET header (set as Vercel env var).
@@ -70,10 +71,14 @@ export async function GET(req: NextRequest) {
           if ((it.net ?? 0) <= 0) continue
           const prof = profById[profIdByPartner[it.partner_id]]
           if (!prof?.email) continue
+          // ★金額算出(it.net)・対象判定・締め/payout/凍結は不変。本文textのみ templates 優先（無ければ既存文面）。
+          const amount = `¥${(it.net ?? 0).toLocaleString()}`
+          const defaultText = `${prof.name ?? 'パートナー'} 様\n${targetMonth} 分の報酬が確定しました。\n・手取り：${amount}\n明細はアプリの「報酬」からご確認いただけます。`
+          const text = (await resolveTemplate('payout-confirmed', { name: prof.name ?? 'パートナー', month: targetMonth, amount })) ?? defaultText
           await sendEmail({
             to: prof.email,
             subject: '【MB Partners】今月の報酬が確定しました',
-            text: `${prof.name ?? 'パートナー'} 様\n${targetMonth} 分の報酬が確定しました。\n・手取り：¥${(it.net ?? 0).toLocaleString()}\n明細はアプリの「報酬」からご確認いただけます。`,
+            text,
           })
         }
       }

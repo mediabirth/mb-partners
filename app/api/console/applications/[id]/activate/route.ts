@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notify } from '@/lib/notify/index'
+import { resolveTemplate } from '@/lib/notify/template-resolve'
 
 // Feature E（E-3）：応募の「承認＝仲間化」マークと、紹介元への“賞賛”通知（非金銭）。
 // ★これは金銭オーバーライドではない。frontier・お金・deals・status・/r帰属には一切触れない。
@@ -42,9 +43,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     // 紹介元があれば賞賛通知を1件（非金銭・売上/成果/金額/件数は一切含めない＝非開示が設計原則）。
     let recognized = false
     if (app.referrer_partner_id) {
+      // 文面のみ templates 優先解決（無ければ既存ハードコード文面へフォールバック）。発火/宛先/チャネル不変。
+      const defaultBody = 'あなたの紹介に、心から感謝します。信頼の輪が、あなたから確かに広がっています。これからもどうぞよろしくお願いします。— MB Partners'
+      const body = (await resolveTemplate('recognition', { name: app.name })) ?? defaultBody
       const payload = {
         title: `${app.name}さんが仲間に加わりました`,
-        body: 'あなたの紹介に、心から感謝します。信頼の輪が、あなたから確かに広がっています。これからもどうぞよろしくお願いします。— MB Partners',
+        body,
         url: '/app',
         tag: `recognition-${app.id}`,
         ref: { type: 'recognition', application_id: app.id },

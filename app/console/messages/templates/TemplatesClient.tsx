@@ -8,6 +8,18 @@ type Draft = { title: string; body: string; category: string; channel: '' | 'lin
 const emptyDraft: Draft = { title: '', body: '', category: '', channel: '', sort_order: 0 }
 const chLabel = (c: Template['channel']) => c === 'line' ? 'LINE' : c === 'email' ? 'メール' : c === 'both' ? 'LINE/メール' : '汎用'
 
+// 自動メッセージのセクション（category＝通知イベント識別子）。未設定なら各通知は既定の文面を使用。
+type Section = { key: string; label: string; desc: string; vars: string[]; channel: Draft['channel'] }
+const SECTIONS: Section[] = [
+  { key: 'greeting', label: 'あいさつ（友だち追加時）', desc: 'LINE友だち追加直後に自動返信。未設定ならLINE Manager側のあいさつに委ねます。', vars: [], channel: 'line' },
+  { key: 'deal-won', label: '成約（勝ち通知）', desc: '担当紹介が成約した時にパートナー本人へ。', vars: ['customer'], channel: '' },
+  { key: 'recognition', label: '賞賛（仲間が増えた）', desc: '紹介した相手が参加した時に紹介元へ。', vars: ['name'], channel: '' },
+  { key: 'nudge', label: '再活性化ナッジ', desc: '休眠パートナーへの手動ナッジ本文。', vars: ['name', 'thanks'], channel: '' },
+  { key: 'receipt', label: '受付確認メール', desc: '紹介/協力/商談予約の受付完了メール本文。', vars: ['name', 'kind', 'customer', 'service', 'meeting'], channel: 'email' },
+  { key: 'booking', label: '予約完了メール（顧客）', desc: '顧客への予約完了メール本文。', vars: ['name', 'when', 'meetingUrl'], channel: 'email' },
+  { key: 'payout-confirmed', label: '報酬確定メール', desc: '月末締め確定時にパートナー本人へ（金額算出は不変）。', vars: ['name', 'month', 'amount'], channel: 'email' },
+]
+
 export default function TemplatesClient({ initial }: { initial: Template[] }) {
   const [list, setList] = useState<Template[]>(initial)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
@@ -47,6 +59,14 @@ export default function TemplatesClient({ initial }: { initial: Template[] }) {
     } catch { setErr('通信に失敗しました') } finally { setBusy(false) }
   }
 
+  // セクション設定の開始：該当categoryの既存テンプレを編集、無ければそのcategoryでの新規作成をプレフィル。
+  function startSection(s: Section) {
+    setErr('')
+    const existing = list.find(t => t.category === s.key)
+    if (existing) { setEditing(existing.id); setDraft(toDraft(existing)) }
+    else { setEditing(null); setDraft({ title: s.label, body: '', category: s.key, channel: s.channel, sort_order: 0 }) }
+  }
+
   const field = (label: string, node: React.ReactNode) => (
     <label style={{ display: 'block', marginBottom: 10 }}>
       <span style={{ display: 'block', fontSize: '.6rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 4 }}>{label}</span>
@@ -80,7 +100,29 @@ export default function TemplatesClient({ initial }: { initial: Template[] }) {
         <a href="/console/messages" style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none' }}>← メッセージへ</a>
       </div>
 
-      {/* 新規作成 */}
+      {/* 自動メッセージのセクション（category別割り当て） */}
+      <div style={{ marginBottom: 26 }}>
+        <p className="caption" style={{ marginBottom: 10 }}>自動メッセージのセクション</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {SECTIONS.map(s => {
+            const set = list.find(t => t.category === s.key)
+            return (
+              <div key={s.key} className="ui-card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '.8rem', fontWeight: 800 }}>{s.label}
+                    <span style={{ marginLeft: 8, fontSize: '.5rem', fontWeight: 800, color: set ? 'var(--c-success)' : 'var(--t-tertiary)', background: set ? 'rgba(30,158,106,0.1)' : 'var(--s-2)', borderRadius: 5, padding: '2px 6px' }}>{set ? '設定済み' : '既定の文面を使用中'}</span>
+                  </div>
+                  <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3 }}>{s.desc}</div>
+                  {s.vars.length > 0 && <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginTop: 3 }}>使える差し込み：{s.vars.map(v => `\${${v}}`).join(' ')}</div>}
+                </div>
+                <Button variant={set ? 'ghost' : 'secondary'} size="sm" onClick={() => startSection(s)}>{set ? '編集' : '設定'}</Button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 新規作成（自由テンプレ） */}
       {editing === null && <div style={{ marginBottom: 22 }}>{editor(create)}</div>}
 
       {/* 一覧 */}

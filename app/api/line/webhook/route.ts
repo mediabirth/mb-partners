@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getLineAccessToken } from '@/lib/notify/line-token'
+import { resolveTemplate } from '@/lib/notify/template-resolve'
 
 // メッセージ司令塔 Phase2：LINE Messaging API 受信 webhook（additive・新設）。
 // ★署名検証必須（x-line-signature を LINE_CHANNEL_SECRET で HMAC-SHA256→base64・生body比較）。不一致/欠如は 401。
@@ -30,6 +31,24 @@ export async function POST(req: NextRequest) {
 
     for (const ev of events) {
       try {
+        // Phase3-C あいさつ自前化（独立追加・受信 logic非接触）：follow受信時、greetingテンプレがあれば1通返信。
+        // テンプレ未設定なら沈黙（＝現状どおり・LINE Manager側あいさつに委ねる＝後方互換）。
+        if (ev.type === 'follow') {
+          try {
+            const greeting = await resolveTemplate('greeting', {})
+            const replyToken: string | undefined = ev.replyToken
+            if (greeting && replyToken) {
+              const token = await getLineAccessToken()
+              if (token) {
+                await fetch('https://api.line.me/v2/bot/message/reply', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: greeting }] }),
+                })
+              }
+            }
+          } catch { /* あいさつ失敗は握る（200維持） */ }
+          continue
+        }
         if (ev.type !== 'message') continue                              // message のみ（follow/unfollow/その他は記録しない）
         const userId: string | undefined = ev.source?.userId
         if (!userId) continue

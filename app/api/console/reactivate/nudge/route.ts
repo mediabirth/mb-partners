@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notify } from '@/lib/notify/index'
+import { resolveTemplate } from '@/lib/notify/template-resolve'
 
 export const runtime = 'nodejs'
 
@@ -36,9 +37,12 @@ export async function POST(req: NextRequest) {
   const { count: wonCount } = await admin.from('deals').select('id', { count: 'exact', head: true }).eq('partner_id', partnerId).in('status', ['confirmed', 'paid'])
   const thanks = (wonCount ?? 0) > 0 ? 'これまでのご紹介、ありがとうございます。' : ''
 
+  // 文面のみ templates 優先解決（無ければ既存ハードコード文面へフォールバック）。発火/宛先/チャネル/頻度上限は不変。
+  const defaultBody = `${name}さん、お久しぶりです。最近、MB Partnersでご紹介できそうな方はいませんか？${thanks ? '\n' + thanks : ''}`
+  const body = (await resolveTemplate('nudge', { name, thanks })) ?? defaultBody
   const payload = {
     title: 'MB Partners からのお知らせ',
-    body: `${name}さん、お久しぶりです。最近、MB Partnersでご紹介できそうな方はいませんか？${thanks ? '\n' + thanks : ''}`,
+    body,
     url: '/app/refer',
     tag: 'mbp-nudge',
     ref: { type: 'nudge' as const },

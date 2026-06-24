@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notify } from '@/lib/notify/index'
+import { resolveTemplate } from '@/lib/notify/template-resolve'
 
 // Wave1-④b：成約確定の「コミット後」に呼ばれる内部通知エンドポイント（CRON_SECRET 保護・nodejs）。
 // notify() で inbox + Web Push へ fan-out。お金・案件状態・status判定には一切触れない（読み取りのみ）。
@@ -23,9 +24,12 @@ export async function POST(req: NextRequest) {
   if (!deal?.partner_id) return NextResponse.json({ ok: true, skipped: 'no partner' })
 
   const customer = deal.customer_name ?? 'お客さま'
+  // 文面のみ templates 優先解決（無ければ既存ハードコード文面へフォールバック）。発火/宛先/チャネルは不変。
+  const defaultBody = `${customer} のご紹介が成約に至りました。報酬の詳細は実績画面でご確認いただけます。`
+  const body = (await resolveTemplate('deal-won', { customer })) ?? defaultBody
   const payload = {
     title: '🎉 成約しました！',
-    body: `${customer} のご紹介が成約に至りました。報酬の詳細は実績画面でご確認いただけます。`,
+    body,
     url: '/app/rewards',
     tag: `deal-won-${dealId}`,
     ref: { type: 'deal', id: dealId },
