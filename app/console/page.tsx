@@ -13,6 +13,8 @@ import ConsoleMain from '@/components/ConsolePageTransition'
 import CountUp from '@/components/CountUp'
 import StatusPill from '@/components/ui/StatusPill'
 import StatCard from '@/components/ui/StatCard'
+import Button from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
 import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill } from '@/lib/status'
 import { PROJECT_STATUSES, INTAKE_LABEL } from '@/lib/phase'
 
@@ -147,7 +149,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
   // お金の内訳（今月）— 受注額 → 各コスト → 残るMB粗利
   const costLines = [
-    { label: 'パートナー報酬（紹介/協力）', val: cur.partnerReward, color: 'var(--blue)' },
+    { label: 'パートナー報酬（紹介/協力）', val: cur.partnerReward, color: 'var(--c-blue)' },
     { label: 'フロンティアoverride', val: cur.frontierOverride, color: 'var(--blue-dk)' },
     { label: 'デリバリー委託費', val: cur.deliveryCost, color: 'var(--amber)' },
     { label: 'デリバリー経費（承認済）', val: cur.deliveryExpense, color: 'var(--amber)' },
@@ -262,9 +264,9 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             <MonthSelector months={monthOptions} selected={selectedYm} current={ym} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link href="/console/funnel" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>📈 ファネル</Link>
-            <Link href="/console/reactivate" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>🔔 再活性化</Link>
-            <Link href="/console/analytics" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>📊 詳細分析</Link>
+            <Button variant="secondary" size="sm" href="/console/funnel">📈 ファネル</Button>
+            <Button variant="secondary" size="sm" href="/console/reactivate">🔔 再活性化</Button>
+            <Button variant="secondary" size="sm" href="/console/analytics">📊 詳細分析</Button>
             <GlobalSearchClient />
           </div>
         </div>
@@ -275,7 +277,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           {/* ① ヒーロー：今月のMB粗利（正確）＋前月比＋月間目標進捗 */}
           <div className="page-anim shine card-hover" style={{
             position: 'relative', borderRadius: 16, padding: '22px 26px', marginBottom: 16,
-            background: 'linear-gradient(120deg, var(--blue) 0%, var(--blue-dk) 100%)',
+            background: 'linear-gradient(120deg, var(--c-blue) 0%, var(--blue-dk) 100%)',
             color: '#fff', overflow: 'hidden', boxShadow: '0 10px 30px rgba(71,51,230,.22)',
           }}>
             <div style={{ position: 'relative', zIndex: 1 }}>
@@ -309,7 +311,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* 最重要KPI（ヒーロー直下に集約・3指標。重複を作らない＝対応中見込みは下のパイプラインへ） */}
           <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
-            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の成約数`} value={curWon} suffix="件" icon="deal" accent="var(--blue)" delta={{ cur: curWon, prev: prevWon }} />
+            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の成約数`} value={curWon} suffix="件" icon="deal" accent="var(--c-blue)" delta={{ cur: curWon, prev: prevWon }} />
             <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の総受注額`} value={cur.revenue} format="yen" icon="yen" accent="var(--green)" delta={{ cur: cur.revenue, prev: prev.revenue }} />
             <KpiCard label="成約率（成約÷受付・当月）" value={winRate ?? 0} suffix="%" icon="deal" accent="var(--amber)" sub={`成約 ${curWon} / 受付 ${curIntake} 件`} />
           </div>
@@ -327,19 +329,19 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* ② お金の内訳（今月）：受注額 → 各コスト → 残るMB粗利 */}
           <SectionTitle title="お金の内訳" subtitle={`${isCurrentMonth ? '今月' : selMonthLabel}・受注額から出ていくお金を引いて、残るMB粗利`} />
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <WaterRow label="総受注額" val={cur.revenue} pct={100} color="var(--green)" head />
             {costLines.map((c, i) => (
               <WaterRow key={i} label={c.label} val={c.val} pct={Math.round((c.val / barBase) * 100)} color={c.color} minus />
             ))}
             <div style={{ borderTop: '1.5px solid var(--line)', marginTop: 8, paddingTop: 10 }}>
-              <WaterRow label="残るMB粗利" val={mbMargin} pct={Math.round((Math.max(0, mbMargin) / barBase) * 100)} color={mbMargin >= 0 ? 'var(--blue)' : 'var(--red)'} strong />
+              <WaterRow label="残るMB粗利" val={mbMargin} pct={Math.round((Math.max(0, mbMargin) / barBase) * 100)} color={mbMargin >= 0 ? 'var(--c-blue)' : 'var(--red)'} strong />
             </div>
           </div>
 
           {/* ③ パイプライン（受注前の見込み・平均・商談ステージを1セクションに集約） */}
           <SectionTitle title="パイプライン" subtitle="受注前の見込み額と平均（成約前のヘルス）。意味の違う金額はラベルで区別" />
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
               <StatCard label="対応中の見込み" value={`¥${pipeline.toLocaleString()}`} accent="blue" sub="商談中のみ（来月見込み）" />
               <StatCard label="パイプライン金額" value={`¥${pipelineAmount.toLocaleString()}`} accent="amber" sub="受付＋商談中の見込み額" />
@@ -361,13 +363,13 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           <SectionTitle title="成約・ファネル" subtitle="商談→成約の歩留まりと、流入経路ごとの成果。当月成約率（上のKPI）とは別指標" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
             {/* 商談→成約ファネル（全体成約率を見出しに集約＝重複表示を1回に） */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
                 <b style={{ fontSize: '.84rem' }}>商談 → 成約 ファネル</b>
                 <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>全体成約率 <b style={{ fontFamily: 'Inter', fontSize: '.92rem', color: 'var(--green)' }}>{winRateAll}%</b></span>
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>成約 {funnel.won} / 商談化 {shodanTotal} 件（成約÷商談化・直営業は商談を経ないため除外）</div>
-              {([['受付', funnel.received, 'var(--amber)'], ['商談中', funnel.inProgress, 'var(--blue)'], ['成約', funnel.won, 'var(--green)'], ['不成立', funnel.lost, 'var(--muted2)']] as const).map(([label, n, color]) => {
+              {([['受付', funnel.received, 'var(--amber)'], ['商談中', funnel.inProgress, 'var(--c-blue)'], ['成約', funnel.won, 'var(--green)'], ['不成立', funnel.lost, 'var(--muted2)']] as const).map(([label, n, color]) => {
                 const w = shodanTotal > 0 ? Math.round((n / shodanTotal) * 100) : 0
                 return (
                   <div key={label} style={{ padding: '7px 0' }}>
@@ -382,7 +384,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </div>
 
             {/* 流入経路（件数・受注額・成約率を1ブロックに統合） */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
               <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>流入経路（件数・受注額・成約率）</b>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>紹介・協力／直営業の強み・弱み</div>
               {intakeRate.map((r, i) => (
@@ -400,8 +402,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* ⑤ サービス別 成約率・受注額（空の「—」サービス行は非表示） */}
           <SectionTitle title="サービス別 成約率・受注額" subtitle="受注額の大きい順（上位）" />
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
-            {visibleServiceRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>データがありません。</p> : visibleServiceRows.map((s, i) => (
+          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 28 }}>
+            {visibleServiceRows.length === 0 ? <EmptyState title="データがありません" compact /> : visibleServiceRows.map((s, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr auto', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: i < visibleServiceRows.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
                 <span style={{ fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}<span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 5 }}>{s.won}/{s.total}件</span></span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -417,14 +419,14 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           <SectionTitle title="要対応・最近の動き" subtitle="対応が必要な項目と、直近のアクティビティ" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
             {/* 要対応（統合）：アラート → 停滞中 → 直近の商談 */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ padding: '15px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontSize: '.84rem' }}>要対応{alerts.length > 0 && <span style={{ color: 'var(--red)', marginLeft: 6 }}>{alerts.length}</span>}</b>
                 <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>クリックで該当案件へ</span>
               </div>
               {/* アラート（差戻し経費・期日超過・課題フラグ・受注額未入力） */}
               {alerts.length === 0 ? (
-                <p style={{ padding: '14px 18px', fontSize: '.7rem', color: 'var(--muted2)' }}>対応が必要なアラートはありません。</p>
+                <EmptyState title="対応が必要なアラートはありません" compact />
               ) : (
                 <div className="stagger">
                   {alerts.slice(0, 12).map((a, i) => (
@@ -440,7 +442,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               <div style={{ padding: '12px 18px 6px', borderTop: '1px solid #F2F2F6' }}>
                 <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>停滞中（7日以上動きなし）{stalled.length > 0 && <span style={{ color: 'var(--amber)' }}> · {stalled.length}件</span>}</div>
                 {stalled.length === 0 ? (
-                  <p style={{ fontSize: '.66rem', color: 'var(--muted2)', padding: '2px 0 8px' }}>停滞している案件はありません。</p>
+                  <EmptyState title="停滞している案件はありません" compact />
                 ) : stalled.slice(0, 3).map(d => {
                   const days = Math.floor((now.getTime() - new Date(d.updated_at!).getTime()) / 86_400_000)
                   return (
@@ -456,17 +458,17 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               <div style={{ padding: '8px 18px 14px', borderTop: '1px solid #F2F2F6' }}>
                 <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', margin: '4px 0 6px' }}>直近の商談</div>
                 {upcomingMeetings.length === 0 ? (
-                  <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>予定されている商談はありません。</p>
+                  <EmptyState title="予定されている商談はありません" compact />
                 ) : upcomingMeetings.slice(0, 3).map(d => {
                   const dt = new Date(d.meeting_at!)
                   const isToday = dt.toDateString() === now.toDateString()
                   return (
                     <Link key={d.id} href={`/console/deals?deal=${d.id}`} className="lift" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 0', textDecoration: 'none', color: 'var(--txt)' }}>
-                      <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: isToday ? 'var(--blue)' : 'var(--muted2)', fontWeight: 700, width: 64 }}>
+                      <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: isToday ? 'var(--c-blue)' : 'var(--muted2)', fontWeight: 700, width: 64 }}>
                         {dt.toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
-                      {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--blue)' }}>本日</span>}
+                      {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--c-blue)' }}>本日</span>}
                     </Link>
                   )
                 })}
@@ -474,13 +476,13 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </div>
 
             {/* 最近の動き */}
-            <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 18px', borderBottom: '1px solid var(--line)' }}>
                 <b style={{ fontSize: '.84rem' }}>最近の動き</b>
-                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
+                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
               </div>
               {(recentEvents ?? []).length === 0 ? (
-                <p style={{ padding: '16px 18px', fontSize: '.72rem', color: 'var(--muted2)' }}>まだ記録がありません</p>
+                <EmptyState title="まだ記録がありません" compact />
               ) : (
                 <div className="stagger">
                   {(recentEvents ?? []).map((e: any) => (
@@ -505,7 +507,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* ⑦ MB粗利の推移（データのある月から表示） */}
           <SectionTitle title="MB粗利の推移" subtitle="プロジェクトP&L集計（データのある月から）" />
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: 140 }}>
               {visibleTrend.map((t, i) => {
                 const h = Math.max(3, Math.round((Math.max(0, t.value) / trendMax) * 110))
@@ -513,8 +515,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                 return (
                   <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                     <span className="tnum" style={{ fontSize: '.52rem', color: 'var(--muted2)', fontFamily: 'Inter' }}>{Math.abs(t.value) >= 1000 ? `${Math.round(t.value / 1000)}k` : t.value}</span>
-                    <div className="bar-grow" style={{ width: '100%', maxWidth: 40, height: h, borderRadius: '6px 6px 0 0', background: isLast ? 'var(--blue)' : 'var(--blue-bg)' }} />
-                    <span style={{ fontSize: '.56rem', color: isLast ? 'var(--blue)' : 'var(--muted2)', fontWeight: isLast ? 700 : 400 }}>{t.label}</span>
+                    <div className="bar-grow" style={{ width: '100%', maxWidth: 40, height: h, borderRadius: '6px 6px 0 0', background: isLast ? 'var(--c-blue)' : 'var(--blue-bg)' }} />
+                    <span style={{ fontSize: '.56rem', color: isLast ? 'var(--c-blue)' : 'var(--muted2)', fontWeight: isLast ? 700 : 400 }}>{t.label}</span>
                   </div>
                 )
               })}
@@ -522,7 +524,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           </div>
 
           {/* ⑧ 詳細（格下げ・折りたたみ）：プロジェクト実行（1行サマリー）＋MB担当別粗利＋デリバリー別原価 */}
-          <details className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 8 }}>
+          <details className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 8 }}>
             <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '14px 20px', fontSize: '.82rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>詳細（プロジェクト実行・MB担当別・デリバリー別）</span>
               <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 600 }}>クリックで展開</span>
@@ -559,7 +561,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                           <span style={{ fontSize: '.72rem', fontWeight: 600 }}>{d.name} <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400 }}>· {d.count}件</span></span>
                           <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 700, color: d.margin >= 0 ? 'var(--txt)' : 'var(--red)' }}>¥{d.margin.toLocaleString()}</span>
                         </div>
-                        <div style={{ height: 5, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><div style={{ width: `${w}%`, height: '100%', background: 'var(--blue)', borderRadius: 4 }} /></div>
+                        <div style={{ height: 5, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><div style={{ width: `${w}%`, height: '100%', background: 'var(--c-blue)', borderRadius: 4 }} /></div>
                       </div>
                     )
                   })}
@@ -592,18 +594,18 @@ function ConsoleDashboardSkeleton() {
   return (
     <div aria-busy="true">
       <div style={{ borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className="skeleton" style={{ width: 170, height: 22, borderRadius: 6 }} />
-        <div className="skeleton" style={{ width: 130, height: 30, borderRadius: 8 }} />
+        <div className="ui-skeleton" style={{ width: 170, height: 22, borderRadius: 6 }} />
+        <div className="ui-skeleton" style={{ width: 130, height: 30, borderRadius: 8 }} />
       </div>
       <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
-        <div className="skeleton" style={{ height: 140, borderRadius: 16, marginBottom: 18 }} />
+        <div className="ui-skeleton" style={{ height: 140, borderRadius: 16, marginBottom: 18 }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
-          {[0, 1, 2].map(i => <div key={i} className="skeleton" style={{ height: 96, borderRadius: 14 }} />)}
+          {[0, 1, 2].map(i => <div key={i} className="ui-skeleton" style={{ height: 96, borderRadius: 14 }} />)}
         </div>
-        <div className="skeleton" style={{ height: 210, borderRadius: 14, marginBottom: 18 }} />
+        <div className="ui-skeleton" style={{ height: 210, borderRadius: 14, marginBottom: 18 }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
-          <div className="skeleton" style={{ height: 170, borderRadius: 14 }} />
-          <div className="skeleton" style={{ height: 170, borderRadius: 14 }} />
+          <div className="ui-skeleton" style={{ height: 170, borderRadius: 14 }} />
+          <div className="ui-skeleton" style={{ height: 170, borderRadius: 14 }} />
         </div>
       </div>
     </div>
@@ -676,7 +678,7 @@ function KpiCard({ label, value, suffix, format, icon, accent, alert, delta, sub
   delta?: { cur: number; prev: number }; sub?: string
 }) {
   const TINT: Record<string, string> = {
-    'var(--blue)': 'var(--blue-bg)', 'var(--green)': 'var(--green-bg)', 'var(--amber)': 'var(--amber-bg)',
+    'var(--c-blue)': 'var(--blue-bg)', 'var(--green)': 'var(--green-bg)', 'var(--amber)': 'var(--amber-bg)',
     'var(--muted2)': 'var(--bg2)',
   }
   const numColor = alert ? 'var(--red)' : 'var(--txt)'
