@@ -7,6 +7,8 @@ import { customerHonorific } from '@/lib/customer'
 import { computeProjectPnl } from '@/lib/pnl'
 import { phaseOf, PHASE_LABEL, PHASE_STYLE, INTAKE_LABEL, PROJECT_STATUSES, PROJECT_STATUS_STYLE } from '@/lib/phase'
 import StatusPill from '@/components/ui/StatusPill'
+import Button from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
 import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill, DEAL_STATUS } from '@/lib/status'
 import DeliveryProgress from './DeliveryProgress'
 
@@ -73,7 +75,7 @@ function needsBase(d: Deal): boolean {
 
 const COLS = [
   { key: 'received',    label: '受付',       accent: 'var(--amber)', accentBg: 'var(--amber-bg)' },
-  { key: 'in_progress', label: '対応中',     accent: 'var(--blue)',  accentBg: 'var(--blue-bg)' },
+  { key: 'in_progress', label: '対応中',     accent: 'var(--c-blue)',  accentBg: 'var(--blue-bg)' },
   { key: 'confirmed',   label: '成約・確定', accent: 'var(--green)', accentBg: 'var(--green-bg)' },
   { key: 'paid',        label: '支払済',     accent: 'var(--muted2)', accentBg: 'var(--bg2)' },
   { key: 'lost',        label: '不成立',     accent: 'var(--red)',   accentBg: 'var(--red-bg)' },
@@ -96,10 +98,10 @@ function DealStepper({ status }: { status: string }) {
           return (
             <div key={k} style={{ display: 'flex', alignItems: 'flex-start', flex: i < DEAL_FLOW.length - 1 ? 1 : '0 0 auto' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0, width: 56 }}>
-                <span style={{ width: isCur ? 13 : 10, height: isCur ? 13 : 10, borderRadius: '50%', background: done ? 'var(--blue)' : '#fff', border: `2px solid ${done ? 'var(--blue)' : 'var(--line)'}`, boxShadow: isCur ? '0 0 0 3px var(--blue-bg)' : 'none', marginTop: isCur ? 0 : 1.5, transition: 'all .15s' }} />
-                <span style={{ fontSize: '.54rem', fontWeight: isCur ? 800 : 600, color: isCur ? 'var(--blue)' : 'var(--muted2)', whiteSpace: 'nowrap' }}>{DEAL_STATUS[k].label}</span>
+                <span style={{ width: isCur ? 13 : 10, height: isCur ? 13 : 10, borderRadius: '50%', background: done ? 'var(--c-blue)' : '#fff', border: `2px solid ${done ? 'var(--c-blue)' : 'var(--line)'}`, boxShadow: isCur ? '0 0 0 3px var(--blue-bg)' : 'none', marginTop: isCur ? 0 : 1.5, transition: 'all .15s' }} />
+                <span style={{ fontSize: '.54rem', fontWeight: isCur ? 800 : 600, color: isCur ? 'var(--c-blue)' : 'var(--muted2)', whiteSpace: 'nowrap' }}>{DEAL_STATUS[k].label}</span>
               </div>
-              {i < DEAL_FLOW.length - 1 && <span aria-hidden style={{ flex: 1, height: 2, borderRadius: 2, background: (!isLost && curIdx > i) ? 'var(--blue)' : 'var(--line)', marginTop: 5 }} />}
+              {i < DEAL_FLOW.length - 1 && <span aria-hidden style={{ flex: 1, height: 2, borderRadius: 2, background: (!isLost && curIdx > i) ? 'var(--c-blue)' : 'var(--line)', marginTop: 5 }} />}
             </div>
           )
         })}
@@ -171,11 +173,11 @@ function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDelete, o
       {exps.map(e => {
         const b = badge(e.status)
         return (
-          <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 0', fontSize: '.62rem' }}>
+          <div key={e.id} className="ui-row" style={{ gap: 5, padding: '3px 0', fontSize: '.62rem' }}>
             <span style={{ color: 'var(--muted2)', width: 36, flexShrink: 0 }}>{e.kind}</span>
             <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 700, minWidth: 56, textAlign: 'right' }}>¥{(e.amount ?? 0).toLocaleString()}</span>
             <span style={{ fontSize: '.5rem', fontWeight: 700, color: b.c, background: b.bg, borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{b.t}</span>
-            {e.has_evidence && <button onClick={() => onView(e.id)} title="領収書" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.62rem', color: 'var(--blue)', padding: 0 }}>📎</button>}
+            {e.has_evidence && <button onClick={() => onView(e.id)} title="領収書" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.62rem', color: 'var(--c-blue)', padding: 0 }}>📎</button>}
             <span style={{ flex: 1 }} />
             {e.status !== 'approved' && <button onClick={() => onStatus(e.id, 'approved')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--green)', background: 'none', border: '1px solid var(--green)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>承認</button>}
             {e.status !== 'rejected' && <button onClick={() => onStatus(e.id, 'rejected')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>却下</button>}
@@ -192,7 +194,7 @@ function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDelete, o
             style={{ width: 64, border: '1px solid var(--line)', borderRadius: 6, padding: '3px 6px', fontFamily: 'Inter', fontSize: '.62rem', textAlign: 'right' }} />
           <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} disabled={busy}
             style={{ fontSize: '.52rem', width: 116 }} />
-          <button onClick={submit} disabled={busy || !amount.trim()} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', opacity: (busy || !amount.trim()) ? .5 : 1 }}>経費を追加</button>
+          <button onClick={submit} disabled={busy || !amount.trim()} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', opacity: (busy || !amount.trim()) ? .5 : 1 }}>経費を追加</button>
         </div>
       )}
     </div>
@@ -630,8 +632,11 @@ export default function DealsPage() {
   if (loading) return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
-      <div style={{ flex: 1, marginLeft: 230, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--muted2)', fontSize: '.8rem' }}>読み込み中…</p>
+      <div style={{ flex: 1, marginLeft: 230, padding: '30px 32px' }} aria-busy="true">
+        <div className="ui-skeleton" style={{ height: 28, width: 200, marginBottom: 22 }} />
+        <div style={{ display: 'flex', gap: 14 }}>
+          {[0, 1, 2, 3].map(i => <div key={i} className="ui-skeleton" style={{ width: 256, height: 220, borderRadius: 16 }} />)}
+        </div>
       </div>
     </div>
   )
@@ -676,7 +681,7 @@ export default function DealsPage() {
           </select>
 
           {/* F-3a: 直営業プロジェクト起票（商談を経ず MB直営・確定で起票）。紹介・協力の商談起票は従来どおり別導線。 */}
-          <button onClick={() => setDirectModal(true)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 800, padding: '8px 14px', borderRadius: 8, color: '#fff', background: 'var(--blue)', whiteSpace: 'nowrap' }}>＋ 直営業プロジェクト</button>
+          <Button variant="primary" size="sm" onClick={() => setDirectModal(true)} style={{ whiteSpace: 'nowrap' }}>＋ 直営業プロジェクト</Button>
         </div>
 
         {/* F-3a: フィルタバー（ボードのみ）。流入経路・フェーズ・MB担当・パートナーで絞り込み。 */}
@@ -702,8 +707,7 @@ export default function DealsPage() {
               {partnerOpts.map(([code, name]) => <option key={code} value={code}>パートナー：{name}</option>)}
             </select>
             {(filterIntake !== 'all' || filterPhase !== 'all' || filterDirector !== 'all' || filterPartner !== 'all' || filterSvc !== 'all') && (
-              <button onClick={() => { setFilterIntake('all'); setFilterPhase('all'); setFilterDirector('all'); setFilterPartner('all'); setFilterSvc('all') }}
-                style={{ border: '1px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700, padding: '6px 12px', borderRadius: 8, color: 'var(--muted2)' }}>クリア</button>
+              <Button variant="secondary" size="sm" onClick={() => { setFilterIntake('all'); setFilterPhase('all'); setFilterDirector('all'); setFilterPartner('all'); setFilterSvc('all') }}>クリア</Button>
             )}
           </div>
         )}
@@ -715,13 +719,14 @@ export default function DealsPage() {
               value={archiveSearch}
               onChange={e => setArchiveSearch(e.target.value)}
               placeholder="お客様名で検索…"
-              style={{ width: '100%', maxWidth: 360, border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 13px', fontFamily: 'inherit', fontSize: '.8rem', marginBottom: 16 }}
+              className="ui-field"
+              style={{ maxWidth: 360, fontSize: '.8rem', marginBottom: 16 }}
             />
             {(() => {
               const arch = filteredDeals
                 .filter(d => d.status === 'paid' || d.status === 'lost')
                 .filter(d => !archiveSearch.trim() || customerHonorific(d).toLowerCase().includes(archiveSearch.trim().toLowerCase()))
-              if (arch.length === 0) return <p style={{ fontSize: '.78rem', color: 'var(--muted2)' }}>該当する案件がありません。</p>
+              if (arch.length === 0) return <EmptyState title="該当する案件がありません" compact />
               return (
                 <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
                   {arch.map((d, i) => (
@@ -772,7 +777,7 @@ export default function DealsPage() {
                     onClick={collapsed ? () => toggleCol(lane.key) : undefined}
                     className={collapsed ? 'card-hover' : undefined}
                     title={collapsed ? 'クリックで展開' : undefined}
-                    style={{ width: collapsed ? 50 : 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: collapsed ? '12px 4px' : 14, minHeight: 220, cursor: collapsed ? 'pointer' : 'default', border: `1px solid ${dragOverCol === lane.key ? 'var(--blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out), width .18s var(--ease-out)' }}
+                    style={{ width: collapsed ? 50 : 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: collapsed ? '12px 4px' : 14, minHeight: 220, cursor: collapsed ? 'pointer' : 'default', border: `1px solid ${dragOverCol === lane.key ? 'var(--c-blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out), width .18s var(--ease-out)' }}
                   >
                     {collapsed ? (
                       /* B2: 細い折りたたみ列＝ステージ名(縦書き)＋件数0のみ。大きな空ボックスは出さない。 */
@@ -821,8 +826,8 @@ export default function DealsPage() {
                           draggable
                           onDragStart={() => onDragStart(d)}
                           onClick={() => setSelected(d)}
-                          className="card-hover"
-                          style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '10px 12px', marginBottom: 8, cursor: 'grab', boxShadow: selected?.id === d.id ? '0 0 0 2px var(--blue)' : undefined, userSelect: 'none', height: 66, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}
+                          className="card-hover ui-card"
+                          style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 13, padding: '10px 12px', marginBottom: 8, cursor: 'grab', boxShadow: selected?.id === d.id ? '0 0 0 2px var(--c-blue)' : undefined, userSelect: 'none', height: 66, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                             {attention && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--red)', borderRadius: 20, padding: '2px 7px', letterSpacing: '.02em' }}>要対応</span>}
@@ -1003,7 +1008,7 @@ export default function DealsPage() {
                       ))}
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 14px' }}>
                         <span style={{ fontSize: '.68rem', fontWeight: 800 }}>報酬合計（パートナー）</span>
-                        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 800, color: 'var(--blue)' }}>¥{selected.amount.toLocaleString()}</span>
+                        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 800, color: 'var(--c-blue)' }}>¥{selected.amount.toLocaleString()}</span>
                       </div>
                     </div>
 
@@ -1135,7 +1140,7 @@ export default function DealsPage() {
                       />
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
                         <span style={{ color: 'var(--muted2)' }}>確定報酬（{rateInfo(selected).rate}%）</span>
-                        <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--blue)' }}>
+                        <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)' }}>
                           {(() => { const bv = Number(baseEdit.replace(/[,，\s]/g, '')); return bv > 0 ? `¥${Math.round(bv * (rateInfo(selected).rate as number) / 100).toLocaleString()}` : '—' })()}
                         </b>
                       </div>
@@ -1241,7 +1246,7 @@ export default function DealsPage() {
               />
               <div style={{ marginTop: 12, padding: '11px 14px', background: 'var(--blue-bg2)', borderRadius: 10, fontSize: '.74rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--muted2)' }}>確定報酬（{baseModal.rate}%）</span>
-                <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--blue)', fontSize: '.95rem' }}>{preview != null ? `¥${preview.toLocaleString()}` : '—'}</b>
+                <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)', fontSize: '.95rem' }}>{preview != null ? `¥${preview.toLocaleString()}` : '—'}</b>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
                 <button onClick={() => setBaseModal(null)} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
@@ -1316,7 +1321,7 @@ export default function DealsPage() {
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'Inter', fontSize: '.8rem', margin: '5px 0 18px', textAlign: 'right' }} />
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setDirectModal(false)} disabled={directBusy} style={{ border: '1.5px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, padding: '8px 16px', borderRadius: 8, color: 'var(--muted2)' }}>キャンセル</button>
-              <button onClick={createDirectProject} disabled={directBusy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 800, padding: '8px 18px', borderRadius: 8, color: '#fff', background: 'var(--blue)', opacity: directBusy ? .6 : 1 }}>{directBusy ? '作成中…' : '起票する'}</button>
+              <button onClick={createDirectProject} disabled={directBusy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 800, padding: '8px 18px', borderRadius: 8, color: '#fff', background: 'var(--c-blue)', opacity: directBusy ? .6 : 1 }}>{directBusy ? '作成中…' : '起票する'}</button>
             </div>
           </div>
         </div>
