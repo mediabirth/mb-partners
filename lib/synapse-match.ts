@@ -85,3 +85,13 @@ export function topSuggestion(contacts: MatchContact[], catalog: string[]): TopS
   }
   return best
 }
+
+// 詳細の「SYNAPSEの結論」一行。決定的・AI非依存・新規I/O無し（既計算の candidates と demand_tags を整形するだけ）。
+// 素材不足（キーワード or 候補が無い）なら null＝結論カードを描画しない（沈黙＝未分析CTAが受け皿）。
+export type Conclusion = { keyword: string; targetTitle: string; verb: '紹介' | 'つなげる' } | null
+export function synapseConclusion(demandTags: string[] | null | undefined, candidates: MatchCandidate[] | null | undefined): Conclusion {
+  const keyword = (demandTags ?? []).find(t => typeof t === 'string' && t.trim())?.trim()
+  const cand = (candidates ?? [])[0]
+  if (!keyword || !cand) return null
+  return { keyword, targetTitle: cand.title, verb: cand.kind === 'service' ? '紹介' : 'つなげる' }
+}

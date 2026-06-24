@@ -3,7 +3,7 @@ import { createClient, getCachedUid } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
 import { inferEntity, synNorm } from '@/lib/synapse-entity'
-import { matchForContact } from '@/lib/synapse-match'
+import { matchForContact, synapseConclusion } from '@/lib/synapse-match'
 import { nudgeForContact } from '@/lib/synapse-nudge'
 import SynapseDetailClient, { type DetailContact, type HistoryItem } from './SynapseDetailClient'
 
@@ -93,10 +93,12 @@ export default async function SynapseDetailPage({ params }: { params: Promise<{ 
   // A/B：つなげる候補（決定的・本人台帳＋目録のみ・最大3・重なりゼロは沈黙）。書込ゼロ。
   const catalog = ((svcRes.data ?? []) as Array<{ name: string }>).map(s => s.name).filter(Boolean)
   const candidates = matchForContact(c, allContacts, catalog, 3)
+  // 旗艦①：SYNAPSEの結論（決定的・AI非依存・新規I/O無し＝既計算 candidates＋demand_tags の整形のみ）。素材不足は null。
+  const conclusion = synapseConclusion(c.demand_tags, candidates)
 
   // 詳細の一言ナッジ（該当時のみ・read-only）。新着は newServiceNames を渡さない＝発火しない。
   const nudge = nudgeForContact(c, { nowMs: Date.now(), dormantDays: 90 })
 
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY
-  return <SynapseDetailClient contact={c} aiEnabled={aiEnabled} history={history} candidates={candidates} nudge={nudge} />
+  return <SynapseDetailClient contact={c} aiEnabled={aiEnabled} history={history} candidates={candidates} nudge={nudge} conclusion={conclusion} />
 }

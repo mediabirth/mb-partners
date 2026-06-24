@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import SynapseCrest from '../SynapseCrest'
 import Button from '@/components/ui/Button'
 import Tag from '@/components/ui/Tag'
-import type { MatchCandidate } from '@/lib/synapse-match'
+import type { MatchCandidate, Conclusion } from '@/lib/synapse-match'
 import type { Nudge } from '@/lib/synapse-nudge'
 
 // SYNAPSE 詳細＝需要分析モデル（仕上げ）。情報(事実プロフィール+編集トグル+URL欄に小SYNAPSEボタン) → 需要分析(キーワード＋推奨サービスの2段) → タグ→ポップアップ→紹介文(Feature C) → 紹介する(deep-link) → 削除。
@@ -31,7 +31,7 @@ const FIELDS: Array<[label: string, key: keyof DetailContact, long?: boolean]> =
   ['電話', 'phone'], ['お名前', 'name'], ['住所', 'address', true], ['メモ', 'notes', true],
 ]
 
-export default function SynapseDetailClient({ contact, aiEnabled, history, candidates = [], nudge = null }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[]; candidates?: MatchCandidate[]; nudge?: Nudge | null }) {
+export default function SynapseDetailClient({ contact, aiEnabled, history, candidates = [], nudge = null, conclusion = null }: { contact: DetailContact; aiEnabled: boolean; history: HistoryItem[]; candidates?: MatchCandidate[]; nudge?: Nudge | null; conclusion?: Conclusion }) {
   const router = useRouter()
   const [c, setC] = useState<DetailContact>(contact)
   // 一言ナッジの「後で」（localStorage＝本人端末スコープ・DB/money非接触）。
@@ -133,13 +133,27 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
         return (
           <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{main || '名称未設定'}</h1>
+              <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{main || '名称未設定'}</h1>
               {sub && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
             </div>
             <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '3px 10px', flexShrink: 0, marginTop: 4 }}>{entityLabel}・見込み</span>
           </div>
         )
       })()}
+
+      {/* 旗艦①：SYNAPSEの結論（会社名＋区分の直下・読みパネルの上）。決定的・AI非依存。素材不足は非表示＝沈黙。
+          静謐版：極薄囲み(0.5px var(--line-2))・グラデ/影なし＋紋章＋小ラベル＋結論文（対象名は --c-blue 強調）。 */}
+      {conclusion && (
+        <div className="ui-enter" style={{ margin: '14px 20px 0', border: '0.5px solid var(--line-2)', borderRadius: 'var(--r-card)', padding: '13px 15px', background: 'var(--s-0)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+            <SynapseCrest size={18} />
+            <span style={{ fontSize: '.56rem', fontWeight: 800, letterSpacing: '.1em', color: 'var(--c-blue)' }}>SYNAPSEの結論</span>
+          </div>
+          <p style={{ fontSize: '14.5px', fontWeight: 500, color: 'var(--t-primary)', lineHeight: 1.7, margin: 0 }}>
+            「{conclusion.keyword}」を切り口に、<b style={{ fontWeight: 700, color: 'var(--c-blue)' }}>{conclusion.targetTitle}</b>{conclusion.verb === '紹介' ? 'を紹介する' : 'とつなげる'}のが筋。
+          </p>
+        </div>
+      )}
 
       {/* Phase4：一言ナッジ（該当時のみ・控えめ・「後で」で畳める＝localStorage本人端末スコープ）。無ければ非表示＝沈黙。 */}
       {nudge && !nudgeHidden && (
@@ -167,7 +181,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
               <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>SYNAPSEの読み</b>
             </div>
             {c.demand_summary
-              ? <p style={{ fontSize: '.74rem', color: 'var(--txt)', lineHeight: 1.85 }}>{c.demand_summary}</p>
+              ? <p style={{ fontSize: '.74rem', color: 'var(--t-primary)', lineHeight: 1.9 }}>{c.demand_summary}</p>
               : <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>この会社の需要傾向を読み解きました。下のキーワード／推奨サービスから紹介文を作れます。</p>}
             {keywords.length > 0 && (
               <div style={{ marginTop: 12 }}>
@@ -221,7 +235,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
 
       {/* B：つなげる候補（需要分析の下・候補がある時のみ・最大3・0件は非表示＝沈黙）。理由付き＝なぜこの人/サービス。 */}
       {candidates.length > 0 && (
-        <div style={{ margin: '18px 20px 0', background: '#fff', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
+        <div style={{ margin: '26px 20px 0', background: '#fff', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
             <SynapseCrest size={18} />
             <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>つなげる候補</b>
@@ -243,7 +257,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
       )}
 
       {/* 1. 情報＝事実プロフィール（編集トグル・URL欄に小SYNAPSEボタン） */}
-      <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
+      <div style={{ margin: '26px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <b style={{ fontSize: '.82rem', fontWeight: 800 }}>情報</b>
           {edit
@@ -301,7 +315,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
       </div>
 
       {/* C. 紹介の履歴（read-only・このつながりに紐づく過去の紹介） */}
-      <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
+      <div style={{ margin: '26px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: history.length ? 10 : 0 }}>
           <b style={{ fontSize: '.82rem', fontWeight: 800 }}>紹介の履歴</b>
           {history.length > 3 && <button onClick={() => setShowAllHistory(true)} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>すべて見る（{history.length}）</button>}
@@ -318,7 +332,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
       </div>
 
       {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ・憲法Button secondary・遷移ロジック不変） */}
-      <div style={{ margin: '18px 20px 0', textAlign: 'center' }}>
+      <div style={{ margin: '26px 20px 0', textAlign: 'center' }}>
         <Button variant="secondary" size="sm" href={referHref} style={{ borderRadius: 999 }}>このつながりを紹介する →</Button>
         <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 7 }}>いまの情報を引き継いで紹介できます。</p>
       </div>

@@ -1,6 +1,6 @@
 // 単体テスト（決定性担保）：matchForContact / topSuggestion。
 // 実行：node lib/synapse-match.test.ts （Node 25 type-stripping）。
-import { matchForContact, topSuggestion, type MatchContact } from './synapse-match.ts'
+import { matchForContact, topSuggestion, synapseConclusion, type MatchContact, type MatchCandidate } from './synapse-match.ts'
 
 let pass = 0, fail = 0
 const ok = (name: string, cond: boolean, got?: unknown) => { if (cond) { pass++; console.log(`  ✓ ${name}`) } else { fail++; console.log(`  ✗ ${name}  got=${JSON.stringify(got)}`) } }
@@ -55,6 +55,19 @@ console.log('=== topSuggestion ===')
   ok('示唆あり（最高スコア1件）', !!s && !!s.candidate, s)
   ok('示唆に理由', !!s && s.candidate.reason.length > 0, s?.candidate.reason)
   ok('示唆なし→null', topSuggestion([C('z', { demand_tags: ['宇宙'] })], catalog) === null)
+}
+
+console.log('=== synapseConclusion（決定的・AI非依存） ===')
+{
+  const svc: MatchCandidate = { kind: 'service', refId: null, title: 'MatchHub', reasons: ['採用強化'], reason: '', score: 3 }
+  const ppl: MatchCandidate = { kind: 'contact', refId: 'y', title: 'エヌ・アパレル', entity: 'corporate', reasons: ['採用強化'], reason: '', score: 1 }
+  const cs = synapseConclusion(['グローバル採用強化'], [svc])
+  ok('サービス→紹介(verb)', !!cs && cs.verb === '紹介' && cs.targetTitle === 'MatchHub' && cs.keyword === 'グローバル採用強化', cs)
+  const cc = synapseConclusion(['グローバル採用強化'], [ppl])
+  ok('人→つなげる(verb)', !!cc && cc.verb === 'つなげる' && cc.targetTitle === 'エヌ・アパレル', cc)
+  ok('キーワード無→null', synapseConclusion([], [svc]) === null)
+  ok('候補無→null', synapseConclusion(['採用'], []) === null)
+  ok('両方無→null', synapseConclusion(null, null) === null)
 }
 
 console.log(`\n=== RESULT: ${pass} pass / ${fail} fail ===`)
