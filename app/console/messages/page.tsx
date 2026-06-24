@@ -15,12 +15,14 @@ export default async function ConsoleMessagesPage() {
   if (prof?.role !== 'owner') redirect('/console')
 
   const admin = await createServiceRoleClient()
-  const [linksRes, msgsRes] = await Promise.all([
+  const [linksRes, msgsRes, tplRes] = await Promise.all([
     admin.from('partner_line_links').select('partner_id, line_user_id'),
     admin.from('messages').select('id, created_at, partner_id, customer_email, direction, channel, subject, body, status, error, thread_key, attachments').order('created_at', { ascending: true }).limit(2000),
+    admin.from('message_templates').select('id, title, body, category, channel, attachments, sort_order').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
   ])
   const links = (linksRes.data ?? []) as Array<{ partner_id: string; line_user_id: string }>
   const messages = (msgsRes.data ?? []) as Msg[]
+  const templates = (tplRes.data ?? []) as import('./MessagesClient').Template[]
 
   // 受信画像：private バケットの署名URLを path→url で解決（console表示のみ・公開URLは発行しない）。
   const signedUrls: Record<string, string> = {}
@@ -71,7 +73,7 @@ export default async function ConsoleMessagesPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <MessagesClient threads={threads} messages={messages} signedUrls={signedUrls} />
+        <MessagesClient threads={threads} messages={messages} signedUrls={signedUrls} templates={templates} />
       </div>
     </div>
   )

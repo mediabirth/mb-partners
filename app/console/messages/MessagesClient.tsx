@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ChangeEvent } from 'react'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -15,34 +15,64 @@ export type ThreadRow = {
   partnerId?: string; customerEmail?: string; hasLine: boolean
   lastBody: string | null; lastAt: string | null
 }
+export type Template = {
+  id: string; title: string; body: string | null; category: string | null
+  channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; sort_order: number
+}
+type PendingImage = { path: string; previewUrl: string; filename: string }
 
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 
-export default function MessagesClient({ threads, messages, signedUrls = {} }: { threads: ThreadRow[]; messages: Msg[]; signedUrls?: Record<string, string> }) {
+export default function MessagesClient({ threads, messages, signedUrls = {}, templates = [] }: { threads: ThreadRow[]; messages: Msg[]; signedUrls?: Record<string, string>; templates?: Template[] }) {
   const [sel, setSel] = useState<string | null>(threads[0]?.key ?? null)
   const [msgs, setMsgs] = useState<Msg[]>(messages)
   const [body, setBody] = useState(''); const [subject, setSubject] = useState('')
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
+  const [tplOpen, setTplOpen] = useState(false)
+  const [pending, setPending] = useState<PendingImage[]>([])   // 送信前にアップロード済みの画像
+  const [urls, setUrls] = useState<Record<string, string>>(signedUrls)   // path→署名URL（送信後の表示用にローカル追記）
 
   const thread = threads.find(t => t.key === sel) ?? null
   const channel: 'line' | 'email' = thread?.kind === 'partner' ? 'line' : 'email'
   // 未連携LINE（kind='unknown'）は送信先userIdを保持しない方針 → 受信表示のみ・送信不可。
   const canSend = thread?.kind === 'partner' || thread?.kind === 'customer'
   const threadMsgs = useMemo(() => msgs.filter(m => m.thread_key === sel).sort((a, b) => a.created_at.localeCompare(b.created_at)), [msgs, sel])
+  // このチャネルに使えるテンプレ（line/email/both/null汎用）。
+  const usableTpls = templates.filter(t => !t.channel || t.channel === 'both' || t.channel === channel)
+
+  function insertTemplate(t: Template) {
+    setBody(prev => (prev ? prev + '\n' : '') + (t.body ?? ''))
+    setTplOpen(false)
+  }
+
+  async function onPickImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    setErr('')
+    try {
+      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file) })
+      const res = await fetch('/api/console/messages/upload', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ filename: file.name, contentType: file.type, contentBase64: dataUrl }) })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.attachment) { setErr(j?.error || '画像アップロードに失敗しました'); return }
+      if (j.previewUrl) setUrls(prev => ({ ...prev, [j.attachment.path]: j.previewUrl }))
+      setPending(prev => [...prev, { path: j.attachment.path, previewUrl: j.previewUrl || '', filename: file.name }])
+    } catch { setErr('画像アップロードに失敗しました') }
+  }
 
   async function send() {
-    if (busy || !thread || !body.trim()) return
+    if (busy || !thread || (!body.trim() && pending.length === 0)) return
     setBusy(true); setErr('')
     try {
+      const attachments = pending.map(p => ({ type: 'image', path: p.path }))
       const payload = channel === 'line'
-        ? { channel: 'line', partnerId: thread.partnerId, body }
-        : { channel: 'email', partnerId: thread.partnerId ?? null, customerEmail: thread.customerEmail, subject: subject || undefined, body }
+        ? { channel: 'line', partnerId: thread.partnerId, body, attachments }
+        : { channel: 'email', partnerId: thread.partnerId ?? null, customerEmail: thread.customerEmail, subject: subject || undefined, body, attachments }
       const res = await fetch('/api/console/messages/send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { setErr(j?.error || '送信に失敗しました'); return }
       if (j.message) setMsgs(prev => [...prev, j.message as Msg])
       if (!j.ok) setErr(j.error || '送信は記録されましたが配信に失敗しました')
-      setBody(''); setSubject('')
+      setBody(''); setSubject(''); setPending([])
     } catch { setErr('通信に失敗しました') } finally { setBusy(false) }
   }
 
@@ -52,7 +82,10 @@ export default function MessagesClient({ threads, messages, signedUrls = {} }: {
       <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid var(--line)', background: 'var(--s-0)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--line)' }}>
           <p className="eyebrow" style={{ marginBottom: 2 }}>司令塔</p>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>メッセージ</h1>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>メッセージ</h1>
+            <a href="/console/messages/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ管理</a>
+          </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {threads.length === 0 ? (
@@ -88,9 +121,9 @@ export default function MessagesClient({ threads, messages, signedUrls = {} }: {
                 <div key={m.id} style={{ alignSelf: m.direction === 'out' ? 'flex-end' : 'flex-start', maxWidth: '72%' }}>
                   <div style={{ background: m.direction === 'out' ? 'var(--c-blue)' : 'var(--s-2)', color: m.direction === 'out' ? '#fff' : 'var(--txt)', borderRadius: 12, padding: '9px 13px', fontSize: '.76rem', lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {m.subject && <div style={{ fontWeight: 800, marginBottom: 3 }}>{m.subject}</div>}
-                    {(m.attachments ?? []).filter(a => a.type === 'image' && signedUrls[a.path]).map(a => (
+                    {(m.attachments ?? []).filter(a => a.type === 'image' && urls[a.path]).map(a => (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <a key={a.path} href={signedUrls[a.path]} target="_blank" rel="noopener noreferrer"><img src={signedUrls[a.path]} alt="受信画像" style={{ display: 'block', maxWidth: 220, maxHeight: 220, borderRadius: 8, marginBottom: m.body ? 4 : 0 }} /></a>
+                      <a key={a.path} href={urls[a.path]} target="_blank" rel="noopener noreferrer"><img src={urls[a.path]} alt="画像" style={{ display: 'block', maxWidth: 220, maxHeight: 220, borderRadius: 8, marginBottom: m.body ? 4 : 0 }} /></a>
                     ))}
                     {m.body}
                   </div>
@@ -104,13 +137,45 @@ export default function MessagesClient({ threads, messages, signedUrls = {} }: {
             <div style={{ borderTop: '1px solid var(--line)', padding: '14px 24px 18px', background: 'var(--s-0)', fontSize: '.66rem', color: 'var(--t-tertiary)' }}>この相手はまだ連携前のため返信できません。LINE連携が完了すると返信できます。</div>
           ) : (
           <div style={{ borderTop: '1px solid var(--line)', padding: '12px 24px 16px', background: 'var(--s-0)' }}>
+            {/* テンプレ挿入バー */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, position: 'relative' }}>
+              <button type="button" className="ui-btn" onClick={() => setTplOpen(o => !o)} disabled={usableTpls.length === 0} style={{ fontSize: '.62rem', padding: '5px 10px', borderRadius: 7, border: '1px solid var(--line)', background: 'var(--s-1)', cursor: usableTpls.length ? 'pointer' : 'default', color: usableTpls.length ? 'var(--txt)' : 'var(--t-tertiary)' }}>
+                テンプレート{usableTpls.length ? `（${usableTpls.length}）` : '（なし）'}
+              </button>
+              <label className="ui-btn" style={{ fontSize: '.62rem', padding: '5px 10px', borderRadius: 7, border: '1px solid var(--line)', background: 'var(--s-1)', cursor: 'pointer' }}>
+                画像を添付
+                <input type="file" accept="image/*" onChange={onPickImage} style={{ display: 'none' }} />
+              </label>
+              {tplOpen && usableTpls.length > 0 && (
+                <div style={{ position: 'absolute', bottom: '110%', left: 0, zIndex: 20, width: 280, maxHeight: 260, overflowY: 'auto', background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 8px 24px rgba(15,23,42,0.12)' }}>
+                  {usableTpls.map(t => (
+                    <button key={t.id} type="button" onClick={() => insertTemplate(t)} className="ui-row" style={{ width: '100%', textAlign: 'left', border: 'none', borderBottom: '1px solid var(--c-hairline)', cursor: 'pointer', background: 'transparent', display: 'block', padding: '9px 12px' }}>
+                      <div style={{ fontSize: '.72rem', fontWeight: 700 }}>{t.title}{t.category && <span style={{ marginLeft: 6, fontSize: '.52rem', color: 'var(--t-tertiary)' }}>{t.category}</span>}</div>
+                      {t.body && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.body}</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* 添付プレビュー */}
+            {pending.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                {pending.map((p, i) => (
+                  <div key={p.path} style={{ position: 'relative' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {p.previewUrl && <img src={p.previewUrl} alt={p.filename} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 7, border: '1px solid var(--line)' }} />}
+                    <button type="button" onClick={() => setPending(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: 9, border: 'none', background: 'var(--c-danger)', color: '#fff', fontSize: 11, lineHeight: 1, cursor: 'pointer' }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {channel === 'email' && (
               <input className="ui-field" value={subject} onChange={e => setSubject(e.target.value)} placeholder="件名（任意）" style={{ marginBottom: 8 }} />
             )}
             <textarea className="ui-field" value={body} onChange={e => setBody(e.target.value)} rows={3} placeholder={channel === 'line' ? 'LINE メッセージを入力…' : 'メール本文を入力…'} style={{ resize: 'vertical' }} />
             {err && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '6px 0 0' }}>{err}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-              <Button variant="primary" size="md" busy={busy} disabled={!body.trim()} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
+              <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && pending.length === 0} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
             </div>
           </div>
           )}
