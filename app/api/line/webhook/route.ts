@@ -67,11 +67,16 @@ export async function POST(req: NextRequest) {
           continue                                                        // sticker/video/audio/location 等は今は記録しない
         }
 
-        // 冪等：line_event_id 一意（再送は無視）。messages 隔離表のみ。
-        await admin.from('messages').upsert({
+        // 冪等：line_event_id で事前突合（既存ならスキップ）。partial unique index は競合時のbackstop
+        // （PostgREST upsert は partial index を推論できないため、明示select→insert方式にする）。
+        if (eventId) {
+          const { data: dup } = await admin.from('messages').select('id').eq('line_event_id', eventId).maybeSingle()
+          if (dup) continue
+        }
+        await admin.from('messages').insert({
           partner_id: partnerId, customer_email: null, direction: 'in', channel: 'line',
           body, attachments, status: 'received', thread_key: threadKey, line_event_id: eventId,
-        }, { onConflict: 'line_event_id', ignoreDuplicates: true })
+        })
       } catch { /* 個別event失敗は握る（LINE再送防止のため200を返す） */ }
     }
     return NextResponse.json({ ok: true })
