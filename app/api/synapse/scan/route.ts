@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { safeUrl, extractText, extractAddress, extractAddressLinks } from '@/lib/synapse-fetch'
+import { SCAN_DAILY_PER_USER, aiGlobalDailyExceeded, AI_BUSY_MESSAGE } from '@/lib/ai-limits'
 
 // SYNAPSE 名簿化（N3）：会社URLを取得→本文をAIに渡し 業種/規模/想定ニーズ を抽出→該当見込みに自動記入＋提案。
 // ★本人スコープ（.eq partner_id）厳守。サービス目録は読むだけ。お金/deals/帰属/通知は非接触。捏造ガード（目録名一致のみ）。
 // ★URL取得は基本SSRF対策：http/https のみ・内部/予約IP遮断・タイムアウト・サイズ上限・GETのみ。
-// ★partner-auth必須・ai_usage日次上限・ANTHROPIC_API_KEY未設定なら{disabled:true}。Anthropic REST(Node)。
+// ★コスト最適化：抽出/読み取りは軽量 haiku。AI入力は8000字に圧縮（住所は別途フルテキストへ正規表現＝AI非依存）。
+//   同一URL×直近結果ありは force 無しなら AI を呼ばず既存を返す（連打・再分析の無駄消費を防止）。全体/日サーキットブレーカ併設。
 export const runtime = 'nodejs'
 
-const DAILY_LIMIT = 20
-const MODEL = 'claude-sonnet-4-6'
+const DAILY_LIMIT = SCAN_DAILY_PER_USER
+const MODEL = 'claude-haiku-4-5-20251001'   // 読み取り/抽出は軽量モデルで十分（紹介文 draft-intro も haiku）。
 const MAX_TOKENS = 700
+const AI_INPUT_MAX = 8000                    // AIへ渡す本文の上限（14000→8000・住所はフルテキストで別抽出）。
+const CACHE_FRESH_MS = 7 * 24 * 60 * 60 * 1000   // 同一URLの直近スキャンを使い回す窓（7日）。
 const FETCH_TIMEOUT_MS = 6000
 const MAX_BYTES = 300_000
 const SELECT = 'id, name, company, industry, role, relationship, needs, notes, suggested_service, suggested_angle, acted_at, enriched_at, url, company_size, scanned_at, entity_type, phone, address, demand_summary, demand_tags, recommended_services, source, created_at, updated_at'
@@ -45,21 +49,31 @@ export async function POST(req: NextRequest) {
 
     const b = await req.json().catch(() => ({}))
     const id = typeof b.id === 'string' ? b.id : ''
+    const force = b.force === true   // 明示的な再分析（「別のURLで再分析する」）のみ AI を再実行。
     const u = safeUrl(typeof b.url === 'string' ? b.url : '')
     if (!id) return NextResponse.json({ error: '対象がありません' }, { status: 400 })
     if (!u) return NextResponse.json({ error: '有効なURL（http/https）を入力してください' }, { status: 400 })
 
     const admin = await createServiceRoleClient()
-    // 対象が本人の見込みであることを確認（本人スコープ）。
-    // 既存値（空欄のみ自動記入のため事実フィールドを読む）。
-    const { data: target } = await admin.from('synapse_contacts').select('id, company, industry, company_size, phone, address, entity_type').eq('id', id).eq('partner_id', partnerId).maybeSingle()
+    // 対象が本人の見込みであることを確認（本人スコープ）。事実フィールド＋キャッシュ判定用(url/scanned_at/demand_summary)を読む。
+    const { data: target } = await admin.from('synapse_contacts').select('id, company, industry, company_size, phone, address, entity_type, url, scanned_at, demand_summary').eq('id', id).eq('partner_id', partnerId).maybeSingle()
     if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // レート上限。
+    // C：同一URL×直近スキャン済み×分析済み で force でなければ AI を呼ばず既存を返す（無駄消費を防止）。
+    const tt = target as any
+    const fresh = tt.scanned_at && (Date.now() - new Date(tt.scanned_at).getTime() < CACHE_FRESH_MS)
+    if (!force && tt.url === u.toString() && fresh && typeof tt.demand_summary === 'string' && tt.demand_summary.trim()) {
+      const { data: cached } = await admin.from('synapse_contacts').select(SELECT).eq('id', id).eq('partner_id', partnerId).maybeSingle()
+      return NextResponse.json({ contact: cached, filledFacts: {}, cached: true, demand_summary: tt.demand_summary, demand_tags: [], recommended_services: [] })
+    }
+
+    // レート上限（1ユーザー/日）。
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date())
     const { data: usage } = await admin.from('ai_usage').select('count').eq('partner_id', partnerId).eq('day', day).maybeSingle()
     const used = usage?.count ?? 0
     if (used >= DAILY_LIMIT) return NextResponse.json({ error: `本日のAI利用上限（${DAILY_LIMIT}回/日）に達しました。明日また自動的にご利用いただけます。` }, { status: 429 })
+    // D：全体/日サーキットブレーカ（暴走時の保険・全パートナー合計）。
+    if (await aiGlobalDailyExceeded(admin, day)) return NextResponse.json({ error: AI_BUSY_MESSAGE }, { status: 429 })
 
     const topHtml = await fetchRaw(u)
     if (!topHtml) return NextResponse.json({ error: 'ページを取得できませんでした。URLをご確認ください。' }, { status: 422 })
@@ -73,7 +87,9 @@ export async function POST(req: NextRequest) {
       const sub = await fetchRaw(link)
       if (sub) pageText += `\n\n[追加ページ ${link.pathname}]\n${extractText(sub).slice(0, 3000)}`
     }
-    pageText = pageText.slice(0, 14000)
+    // 住所抽出は決定的（正規表現）＝フルテキストで実施（AI非依存・無料）。AIへの入力だけ圧縮する。
+    const addrText = pageText.slice(0, 14000)
+    const aiText = pageText.slice(0, AI_INPUT_MAX)
 
     // サービス目録（read-only）＝推奨サービスの捏造ガード用（完全一致のみ採用）。
     const { data: svcData } = await admin.from('services').select('name, subtitle, description').eq('active', true).order('sort', { ascending: true })
@@ -105,7 +121,7 @@ export async function POST(req: NextRequest) {
       '出力は次のJSONのみ（前置き・コードフェンス無し）：',
       '{"company":string|null,"industry":string|null,"size":string|null,"phone":string|null,"address":string|null,"demand_summary":string|null,"demand_tags":string[],"recommended_services":string[]}',
     ].join('\n')
-    const userMsg = `次の企業サイト本文から読み取ってください。\nURL: ${u.toString()}\n----\n${pageText}\n----`
+    const userMsg = `次の企業サイト本文から読み取ってください。\nURL: ${u.toString()}\n----\n${aiText}\n----`
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
@@ -125,7 +141,7 @@ export async function POST(req: NextRequest) {
     const empty = (v: any) => !(typeof v === 'string' && v.trim())   // 既存が空欄か
     // (1) 事実：空欄のみ自動記入（既存値は絶対に上書きしない）。
     // 住所は決定的抽出（正規表現）を優先・AI返却はフォールバック。
-    const addrFromText = extractAddress(pageText)
+    const addrFromText = extractAddress(addrText)
     const facts = { company: str(parsed.company, 200), industry: str(parsed.industry, 80), size: str(parsed.size, 30), phone: str(parsed.phone, 60), address: addrFromText || str(parsed.address, 300) }
     const filledFacts: Record<string, string> = {}
     const patch: Record<string, any> = { url: u.toString(), scanned_at: new Date().toISOString(), updated_at: new Date().toISOString() }

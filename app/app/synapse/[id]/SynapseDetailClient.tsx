@@ -78,16 +78,19 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
     if (!confirm('このつながりを削除しますか？')) return
     try { const res = await fetch(`/api/synapse/contacts/${c.id}`, { method: 'DELETE' }); if (res.ok) router.push('/app/synapse') } catch { /* noop */ }
   }
-  async function scan() {
+  async function scan(force = false) {
+    if (scanBusy) return                                   // 二度押し・多重発火ガード（連打抑止）。
     if (!url.trim()) { setScanErr('会社URLを入力してください'); return }
     setScanBusy(true); setScanErr(''); setScanInfo(null)
     try {
-      const res = await fetch('/api/synapse/scan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: c.id, url }) })
+      // force＝明示的な再分析（「別のURLで再分析する」）のみ AI を再実行。それ以外は同一URL直近結果を使い回す。
+      const res = await fetch('/api/synapse/scan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: c.id, url, force }) })
       const j = await res.json().catch(() => ({}))
       if (j?.disabled) { setScanErr('URL取込は現在ご利用いただけません。'); return }
       if (!res.ok) { setScanErr(j?.error || '取得に失敗しました'); return }
       if (j.contact) reflect(j.contact as DetailContact)   // ★⑤：事実が空欄補完されDBから再取得→画面に反映
-      setEdit(false)
+      setEdit(false); setRescan(false)
+      if (j.cached) { setScanInfo('直近の分析を表示しています（再取得なし）'); return }
       const ff = j.filledFacts ?? {}
       const labels: Record<string, string> = { company: '会社', industry: '業種', size: '規模', phone: '電話', address: '住所' }
       const filled = Object.keys(ff).map(k => labels[k] ?? k).join('・')
@@ -187,7 +190,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
                 {rescan ? (
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', background: '#fff' }} />
-                    <button onClick={scan} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
+                    <button onClick={() => scan(true)} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
                   </div>
                 ) : (
                   <button onClick={() => setRescan(true)} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>別のURLで再分析する</button>
@@ -204,7 +207,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
             {aiEnabled ? (
               <div style={{ display: 'flex', gap: 6 }}>
                 <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 10, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.78rem', background: '#fff' }} />
-                <button onClick={scan} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>SYNAPSE</button>
+                <button onClick={() => scan(false)} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>SYNAPSE</button>
               </div>
             ) : (
               <p style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>URL取込は現在ご利用いただけません。</p>

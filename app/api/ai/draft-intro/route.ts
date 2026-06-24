@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { DRAFT_DAILY_PER_USER, aiGlobalDailyExceeded, AI_BUSY_MESSAGE } from '@/lib/ai-limits'
 
 // バッチC：AI紹介文ドラフト生成（partner認証必須・サーバ専用）。
 // ★これはテキスト生成の“補助”。紹介の作成・帰属・お金・deals には一切関与しない。
 // ★ANTHROPIC_API_KEY はサーバ専用（NEXT_PUBLIC_ を付けない）。未設定でも安全に動く（disabled応答）。
 // web系SDKは使わず Anthropic REST を fetch（依存追加なし）。Node ランタイム。
+// ★品質が要る紹介文生成のため MODEL は haiku 据え置き（コスト×品質バランス）。全体/日サーキットブレーカ併設。
 export const runtime = 'nodejs'
 
-const DAILY_LIMIT = 20
-// コスト優先のため Haiku を既定にする。品質を上げたい時は次の1行を 'claude-sonnet-4-6' に差し替えるだけ。
+const DAILY_LIMIT = DRAFT_DAILY_PER_USER
+// 品質維持のため Haiku 据え置き（紹介文は据え置き＝モデル切替の対象外）。
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 600
 
@@ -66,6 +68,8 @@ export async function POST(req: NextRequest) {
         { status: 429 },
       )
     }
+    // 全体/日サーキットブレーカ（暴走時の保険・全パートナー合計）。
+    if (await aiGlobalDailyExceeded(admin, day)) return NextResponse.json({ error: AI_BUSY_MESSAGE }, { status: 429 })
 
     // 入力を整形して user メッセージに。
     const userMsg = [
