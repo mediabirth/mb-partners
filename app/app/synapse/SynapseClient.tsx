@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import SynapseCrest from './SynapseCrest'
 import SynapsePreempt, { type PreemptItem } from './SynapsePreempt'
+import EmptyState from '@/components/ui/EmptyState'
 
 // 表示用に【デモ】マーカーを除去（DBは不変＝go-live一括削除の対象を温存）。
 const stripDemo = (s: string | null | undefined) => (s ?? '').replace(/\s*【デモ】\s*/g, '').trim()
@@ -95,7 +96,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
           </button>
         </div>
         {entries.length === 0 ? (
-          <p style={{ padding: '24px 20px 30px', textAlign: 'center', fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, whiteSpace: 'pre-line', borderTop: '1px solid var(--line)' }}>{'ここに、あなたが繋いだ人・これから繋ぐ人が並びます。\n右上の「＋追加」から始めましょう。'}</p>
+          <EmptyState title="まだつながりはありません" hint="右上の「＋追加」から、繋いだ人・これから繋ぐ人を増やしましょう。" style={{ borderTop: '1px solid var(--line)' }} />
         ) : (
           entries.map(e => {
             const corp = e.entity === 'corporate'

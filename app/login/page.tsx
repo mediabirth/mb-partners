@@ -111,12 +111,13 @@ export default function LoginPage() {
             ご縁を、成果に。
           </p>
 
-          <div style={{ animation: 'up .5s .42s both' }}>
+          <div className="ui-card" style={{ animation: 'up .5s .42s both', padding: 18 }}>
             <form onSubmit={handleSubmit}>
               <div className="fld">
                 <label htmlFor="email">メールアドレス</label>
                 <input
                   id="email"
+                  className="ui-field"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -130,6 +131,7 @@ export default function LoginPage() {
                 <label htmlFor="password">パスワード</label>
                 <input
                   id="password"
+                  className="ui-field"
                   type="password"
                   placeholder="••••••••••"
                   value={password}
@@ -147,8 +149,8 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="btn btn-p"
-                style={{ width: '100%', justifyContent: 'center' }}
+                className="ui-btn ui-btn--primary ui-btn--lg"
+                style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
                 disabled={loading}
               >
                 {loading ? 'ログイン中…' : 'ログイン'}

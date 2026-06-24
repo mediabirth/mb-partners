@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import EmptyState from '@/components/ui/EmptyState'
 
 type Notification = {
   id: string
@@ -210,7 +211,7 @@ export default function InboxPage() {
       {tab === 'all' && (
         <>
           {notifs.length === 0 && broadcasts.length === 0 ? (
-            <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>通知はありません</p>
+            <EmptyState title="まだ通知はありません" compact />
           ) : (
             <>
               {notifs.map(n => (
@@ -226,7 +227,7 @@ export default function InboxPage() {
 
       {/* Personal */}
       {tab === 'personal' && (notifs.length === 0 ? (
-        <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>通知はありません</p>
+        <EmptyState title="まだ通知はありません" compact />
       ) : notifs.map(n => (
         <NotifRow key={n.id} n={n} onRead={() => !n.read_at && markRead(n.id)} />
       )))}
@@ -234,7 +235,7 @@ export default function InboxPage() {
       {/* News */}
       {tab === 'news' && (
         broadcasts.filter(b => b.kind === 'news').length === 0 ? (
-          <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>お知らせはありません</p>
+          <EmptyState title="まだお知らせはありません" compact />
         ) : broadcasts.filter(b => b.kind === 'news').map(b => (
           <BroadcastRow key={b.id} b={b} onClick={() => setDetail(b)} />
         ))
@@ -243,7 +244,7 @@ export default function InboxPage() {
       {/* Tips */}
       {tab === 'tips' && (
         broadcasts.filter(b => b.kind === 'tips').length === 0 ? (
-          <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>お役立ち情報はありません</p>
+          <EmptyState title="まだお役立ち情報はありません" compact />
         ) : broadcasts.filter(b => b.kind === 'tips').map(b => (
           <BroadcastRow key={b.id} b={b} onClick={() => setDetail(b)} />
         ))

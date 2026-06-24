@@ -46,10 +46,9 @@ export default function ConsoleLoginPage() {
         <div style={{ position: 'absolute', inset: 46, border: '1.5px solid #DCD8FA', borderRadius: '50%', animation: 'spin 34s linear infinite reverse' }} />
         <div style={{ position: 'absolute', inset: 104, border: '1.5px solid #4733E6', borderRadius: '50%', opacity: .22, animation: 'spin 22s linear infinite' }} />
       </div>
-      <div style={{
+      <div className="ui-card" style={{
         width: 402, maxWidth: '100%',
-        background: '#fff',
-        border: '1px solid var(--line)',
+        background: 'var(--s-0)',
         borderRadius: 18,
         padding: '36px 32px 30px',
         boxShadow: '0 28px 80px rgba(14,14,20,.12)',
@@ -73,6 +72,7 @@ export default function ConsoleLoginPage() {
           <div className="fld">
             <label>メールアドレス</label>
             <input
+              className="ui-field"
               type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="admin@example.com" required autoComplete="email"
             />
@@ -80,12 +80,13 @@ export default function ConsoleLoginPage() {
           <div className="fld">
             <label>パスワード</label>
             <input
+              className="ui-field"
               type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="••••••••••" required autoComplete="current-password"
             />
           </div>
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-          <button type="submit" className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
+          <button type="submit" className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
             {loading ? 'ログイン中…' : 'ログイン'}
           </button>
         </form>

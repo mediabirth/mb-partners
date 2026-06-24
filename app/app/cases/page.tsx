@@ -6,6 +6,7 @@ import { customerHonorific } from '@/lib/customer'
 import { nextPayoutDate } from '@/lib/payout'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import ChannelMark from '@/components/ChannelMark'
+import EmptyState from '@/components/ui/EmptyState'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済', lost: '不成立',
@@ -157,17 +158,15 @@ export default async function CasesPage({
       {/* Deal list */}
       <div style={{ padding: '0 20px' }}>
         {filtered.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 11, padding: '46px 26px' }}>
-            <div style={{ width: 52, height: 52, borderRadius: 15, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="1.6">
-                <path d="M4 6h16M4 12h16M4 18h10"/>
-              </svg>
-            </div>
-            <b style={{ fontSize: '.84rem' }}>案件がありません</b>
-            <p style={{ fontSize: '.71rem', lineHeight: 1.75, color: 'var(--muted2)' }}>
-              「紹介する」ボタンから案件を登録しましょう。
-            </p>
-          </div>
+          <EmptyState
+            title="まだ案件はありません"
+            hint="「紹介する」ボタンから案件を登録しましょう。"
+            icon={
+              <span style={{ display: 'inline-flex', width: 52, height: 52, borderRadius: 15, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
+              </span>
+            }
+          />
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column' }}>
             {filtered.map(d => {
