@@ -44,6 +44,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
   const [url, setUrl] = useState(contact.url ?? '')
   const [scanBusy, setScanBusy] = useState(false); const [scanErr, setScanErr] = useState(''); const [scanInfo, setScanInfo] = useState<string | null>(null)
   const [rescan, setRescan] = useState(false)   // 分析済みパネル内の「再分析」URL入力の開閉
+  const [memoOpen, setMemoOpen] = useState(false)   // メモの全文トグル
   const [picked, setPicked] = useState<{ tag: string; kind: 'keyword' | 'service' } | null>(null)
   const [intro, setIntro] = useState<{ text: string } | null>(null); const [introBusy, setIntroBusy] = useState(false)
 
@@ -198,8 +199,8 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
           // 未分析：このパネル自体を誘導CTAに
           <div style={{ textAlign: 'center', padding: '6px 0 2px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><SynapseCrest size={64} /></div>
-            <b style={{ fontSize: '.84rem', fontWeight: 800, color: 'var(--blue-dk)' }}>まだ読み解いていません</b>
-            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '5px auto 13px', lineHeight: 1.7, maxWidth: 260 }}>会社URLを渡すと、SYNAPSEがこの会社の需要を読み解きます。</p>
+            <b style={{ fontSize: '.84rem', fontWeight: 800, color: 'var(--blue-dk)' }}>この会社を読み解きましょう</b>
+            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '5px auto 13px', lineHeight: 1.7, maxWidth: 260 }}>URLを教えてくれれば、この会社を読み解きます。</p>
             {aiEnabled ? (
               <div style={{ display: 'flex', gap: 6 }}>
                 <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 10, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.78rem', background: '#fff' }} />
@@ -249,14 +250,25 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
         {/* B：会社URL＋SYNAPSEボタンは「SYNAPSEの読み」パネルに一本化（情報カードのURL欄は廃止＝二重URL解消）。 */}
 
         {!edit ? (
+          // 値のある項目だけを2カラムで詰めて表示（空欄は描画しない＝「—」を出さない）。メモは2行truncate＋続き。
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
             <div><div style={labelStyle}>区分</div><div style={{ ...valStyle, color: 'var(--txt)' }}>{entityLabel}</div></div>
-            {FIELDS.map(([label, key, long]) => {
-              const v = (c[key] as string) || null
+            {FIELDS.filter(([, key]) => { const v = c[key]; return typeof v === 'string' && v.trim() }).map(([label, key, long]) => {
+              const v = c[key] as string
+              if (key === 'notes') {
+                const longMemo = v.length > 48
+                return (
+                  <div key={key as string} style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+                    <div style={labelStyle}>{label}</div>
+                    <div style={{ ...valStyle, color: 'var(--txt)', whiteSpace: 'pre-wrap', ...(memoOpen ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>{v}</div>
+                    {longMemo && <button onClick={() => setMemoOpen(o => !o)} style={{ marginTop: 3, background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.6rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>{memoOpen ? '閉じる' : '続き'}</button>}
+                  </div>
+                )
+              }
               return (
                 <div key={key as string} style={{ gridColumn: long ? '1 / -1' : 'auto', minWidth: 0 }}>
                   <div style={labelStyle}>{label}</div>
-                  <div style={{ ...valStyle, color: v ? 'var(--txt)' : 'var(--muted)' }}>{v || '—'}</div>
+                  <div style={{ ...valStyle, color: 'var(--txt)' }}>{v}</div>
                 </div>
               )
             })}

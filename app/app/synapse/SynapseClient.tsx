@@ -2,6 +2,10 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import SynapseCrest from './SynapseCrest'
+import SynapsePreempt, { type PreemptItem } from './SynapsePreempt'
+
+// 表示用に【デモ】マーカーを除去（DBは不変＝go-live一括削除の対象を温存）。
+const stripDemo = (s: string | null | undefined) => (s ?? '').replace(/\s*【デモ】\s*/g, '').trim()
 
 // SYNAPSE 一覧（名簿＝資産）：個人/法人タブ撤去・検索なし・「話して追加」撤去。
 // 各行＝左端に個人/法人タグ＋主(法人=会社名/個人=氏名)＋副(担当者・業種 or 役職・所属)＋chevron。行のステータスタグは撤去。
@@ -25,7 +29,7 @@ export type ReferredEntry = {
 
 const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
-export default function SynapseClient({ initialContacts, referred = [] }: { initialContacts: SynapseContact[]; referred?: ReferredEntry[]; aiEnabled: boolean }) {
+export default function SynapseClient({ initialContacts, referred = [], preemptItems = [] }: { initialContacts: SynapseContact[]; referred?: ReferredEntry[]; aiEnabled: boolean; preemptItems?: PreemptItem[] }) {
   const [prospects, setProspects] = useState<SynapseContact[]>(initialContacts)
   const [adding, setAdding] = useState<null | { name: string; company: string }>(null); const [addErr, setAddErr] = useState(''); const [addBusy, setAddBusy] = useState(false)
 
@@ -40,14 +44,14 @@ export default function SynapseClient({ initialContacts, referred = [] }: { init
     const ledger: Entry[] = prospects.map(c => {
       const entity = prospectEntity(c)
       const corp = entity === 'corporate'
-      const main = (corp ? (c.company || c.name) : (c.name || c.company)) || '名称未設定'
-      const sub = (corp ? [c.name, c.industry] : [c.role, c.company]).filter(Boolean).join('・') || (corp ? '未取得' : '—')
+      const main = stripDemo((corp ? (c.company || c.name) : (c.name || c.company))) || '名称未設定'
+      const sub = (corp ? [c.name, c.industry] : [c.role, c.company]).map(stripDemo).filter(Boolean).join('・') || ''
       return { key: 'c' + c.id, main, entity, sub, href: `/app/synapse/${c.id}`, date: c.created_at }
     })
     const deals: Entry[] = referred.map(r => {
       const corp = r.entity === 'corporate'
-      const main = (corp ? (r.company || r.name) : (r.name || r.company)) || '紹介した顧客'
-      const sub = [corp ? r.person : null, r.service].filter(Boolean).join('・') || '紹介済み'
+      const main = stripDemo((corp ? (r.company || r.name) : (r.name || r.company))) || '紹介した顧客'
+      const sub = [corp ? r.person : null, r.service].map(stripDemo).filter(Boolean).join('・') || '紹介済み'
       return { key: 'd' + r.id, main, entity: r.entity, sub, href: `/app/synapse/deal-${r.id}`, date: r.date, lazy: true }
     })
     return [...ledger, ...deals].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -75,9 +79,12 @@ export default function SynapseClient({ initialContacts, referred = [] }: { init
             <span style={{ fontSize: '1.9rem', fontWeight: 900, letterSpacing: '-.02em', color: 'var(--blue-dk)', lineHeight: 1 }}>{entries.length}</span>
             <span style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--muted2)' }}>のつながり</span>
           </div>
-          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>繋いだ人・これから繋ぐ人が、あなたの資産になる。</p>
+          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>繋いだ人も、これから繋ぐ人も。ぜんぶあなたの資産。</p>
         </div>
       </div>
+
+      {/* D. 今日の動き（先回りナッジ＋今日の示唆）をヒーロー直下に。0件なら枠ごと非表示（沈黙）。read-only・本人台帳のみ。 */}
+      <SynapsePreempt items={preemptItems} />
 
       {/* A2. リストカード：先頭行「すべてのつながり」＋＋追加。各行＝区分色のノード点＋主＋タグ＋副＋chevron。 */}
       <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
