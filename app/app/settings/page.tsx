@@ -42,7 +42,7 @@ export default function SettingsPage() {
         {/* Feature E（M-1）：推薦カードはホームから撤去し、ログアウト直上に控えめ配置。 */}
         {partnerId && <InviteFellowCard partnerId={partnerId} />}
       </>}
-      logout={<button onClick={logout} className="btn btn-g" style={{ width: '100%', marginTop: 0 }}>ログアウト</button>}
+      logout={<button onClick={logout} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ width: '100%', marginTop: 0 }}>ログアウト</button>}
     />
   )
 }

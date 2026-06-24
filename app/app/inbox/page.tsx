@@ -24,7 +24,7 @@ function NotifIcon({ type }: { type?: string }) {
   const isPayout  = type === 'payout' || type === 'payout_paid'
   const isInquiry = type === 'inquiry_reply'
   const bg    = isPayout ? 'var(--green-bg)' : isInquiry ? 'var(--amber-bg)' : 'var(--blue-bg)'
-  const color = isPayout ? 'var(--green)'    : isInquiry ? 'var(--amber)'    : 'var(--blue)'
+  const color = isPayout ? 'var(--green)'    : isInquiry ? 'var(--amber)'    : 'var(--c-blue)'
   return (
     <span style={{ width: 34, height: 34, borderRadius: '50%', background: bg, color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       {isPayout ? (
@@ -173,7 +173,7 @@ export default function InboxPage() {
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
           <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>通知</h2>
           {(tab === 'all' || tab === 'personal') && unreadCount > 0 && (
-            <button onClick={markAllRead} style={{ fontSize: '.6rem', color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <button onClick={markAllRead} style={{ fontSize: '.6rem', color: 'var(--c-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               すべて既読にする
             </button>
           )}
@@ -198,7 +198,7 @@ export default function InboxPage() {
             }}>
               {lbl}
               {val === 'personal' && unreadCount > 0 && (
-                <span style={{ background: 'var(--blue)', color: '#fff', borderRadius: 99, fontSize: '.52rem', padding: '1px 5px', fontFamily: 'Inter', fontWeight: 700 }}>
+                <span style={{ background: 'var(--c-blue)', color: '#fff', borderRadius: 99, fontSize: '.52rem', padding: '1px 5px', fontFamily: 'Inter', fontWeight: 700 }}>
                   {unreadCount}
                 </span>
               )}
@@ -260,7 +260,7 @@ function NotifRow({ n, onRead }: { n: Notification; onRead: () => void }) {
     <button onClick={onRead} className="lift" style={{
       display: 'flex', gap: 12, padding: '14px 20px', width: '100%', textAlign: 'left',
       background: n.read_at ? 'var(--bg)' : 'var(--blue-bg2)',
-      borderLeft: n.read_at ? '3px solid transparent' : '3px solid var(--blue)',
+      borderLeft: n.read_at ? '3px solid transparent' : '3px solid var(--c-blue)',
       borderTop: 'none', borderRight: 'none',
       borderBottom: '1px solid var(--line)',
       cursor: n.read_at ? 'default' : 'pointer',
@@ -269,7 +269,7 @@ function NotifRow({ n, onRead }: { n: Notification; onRead: () => void }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2, fontWeight: n.read_at ? 400 : 700 }}>
           {n.title}
-          {!n.read_at && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--blue)', marginLeft: 7, verticalAlign: 1, animation: 'pulseDot 2.6s ease-in-out infinite' }}/>}
+          {!n.read_at && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--c-blue)', marginLeft: 7, verticalAlign: 1, animation: 'pulseDot 2.6s ease-in-out infinite' }}/>}
         </b>
         {n.body && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.body}</p>}
       </div>

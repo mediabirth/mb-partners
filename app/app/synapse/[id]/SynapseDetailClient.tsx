@@ -136,7 +136,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
               <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{main || '名称未設定'}</h1>
               {sub && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
             </div>
-            <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '3px 10px', flexShrink: 0, marginTop: 4 }}>{entityLabel}・見込み</span>
+            <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '3px 10px', flexShrink: 0, marginTop: 4 }}>{entityLabel}・見込み</span>
           </div>
         )
       })()}
@@ -144,7 +144,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
       {/* Phase4：一言ナッジ（該当時のみ・控えめ・「後で」で畳める＝localStorage本人端末スコープ）。無ければ非表示＝沈黙。 */}
       {nudge && !nudgeHidden && (
         <div style={{ margin: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 9, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '9px 12px' }}>
-          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 5, padding: '2px 6px' }}>先回り</span>
+          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 5, padding: '2px 6px' }}>先回り</span>
           <span style={{ flex: 1, minWidth: 0, fontSize: '.64rem', color: 'var(--blue-dk)', fontWeight: 600, lineHeight: 1.5 }}>{nudge.reason}</span>
           <button onClick={dismissNudge} style={{ flexShrink: 0, background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.6rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>後で</button>
         </div>
@@ -191,10 +191,10 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
                 {rescan ? (
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 9, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', background: '#fff' }} />
-                    <button onClick={() => scan(true)} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
+                    <button onClick={() => scan(true)} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '0 13px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>SYNAPSE</button>
                   </div>
                 ) : (
-                  <button onClick={() => setRescan(true)} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>別のURLで再分析する</button>
+                  <button onClick={() => setRescan(true)} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>別のURLで再分析する</button>
                 )}
               </div>
             )}
@@ -208,7 +208,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
             {aiEnabled ? (
               <div style={{ display: 'flex', gap: 6 }}>
                 <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://example.co.jp" inputMode="url" disabled={scanBusy} style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--blue-bg)', borderRadius: 10, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.78rem', background: '#fff' }} />
-                <button onClick={() => scan(false)} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>SYNAPSE</button>
+                <button onClick={() => scan(false)} disabled={scanBusy} className="lift" style={{ flexShrink: 0, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', cursor: scanBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>SYNAPSE</button>
               </div>
             ) : (
               <p style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>URL取込は現在ご利用いただけません。</p>
@@ -231,11 +231,11 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
             {candidates.map((cand, i) => (
               <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 11, padding: '11px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                  <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: cand.kind === 'service' ? 'var(--green)' : 'var(--blue)', background: cand.kind === 'service' ? 'var(--green-bg)' : 'var(--blue-bg)', borderRadius: 5, padding: '2px 6px' }}>{cand.kind === 'service' ? 'サービス' : '人'}</span>
+                  <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: cand.kind === 'service' ? 'var(--green)' : 'var(--c-blue)', background: cand.kind === 'service' ? 'var(--green-bg)' : 'var(--blue-bg)', borderRadius: 5, padding: '2px 6px' }}>{cand.kind === 'service' ? 'サービス' : '人'}</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: '.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cand.title}</span>
                 </div>
                 <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>{cand.reason}</div>
-                <button onClick={() => makeIntro(cand.kind === 'service' ? cand.title : (cand.reasons[0] || cand.title), cand.kind === 'service' ? 'service' : 'keyword')} className="lift" style={{ marginTop: 9, background: 'var(--blue-bg2)', color: 'var(--blue)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: '7px 11px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>この切り口で紹介文を作る</button>
+                <button onClick={() => makeIntro(cand.kind === 'service' ? cand.title : (cand.reasons[0] || cand.title), cand.kind === 'service' ? 'service' : 'keyword')} className="lift" style={{ marginTop: 9, background: 'var(--blue-bg2)', color: 'var(--c-blue)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: '7px 11px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 800 }}>この切り口で紹介文を作る</button>
               </div>
             ))}
           </div>
@@ -248,7 +248,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
           <b style={{ fontSize: '.82rem', fontWeight: 800 }}>情報</b>
           {edit
             ? <button onClick={() => { setEdit(false); setErr('') }} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>キャンセル</button>
-            : <button onClick={startEdit} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>}
+            : <button onClick={startEdit} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.68rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>編集</button>}
         </div>
 
         {/* B：会社URL＋SYNAPSEボタンは「SYNAPSEの読み」パネルに一本化（情報カードのURL欄は廃止＝二重URL解消）。 */}
@@ -265,7 +265,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
                   <div key={key as string} style={{ gridColumn: '1 / -1', minWidth: 0 }}>
                     <div style={labelStyle}>{label}</div>
                     <div style={{ ...valStyle, color: 'var(--txt)', whiteSpace: 'pre-wrap', ...(memoOpen ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }) }}>{v}</div>
-                    {longMemo && <button onClick={() => setMemoOpen(o => !o)} style={{ marginTop: 3, background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.6rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>{memoOpen ? '閉じる' : '続き'}</button>}
+                    {longMemo && <button onClick={() => setMemoOpen(o => !o)} style={{ marginTop: 3, background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.6rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>{memoOpen ? '閉じる' : '続き'}</button>}
                   </div>
                 )
               }
@@ -282,7 +282,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
             <div><label style={labelStyle}>区分</label>
               <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
                 {(['corporate', 'individual'] as const).map(v => (
-                  <button key={v} onClick={() => setForm(f => ({ ...f, entity_type: v }))} style={{ flex: 1, padding: '7px 0', borderRadius: 8, fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${form.entity_type === v ? 'var(--blue)' : 'var(--line)'}`, background: form.entity_type === v ? 'var(--blue)' : '#fff', color: form.entity_type === v ? '#fff' : 'var(--muted2)' }}>{v === 'corporate' ? '法人' : '個人'}</button>
+                  <button key={v} onClick={() => setForm(f => ({ ...f, entity_type: v }))} style={{ flex: 1, padding: '7px 0', borderRadius: 8, fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${form.entity_type === v ? 'var(--c-blue)' : 'var(--line)'}`, background: form.entity_type === v ? 'var(--c-blue)' : '#fff', color: form.entity_type === v ? '#fff' : 'var(--muted2)' }}>{v === 'corporate' ? '法人' : '個人'}</button>
                 ))}
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
               </div>
             ))}
             {err && <p style={{ gridColumn: '1 / -1', fontSize: '.68rem', color: 'var(--red)', margin: 0 }}>{err}</p>}
-            <button onClick={save} disabled={busy} className="btn btn-p lift" style={{ gridColumn: '1 / -1', width: '100%', marginTop: 2 }}>{busy ? '保存中…' : '保存する'}</button>
+            <button onClick={save} disabled={busy} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ gridColumn: '1 / -1', width: '100%', marginTop: 2 }}>{busy ? '保存中…' : '保存する'}</button>
           </div>
         )}
       </div>
@@ -304,7 +304,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
       <div style={{ margin: '18px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: history.length ? 10 : 0 }}>
           <b style={{ fontSize: '.82rem', fontWeight: 800 }}>紹介の履歴</b>
-          {history.length > 3 && <button onClick={() => setShowAllHistory(true)} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>すべて見る（{history.length}）</button>}
+          {history.length > 3 && <button onClick={() => setShowAllHistory(true)} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>すべて見る（{history.length}）</button>}
         </div>
         {history.length === 0 ? (
           <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>まだ紹介の履歴はありません。</p>
@@ -354,7 +354,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
             <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginBottom: 11 }}>{picked.kind === 'service' ? '推奨サービス' : 'キーワード'}：<b style={{ color: 'var(--txt)' }}>{picked.tag}</b></div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.68rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '7px 10px' }}>閉じる</button>
-              <button onClick={() => makeIntro(picked.tag, picked.kind)} className="lift" style={{ background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>{picked.kind === 'service' ? 'このサービスで紹介文を作る' : 'このキーワードで紹介文を作る'}</button>
+              <button onClick={() => makeIntro(picked.tag, picked.kind)} className="lift" style={{ background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>{picked.kind === 'service' ? 'このサービスで紹介文を作る' : 'このキーワードで紹介文を作る'}</button>
             </div>
           </div>
         </div>
@@ -369,7 +369,7 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
               <button onClick={() => setIntro(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
             </div>
             {introBusy ? <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '20px 0', textAlign: 'center' }}>SYNAPSEが下書きしています…</p>
-              : <><textarea value={intro.text} readOnly rows={9} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontFamily: 'inherit', fontSize: '.78rem', lineHeight: 1.7, resize: 'vertical' }} /><button onClick={() => { navigator.clipboard?.writeText(intro.text) }} className="btn btn-p lift" style={{ width: '100%', marginTop: 8 }}>コピーする</button></>}
+              : <><textarea value={intro.text} readOnly rows={9} style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontFamily: 'inherit', fontSize: '.78rem', lineHeight: 1.7, resize: 'vertical' }} /><button onClick={() => { navigator.clipboard?.writeText(intro.text) }} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 8 }}>コピーする</button></>}
           </div>
         </div>
       )}

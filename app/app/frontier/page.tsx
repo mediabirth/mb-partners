@@ -86,7 +86,7 @@ export default async function FrontierPage() {
           <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {/* MVP スパーク（単色フラット） */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2 L14.6 9.4 L22 12 L14.6 14.6 L12 22 L9.4 14.6 L2 12 L9.4 9.4 Z" fill="var(--blue)"/>
+              <path d="M12 2 L14.6 9.4 L22 12 L14.6 14.6 L12 22 L9.4 14.6 L2 12 L9.4 9.4 Z" fill="var(--c-blue)"/>
             </svg>
           </span>
           <div style={{ minWidth: 0 }}>
@@ -112,9 +112,9 @@ export default async function FrontierPage() {
               const linkedAt = s.frontier_linked_at
               const expired = linkedAt ? !withinWindow(linkedAt, now.toISOString()) : true
               return (
-                <div key={s.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px' }}>
+                <div key={s.id} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ width: 30, height: 30, borderRadius: '50%', background: (s as any).profiles?.color ?? 'var(--blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.74rem', fontWeight: 700, flexShrink: 0 }}>
+                    <span style={{ width: 30, height: 30, borderRadius: '50%', background: (s as any).profiles?.color ?? 'var(--c-blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.74rem', fontWeight: 700, flexShrink: 0 }}>
                       {((s as any).profiles?.name ?? s.code)[0]}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -122,7 +122,7 @@ export default async function FrontierPage() {
                       <div style={{ fontSize: '.58rem', color: expired ? 'var(--muted2)' : 'var(--green)', marginTop: 1 }}>{expired ? '対象期間外' : 'オーバーライド対象'}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.92rem', color: 'var(--blue)' }}>＋¥{st.override.toLocaleString()}</div>
+                      <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.92rem', color: 'var(--c-blue)' }}>＋¥{st.override.toLocaleString()}</div>
                       <div style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>今月成約 {st.count}件</div>
                     </div>
                   </div>
@@ -140,7 +140,7 @@ export default async function FrontierPage() {
 
 function Kpi({ label, value, unit }: { label: string; value: number; unit: string }) {
   return (
-    <div className="card-hover" style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '12px 12px' }}>
+    <div className="card-hover ui-card" style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '12px 12px' }}>
       <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700 }}>{label}</div>
       <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', marginTop: 3 }}>
         <CountUp value={value} /><small style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', marginLeft: 2 }}>{unit}</small>

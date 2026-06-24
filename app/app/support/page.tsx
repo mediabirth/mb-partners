@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, { color: string; bg: string }> = {
   open:    { color: 'var(--amber)', bg: 'var(--amber-bg)' },
-  replied: { color: 'var(--blue)', bg: 'var(--blue-bg2)' },
+  replied: { color: 'var(--c-blue)', bg: 'var(--blue-bg2)' },
   closed:  { color: 'var(--muted2)', bg: 'var(--bg2)' },
 }
 
@@ -71,7 +71,7 @@ export default function SupportPage() {
   return (
     <div style={{ padding: '22px 20px', maxWidth: 600 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="1.8">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.8">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
         </svg>
         <h1 style={{ fontSize: '1.1rem', fontWeight: 700 }}>お問い合わせ</h1>
@@ -80,7 +80,7 @@ export default function SupportPage() {
       <div style={{
         background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)',
         borderRadius: 10, padding: '12px 14px', marginBottom: 20,
-        fontSize: '.72rem', color: 'var(--blue)', lineHeight: 1.7,
+        fontSize: '.72rem', color: 'var(--c-blue)', lineHeight: 1.7,
       }}>
         通常1営業日以内に返信いたします。お急ぎの場合はご連絡ください。
       </div>
@@ -159,7 +159,7 @@ export default function SupportPage() {
           disabled={sending}
           style={{
             width: '100%', padding: '12px', borderRadius: 9, border: 'none',
-            background: sending ? 'var(--muted)' : 'var(--blue)',
+            background: sending ? 'var(--muted)' : 'var(--c-blue)',
             color: '#fff', fontSize: '.82rem', fontWeight: 700,
             cursor: sending ? 'not-allowed' : 'pointer',
           }}

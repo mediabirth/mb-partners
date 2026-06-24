@@ -58,7 +58,7 @@ function StatusStepper({ step }: { step: number }) {
       {RAIL_STEPS.map((label, i) => {
         const done = i <= step
         const isCurrent = i === step
-        const color = i === 3 && done ? 'var(--green)' : 'var(--blue)'
+        const color = i === 3 && done ? 'var(--green)' : 'var(--c-blue)'
         return (
           <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             {/* connector to previous node */}
@@ -179,7 +179,7 @@ export default async function CasesPage({
                 <Link
                   key={d.id}
                   href={`/app/cases/${d.id}`}
-                  className="card-hover lift"
+                  className="card-hover lift ui-card"
                   style={{
                     display: 'block', textDecoration: 'none', color: 'var(--txt)',
                     background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
@@ -194,13 +194,13 @@ export default async function CasesPage({
                         : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: corp ? 'var(--blue)' : 'var(--muted2)', background: corp ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{corp ? '法人' : '個人'}</span>
+                          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: corp ? 'var(--c-blue)' : 'var(--muted2)', background: corp ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{corp ? '法人' : '個人'}</span>
                           <b style={{ fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{mainName}</b>
                           {!d.services && (
                             <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
                           )}
                           {(itemCounts[d.id] ?? 0) > 1 && (
-                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
+                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
                           )}
                           <span style={{ flexShrink: 0 }}><ChannelMark channel={d.channel} /></span>
                         </div>
@@ -238,7 +238,7 @@ export default async function CasesPage({
 
                   {/* ②A 現在の段階（パートナー視点ラベル）＋紹介日／最終更新（read-only・金額なし） */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 11, paddingTop: 10, borderTop: '1px solid #F4F4F7', fontSize: '.58rem', color: 'var(--muted2)' }}>
-                    <span style={{ fontWeight: 800, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--blue)' }}>現在：{partnerStageLabel(d.status, (d as { review_stage?: string | null }).review_stage)}</span>
+                    <span style={{ fontWeight: 800, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--c-blue)' }}>現在：{partnerStageLabel(d.status, (d as { review_stage?: string | null }).review_stage)}</span>
                     <span style={{ color: 'var(--line)' }}>|</span>
                     <span>紹介 {fmtDate(d.created_at)}</span>
                     <span style={{ color: 'var(--line)' }}>|</span>

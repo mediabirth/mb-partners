@@ -68,7 +68,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
 
   return (
     <div style={{ padding: '22px 20px', maxWidth: 600 }}>
-      <a href="/app/support" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.72rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 16 }}>
+      <a href="/app/support" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.72rem', color: 'var(--c-blue)', textDecoration: 'none', marginBottom: 16 }}>
         ← お問い合わせ一覧に戻る
       </a>
 
@@ -82,7 +82,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
           </div>
           <span style={{
             fontSize: '.62rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-            color: inquiry.status === 'replied' ? 'var(--blue)' : inquiry.status === 'open' ? 'var(--amber)' : 'var(--muted2)',
+            color: inquiry.status === 'replied' ? 'var(--c-blue)' : inquiry.status === 'open' ? 'var(--amber)' : 'var(--muted2)',
             background: inquiry.status === 'replied' ? 'var(--blue-bg2)' : inquiry.status === 'open' ? 'var(--amber-bg)' : 'var(--bg2)',
             flexShrink: 0,
           }}>
@@ -94,7 +94,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
       <div style={{
         background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)',
         borderRadius: 10, padding: '10px 13px', marginBottom: 20,
-        fontSize: '.68rem', color: 'var(--blue)',
+        fontSize: '.68rem', color: 'var(--c-blue)',
       }}>
         通常1営業日以内に返信いたします。
       </div>
@@ -107,7 +107,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
             <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isPartner ? 'flex-end' : 'flex-start' }}>
               <div style={{
                 maxWidth: '80%', padding: '11px 14px', borderRadius: isPartner ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                background: isPartner ? 'var(--blue)' : '#fff',
+                background: isPartner ? 'var(--c-blue)' : '#fff',
                 color: isPartner ? '#fff' : 'var(--txt)',
                 border: isPartner ? 'none' : '1px solid var(--line)',
                 fontSize: '.78rem', lineHeight: 1.65,
@@ -147,7 +147,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
             disabled={sending || !replyBody.trim()}
             style={{
               padding: '10px 20px', borderRadius: 8, border: 'none',
-              background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--blue)',
+              background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--c-blue)',
               color: '#fff', fontSize: '.78rem', fontWeight: 700,
               cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
             }}

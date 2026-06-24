@@ -56,10 +56,10 @@ export default async function RewardsPage() {
 
       {/* Statement buttons */}
       <div style={{ display: 'flex', gap: 8, margin: '14px 20px 0' }}>
-        <Link href="/app/rewards/statement" className="btn btn-g" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
+        <Link href="/app/rewards/statement" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
           支払明細
         </Link>
-        <Link href="/app/rewards/statement" className="btn btn-g" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
+        <Link href="/app/rewards/statement" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
           年間集計
         </Link>
       </div>
@@ -132,7 +132,7 @@ function MonthAccordion({ title, subtitle, net, children }: {
   return (
     <details className="acc" style={{ margin: '0 20px 10px', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
       <style>{`.acc > summary::-webkit-details-marker{display:none} .acc[open] .acc-chev{transform:rotate(90deg)}`}</style>
-      <summary className="card-hover" style={{
+      <summary className="card-hover ui-card" style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '15px 14px', cursor: 'pointer', listStyle: 'none',
       }}>

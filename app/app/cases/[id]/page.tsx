@@ -98,24 +98,24 @@ export default async function CaseDetailPage({
                 className={i === step ? 'stnPulse' : undefined}
                 style={{
                   width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                  background: i <= step ? 'var(--blue)' : 'var(--bg)',
-                  border: i <= step ? '2px solid var(--blue)' : '2px solid #DBDBE3',
+                  background: i <= step ? 'var(--c-blue)' : 'var(--bg)',
+                  border: i <= step ? '2px solid var(--c-blue)' : '2px solid #DBDBE3',
                   boxShadow: i === step ? '0 0 0 4px var(--blue-bg)' : 'none',
                   display: 'inline-block',
                 }}
               />
-              {i < 3 && <span style={{ height: 2, flex: 1, background: i < step ? 'var(--blue)' : '#E7E7ED' }}/>}
+              {i < 3 && <span style={{ height: 2, flex: 1, background: i < step ? 'var(--c-blue)' : '#E7E7ED' }}/>}
             </span>
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.54rem', color: 'var(--muted)' }}>
           {RAIL_STEPS.map((s, i) => (
-            <span key={i} style={{ color: i === step ? 'var(--blue)' : undefined, fontWeight: i === step ? 700 : undefined }}>{s}</span>
+            <span key={i} style={{ color: i === step ? 'var(--c-blue)' : undefined, fontWeight: i === step ? 700 : undefined }}>{s}</span>
           ))}
         </div>
         {/* Reward trigger label at confirmed step */}
         {menu?.ref_trigger && (
-          <div style={{ marginTop: 8, fontSize: '.62rem', color: 'var(--blue)', fontWeight: 600 }}>
+          <div style={{ marginTop: 8, fontSize: '.62rem', color: 'var(--c-blue)', fontWeight: 600 }}>
             報酬発生条件: {menu.ref_trigger}
           </div>
         )}
@@ -161,7 +161,7 @@ export default async function CaseDetailPage({
             ))}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--bg2)' }}>
               <span style={{ fontSize: '.72rem', fontWeight: 800 }}>案件合計</span>
-              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 800, color: 'var(--blue)' }}>¥{deal.amount.toLocaleString()}</span>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 800, color: 'var(--c-blue)' }}>¥{deal.amount.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -186,7 +186,7 @@ export default async function CaseDetailPage({
             )}
             <div style={{
               width: 12, height: 12, borderRadius: '50%', flexShrink: 0, marginTop: 3,
-              background: i === 0 ? 'var(--blue)' : '#D7D7E0',
+              background: i === 0 ? 'var(--c-blue)' : '#D7D7E0',
               border: i === 0 ? '2.5px solid var(--blue-bg)' : '2.5px solid var(--bg2)',
             }}/>
             <div style={{ fontSize: '.74rem', lineHeight: 1.55, color: i === 0 ? 'var(--txt)' : 'var(--muted2)', fontWeight: i === 0 ? 700 : 400 }}>

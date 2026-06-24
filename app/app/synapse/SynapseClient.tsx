@@ -75,7 +75,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
       <div style={{ margin: '14px 20px 16px', display: 'flex', alignItems: 'center', gap: 14, background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--blue-bg2) 70%)', border: '1px solid var(--blue-bg)', borderRadius: 18, padding: '18px 18px' }}>
         <div style={{ flexShrink: 0 }}><SynapseCrest size={74} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '.54rem', fontWeight: 900, letterSpacing: '.16em', color: 'var(--blue)' }}>SYNAPSE</div>
+          <div style={{ fontSize: '.54rem', fontWeight: 900, letterSpacing: '.16em', color: 'var(--c-blue)' }}>SYNAPSE</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
             <span style={{ fontSize: '1.9rem', fontWeight: 900, letterSpacing: '-.02em', color: 'var(--blue-dk)', lineHeight: 1 }}>{entries.length}</span>
             <span style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--muted2)' }}>のつながり</span>
@@ -91,7 +91,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
       <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px 12px' }}>
           <b style={{ fontSize: '.78rem', fontWeight: 800 }}>すべてのつながり</b>
-          <button onClick={() => { setAdding({ name: '', company: '' }); setAddErr('') }} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>
+          <button onClick={() => { setAdding({ name: '', company: '' }); setAddErr('') }} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 800 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>追加
           </button>
         </div>
@@ -100,7 +100,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
         ) : (
           entries.map(e => {
             const corp = e.entity === 'corporate'
-            const dot = corp ? 'var(--blue)' : 'var(--muted2)'
+            const dot = corp ? 'var(--c-blue)' : 'var(--muted2)'
             return (
               <Link key={e.key} href={e.href} prefetch={e.lazy ? false : undefined} className="row-hover" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 16px', borderTop: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
                 {/* 左端＝区分色のノード点 */}
@@ -135,7 +135,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
               </div>
             ))}
             {addErr && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '0 0 8px' }}>{addErr}</p>}
-            <button onClick={saveAdd} disabled={addBusy} className="btn btn-p lift" style={{ width: '100%' }}>{addBusy ? '保存中…' : '名簿に追加'}</button>
+            <button onClick={saveAdd} disabled={addBusy} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>{addBusy ? '保存中…' : '名簿に追加'}</button>
           </div>
         </div>
       )}

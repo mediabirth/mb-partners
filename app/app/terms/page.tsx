@@ -130,7 +130,7 @@ export default function TermsPage() {
               }}
             />
           </div>
-          <button onClick={handleSend} disabled={sending || !body.trim()} className="btn btn-p" style={{ width: '100%' }}>
+          <button onClick={handleSend} disabled={sending || !body.trim()} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%' }}>
             {sending ? '送信中...' : '送信する'}
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }}/>
           </button>
