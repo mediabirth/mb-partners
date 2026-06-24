@@ -19,7 +19,7 @@ function kindBadge(kind: string) {
     <span style={{
       fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20,
       background: isNews ? 'var(--blue-bg)' : 'var(--amber-bg)',
-      color: isNews ? 'var(--blue)' : 'var(--amber)',
+      color: isNews ? 'var(--c-blue)' : 'var(--amber)',
     }}>
       {isNews ? 'NEWS' : 'TIPS'}
     </span>
@@ -64,9 +64,9 @@ export default function BroadcastsPage() {
             <div className="eyebrow">CONSOLE</div>
             <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信</h1>
           </div>
-          <Link href="/console/broadcasts/new" className="btn btn-p" style={{
+          <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
             fontSize: '.75rem', fontWeight: 700, padding: '8px 16px', borderRadius: 9,
-            background: 'var(--blue)', color: '#fff', textDecoration: 'none',
+            background: 'var(--c-blue)', color: '#fff', textDecoration: 'none',
           }}>
             + 新規作成
           </Link>
@@ -76,7 +76,7 @@ export default function BroadcastsPage() {
           {loading && (
             <div className="stagger">
               {[0, 1, 2].map(i => (
-                <div key={i} className="skeleton" style={{ height: 72, borderRadius: 14, marginBottom: 12 }} />
+                <div key={i} className="ui-skeleton" style={{ height: 72, borderRadius: 14, marginBottom: 12 }} />
               ))}
             </div>
           )}
@@ -88,7 +88,7 @@ export default function BroadcastsPage() {
               <div style={{
                 width: 52, height: 52, borderRadius: 14, margin: '0 auto 16px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--blue-bg)', color: 'var(--blue)',
+                background: 'var(--blue-bg)', color: 'var(--c-blue)',
               }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3 11v3a1 1 0 0 0 1 1h2.5L11 19V5L6.5 9H4a1 1 0 0 0-1 1Z" />
@@ -103,9 +103,9 @@ export default function BroadcastsPage() {
                 NEWSやTIPSをパートナーへ届けましょう。<br />
                 最初の配信を作成して、つながりを深めませんか？
               </div>
-              <Link href="/console/broadcasts/new" className="btn btn-p" style={{
+              <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
                 fontSize: '.78rem', fontWeight: 700, padding: '10px 22px', borderRadius: 10,
-                background: 'var(--blue)', color: '#fff', textDecoration: 'none', display: 'inline-block',
+                background: 'var(--c-blue)', color: '#fff', textDecoration: 'none', display: 'inline-block',
               }}>
                 + 新規作成
               </Link>
@@ -116,7 +116,7 @@ export default function BroadcastsPage() {
           <div className="stagger">
           {broadcasts.map(b => (
             <Link key={b.id} href={`/console/broadcasts/${b.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="card-hover lift" style={{
+              <div className="card-hover lift ui-card" style={{
                 background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
                 padding: '16px 20px', marginBottom: 12, display: 'flex',
                 alignItems: 'center', gap: 14, cursor: 'pointer',

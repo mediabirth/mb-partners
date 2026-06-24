@@ -88,7 +88,7 @@ export default function BroadcastPreviewPage() {
               className={pending ? '' : 'btn btn-p'}
               style={{
                 padding: '8px 20px', borderRadius: 9, fontSize: '.78rem', fontWeight: 700,
-                background: pending ? 'var(--muted)' : 'var(--blue)',
+                background: pending ? 'var(--muted)' : 'var(--c-blue)',
                 color: '#fff', border: 'none', cursor: pending ? 'not-allowed' : 'pointer',
               }}
             >
@@ -122,7 +122,7 @@ export default function BroadcastPreviewPage() {
                   <span style={{
                     fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                     background: broadcast.kind === 'news' ? 'var(--blue-bg)' : 'var(--amber-bg)',
-                    color: broadcast.kind === 'news' ? 'var(--blue)' : 'var(--amber)',
+                    color: broadcast.kind === 'news' ? 'var(--c-blue)' : 'var(--amber)',
                   }}>
                     {broadcast.kind === 'news' ? 'NEWS' : 'TIPS'}
                   </span>

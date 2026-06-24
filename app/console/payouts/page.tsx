@@ -54,7 +54,7 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
           <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 800 }}>{yen(row.amount)}</div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-          {row.primary && <button onClick={row.primary.onClick} disabled={busy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 800, padding: '7px 13px', borderRadius: 8, color: row.primary.tone === 'green' ? 'var(--green)' : '#fff', background: row.primary.tone === 'green' ? 'var(--green-bg)' : 'var(--blue)' }}>{row.primary.label}</button>}
+          {row.primary && <button onClick={row.primary.onClick} disabled={busy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 800, padding: '7px 13px', borderRadius: 8, color: row.primary.tone === 'green' ? 'var(--green)' : '#fff', background: row.primary.tone === 'green' ? 'var(--green-bg)' : 'var(--c-blue)' }}>{row.primary.label}</button>}
         </div>
         <span style={{ color: 'var(--muted)', fontSize: '.7rem', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>∨</span>
       </div>
@@ -68,7 +68,7 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            {row.csvYm && <a href={`/api/console/payouts/${row.csvYm}/csv`} download={`payout_${row.csvYm}.csv`} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--blue)', textDecoration: 'none', border: '1px solid var(--blue-bg)', background: 'var(--blue-bg2)', borderRadius: 8, padding: '5px 11px' }}>CSV出力</a>}
+            {row.csvYm && <a href={`/api/console/payouts/${row.csvYm}/csv`} download={`payout_${row.csvYm}.csv`} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', border: '1px solid var(--blue-bg)', background: 'var(--blue-bg2)', borderRadius: 8, padding: '5px 11px' }}>CSV出力</a>}
             {row.secondary && <button onClick={row.secondary.onClick} disabled={busy} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: '5px 11px', cursor: 'pointer' }}>{row.secondary.label}</button>}
           </div>
         </div>

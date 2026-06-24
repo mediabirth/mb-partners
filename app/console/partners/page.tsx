@@ -125,7 +125,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               {r.deals == null ? <span style={{ color: 'var(--muted)' }}>—</span> : <>
                 <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}>{r.deals}</span>
                 <span style={{ fontSize: '.6rem', color: 'var(--muted2)', marginLeft: 3 }}>件</span>
-                {r.activeDeals > 0 && <span style={{ marginLeft: 5, fontSize: '.58rem', fontWeight: 700, color: 'var(--blue)' }}>/{r.activeDeals}進行</span>}
+                {r.activeDeals > 0 && <span style={{ marginLeft: 5, fontSize: '.58rem', fontWeight: 700, color: 'var(--c-blue)' }}>/{r.activeDeals}進行</span>}
               </>}
             </div>
             <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.86rem', fontFeatureSettings: '"tnum"', color: (r.reward ?? 0) > 0 ? 'var(--txt)' : 'var(--muted2)' }}>{r.reward == null ? '—' : `¥${r.reward.toLocaleString()}`}</span>
@@ -147,7 +147,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>パートナー</h1>
-            <Link href={`/console/partners/invite?kind=${filter === 'frontier' ? 'frontier' : filter === 'delivery' ? 'delivery' : 'partner'}`} className="btn btn-p" style={{ fontSize: '.72rem', padding: '7px 14px' }}>招待する</Link>
+            <Link href={`/console/partners/invite?kind=${filter === 'frontier' ? 'frontier' : filter === 'delivery' ? 'delivery' : 'partner'}`} className="ui-btn ui-btn--primary ui-btn--lg" style={{ fontSize: '.72rem', padding: '7px 14px' }}>招待する</Link>
           </div>
           {/* BR-C2：種別タブ→統一リストのフィルタ（既定=すべて）。役職は行内 StatusPill で識別。 */}
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg2)', borderRadius: 9, padding: 3, width: 'fit-content' }}>
@@ -171,7 +171,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               { label: '累計成約件数', value: summaryDeals, unit: '件', yen: false },
               { label: '累計報酬総額', value: summaryReward, unit: '', yen: true },
             ].map(s => (
-              <div key={s.label} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
+              <div key={s.label} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
                 <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</div>
                 <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem' }}>
                   <CountUp value={s.value} format={s.yen ? 'yen' : 'number'} /><span style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', marginLeft: 2 }}>{s.unit}</span>

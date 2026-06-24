@@ -22,7 +22,7 @@ export default async function AnalyticsPage() {
             <p className="eyebrow" style={{ marginBottom: 2 }}>分析</p>
             <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>成約分析・深掘り</h1>
           </div>
-          <Link href="/console" style={{ fontSize: '.7rem', color: 'var(--blue)', fontWeight: 700, textDecoration: 'none' }}>← ダッシュボード</Link>
+          <Link href="/console" style={{ fontSize: '.7rem', color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
         <AnalyticsClient />
       </div>

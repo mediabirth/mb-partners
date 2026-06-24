@@ -81,7 +81,7 @@ export default function BroadcastDetailPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <Link href={`/console/broadcasts/${id}/preview`} style={{
                 padding: '7px 14px', borderRadius: 8, fontSize: '.75rem', fontWeight: 700,
-                background: 'var(--blue)', color: '#fff', textDecoration: 'none',
+                background: 'var(--c-blue)', color: '#fff', textDecoration: 'none',
               }}>
                 プレビュー・配信
               </Link>
@@ -134,7 +134,7 @@ export default function BroadcastDetailPage() {
                   <span style={{
                     fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                     background: broadcast.kind === 'news' ? 'var(--blue-bg)' : 'var(--amber-bg)',
-                    color: broadcast.kind === 'news' ? 'var(--blue)' : 'var(--amber)',
+                    color: broadcast.kind === 'news' ? 'var(--c-blue)' : 'var(--amber)',
                   }}>
                     {broadcast.kind === 'news' ? 'NEWS' : 'TIPS'}
                   </span>

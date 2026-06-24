@@ -7,9 +7,10 @@ import { useConsoleSession } from '@/components/ConsoleSession'
 // G: レスポンシブ。<=900px ではサイドバーをドロワー化＋ハンバーガー。
 // コンテンツ余白(inline margin-left:230)は aside[data-cnav]~* を !important で上書き。
 const NAV_STYLE = `
-  .cnav-link { transition: color .18s, background .18s; }
+  .cnav-link { transition: color .18s cubic-bezier(0.2,0,0,1), background .18s cubic-bezier(0.2,0,0,1); }
   .cnav-link:hover:not(.cnav-active) { background: var(--bg2) !important; color: var(--txt) !important; }
-  .cnav-active { background: var(--blue-bg2) !important; color: var(--blue) !important; font-weight: 700 !important; }
+  .cnav-link:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--c-ring); }
+  .cnav-active { background: var(--blue-bg2) !important; color: var(--c-blue) !important; font-weight: 700 !important; }
   .cnav-acct { transition: background .18s; }
   .cnav-acct:hover { background: var(--bg2) !important; }
   .cnav-burger { display: none; }
@@ -106,9 +107,9 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
         </svg>
         <div>
           <b style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.98rem', color: 'var(--txt)' }}>
-            MB <span style={{ color: 'var(--blue)' }}>Partners</span>
+            MB <span style={{ color: 'var(--c-blue)' }}>Partners</span>
           </b>
-          <small style={{ display: 'block', fontFamily: 'Inter', fontSize: '.46rem', letterSpacing: '.3em', color: 'var(--blue)', marginTop: 2, fontWeight: 700, textTransform: 'uppercase' }}>Console</small>
+          <small style={{ display: 'block', fontFamily: 'Inter', fontSize: '.46rem', letterSpacing: '.3em', color: 'var(--c-blue)', marginTop: 2, fontWeight: 700, textTransform: 'uppercase' }}>Console</small>
         </div>
       </Link>
 
@@ -119,7 +120,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '10px 14px', borderRadius: 9,
             fontSize: '.77rem', fontWeight: active(item.href) ? 700 : 500,
-            color: active(item.href) ? 'var(--blue)' : 'var(--muted2)',
+            color: active(item.href) ? 'var(--c-blue)' : 'var(--t-tertiary)',
             background: active(item.href) ? 'var(--blue-bg2)' : 'transparent',
             textDecoration: 'none', minHeight: 42,
           }}>
@@ -128,7 +129,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
           {item.id === 'partners' && badges.pendingPartners > 0 && (
             <span style={{
               marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-              background: 'var(--blue)', color: '#fff', fontSize: '.56rem', fontWeight: 700,
+              background: 'var(--c-blue)', color: '#fff', fontSize: '.56rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
               animation: 'pulseDot 2.8s ease-in-out infinite',
             }}>
@@ -152,10 +153,10 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', fontSize: '.72rem', color: 'var(--muted2)', borderRadius: 9 }}>
           {!ready ? (
             <>
-              <span className="skeleton" style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
+              <span className="ui-skeleton" style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }} />
               <span style={{ minWidth: 0, flex: 1 }}>
-                <span className="skeleton" style={{ display: 'block', width: '60%', height: 9, marginBottom: 5 }} />
-                <span className="skeleton" style={{ display: 'block', width: '85%', height: 7 }} />
+                <span className="ui-skeleton" style={{ display: 'block', width: '60%', height: 9, marginBottom: 5 }} />
+                <span className="ui-skeleton" style={{ display: 'block', width: '85%', height: 7 }} />
               </span>
             </>
           ) : (

@@ -97,9 +97,9 @@ export default function NewBroadcastPage() {
                     style={{
                       padding: '7px 20px', borderRadius: 8, fontSize: '.78rem', fontWeight: 700,
                       cursor: 'pointer', border: '2px solid',
-                      borderColor: kind === k ? 'var(--blue)' : 'var(--line)',
+                      borderColor: kind === k ? 'var(--c-blue)' : 'var(--line)',
                       background: kind === k ? 'var(--blue-bg)' : '#fff',
-                      color: kind === k ? 'var(--blue)' : 'var(--muted2)',
+                      color: kind === k ? 'var(--c-blue)' : 'var(--muted2)',
                     }}
                   >
                     {k === 'news' ? 'NEWS' : 'TIPS'}
@@ -175,7 +175,7 @@ export default function NewBroadcastPage() {
               className={pending ? '' : 'btn btn-p'}
               style={{
                 width: '100%', padding: '13px', borderRadius: 10,
-                background: pending ? 'var(--muted)' : 'var(--blue)',
+                background: pending ? 'var(--muted)' : 'var(--c-blue)',
                 color: '#fff', fontWeight: 700, fontSize: '.85rem',
                 border: 'none', cursor: pending ? 'not-allowed' : 'pointer',
               }}

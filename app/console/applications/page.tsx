@@ -65,7 +65,7 @@ export default async function ConsoleApplicationsPage() {
       <ConsoleMain>
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>パートナー応募</h1>
-          <Link href="/console" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
+          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
 
         <div style={{ padding: '24px 28px 44px' }}>
@@ -103,8 +103,8 @@ export default async function ConsoleApplicationsPage() {
                         <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap' }}>{r.name || '—'}</td>
                         <td style={TD}>{r.org || '—'}</td>
                         <td style={TD}>{r.expertise || '—'}</td>
-                        <td style={TD}>{r.email ? <a href={`mailto:${r.email}`} style={{ color: 'var(--blue)' }}>{r.email}</a> : '—'}</td>
-                        <td style={{ ...TD, whiteSpace: 'nowrap' }}>{r.phone ? <a href={`tel:${r.phone}`} style={{ color: 'var(--blue)' }}>{r.phone}</a> : '—'}</td>
+                        <td style={TD}>{r.email ? <a href={`mailto:${r.email}`} style={{ color: 'var(--c-blue)' }}>{r.email}</a> : '—'}</td>
+                        <td style={{ ...TD, whiteSpace: 'nowrap' }}>{r.phone ? <a href={`tel:${r.phone}`} style={{ color: 'var(--c-blue)' }}>{r.phone}</a> : '—'}</td>
                         <td style={{ ...TD, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{r.message || '—'}</td>
                         <td style={TD}>
                           {r.consent

@@ -16,7 +16,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
       onClick={() => onChange(!on)}
       style={{
         width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-        background: on ? 'var(--blue)' : 'var(--line)', padding: 0, position: 'relative',
+        background: on ? 'var(--c-blue)' : 'var(--line)', padding: 0, position: 'relative',
         transition: 'background .2s',
       }}
     >
@@ -32,7 +32,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
+    <div className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
       <div style={{ padding: '15px 22px', borderBottom: '1px solid var(--line)' }}>
         <b style={{ fontSize: '.84rem' }}>{title}</b>
       </div>
@@ -176,7 +176,7 @@ export default function SettingsPage() {
                 />
               </div>
             </RowItem>
-            <button onClick={saveNotif} disabled={notifSaving} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
+            <button onClick={saveNotif} disabled={notifSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
           </SectionCard>
 
           {/* 4. 通知設定 */}
@@ -198,7 +198,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-            <button onClick={saveNotif} disabled={notifSaving} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
+            <button onClick={saveNotif} disabled={notifSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
           </SectionCard>
 
           {/* 5. 監査ログ */}
@@ -220,7 +220,7 @@ export default function SettingsPage() {
               <button
                 onClick={exportCsv}
                 disabled={auditLogs.length === 0}
-                style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}
+                style={{ fontSize: '.7rem', color: 'var(--c-blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}
               >
                 CSV出力
               </button>

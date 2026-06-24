@@ -35,7 +35,7 @@ export default async function InvitePage() {
         }}>
           <Link
             href="/console/partners"
-            style={{ fontSize: '.72rem', color: 'var(--blue)', textDecoration: 'none' }}
+            style={{ fontSize: '.72rem', color: 'var(--c-blue)', textDecoration: 'none' }}
           >
             ← パートナー一覧
           </Link>

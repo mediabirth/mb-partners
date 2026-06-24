@@ -33,7 +33,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 const CATEGORY_COLOR: Record<string, { color: string; bg: string }> = {
   reward:  { color: 'var(--green)', bg: 'var(--green-bg)' },
-  deal:    { color: 'var(--blue)',  bg: 'var(--blue-bg2)' },
+  deal:    { color: 'var(--c-blue)',  bg: 'var(--blue-bg2)' },
   account: { color: 'var(--amber)', bg: 'var(--amber-bg)' },
   other:   { color: 'var(--muted2)', bg: 'var(--bg2)' },
 }
@@ -100,7 +100,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
   }
 
   const statusColor = inquiry
-    ? (inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--blue)' : 'var(--muted2)')
+    ? (inquiry.status === 'open' ? 'var(--amber)' : inquiry.status === 'replied' ? 'var(--c-blue)' : 'var(--muted2)')
     : 'var(--muted2)'
   const statusBg = inquiry
     ? (inquiry.status === 'open' ? 'var(--amber-bg)' : inquiry.status === 'replied' ? 'var(--blue-bg2)' : 'var(--bg2)')
@@ -116,7 +116,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
           </div>
         ) : !inquiry ? (
           <div style={{ padding: '32px' }}>
-            <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.74rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 20 }}>
+            <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.74rem', color: 'var(--c-blue)', textDecoration: 'none', marginBottom: 20 }}>
               ← 問い合わせ一覧に戻る
             </Link>
             <p style={{ color: 'var(--red)', fontSize: '.82rem' }}>問い合わせが見つかりません。</p>
@@ -128,7 +128,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
               flexShrink: 0, background: '#fff', borderBottom: '1px solid var(--line)',
               padding: '14px 28px',
             }}>
-              <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.72rem', color: 'var(--blue)', textDecoration: 'none', marginBottom: 10 }}>
+              <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.72rem', color: 'var(--c-blue)', textDecoration: 'none', marginBottom: 10 }}>
                 ← 問い合わせ一覧に戻る
               </Link>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -212,7 +212,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                       <div style={{
                         maxWidth: '78%', padding: '10px 14px',
                         borderRadius: isOwner ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
-                        background: isOwner ? 'var(--blue)' : '#fff',
+                        background: isOwner ? 'var(--c-blue)' : '#fff',
                         color: isOwner ? '#fff' : 'var(--txt)',
                         border: isOwner ? 'none' : '1px solid var(--line)',
                         boxShadow: isOwner ? '0 1px 2px rgba(46,91,255,.18)' : '0 1px 2px rgba(14,14,20,.04)',
@@ -270,11 +270,11 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                   />
                   <button
                     type="submit"
-                    className="btn btn-p"
+                    className="ui-btn ui-btn--primary ui-btn--lg"
                     disabled={sending || !replyBody.trim()}
                     style={{
                       padding: '10px 22px', borderRadius: 22, border: 'none',
-                      background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--blue)',
+                      background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--c-blue)',
                       color: '#fff', fontSize: '.8rem', fontWeight: 700, flexShrink: 0,
                       cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
                     }}

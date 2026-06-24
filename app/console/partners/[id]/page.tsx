@@ -27,7 +27,7 @@ function dealStatusLabel(s: string) {
   return m[s] ?? s
 }
 function dealStatusColor(s: string) {
-  const m: Record<string, string> = { received: 'var(--amber)', in_progress: 'var(--blue)', confirmed: 'var(--green)', paid: 'var(--green)' }
+  const m: Record<string, string> = { received: 'var(--amber)', in_progress: 'var(--c-blue)', confirmed: 'var(--green)', paid: 'var(--green)' }
   return m[s] ?? 'var(--muted2)'
 }
 function dealStatusBg(s: string) {
@@ -133,7 +133,7 @@ export default async function PartnerDetailPage({
           display: 'flex', alignItems: 'center', gap: 12,
           position: 'sticky', top: 0, zIndex: 30,
         }}>
-          <Link href="/console/partners" style={{ fontSize: '.72rem', color: 'var(--blue)', textDecoration: 'none' }}>
+          <Link href="/console/partners" style={{ fontSize: '.72rem', color: 'var(--c-blue)', textDecoration: 'none' }}>
             ← パートナー一覧
           </Link>
           <span style={{ color: 'var(--line)' }}>/</span>
@@ -148,7 +148,7 @@ export default async function PartnerDetailPage({
         <div style={{ padding: '24px 28px', maxWidth: 900 }}>
 
           {/* Header card */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '22px 24px', marginBottom: 22 }}>
+          <div className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '22px 24px', marginBottom: 22 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{
                 width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
@@ -187,12 +187,12 @@ export default async function PartnerDetailPage({
           {/* KPI strip */}
           <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
             {[
-              { label: '累計報酬(税込)', value: cumulativeReward, unit: '',   yen: true,  color: 'var(--blue)' },
+              { label: '累計報酬(税込)', value: cumulativeReward, unit: '',   yen: true,  color: 'var(--c-blue)' },
               { label: '累計案件',       value: totalDeals,       unit: '件', yen: false, color: undefined },
               { label: '進行中',         value: activeDeals,      unit: '件', yen: false, color: activeDeals > 0 ? 'var(--amber)' : undefined },
               { label: '今月成約',       value: monthConfirmed,   unit: '件', yen: false, color: monthConfirmed > 0 ? 'var(--green)' : undefined },
             ].map(kpi => (
-              <div key={kpi.label} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
+              <div key={kpi.label} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>
                   {kpi.label}
                 </div>
@@ -228,7 +228,7 @@ export default async function PartnerDetailPage({
             {/* Left: deals + payouts */}
             <div>
               {/* Deals */}
-              <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
+              <div className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
                 <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <h2 style={{ fontSize: '.82rem', fontWeight: 700, margin: 0 }}>案件一覧</h2>
                   <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{totalDeals}件</span>
@@ -333,7 +333,7 @@ export default async function PartnerDetailPage({
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', textDecoration: 'none', color: 'inherit' }}
                 >
                   <span style={{ fontSize: '.78rem', fontWeight: 700 }}>問い合わせ</span>
-                  <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.82rem', color: inquiryCount > 0 ? 'var(--blue)' : 'var(--muted2)' }}>
+                  <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.82rem', color: inquiryCount > 0 ? 'var(--c-blue)' : 'var(--muted2)' }}>
                     {inquiryCount}件 →
                   </span>
                 </Link>

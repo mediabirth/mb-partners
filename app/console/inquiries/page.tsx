@@ -22,12 +22,12 @@ const STATUS_LABEL: Record<string, string> = {
 }
 const STATUS_COLOR: Record<string, { color: string; bg: string; dot: string }> = {
   open:    { color: 'var(--amber)', bg: 'var(--amber-bg)', dot: 'var(--amber)' },
-  replied: { color: 'var(--blue)',  bg: 'var(--blue-bg2)', dot: 'var(--blue)' },
+  replied: { color: 'var(--c-blue)',  bg: 'var(--blue-bg2)', dot: 'var(--c-blue)' },
   closed:  { color: 'var(--muted2)', bg: 'var(--bg2)', dot: 'var(--muted2)' },
 }
 const CATEGORY_COLOR: Record<string, { color: string; bg: string }> = {
   reward:  { color: 'var(--green)', bg: 'var(--green-bg)' },
-  deal:    { color: 'var(--blue)',  bg: 'var(--blue-bg2)' },
+  deal:    { color: 'var(--c-blue)',  bg: 'var(--blue-bg2)' },
   account: { color: 'var(--amber)', bg: 'var(--amber-bg)' },
   other:   { color: 'var(--muted2)', bg: 'var(--bg2)' },
 }
@@ -97,7 +97,7 @@ export default function ConsoleInquiriesPage() {
                 <Link
                   key={inq.id}
                   href={`/console/inquiries/${inq.id}`}
-                  className="card-hover lift"
+                  className="card-hover lift ui-card"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 13, textDecoration: 'none',
                     background: '#fff', borderRadius: 12,

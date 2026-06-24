@@ -29,7 +29,7 @@ export default async function ConsoleFunnelPage() {
   // 各段間の転換率（分母0は—）。
   const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : null)
   const stages = [
-    { label: '共有', n: shares, sub: 'メール/LINE/COPY/QR タップ', color: 'var(--blue)' },
+    { label: '共有', n: shares, sub: 'メール/LINE/COPY/QR タップ', color: 'var(--c-blue)' },
     { label: 'ランディング閲覧', n: views, sub: '/r/ を開いた数', color: 'var(--blue-dk)', rate: pct(views, shares), rateLabel: '閲覧/共有' },
     { label: '送信', n: subs, sub: '紹介として登録', color: 'var(--amber)', rate: pct(subs, views), rateLabel: '送信/閲覧' },
     { label: '成約', n: confirmed, sub: 'うち成約確定', color: 'var(--green)', rate: pct(confirmed, subs), rateLabel: '成約/送信' },
@@ -48,7 +48,7 @@ export default async function ConsoleFunnelPage() {
       <ConsoleMain>
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>紹介ファネル</h1>
-          <Link href="/console" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
+          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
 
         <div style={{ padding: '30px 32px 44px', maxWidth: 1000, margin: '0 auto' }}>
@@ -59,7 +59,7 @@ export default async function ConsoleFunnelPage() {
           {/* 4段 KPI */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
             {stages.map((s, i) => (
-              <div key={s.label} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px' }}>
+              <div key={s.label} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px' }}>
                 <div style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>{i + 1}. {s.label}</div>
                 <div style={{ fontFamily: 'Inter', fontSize: '1.7rem', fontWeight: 800, marginTop: 8, letterSpacing: '-.02em', color: s.color }}>{s.n}</div>
                 <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.4 }}>{s.sub}</div>
@@ -73,7 +73,7 @@ export default async function ConsoleFunnelPage() {
           </div>
 
           {/* チャネル別 共有 */}
-          <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+          <div className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
             <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>共有チャネルの内訳</b>
             <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>直近{WINDOW_DAYS}日の共有タップ数</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>

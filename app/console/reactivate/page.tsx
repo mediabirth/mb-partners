@@ -62,7 +62,7 @@ export default async function ConsoleReactivatePage() {
       <ConsoleMain>
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>再活性化</h1>
-          <Link href="/console" className="btn btn-g" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
+          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
         <div style={{ padding: '30px 32px 44px', maxWidth: 880, margin: '0 auto' }}>
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 18 }}>
