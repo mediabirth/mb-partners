@@ -27,12 +27,17 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-/** 上品・簡潔なブランドHTML（本文段落 + 任意の明細行）。 */
-export function brandedEmailHtml(params: { lead: string; rows?: [string, string][]; note?: string }): string {
+/** 上品・簡潔なブランドHTML（本文段落 + 任意の明細行 + 任意のURLボタン）。 */
+export function brandedEmailHtml(params: { lead: string; rows?: [string, string][]; note?: string; buttons?: { label: string; url: string }[] }): string {
   const rows = params.rows?.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 14px">
         ${params.rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:96px">${escapeHtml(k)}</td><td style="padding:6px 0;font-weight:600">${escapeHtml(v)}</td></tr>`).join('')}
       </table>`
+    : ''
+  // ボタン（http/httpsのみ・additive・省略時は従来と完全同一）。
+  const validButtons = (params.buttons ?? []).filter(b => b?.label && /^https?:\/\//i.test(b?.url ?? '')).slice(0, 3)
+  const buttons = validButtons.length
+    ? `<div style="margin:18px 0 2px">${validButtons.map(b => `<a href="${escapeHtml(b.url)}" style="display:inline-block;background:#4733E6;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:9px;margin:0 8px 8px 0">${escapeHtml(b.label)}</a>`).join('')}</div>`
     : ''
   return `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
   ${LOGO_BAR}
@@ -40,6 +45,7 @@ export function brandedEmailHtml(params: { lead: string; rows?: [string, string]
     <p style="margin:0 0 16px">${escapeHtml(params.lead)}</p>
     ${rows}
     ${params.note ? `<p style="margin:0;font-size:13px;color:#6E707D">${escapeHtml(params.note)}</p>` : ''}
+    ${buttons}
   </div>
   <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
@@ -68,12 +74,13 @@ export async function sendSlack(text: string): Promise<SendResult> {
 export async function sendEmail(params: {
   to?: string | null; subject: string; text: string; html?: string
   attachments?: { filename: string; content: string }[]   // additive：base64 content。省略時は従来と完全同一動作（既存呼び出し不変）。
+  buttons?: { label: string; url: string }[]   // additive：URLボタン。省略時は従来と完全同一（既定HTML時のみ反映）。
 }): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: 'RESEND_API_KEY 未設定' }
   if (!params.to) return { sent: false, skipped: '宛先なし' }
   const html = params.html
-    ?? brandedEmailHtml({ lead: params.text.split('\n')[0] || params.subject, note: params.text.split('\n').slice(1).join(' ').trim() || undefined })
+    ?? brandedEmailHtml({ lead: params.text.split('\n')[0] || params.subject, note: params.text.split('\n').slice(1).join(' ').trim() || undefined, buttons: params.buttons })
   try {
     const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject: params.subject, text: params.text, html }
     if (params.attachments && params.attachments.length > 0) payload.attachments = params.attachments   // 付与時のみ追加＝既存呼び出しは body byte-unchanged

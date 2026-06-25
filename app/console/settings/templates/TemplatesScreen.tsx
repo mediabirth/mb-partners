@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import Button from '@/components/ui/Button'
 import type { Template } from '../../messages/MessagesClient'
-import { ChannelBadge, uploadImage, useIsNarrow } from '../messaging-shared'
+import { ChannelBadge, uploadImage, useIsNarrow, ButtonsField, PreviewButtons, type EditButton } from '../messaging-shared'
 
 // Phase3-D②c：自由送信テンプレを左右1画面（master-detail）に統一。新規作成も右ペインで完結（別ルート遷移なし）。
 // ★既存CRUD API流用。resolve/送信/発火には触れない。
@@ -20,6 +20,7 @@ function Editor({ existing, previewUrl, onSaved, onDeleted, onBack }: { existing
   const [body, setBody] = useState(existing?.body ?? '')
   const [imgPath, setImgPath] = useState<string | null>(initImg)
   const [imgUrl, setImgUrl] = useState<string>(initImg ? (previewUrl ?? '') : '')
+  const [buttons, setButtons] = useState<EditButton[]>(existing?.buttons ?? [])
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const ref = useRef<HTMLTextAreaElement>(null)
   const channel = isNew ? kind : (existing!.channel ?? kind)
@@ -42,7 +43,8 @@ function Editor({ existing, previewUrl, onSaved, onDeleted, onBack }: { existing
     setBusy(true); setErr('')
     try {
       const attachments = imgPath ? [{ type: 'image', path: imgPath }] : []
-      const payload = { title: title.trim(), body, channel, category: '自由送信', subject: channel === 'email' ? (subject.trim() || null) : null, attachments }
+      const cleanButtons = buttons.filter(b => b.label.trim() && /^https?:\/\//i.test(b.url.trim()))
+      const payload = { title: title.trim(), body, channel, category: '自由送信', subject: channel === 'email' ? (subject.trim() || null) : null, attachments, buttons: cleanButtons }
       const res = existing
         ? await fetch(`/api/console/messages/templates/${existing.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/console/messages/templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
@@ -95,12 +97,25 @@ function Editor({ existing, previewUrl, onSaved, onDeleted, onBack }: { existing
       ) : (
         <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>画像をアップロード<input type="file" accept="image/*" onChange={onPickImage} style={{ display: 'none' }} /></label>
       ))}
+      {field('ボタン', <ButtonsField buttons={buttons} setButtons={setButtons} />)}
       {field('届くイメージ',
-        <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontSize: '.74rem', lineHeight: 1.7, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: 40 }}>
-          {channel === 'email' && subject && <div style={{ fontWeight: 800, marginBottom: 4 }}>{subject}</div>}
-          {body || <span style={{ color: 'var(--t-tertiary)' }}>本文がここに表示されます</span>}
-          {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 160, borderRadius: 8, marginTop: 8 }} />}
-        </div>
+        channel === 'line' ? (
+          <div style={{ background: '#7AC9A0', borderRadius: 12, padding: '14px 12px' }}>
+            <div style={{ maxWidth: '88%', background: '#fff', borderRadius: 12, padding: '10px 12px', boxShadow: '0 1px 2px rgba(0,0,0,.08)' }}>
+              {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', width: '100%', borderRadius: 8, marginBottom: body ? 8 : 0 }} />}
+              {body && <div style={{ fontSize: '.72rem', lineHeight: 1.7, color: '#0A0A0A', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{body}</div>}
+              {!body && !imgUrl && <span style={{ fontSize: '.72rem', color: 'var(--t-tertiary)' }}>本文がここに表示されます</span>}
+              <PreviewButtons buttons={buttons} />
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontSize: '.74rem', lineHeight: 1.7, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: 40 }}>
+            {subject && <div style={{ fontWeight: 800, marginBottom: 4 }}>{subject}</div>}
+            {body || <span style={{ color: 'var(--t-tertiary)' }}>本文がここに表示されます</span>}
+            {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 160, borderRadius: 8, marginTop: 8 }} />}
+            <PreviewButtons buttons={buttons} />
+          </div>
+        )
       )}
       {err && <p style={{ fontSize: '.66rem', color: 'var(--c-danger)', margin: '0 0 10px' }}>{err}</p>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>

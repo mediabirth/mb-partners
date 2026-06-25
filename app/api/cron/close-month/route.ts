@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
             subject: '【MB Partners】今月の報酬が確定しました',
             text,
             attachments: tplAttach,
+            buttons: custom?.buttons,
           })
         }
       }

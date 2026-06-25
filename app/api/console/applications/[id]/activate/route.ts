@@ -58,7 +58,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       try {
         await notify(admin, app.referrer_partner_id, payload, { event: 'recognition' })
         // 画像付きテンプレ時のみ追加でLINE画像（best-effort・通知本体/発火は不変）。
-        if (custom?.attachments?.length) await pushTemplateImagesToPartner(admin, app.referrer_partner_id, custom.attachments)
+        if (custom?.attachments?.length || custom?.buttons?.length) await pushTemplateImagesToPartner(admin, app.referrer_partner_id, custom.attachments ?? [], custom.buttons ?? [])
         recognized = true
       } catch { /* 通知失敗でも活性化は成立（例外安全） */ }
     }

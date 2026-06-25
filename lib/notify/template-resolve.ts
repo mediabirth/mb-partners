@@ -35,7 +35,8 @@ export async function resolveTemplate(category: string, vars: TemplateVars = {})
 }
 
 export type TemplateImage = { type: 'image'; path: string }
-export type ResolvedTemplate = { body: string | null; attachments: TemplateImage[] }
+export type TemplateButton = { label: string; url: string }
+export type ResolvedTemplate = { body: string | null; attachments: TemplateImage[]; buttons: TemplateButton[] }
 
 /**
  * Phase3-D① additive：本文に加えてテンプレ画像も返す。未設定/例外は null。
@@ -46,7 +47,7 @@ export async function resolveTemplateMedia(category: string, vars: TemplateVars 
   try {
     const admin = await createServiceRoleClient()
     const { data } = await admin.from('message_templates')
-      .select('body, attachments')
+      .select('body, attachments, buttons')
       .eq('is_active', true).eq('category', category)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (!data) return null
@@ -55,8 +56,13 @@ export async function resolveTemplateMedia(category: string, vars: TemplateVars 
     const attachments = (Array.isArray(data.attachments) ? data.attachments : [])
       .filter((a: { type?: string; path?: string }) => a?.type === 'image' && typeof a?.path === 'string')
       .map((a: { path: string }) => ({ type: 'image' as const, path: a.path }))
-    if (!body && attachments.length === 0) return null
-    return { body, attachments }
+    // buttons: label/url を vars 展開（URLにパラメータ差し込み可）。http/https のみ・最大3。
+    const buttons = (Array.isArray(data.buttons) ? data.buttons : [])
+      .map((b: { label?: string; url?: string }) => ({ label: fill((b?.label ?? '').trim(), vars), url: fill((b?.url ?? '').trim(), vars) }))
+      .filter((b: TemplateButton) => b.label && /^https?:\/\//i.test(b.url))
+      .slice(0, 3)
+    if (!body && attachments.length === 0 && buttons.length === 0) return null
+    return { body, attachments, buttons }
   } catch {
     return null
   }

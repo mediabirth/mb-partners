@@ -15,9 +15,10 @@ export type ThreadRow = {
   partnerId?: string; customerEmail?: string; hasLine: boolean
   lastBody: string | null; lastAt: string | null
 }
+export type TemplateButton = { label: string; url: string }
 export type Template = {
   id: string; title: string; body: string | null; subject: string | null; category: string | null
-  channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; sort_order: number
+  channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; buttons: TemplateButton[] | null; sort_order: number
 }
 type PendingImage = { path: string; previewUrl: string; filename: string }
 
@@ -30,6 +31,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const [tplOpen, setTplOpen] = useState(false)
   const [pending, setPending] = useState<PendingImage[]>([])   // 送信前にアップロード済みの画像
+  const [pendingButtons, setPendingButtons] = useState<TemplateButton[]>([])   // テンプレ由来のURLボタン
   const [urls, setUrls] = useState<Record<string, string>>(signedUrls)   // path→署名URL（送信後の表示用にローカル追記）
 
   const thread = threads.find(t => t.key === sel) ?? null
@@ -45,6 +47,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
     if (channel === 'email' && t.subject) setSubject(t.subject)
     const imgs = (t.attachments ?? []).filter(a => a.type === 'image' && a.path)
     if (imgs.length) setPending(prev => [...prev, ...imgs.map(a => ({ path: a.path, previewUrl: urls[a.path] || '', filename: a.path.split('/').pop() || 'image' }))])
+    if (t.buttons?.length) setPendingButtons(t.buttons)
     setTplOpen(false)
   }
 
@@ -63,19 +66,20 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
   }
 
   async function send() {
-    if (busy || !thread || (!body.trim() && pending.length === 0)) return
+    if (busy || !thread || (!body.trim() && pending.length === 0 && pendingButtons.length === 0)) return
     setBusy(true); setErr('')
     try {
       const attachments = pending.map(p => ({ type: 'image', path: p.path }))
+      const buttons = pendingButtons.filter(b => b.label?.trim() && /^https?:\/\//i.test(b.url ?? ''))
       const payload = channel === 'line'
-        ? { channel: 'line', partnerId: thread.partnerId, body, attachments }
-        : { channel: 'email', partnerId: thread.partnerId ?? null, customerEmail: thread.customerEmail, subject: subject || undefined, body, attachments }
+        ? { channel: 'line', partnerId: thread.partnerId, body, attachments, buttons }
+        : { channel: 'email', partnerId: thread.partnerId ?? null, customerEmail: thread.customerEmail, subject: subject || undefined, body, attachments, buttons }
       const res = await fetch('/api/console/messages/send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { setErr(j?.error || '送信に失敗しました'); return }
       if (j.message) setMsgs(prev => [...prev, j.message as Msg])
       if (!j.ok) setErr(j.error || '送信は記録されましたが配信に失敗しました')
-      setBody(''); setSubject(''); setPending([])
+      setBody(''); setSubject(''); setPending([]); setPendingButtons([])
     } catch { setErr('通信に失敗しました') } finally { setBusy(false) }
   }
 
@@ -179,13 +183,22 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
                 ))}
               </div>
             )}
+            {/* テンプレ由来のボタン（タップでURL）。クリアで外す。 */}
+            {pendingButtons.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                {pendingButtons.map((b, i) => (
+                  <span key={i} style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 8px' }}>🔘 {b.label}</span>
+                ))}
+                <button type="button" onClick={() => setPendingButtons([])} style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>ボタンを外す</button>
+              </div>
+            )}
             {channel === 'email' && (
               <input className="ui-field" value={subject} onChange={e => setSubject(e.target.value)} placeholder="件名（任意）" style={{ marginBottom: 8 }} />
             )}
             <textarea className="ui-field" value={body} onChange={e => setBody(e.target.value)} rows={3} placeholder={channel === 'line' ? 'LINE メッセージを入力…' : 'メール本文を入力…'} style={{ resize: 'vertical' }} />
             {err && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '6px 0 0' }}>{err}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-              <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && pending.length === 0} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
+              <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && pending.length === 0 && pendingButtons.length === 0} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
             </div>
           </div>
           )}

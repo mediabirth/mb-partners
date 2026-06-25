@@ -12,7 +12,7 @@ const SECTION_KEYS = new Set(SECTIONS.map(s => s.key))
 async function loadFreeTemplates() {
   const admin = await createServiceRoleClient()
   const { data } = await admin.from('message_templates')
-    .select('id, title, body, subject, category, channel, attachments, sort_order, updated_at')
+    .select('id, title, body, subject, category, channel, attachments, buttons, sort_order, updated_at')
     .eq('is_active', true).order('updated_at', { ascending: false })
   const templates = ((data ?? []) as (Template & { updated_at: string })[]).filter(t => !t.category || !SECTION_KEYS.has(t.category))
   const signedUrls: Record<string, string> = {}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { lineChannel } from '@/lib/notify/line'
 import { getLineAccessToken } from '@/lib/notify/line-token'
+import { buildRichFlex, type FlexButton } from '@/lib/notify/line-flex'
 import { sendEmail } from '@/lib/notify'
 
 // メッセージセンター Phase1+3A：owner の手動送信（LINE push/image・Resendメール+添付）＋ 全履歴を隔離表 messages(direction='out') へ記録。
@@ -17,6 +18,11 @@ type ImgAttach = { type: 'image'; path: string; filename?: string }
 function imageAttachments(raw: unknown): ImgAttach[] {
   if (!Array.isArray(raw)) return []
   return raw.filter((a: { type?: string; path?: string }) => a?.type === 'image' && typeof a?.path === 'string').slice(0, 4) as ImgAttach[]
+}
+function richButtons(raw: unknown): FlexButton[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((b: { label?: string; url?: string }) => ({ label: (b?.label ?? '').trim(), url: (b?.url ?? '').trim() }))
+    .filter(b => b.label && /^https?:\/\//i.test(b.url)).slice(0, 3)
 }
 
 export async function POST(req: NextRequest) {
@@ -35,8 +41,9 @@ export async function POST(req: NextRequest) {
     const subject = typeof b.subject === 'string' ? b.subject.trim().slice(0, 200) : null
     const body = typeof b.body === 'string' ? b.body.trim().slice(0, MAX_BODY) : ''
     const images = imageAttachments(b.attachments)   // 新shape [{type:'image',path}]・Storage参照
+    const buttons = richButtons(b.buttons)           // リッチ：[{label,url}] http/https・最大3
     if (!channel) return NextResponse.json({ error: 'channel が不正です' }, { status: 400 })
-    if (!body && images.length === 0) return NextResponse.json({ error: '本文または画像を入力してください' }, { status: 400 })
+    if (!body && images.length === 0 && buttons.length === 0) return NextResponse.json({ error: '本文・画像・ボタンのいずれかを入力してください' }, { status: 400 })
 
     const admin = await createServiceRoleClient()
     const threadKey = partnerId ? `partner:${partnerId}` : customerEmail ? `email:${customerEmail.toLowerCase()}` : null
@@ -50,7 +57,24 @@ export async function POST(req: NextRequest) {
       if (!partnerId) return NextResponse.json({ error: 'LINEはパートナー宛のみです' }, { status: 400 })
       const { data: link } = await admin.from('partner_line_links').select('line_user_id').eq('partner_id', partnerId).maybeSingle()
       if (!link?.line_user_id) return NextResponse.json({ error: 'このパートナーはLINE未連携です' }, { status: 400 })
-      if (images.length === 0) {
+      if (buttons.length > 0) {
+        // リッチ：ボタンありは Flex 1枚（hero=先頭画像・body=本文・footer=ボタン）。既存text/image経路には割り込まない。
+        const token = await getLineAccessToken()
+        if (!token) { status = 'failed'; error = 'LINEトークン取得不可' }
+        else {
+          let imageUrl: string | null = null
+          if (images.length) { const { data: signed } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(images[0].path, 60 * 60 * 24); imageUrl = signed?.signedUrl ?? null }
+          const flex = buildRichFlex({ imageUrl, body: body || null, buttons, altText: body || undefined })
+          if (!flex) { status = 'failed'; error = '送信内容がありません' }
+          else {
+            const res = await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ to: link.line_user_id, messages: [flex] }),
+            })
+            if (!res.ok) { status = 'failed'; error = 'LINEカード送信に失敗しました' }
+          }
+        }
+      } else if (images.length === 0) {
         // 既存どおり text push（lineChannel.deliver は byte-unchanged）。
         const r = await lineChannel.deliver(admin, partnerId, { title: '', body })
         if (r.sent < 1) { status = 'failed'; error = 'LINE送信に失敗しました' }
@@ -89,7 +113,7 @@ export async function POST(req: NextRequest) {
           }
         }
       }
-      const r = await sendEmail({ to: customerEmail, subject: subject || 'MB Partners', text: body || '（画像を送付しました）', attachments: mailAttachments })
+      const r = await sendEmail({ to: customerEmail, subject: subject || 'MB Partners', text: body || '（画像を送付しました）', attachments: mailAttachments, buttons: buttons.length ? buttons : undefined })
       if (!r.sent) { status = 'failed'; error = r.skipped || r.error || 'メール送信に失敗しました' }
     }
 

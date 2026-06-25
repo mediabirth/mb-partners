@@ -48,6 +48,50 @@ export function EventIcon({ category, channel, size = 36 }: { category: string; 
   )
 }
 
+// URLボタン編集（最大3・ラベル＋リンク先・追加/削除/並べ替え）。
+export type EditButton = { label: string; url: string }
+export function ButtonsField({ buttons, setButtons }: { buttons: EditButton[]; setButtons: (b: EditButton[]) => void }) {
+  const set = (i: number, patch: Partial<EditButton>) => setButtons(buttons.map((b, j) => j === i ? { ...b, ...patch } : b))
+  const add = () => { if (buttons.length < 3) setButtons([...buttons, { label: '', url: '' }]) }
+  const del = (i: number) => setButtons(buttons.filter((_, j) => j !== i))
+  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= buttons.length) return; const next = [...buttons]; [next[i], next[j]] = [next[j], next[i]]; setButtons(next) }
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)' }}>ボタン（最大3個・タップでURLを開く）</div>
+        {buttons.length < 3 && <button type="button" onClick={add} style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}>＋ 追加</button>}
+      </div>
+      {buttons.length === 0 && <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', paddingBottom: 4 }}>ボタンなし（従来どおり画像＋本文で送信）</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {buttons.map((b, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="上へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 9, lineHeight: 1, padding: 0 }}>▲</button>
+              <button type="button" onClick={() => move(i, 1)} disabled={i === buttons.length - 1} title="下へ" style={{ border: 'none', background: 'transparent', cursor: i === buttons.length - 1 ? 'default' : 'pointer', color: i === buttons.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 9, lineHeight: 1, padding: 0 }}>▼</button>
+            </div>
+            <input className="ui-field" value={b.label} onChange={e => set(i, { label: e.target.value })} placeholder="ボタンの文字（例：詳しく見る）" style={{ flex: '0 0 38%' }} />
+            <input className="ui-field" value={b.url} onChange={e => set(i, { url: e.target.value })} placeholder="https://…" style={{ flex: 1 }} />
+            <button type="button" onClick={() => del(i)} title="削除" style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, border: '1px solid var(--c-hairline)', background: 'var(--s-1)', color: 'var(--c-danger)', cursor: 'pointer', fontSize: 13 }}>×</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// 届くイメージ内のボタン描画（LINE/メール共通の見た目）。
+export function PreviewButtons({ buttons }: { buttons: EditButton[] }) {
+  const valid = buttons.filter(b => b.label && /^https?:\/\//i.test(b.url))
+  if (!valid.length) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+      {valid.map((b, i) => (
+        <div key={i} style={{ textAlign: 'center', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.68rem', borderRadius: 8, padding: '8px 10px' }}>{b.label}</div>
+      ))}
+    </div>
+  )
+}
+
 export async function uploadImage(file: File): Promise<{ path: string; previewUrl: string } | null> {
   const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file) })
   const res = await fetch('/api/console/messages/upload', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ filename: file.name, contentType: file.type, contentBase64: dataUrl }) })

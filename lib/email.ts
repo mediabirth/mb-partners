@@ -65,7 +65,7 @@ ${linkLine}
   // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名は不変。
   const custom = await resolveTemplateMedia('booking', { name: nm, when, meetingUrl: params.meetingUrl ?? '' })
   const finalText = custom?.body ?? text
-  const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body }) : html
+  const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body, buttons: custom.buttons }) : html
   // 画像付きテンプレ時のみ Resend 添付（未設定なら従来と完全同一）。
   const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
   const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }
@@ -160,7 +160,7 @@ ${meetLineText}
   // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名/関わり方は不変。
   const custom = await resolveTemplateMedia('receipt', { name, kind: kindLabel, customer: params.customerName, service: params.serviceName ?? '', meeting: meeting ?? '' })
   const finalText = custom?.body ?? text
-  const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body }) : html
+  const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body, buttons: custom.buttons }) : html
   const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
   const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }
   if (tplAttach) payload.attachments = tplAttach

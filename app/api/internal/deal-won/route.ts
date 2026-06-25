@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   const results = await notify(admin, deal.partner_id, payload, { event: 'deal_won' })
-  // 画像付きテンプレが設定されている場合のみ、追加でLINE画像を送付（best-effort・notify/金額/発火は不変）。
-  if (custom?.attachments?.length) await pushTemplateImagesToPartner(admin, deal.partner_id, custom.attachments)
+  // 画像/ボタン付きテンプレ時のみ、追加でLINE画像/カードを送付（best-effort・notify/金額/発火は不変）。
+  if (custom?.attachments?.length || custom?.buttons?.length) await pushTemplateImagesToPartner(admin, deal.partner_id, custom.attachments ?? [], custom.buttons ?? [])
   return NextResponse.json({ ok: true, partnerId: deal.partner_id, channels: results })
 }

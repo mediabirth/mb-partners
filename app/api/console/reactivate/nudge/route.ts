@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
     ref: { type: 'nudge' as const },
   }
   const results = await notify(admin, partnerId, payload, { event: 'nudge' })
-  // 画像付きテンプレ時のみ追加でLINE画像（best-effort・通知本体/頻度上限/発火は不変）。
-  if (custom?.attachments?.length) await pushTemplateImagesToPartner(admin, partnerId, custom.attachments)
+  // 画像/ボタン付きテンプレ時のみ追加でLINE画像/カード（best-effort・通知本体/頻度上限/発火は不変）。
+  if (custom?.attachments?.length || custom?.buttons?.length) await pushTemplateImagesToPartner(admin, partnerId, custom.attachments ?? [], custom.buttons ?? [])
 
   // 送信記録（頻度上限の基準）。お金/status には触れない。
   await admin.from('partners').update({ last_nudged_at: new Date().toISOString() }).eq('id', partnerId)

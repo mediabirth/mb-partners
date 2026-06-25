@@ -5,6 +5,13 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 // ★money/deals/帰属/既存notify 非接触。例外安全。
 export const runtime = 'nodejs'
 
+// buttons: [{label,url}] http/https・最大3・空行除外。
+export function parseButtons(raw: unknown): { label: string; url: string }[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((b: { label?: string; url?: string }) => ({ label: (b?.label ?? '').trim().slice(0, 40), url: (b?.url ?? '').trim().slice(0, 1000) }))
+    .filter(b => b.label && /^https?:\/\//i.test(b.url)).slice(0, 3)
+}
+
 async function ownerGate() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -19,7 +26,7 @@ export async function GET() {
   try {
     const admin = await createServiceRoleClient()
     const { data } = await admin.from('message_templates')
-      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, sort_order, is_active')
+      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, buttons, sort_order, is_active')
       .eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true })
     return NextResponse.json({ templates: data ?? [] })
   } catch (e) {
@@ -38,11 +45,12 @@ export async function POST(req: NextRequest) {
     const category = typeof b.category === 'string' && b.category.trim() ? b.category.trim().slice(0, 40) : null
     const channel = ['line', 'email', 'both'].includes(b.channel) ? b.channel : null
     const attachments = Array.isArray(b.attachments) ? b.attachments.filter((a: { type?: string; path?: string }) => a?.type === 'image' && a?.path).slice(0, 5) : null
+    const buttons = parseButtons(b.buttons)
     const sort_order = Number.isFinite(b.sort_order) ? Math.trunc(b.sort_order) : 0
     const admin = await createServiceRoleClient()
     const { data, error } = await admin.from('message_templates')
-      .insert({ title, body, subject, category, channel, attachments: attachments?.length ? attachments : null, sort_order, created_by: g.user!.id })
-      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, sort_order, is_active').single()
+      .insert({ title, body, subject, category, channel, attachments: attachments?.length ? attachments : null, buttons: buttons.length ? buttons : null, sort_order, created_by: g.user!.id })
+      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, buttons, sort_order, is_active').single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ template: data })
   } catch (e) {

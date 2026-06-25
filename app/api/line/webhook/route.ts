@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getLineAccessToken } from '@/lib/notify/line-token'
 import { resolveTemplateMedia } from '@/lib/notify/template-resolve'
+import { buildRichFlex } from '@/lib/notify/line-flex'
 
 // メッセージセンター Phase2：LINE Messaging API 受信 webhook（additive・新設）。
 // ★署名検証必須（x-line-signature を LINE_CHANNEL_SECRET で HMAC-SHA256→base64・生body比較）。不一致/欠如は 401。
@@ -38,15 +39,23 @@ export async function POST(req: NextRequest) {
             // Phase3-D② fix：text に加えテンプレ画像も送る。reply は replyToken 単回使用のため text＋image を1配列でまとめて送る。
             const greeting = await resolveTemplateMedia('greeting', {})
             const replyToken: string | undefined = ev.replyToken
-            if (greeting && replyToken && (greeting.body || greeting.attachments.length)) {
+            if (greeting && replyToken && (greeting.body || greeting.attachments.length || greeting.buttons.length)) {
               const token = await getLineAccessToken()
               if (token) {
-                const msgs: Array<Record<string, unknown>> = []
-                if (greeting.body) msgs.push({ type: 'text', text: greeting.body })
-                // 署名URL（既存の動く方式を流用）。reply上限5件のため画像は最大4件（text1+image4）。
-                for (const a of greeting.attachments.slice(0, 4)) {
-                  const { data: signed } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(a.path, 60 * 60 * 24)
-                  if (signed?.signedUrl) msgs.push({ type: 'image', originalContentUrl: signed.signedUrl, previewImageUrl: signed.signedUrl })
+                let msgs: Array<Record<string, unknown>> = []
+                if (greeting.buttons.length) {
+                  // リッチ：ボタンありは Flex 1枚（hero=先頭画像・body=本文・footer=ボタン）。
+                  let imageUrl: string | null = null
+                  if (greeting.attachments.length) { const { data: signed } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(greeting.attachments[0].path, 60 * 60 * 24); imageUrl = signed?.signedUrl ?? null }
+                  const flex = buildRichFlex({ imageUrl, body: greeting.body, buttons: greeting.buttons, altText: greeting.body ?? undefined })
+                  if (flex) msgs = [flex]
+                } else {
+                  // 従来：text＋image（byte-unchanged）。reply上限5件のため画像は最大4件（text1+image4）。
+                  if (greeting.body) msgs.push({ type: 'text', text: greeting.body })
+                  for (const a of greeting.attachments.slice(0, 4)) {
+                    const { data: signed } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(a.path, 60 * 60 * 24)
+                    if (signed?.signedUrl) msgs.push({ type: 'image', originalContentUrl: signed.signedUrl, previewImageUrl: signed.signedUrl })
+                  }
                 }
                 if (msgs.length > 0) {
                   const res = await fetch('https://api.line.me/v2/bot/message/reply', {

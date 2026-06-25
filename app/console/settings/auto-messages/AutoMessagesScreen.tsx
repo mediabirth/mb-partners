@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import Button from '@/components/ui/Button'
 import type { Template } from '../../messages/MessagesClient'
-import { ChannelBadge, EventIcon, uploadImage, useIsNarrow } from '../messaging-shared'
+import { ChannelBadge, EventIcon, uploadImage, useIsNarrow, ButtonsField, PreviewButtons, type EditButton } from '../messaging-shared'
 import { EXAMPLE, VARDESC, fillExample, SECTIONS, type Section } from '../messaging-sections'
 
 // Phase3-D②c：自動メッセージを左右1画面（左7イベント list ＋ 右編集）に統一。別ルート遷移なし。
@@ -13,6 +13,7 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
   const [body, setBody] = useState(existing?.body ?? '')
   const [imgPath, setImgPath] = useState<string | null>(initImg)
   const [imgUrl, setImgUrl] = useState<string>(initImg ? (previewUrl ?? '') : '')
+  const [buttons, setButtons] = useState<EditButton[]>(existing?.buttons ?? [])
   const [showDefault, setShowDefault] = useState(false)
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -33,11 +34,12 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
     setImgPath(up.path); setImgUrl(up.previewUrl)
   }
   async function save() {
-    if (busy || (!body.trim() && !imgPath)) return
+    if (busy || (!body.trim() && !imgPath && buttons.length === 0)) return
     setBusy(true); setErr('')
     try {
       const attachments = imgPath ? [{ type: 'image', path: imgPath }] : []
-      const payload = { title: section.label, body, category: section.key, channel: section.channel || null, attachments, sort_order: 0 }
+      const cleanButtons = buttons.filter(b => b.label.trim() && /^https?:\/\//i.test(b.url.trim()))
+      const payload = { title: section.label, body, category: section.key, channel: section.channel || null, attachments, buttons: cleanButtons, sort_order: 0 }
       const res = existing
         ? await fetch(`/api/console/messages/templates/${existing.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/console/messages/templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
@@ -101,13 +103,16 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
         <span style={{ fontSize: '.56rem', color: 'var(--t-tertiary)' }}>{isLine ? 'LINE画像として送られます' : 'メール添付として送られます'}</span>
       </div>
 
+      <div style={{ marginTop: 12 }}><ButtonsField buttons={buttons} setButtons={setButtons} /></div>
+
       <div style={{ marginTop: 14 }}>
         <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 6 }}>実際に届くイメージ{!body && '（未入力のためサンプル）'}</div>
         {isLine ? (
           <div style={{ background: '#7AC9A0', borderRadius: 12, padding: '14px 12px' }}>
-            <div style={{ display: 'inline-block', maxWidth: '85%', background: '#fff', borderRadius: 12, padding: '9px 12px', fontSize: '.72rem', lineHeight: 1.7, color: '#0A0A0A', whiteSpace: 'pre-wrap', wordBreak: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,.08)' }}>
+            <div style={{ display: 'inline-block', maxWidth: '88%', background: '#fff', borderRadius: 12, padding: '10px 12px', fontSize: '.72rem', lineHeight: 1.7, color: '#0A0A0A', whiteSpace: 'pre-wrap', wordBreak: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,.08)' }}>
+              {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', width: '100%', borderRadius: 8, marginBottom: 6 }} />}
               {preview}
-              {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 150, borderRadius: 8, marginTop: 6 }} />}
+              <PreviewButtons buttons={buttons} />
             </div>
           </div>
         ) : (
@@ -116,6 +121,7 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
             <div style={{ padding: '13px', fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {preview}
               {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 180, borderRadius: 8, marginTop: 8 }} />}
+              <PreviewButtons buttons={buttons} />
             </div>
           </div>
         )}
@@ -124,7 +130,7 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
       {err && <p style={{ fontSize: '.66rem', color: 'var(--c-danger)', margin: '10px 0 0' }}>{err}</p>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         {isCustom ? <Button variant="ghost" size="sm" busy={busy} onClick={reset}>既定に戻す</Button> : <span />}
-        <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && !imgPath} onClick={save}>保存する</Button>
+        <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && !imgPath && buttons.length === 0} onClick={save}>保存する</Button>
       </div>
     </div>
   )
