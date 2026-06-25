@@ -4,6 +4,7 @@ import ConsoleNav from '@/components/ConsoleNav'
 import LogoutButton from '@/components/LogoutButton'
 import ConsoleCalendarCard from '@/components/ConsoleCalendarCard'
 import MembersSection from './MembersSection'
+import { SECTION_KEYS } from './messaging-sections'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AuditLog  = { id: string; actor_name: string; category: string; target: string; action: string; created_at: string }
@@ -67,6 +68,8 @@ export default function SettingsPage() {
   const [auditLogs, setAuditLogs]             = useState<AuditLog[]>([])
   const [auditCategory, setAuditCategory]     = useState('')
   const [auditLoading, setAuditLoading]       = useState(true)
+  const [msgFreeCount, setMsgFreeCount]       = useState<number | null>(null)   // 自由送信テンプレ件数
+  const [msgAutoCount, setMsgAutoCount]       = useState<number | null>(null)   // 自動メッセージ カスタム件数
 
   // ⑤ Load persisted notification settings (Slack ON/OFF + per-event).
   useEffect(() => {
@@ -96,6 +99,18 @@ export default function SettingsPage() {
       .catch(() => setAuditLogs([]))
       .finally(() => setAuditLoading(false))
   }, [auditCategory])
+
+  // メッセージ入口カードの件数（既存CRUD一覧API流用・owner gate・money非接触）。
+  useEffect(() => {
+    fetch('/api/console/messages/templates')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        const tpls: { category: string | null }[] = d?.templates ?? []
+        setMsgFreeCount(tpls.filter(t => !t.category || !SECTION_KEYS.has(t.category)).length)
+        setMsgAutoCount(tpls.filter(t => t.category && SECTION_KEYS.has(t.category)).length)
+      })
+      .catch(() => {})
+  }, [])
 
   function exportCsv() {
     const headers = ['日時', '操作者', 'カテゴリ', '対象', 'アクション']
@@ -156,23 +171,32 @@ export default function SettingsPage() {
             <MembersSection />
           </SectionCard>
 
-          {/* メッセージ（テンプレート／自動メッセージ）— Phase3-D② 設定配下へ集約 */}
-          <SectionCard title="メッセージ">
-            <a href="/console/settings/templates" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <RowItem label="自由送信テンプレート" desc="メッセージ画面で手動送信するときに挿入できる定型文（LINE用／メール用・画像つき）">
-                <span style={{ color: 'var(--c-blue)', fontWeight: 700, fontSize: '.74rem' }}>管理 ›</span>
-              </RowItem>
-            </a>
-            <a href="/console/settings/auto-messages" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '.8rem', fontWeight: 600 }}>自動メッセージ</div>
-                  <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>成約・賞賛・受付確認など、各イベントで自動送信される文面と画像</div>
-                </div>
-                <span style={{ color: 'var(--c-blue)', fontWeight: 700, fontSize: '.74rem' }}>設定 ›</span>
+          {/* メッセージ（テンプレート／自動メッセージ）— Phase3-D②b 入口カード（件数動的） */}
+          <div style={{ marginBottom: 20 }}>
+            <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 10 }}>メッセージ</b>
+            <a href="/console/settings/templates" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 10, textDecoration: 'none', color: 'inherit' }}>
+              <span style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--c-ghost-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3v4a1 1 0 001 1h4" /><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" /><path d="M9 9h1M9 13h6M9 17h6" /></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.84rem', fontWeight: 800 }}>自由送信テンプレート</div>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>手動送信で挿入できる定型文（LINE用／メール用・画像つき）</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 700, marginTop: 4 }}>{msgFreeCount == null ? '　' : `${msgFreeCount}件登録済み`}</div>
               </div>
+              <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
             </a>
-          </SectionCard>
+            <a href="/console/settings/auto-messages" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px', textDecoration: 'none', color: 'inherit' }}>
+              <span style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-background-info, #E6F1FB)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-info)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="8" width="16" height="12" rx="2" /><path d="M12 8V4M9 4h6M9 14h.01M15 14h.01M9 17h6" /></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.84rem', fontWeight: 800 }}>自動メッセージ</div>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>成約・賞賛・受付確認など、各イベントで自動送信される文面と画像</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 700, marginTop: 4 }}>{msgAutoCount == null ? '　' : `7イベント · ${msgAutoCount}件カスタム`}</div>
+              </div>
+              <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
+            </a>
+          </div>
 
           {/* 支払サイクルは「月末締め翌月末払い」固定（UIは撤去） */}
           {/* BR-C2: 「管理者管理」は MBメンバー（管理者）と同一対象の二重管理だったため統合・撤去。 */}
