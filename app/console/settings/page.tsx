@@ -156,6 +156,24 @@ export default function SettingsPage() {
             <MembersSection />
           </SectionCard>
 
+          {/* メッセージ（テンプレート／自動メッセージ）— Phase3-D② 設定配下へ集約 */}
+          <SectionCard title="メッセージ">
+            <a href="/console/settings/templates" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <RowItem label="自由送信テンプレート" desc="メッセージ画面で手動送信するときに挿入できる定型文（LINE用／メール用・画像つき）">
+                <span style={{ color: 'var(--c-blue)', fontWeight: 700, fontSize: '.74rem' }}>管理 ›</span>
+              </RowItem>
+            </a>
+            <a href="/console/settings/auto-messages" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '.8rem', fontWeight: 600 }}>自動メッセージ</div>
+                  <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>成約・賞賛・受付確認など、各イベントで自動送信される文面と画像</div>
+                </div>
+                <span style={{ color: 'var(--c-blue)', fontWeight: 700, fontSize: '.74rem' }}>設定 ›</span>
+              </div>
+            </a>
+          </SectionCard>
+
           {/* 支払サイクルは「月末締め翌月末払い」固定（UIは撤去） */}
           {/* BR-C2: 「管理者管理」は MBメンバー（管理者）と同一対象の二重管理だったため統合・撤去。 */}
 

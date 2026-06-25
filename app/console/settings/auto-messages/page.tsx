@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
-import TemplatesClient from './TemplatesClient'
-import type { Template } from '../MessagesClient'
+import AutoMessagesClient from './AutoMessagesClient'
+import type { Template } from '../../messages/MessagesClient'
 
-// メッセージセンター Phase3-A：テンプレート管理（一覧/追加/編集/削除）。owner gate・隔離表 message_templates のみ。
+// Phase3-D②：自動メッセージ（イベント別）。owner gate・隔離表 message_templates のみ。解決ロジックは不変。
 export const runtime = 'edge'
 
-export default async function TemplatesPage() {
+export default async function AutoMessagesPage() {
   const uid = await getCachedUid()
   if (!uid) redirect('/console/login')
   const supabase = await createClient()
@@ -20,7 +20,6 @@ export default async function TemplatesPage() {
     .eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true })
   const templates = (data ?? []) as Template[]
 
-  // テンプレ画像の署名URL（サムネ/プレビュー用・private）。
   const signedUrls: Record<string, string> = {}
   const imgPaths = [...new Set(templates.flatMap(t => (t.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path)))]
   if (imgPaths.length) {
@@ -32,7 +31,7 @@ export default async function TemplatesPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <TemplatesClient initial={templates} signedUrls={signedUrls} />
+        <AutoMessagesClient initial={templates} signedUrls={signedUrls} />
       </div>
     </div>
   )

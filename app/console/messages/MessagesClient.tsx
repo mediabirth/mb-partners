@@ -86,7 +86,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
         <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>メッセージ</h1>
-            <a href="/console/messages/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ管理</a>
+            <a href="/console/settings/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ設定</a>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -146,7 +146,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
                   テンプレート（{usableTpls.length}）{tplOpen ? ' ▾' : ' ▸'}
                 </button>
               ) : (
-                <span style={{ fontSize: '.6rem', color: 'var(--t-tertiary)' }}>テンプレート未登録 <a href="/console/messages/templates" style={{ color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>登録する</a></span>
+                <span style={{ fontSize: '.6rem', color: 'var(--t-tertiary)' }}>テンプレート未登録 <a href="/console/settings/templates" style={{ color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>登録する</a></span>
               )}
               <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>
                 画像を添付
