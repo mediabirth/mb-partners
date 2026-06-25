@@ -16,7 +16,7 @@ export type ThreadRow = {
   lastBody: string | null; lastAt: string | null
 }
 export type Template = {
-  id: string; title: string; body: string | null; category: string | null
+  id: string; title: string; body: string | null; subject: string | null; category: string | null
   channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; sort_order: number
 }
 type PendingImage = { path: string; previewUrl: string; filename: string }
@@ -42,6 +42,9 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
 
   function insertTemplate(t: Template) {
     setBody(prev => (prev ? prev + '\n' : '') + (t.body ?? ''))
+    if (channel === 'email' && t.subject) setSubject(t.subject)
+    const imgs = (t.attachments ?? []).filter(a => a.type === 'image' && a.path)
+    if (imgs.length) setPending(prev => [...prev, ...imgs.map(a => ({ path: a.path, previewUrl: urls[a.path] || '', filename: a.path.split('/').pop() || 'image' }))])
     setTplOpen(false)
   }
 
@@ -81,7 +84,6 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
       {/* 左：相手リスト */}
       <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid var(--line)', background: 'var(--s-0)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--line)' }}>
-          <p className="eyebrow" style={{ marginBottom: 2 }}>司令塔</p>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>メッセージ</h1>
             <a href="/console/messages/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ管理</a>
@@ -154,7 +156,11 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
                 <div style={{ position: 'absolute', bottom: '110%', left: 0, zIndex: 20, width: 280, maxHeight: 260, overflowY: 'auto', background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 8px 24px rgba(15,23,42,0.12)' }}>
                   {usableTpls.map(t => (
                     <button key={t.id} type="button" onClick={() => insertTemplate(t)} className="ui-row" style={{ width: '100%', textAlign: 'left', border: 'none', borderBottom: '1px solid var(--c-hairline)', cursor: 'pointer', background: 'transparent', display: 'block', padding: '9px 12px' }}>
-                      <div style={{ fontSize: '.72rem', fontWeight: 700 }}>{t.title}{t.category && <span style={{ marginLeft: 6, fontSize: '.52rem', color: 'var(--t-tertiary)' }}>{t.category}</span>}</div>
+                      <div style={{ fontSize: '.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ flexShrink: 0, fontSize: '.46rem', fontWeight: 800, color: t.channel === 'line' ? 'var(--c-success)' : 'var(--c-info)', background: t.channel === 'line' ? 'rgba(30,158,106,0.1)' : 'rgba(55,138,221,0.12)', borderRadius: 4, padding: '1px 5px' }}>{t.channel === 'line' ? 'LINE' : 'メール'}</span>
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                        {(t.attachments ?? []).some(a => a.type === 'image') && <span style={{ flexShrink: 0, fontSize: '.5rem', color: 'var(--t-tertiary)' }}>🖼</span>}
+                      </div>
                       {t.body && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.body}</div>}
                     </button>
                   ))}

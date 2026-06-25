@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notify } from '@/lib/notify/index'
-import { resolveTemplate } from '@/lib/notify/template-resolve'
+import { resolveTemplateMedia } from '@/lib/notify/template-resolve'
+import { pushTemplateImagesToPartner } from '@/lib/notify/template-media'
 
 // Feature E（E-3）：応募の「承認＝仲間化」マークと、紹介元への“賞賛”通知（非金銭）。
 // ★これは金銭オーバーライドではない。frontier・お金・deals・status・/r帰属には一切触れない。
@@ -45,7 +46,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     if (app.referrer_partner_id) {
       // 文面のみ templates 優先解決（無ければ既存ハードコード文面へフォールバック）。発火/宛先/チャネル不変。
       const defaultBody = 'あなたの紹介に、心から感謝します。信頼の輪が、あなたから確かに広がっています。これからもどうぞよろしくお願いします。— MB Partners'
-      const body = (await resolveTemplate('recognition', { name: app.name })) ?? defaultBody
+      const custom = await resolveTemplateMedia('recognition', { name: app.name })
+      const body = custom?.body ?? defaultBody
       const payload = {
         title: `${app.name}さんが仲間に加わりました`,
         body,
@@ -55,6 +57,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       }
       try {
         await notify(admin, app.referrer_partner_id, payload, { event: 'recognition' })
+        // 画像付きテンプレ時のみ追加でLINE画像（best-effort・通知本体/発火は不変）。
+        if (custom?.attachments?.length) await pushTemplateImagesToPartner(admin, app.referrer_partner_id, custom.attachments)
         recognized = true
       } catch { /* 通知失敗でも活性化は成立（例外安全） */ }
     }

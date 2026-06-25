@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getLineAccessToken } from '@/lib/notify/line-token'
 import { resolveTemplate } from '@/lib/notify/template-resolve'
 
-// メッセージ司令塔 Phase2：LINE Messaging API 受信 webhook（additive・新設）。
+// メッセージセンター Phase2：LINE Messaging API 受信 webhook（additive・新設）。
 // ★署名検証必須（x-line-signature を LINE_CHANNEL_SECRET で HMAC-SHA256→base64・生body比較）。不一致/欠如は 401。
 // ★検証OKなら常に200（LINE再送ループ防止）。例外は握って200（記録失敗はログのみ）。
 // ★messages 隔離表のみ書込。partner_line_links は read-only 突合。money/deals/帰属/既存notify 非接触。

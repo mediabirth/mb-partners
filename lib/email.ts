@@ -8,7 +8,8 @@
  * SPF / DKIM / DMARC DNS records, otherwise Resend rejects the send.
  */
 import { MAIL_FROM as FROM } from './mail-from'
-import { resolveTemplate } from './notify/template-resolve'
+import { resolveTemplateMedia } from './notify/template-resolve'
+import { emailAttachmentsFromTemplate } from './notify/template-media'
 import { brandedEmailHtml } from './notify'
 
 const SUPPORT = 'support@mb-partners.app'
@@ -62,13 +63,17 @@ ${linkLine}
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
   // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名は不変。
-  const custom = await resolveTemplate('booking', { name: nm, when, meetingUrl: params.meetingUrl ?? '' })
-  const finalText = custom ?? text
-  const finalHtml = custom ? brandedEmailHtml({ lead: custom }) : html
+  const custom = await resolveTemplateMedia('booking', { name: nm, when, meetingUrl: params.meetingUrl ?? '' })
+  const finalText = custom?.body ?? text
+  const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body }) : html
+  // 画像付きテンプレ時のみ Resend 添付（未設定なら従来と完全同一）。
+  const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
+  const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }
+  if (tplAttach) payload.attachments = tplAttach
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }),
+      body: JSON.stringify(payload),
     })
     if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
     return { sent: true }
@@ -153,14 +158,17 @@ ${meetLineText}
 </div>`
 
   // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名/関わり方は不変。
-  const custom = await resolveTemplate('receipt', { name, kind: kindLabel, customer: params.customerName, service: params.serviceName ?? '', meeting: meeting ?? '' })
-  const finalText = custom ?? text
-  const finalHtml = custom ? brandedEmailHtml({ lead: custom }) : html
+  const custom = await resolveTemplateMedia('receipt', { name, kind: kindLabel, customer: params.customerName, service: params.serviceName ?? '', meeting: meeting ?? '' })
+  const finalText = custom?.body ?? text
+  const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body }) : html
+  const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
+  const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }
+  if (tplAttach) payload.attachments = tplAttach
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }),
+      body: JSON.stringify(payload),
     })
     if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
     return { sent: true }

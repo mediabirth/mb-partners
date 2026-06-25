@@ -3,7 +3,7 @@ import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supab
 import ConsoleNav from '@/components/ConsoleNav'
 import MessagesClient, { type ThreadRow, type Msg } from './MessagesClient'
 
-// メッセージ司令塔 Phase1：相手リスト（LINE連携パートナー＋顧客メール）＋スレッド＋送信ボックス。
+// メッセージセンター Phase1：相手リスト（LINE連携パートナー＋顧客メール）＋スレッド＋送信ボックス。
 // ★読取は service_role（owner gate）。messages 隔離表のみ。money/deals/帰属 非接触。
 export const runtime = 'edge'
 
@@ -18,15 +18,18 @@ export default async function ConsoleMessagesPage() {
   const [linksRes, msgsRes, tplRes] = await Promise.all([
     admin.from('partner_line_links').select('partner_id, line_user_id'),
     admin.from('messages').select('id, created_at, partner_id, customer_email, direction, channel, subject, body, status, error, thread_key, attachments').order('created_at', { ascending: true }).limit(2000),
-    admin.from('message_templates').select('id, title, body, category, channel, attachments, sort_order').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
+    admin.from('message_templates').select('id, title, body, subject, category, channel, attachments, sort_order').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
   ])
   const links = (linksRes.data ?? []) as Array<{ partner_id: string; line_user_id: string }>
   const messages = (msgsRes.data ?? []) as Msg[]
   const templates = (tplRes.data ?? []) as import('./MessagesClient').Template[]
 
-  // 受信画像：private バケットの署名URLを path→url で解決（console表示のみ・公開URLは発行しない）。
+  // 受信画像＋テンプレ画像：private バケットの署名URLを path→url で解決（console表示のみ・公開URLは発行しない）。
   const signedUrls: Record<string, string> = {}
-  const imgPaths = [...new Set(messages.flatMap(m => (m.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path)))]
+  const imgPaths = [...new Set([
+    ...messages.flatMap(m => (m.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path)),
+    ...templates.flatMap(t => (t.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path)),
+  ])]
   if (imgPaths.length) {
     const { data: signed } = await admin.storage.from('message-attachments').createSignedUrls(imgPaths, 3600)
     for (const s of signed ?? []) { if (s.signedUrl && s.path) signedUrls[s.path] = s.signedUrl }

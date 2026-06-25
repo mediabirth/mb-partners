@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { resolveTemplate } from '@/lib/notify/template-resolve'
+import { resolveTemplateMedia } from '@/lib/notify/template-resolve'
+import { emailAttachmentsFromTemplate } from '@/lib/notify/template-media'
 
 // Vercel Cron calls this route at schedule defined in vercel.json.
 // Auth: Bearer CRON_SECRET header (set as Vercel env var).
@@ -74,11 +75,15 @@ export async function GET(req: NextRequest) {
           // ★金額算出(it.net)・対象判定・締め/payout/凍結は不変。本文textのみ templates 優先（無ければ既存文面）。
           const amount = `¥${(it.net ?? 0).toLocaleString()}`
           const defaultText = `${prof.name ?? 'パートナー'} 様\n${targetMonth} 分の報酬が確定しました。\n・手取り：${amount}\n明細はアプリの「報酬」からご確認いただけます。`
-          const text = (await resolveTemplate('payout-confirmed', { name: prof.name ?? 'パートナー', month: targetMonth, amount })) ?? defaultText
+          const custom = await resolveTemplateMedia('payout-confirmed', { name: prof.name ?? 'パートナー', month: targetMonth, amount })
+          const text = custom?.body ?? defaultText
+          // 画像付きテンプレ時のみ添付（未設定なら従来と完全同一・金額算出は不変）。
+          const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
           await sendEmail({
             to: prof.email,
             subject: '【MB Partners】今月の報酬が確定しました',
             text,
+            attachments: tplAttach,
           })
         }
       }

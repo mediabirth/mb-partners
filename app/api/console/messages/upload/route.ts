@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 
-// メッセージ司令塔 Phase3-A：送信用画像アップロード（owner gate）。message-attachments 私設バケットへ保存し path を返す。
+// メッセージセンター Phase3-A：送信用画像アップロード（owner gate）。message-attachments 私設バケットへ保存し path を返す。
 // ★画像のみ・サイズ上限。money/deals/帰属 非接触。例外安全。
 export const runtime = 'nodejs'
 

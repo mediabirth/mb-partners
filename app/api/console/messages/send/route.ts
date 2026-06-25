@@ -4,7 +4,7 @@ import { lineChannel } from '@/lib/notify/line'
 import { getLineAccessToken } from '@/lib/notify/line-token'
 import { sendEmail } from '@/lib/notify'
 
-// メッセージ司令塔 Phase1+3A：owner の手動送信（LINE push/image・Resendメール+添付）＋ 全履歴を隔離表 messages(direction='out') へ記録。
+// メッセージセンター Phase1+3A：owner の手動送信（LINE push/image・Resendメール+添付）＋ 全履歴を隔離表 messages(direction='out') へ記録。
 // ★既存 notify() ディスパッチャ（通知4種/リマインド/勝ち通知）には割り込まない＝独立した手動送信経路。
 // ★既存 lineChannel.deliver（text push）は byte-unchanged。画像送信は本route内の新経路として追加（割り込まない）。
 // ★money/deals/帰属/既存RLS 非接触。messages のみ書込（service_role）。例外安全（throwしない）。
