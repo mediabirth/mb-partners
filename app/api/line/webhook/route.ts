@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getLineAccessToken } from '@/lib/notify/line-token'
-import { resolveTemplate } from '@/lib/notify/template-resolve'
+import { resolveTemplateMedia } from '@/lib/notify/template-resolve'
 
 // メッセージセンター Phase2：LINE Messaging API 受信 webhook（additive・新設）。
 // ★署名検証必須（x-line-signature を LINE_CHANNEL_SECRET で HMAC-SHA256→base64・生body比較）。不一致/欠如は 401。
@@ -35,15 +35,38 @@ export async function POST(req: NextRequest) {
         // テンプレ未設定なら沈黙（＝現状どおり・LINE Manager側あいさつに委ねる＝後方互換）。
         if (ev.type === 'follow') {
           try {
-            const greeting = await resolveTemplate('greeting', {})
+            // Phase3-D② fix：text に加えテンプレ画像も送る。reply は replyToken 単回使用のため text＋image を1配列でまとめて送る。
+            const greeting = await resolveTemplateMedia('greeting', {})
             const replyToken: string | undefined = ev.replyToken
-            if (greeting && replyToken) {
+            if (greeting && replyToken && (greeting.body || greeting.attachments.length)) {
               const token = await getLineAccessToken()
               if (token) {
-                await fetch('https://api.line.me/v2/bot/message/reply', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                  body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: greeting }] }),
-                })
+                const msgs: Array<Record<string, unknown>> = []
+                if (greeting.body) msgs.push({ type: 'text', text: greeting.body })
+                // 署名URL（既存の動く方式を流用）。reply上限5件のため画像は最大4件（text1+image4）。
+                for (const a of greeting.attachments.slice(0, 4)) {
+                  const { data: signed } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(a.path, 60 * 60 * 24)
+                  if (signed?.signedUrl) msgs.push({ type: 'image', originalContentUrl: signed.signedUrl, previewImageUrl: signed.signedUrl })
+                }
+                if (msgs.length > 0) {
+                  const res = await fetch('https://api.line.me/v2/bot/message/reply', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ replyToken, messages: msgs.slice(0, 5) }),
+                  })
+                  // 整合のため out 記録（best-effort・隔離表のみ）。突合できれば partner、未連携は line:userId。
+                  if (greeting.attachments.length) {
+                    const followUid: string | undefined = ev.source?.userId
+                    if (followUid) {
+                      const { data: link } = await admin.from('partner_line_links').select('partner_id').eq('line_user_id', followUid).maybeSingle()
+                      const pid = (link?.partner_id as string | undefined) ?? null
+                      await admin.from('messages').insert({
+                        partner_id: pid, direction: 'out', channel: 'line', body: greeting.body || '[画像]',
+                        attachments: greeting.attachments, status: res.ok ? 'sent' : 'failed',
+                        thread_key: pid ? `partner:${pid}` : `line:${followUid}`,
+                      })
+                    }
+                  }
+                }
               }
             }
           } catch { /* あいさつ失敗は握る（200維持） */ }
