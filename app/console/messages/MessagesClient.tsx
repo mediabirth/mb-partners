@@ -16,7 +16,8 @@ export type ThreadRow = {
   lastBody: string | null; lastAt: string | null
 }
 export type TemplateButton = { label: string; url: string }
-export type TemplateBlock = { type: 'text'; text: string } | { type: 'image'; path: string; url?: string } | { type: 'button'; label: string; url: string }
+export type CarouselCard = { image?: string; title?: string; text?: string; tapUrl?: string; buttons?: TemplateButton[] }
+export type TemplateBlock = { type: 'text'; text: string } | { type: 'image'; path: string; url?: string } | { type: 'button'; label: string; url: string } | { type: 'carousel'; cards: CarouselCard[] }
 export type Template = {
   id: string; title: string; body: string | null; subject: string | null; category: string | null
   channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; buttons: TemplateButton[] | null; blocks: TemplateBlock[] | null; sort_order: number

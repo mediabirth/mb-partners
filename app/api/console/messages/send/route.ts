@@ -120,7 +120,9 @@ export async function POST(req: NextRequest) {
       // ★ブロック方式メール：順序付きHTML（image は署名URLで inline・button は aタグ）。
       if (!customerEmail) return NextResponse.json({ error: 'メール宛先がありません' }, { status: 400 })
       const urlMap: Record<string, string> = {}
-      for (const bl of blocks) { if (bl.type === 'image') { const { data: s } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(bl.path, 60 * 60 * 24 * 7); if (s?.signedUrl) urlMap[bl.path] = s.signedUrl } }
+      const emailImgPaths = new Set<string>()
+      for (const bl of blocks) { if (bl.type === 'image') emailImgPaths.add(bl.path); else if (bl.type === 'carousel') for (const c of bl.cards) if (c.image) emailImgPaths.add(c.image) }
+      for (const p of emailImgPaths) { const { data: s } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(p, 60 * 60 * 24 * 7); if (s?.signedUrl) urlMap[p] = s.signedUrl }
       const innerHtml = blocksToEmailInnerHtml(blocks, p => urlMap[p] ?? null)
       const plain = legacyFromBlocks(blocks).body || '（メッセージ）'
       const r = await sendEmail({ to: customerEmail, subject: subject || 'MB Partners', text: plain, html: brandedEmailHtml({ blocksHtml: innerHtml }) })

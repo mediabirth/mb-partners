@@ -18,7 +18,7 @@ async function loadFreeTemplates() {
   const signedUrls: Record<string, string> = {}
   const imgPaths = [...new Set(templates.flatMap(t => [
     ...(t.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path),
-    ...(t.blocks ?? []).flatMap(b => b?.type === 'image' && b.path ? [b.path] : []),
+    ...(t.blocks ?? []).flatMap(b => b?.type === 'image' && b.path ? [b.path] : b?.type === 'carousel' ? (b.cards ?? []).flatMap(c => c.image ? [c.image] : []) : []),
   ]))]
   if (imgPaths.length) {
     const { data: signed } = await admin.storage.from('message-attachments').createSignedUrls(imgPaths, 3600)

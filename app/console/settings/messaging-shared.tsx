@@ -14,9 +14,20 @@ export function templateToBlocks(t: { blocks?: TemplateBlock[] | null; body?: st
   for (const b of t.buttons ?? []) if (b?.label && /^https?:\/\//i.test(b?.url ?? '')) out.push({ type: 'button', label: b.label, url: b.url as string })
   return out
 }
-// 編集ブロック→保存payload（空ブロック除外）。
+// 編集ブロック→保存payload（空ブロック・空カード除外）。
+const cardHas = (c: { image?: string; title?: string; text?: string; buttons?: { label: string; url: string }[] }) => !!(c.image || c.title?.trim() || c.text?.trim() || c.buttons?.some(b => b.label.trim() && /^https?:\/\//i.test(b.url)))
 export function cleanBlocks(blocks: EditBlock[]): EditBlock[] {
-  return blocks.filter(b => (b.type === 'text' && b.text.trim()) || (b.type === 'image' && b.path) || (b.type === 'button' && b.label.trim() && /^https?:\/\//i.test(b.url)))
+  const out: EditBlock[] = []
+  for (const b of blocks) {
+    if (b.type === 'text' && b.text.trim()) out.push(b)
+    else if (b.type === 'image' && b.path) out.push(b)
+    else if (b.type === 'button' && b.label.trim() && /^https?:\/\//i.test(b.url)) out.push(b)
+    else if (b.type === 'carousel') {
+      const cards = b.cards.map(c => ({ ...c, buttons: (c.buttons ?? []).filter(bt => bt.label.trim() && /^https?:\/\//i.test(bt.url)) })).filter(cardHas)
+      if (cards.length) out.push({ type: 'carousel', cards })
+    }
+  }
+  return out
 }
 
 // 狭幅判定（モバイルで list→編集 切替するため）。SSR安全（初期は false）。
@@ -200,15 +211,74 @@ export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accou
 }
 
 // ───── エルメ型ブロックビルダー ─────
-const blockIcon = (t: string) => t === 'text' ? '✏️' : t === 'image' ? '🖼️' : '🔘'
-const blockName = (t: string) => t === 'text' ? 'テキスト' : t === 'image' ? '画像' : 'ボタン'
+const blockIcon = (t: string) => t === 'text' ? '✏️' : t === 'image' ? '🖼️' : t === 'button' ? '🔘' : '🎠'
+const blockName = (t: string) => t === 'text' ? 'テキスト' : t === 'image' ? '画像' : t === 'button' ? 'ボタン' : 'カルーセル'
+
+type Card = { image?: string; title?: string; text?: string; tapUrl?: string; buttons?: { label: string; url: string }[] }
+
+function CarouselEditor({ cards, setCards, urls, setUrls }: { cards: Card[]; setCards: (c: Card[]) => void; urls: Record<string, string>; setUrls: (fn: (p: Record<string, string>) => Record<string, string>) => void }) {
+  const upd = (i: number, patch: Partial<Card>) => setCards(cards.map((c, j) => j === i ? { ...c, ...patch } : c))
+  const del = (i: number) => setCards(cards.filter((_, j) => j !== i))
+  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= cards.length) return; const n = [...cards]; [n[i], n[j]] = [n[j], n[i]]; setCards(n) }
+  const addCard = () => { if (cards.length < 10) setCards([...cards, {}]) }
+  async function pick(i: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
+    const up = await uploadImage(file); if (!up) return
+    setUrls(p => ({ ...p, [up.path]: up.previewUrl })); upd(i, { image: up.path })
+  }
+  const setBtn = (i: number, bi: number, patch: Partial<{ label: string; url: string }>) => { const bs = [...(cards[i].buttons ?? [])]; bs[bi] = { ...(bs[bi] ?? { label: '', url: '' }), ...patch }; upd(i, { buttons: bs }) }
+  const addBtn = (i: number) => { const bs = [...(cards[i].buttons ?? [])]; if (bs.length < 2) { bs.push({ label: '', url: '' }); upd(i, { buttons: bs }) } }
+  const delBtn = (i: number, bi: number) => upd(i, { buttons: (cards[i].buttons ?? []).filter((_, j) => j !== bi) })
+  return (
+    <div>
+      <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 6 }}>カードを横に並べて送れます（画像だけでもOK）。2枚以上推奨・最大10枚。</div>
+      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
+        {cards.map((c, i) => (
+          <div key={i} style={{ flexShrink: 0, width: 210, border: '1px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-0)', padding: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--t-secondary)' }}>カード {i + 1}</span>
+              <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="左へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, padding: 0 }}>◀</button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === cards.length - 1} title="右へ" style={{ border: 'none', background: 'transparent', cursor: i === cards.length - 1 ? 'default' : 'pointer', color: i === cards.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, padding: 0 }}>▶</button>
+                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.54rem', fontWeight: 700 }}>削除</button>
+              </span>
+            </div>
+            {c.image && urls[c.image] ? (
+              <div style={{ position: 'relative', marginBottom: 6 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%', height: 100, objectFit: 'cover', borderRadius: 7, border: '1px solid var(--line)' }} />
+                <button type="button" onClick={() => upd(i, { image: undefined })} style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: 9, border: 'none', background: 'var(--c-danger)', color: '#fff', fontSize: 11, cursor: 'pointer' }}>×</button>
+              </div>
+            ) : (
+              <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.56rem', padding: '5px 8px', borderRadius: 6, cursor: 'pointer', display: 'block', textAlign: 'center', marginBottom: 6 }}>画像を選ぶ<input type="file" accept="image/*" onChange={e => pick(i, e)} style={{ display: 'none' }} /></label>
+            )}
+            <input className="ui-field" value={c.tapUrl ?? ''} onChange={e => upd(i, { tapUrl: e.target.value })} placeholder="画像タップURL（任意）" style={{ fontSize: '.6rem', marginBottom: 5, padding: '6px 8px' }} />
+            <input className="ui-field" value={c.title ?? ''} onChange={e => upd(i, { title: e.target.value })} placeholder="見出し（任意）" style={{ fontSize: '.62rem', marginBottom: 5, padding: '6px 8px' }} />
+            <textarea className="ui-field" value={c.text ?? ''} onChange={e => upd(i, { text: e.target.value })} placeholder="説明（任意）" rows={2} style={{ fontSize: '.62rem', marginBottom: 5, padding: '6px 8px', resize: 'vertical' }} />
+            {(c.buttons ?? []).map((bt, bi) => (
+              <div key={bi} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                <input className="ui-field" value={bt.label} onChange={e => setBtn(i, bi, { label: e.target.value })} placeholder="ボタン文字" style={{ fontSize: '.58rem', padding: '5px 7px', flex: '0 0 42%' }} />
+                <input className="ui-field" value={bt.url} onChange={e => setBtn(i, bi, { url: e.target.value })} placeholder="https://…" style={{ fontSize: '.58rem', padding: '5px 7px', flex: 1 }} />
+                <button type="button" onClick={() => delBtn(i, bi)} style={{ flexShrink: 0, border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: 12 }}>×</button>
+              </div>
+            ))}
+            {(c.buttons?.length ?? 0) < 2 && <button type="button" onClick={() => addBtn(i)} style={{ fontSize: '.56rem', color: 'var(--c-blue)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px 0' }}>＋ ボタン</button>}
+          </div>
+        ))}
+        {cards.length < 10 && (
+          <button type="button" onClick={addCard} style={{ flexShrink: 0, width: 80, border: '1px dashed var(--line-2)', borderRadius: 10, background: 'var(--s-1)', color: 'var(--c-blue)', fontSize: '.6rem', fontWeight: 700, cursor: 'pointer' }}>＋ カード</button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { blocks: EditBlock[]; setBlocks: (b: EditBlock[]) => void; urls: Record<string, string>; setUrls: (fn: (p: Record<string, string>) => Record<string, string>) => void; vars?: string[] }) {
   const [focusText, setFocusText] = useState<number | null>(null)
   const upd = (i: number, patch: Partial<EditBlock>) => setBlocks(blocks.map((b, j) => j === i ? ({ ...b, ...patch } as EditBlock) : b))
   const del = (i: number) => setBlocks(blocks.filter((_, j) => j !== i))
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= blocks.length) return; const n = [...blocks]; [n[i], n[j]] = [n[j], n[i]]; setBlocks(n) }
-  const add = (t: 'text' | 'image' | 'button') => setBlocks([...blocks, t === 'text' ? { type: 'text', text: '' } : t === 'image' ? { type: 'image', path: '' } : { type: 'button', label: '', url: '' }])
+  const add = (t: 'text' | 'image' | 'button' | 'carousel') => setBlocks([...blocks, t === 'text' ? { type: 'text', text: '' } : t === 'image' ? { type: 'image', path: '' } : t === 'button' ? { type: 'button', label: '', url: '' } : { type: 'carousel', cards: [{}, {}] }])
   async function pickImage(i: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
     const up = await uploadImage(file); if (!up) return
@@ -264,11 +334,12 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { 
                 </label>
               </div>
             )}
+            {b.type === 'carousel' && <CarouselEditor cards={b.cards} setCards={cs => upd(i, { cards: cs } as Partial<EditBlock>)} urls={urls} setUrls={setUrls} />}
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        {(['text', 'image', 'button'] as const).map(t => (
+      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+        {(['text', 'image', 'button', 'carousel'] as const).map(t => (
           <button key={t} type="button" onClick={() => add(t)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '7px 12px', borderRadius: 8, cursor: 'pointer' }}>＋ {blockName(t)}</button>
         ))}
       </div>
@@ -278,7 +349,7 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { 
 
 // ブロック列の実物大プレビュー（LINEトーク風 / メール体裁）。
 export function BlocksPreview({ channel, blocks, urls }: { channel: Template['channel']; blocks: EditBlock[]; urls: Record<string, string> }) {
-  const card = blocks.filter(b => (b.type === 'text' && b.text.trim()) || (b.type === 'image' && b.path) || (b.type === 'button' && b.label && /^https?:\/\//i.test(b.url)))
+  const card = blocks.filter(b => (b.type === 'text' && b.text.trim()) || (b.type === 'image' && b.path) || (b.type === 'button' && b.label && /^https?:\/\//i.test(b.url)) || (b.type === 'carousel' && b.cards.length > 0))
   if (channel === 'email') {
     return (
       <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
@@ -287,7 +358,17 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
           {card.length === 0 && <span style={{ fontSize: '.7rem', color: 'var(--t-tertiary)' }}>ブロックを追加すると、ここに表示されます</span>}
           {card.map((b, i) => b.type === 'text' ? <div key={i} style={{ fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 10 }}>{b.text}</div>
             : b.type === 'image' ? (urls[b.path] ? /* eslint-disable-next-line @next/next/no-img-element */ <img key={i} src={urls[b.path]} alt="" style={{ display: 'block', maxWidth: 200, borderRadius: 8, marginBottom: 10 }} /> : null)
-            : <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>)}
+            : b.type === 'button' ? <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>
+            : <div key={i} style={{ marginBottom: 10 }}>{b.cards.map((c, ci) => (
+                <div key={ci} style={{ border: '1px solid #E5E7EB', borderRadius: 9, overflow: 'hidden', maxWidth: 240, marginBottom: 8 }}>
+                  {c.image && urls[c.image] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%' }} />}
+                  {(c.title || c.text || c.buttons?.length) && <div style={{ padding: '8px 10px' }}>
+                    {c.title && <div style={{ fontWeight: 700, fontSize: '.66rem' }}>{c.title}</div>}
+                    {c.text && <div style={{ fontSize: '.6rem', color: '#555', marginTop: 2 }}>{c.text}</div>}
+                    {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ marginTop: 5 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.6rem', borderRadius: 6, padding: '5px 12px' }}>{bt.label}</span></div>)}
+                  </div>}
+                </div>
+              ))}</div>)}
         </div>
       </div>
     )
@@ -307,9 +388,22 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
               <img src={urls[b.path]} alt="" style={{ display: 'block', width: '100%' }} />
               {b.url && <span style={{ position: 'absolute', right: 6, bottom: 6, background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: '.48rem', padding: '2px 6px', borderRadius: 5 }}>🔗 リンク</span>}
             </div>
-          ) : null) : (
+          ) : null) : b.type === 'button' ? (
             <div key={i} style={{ width: 214, background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,.1)' }}>
               <div style={{ textAlign: 'center', padding: '11px 8px', fontSize: '.68rem', fontWeight: 700, color: 'var(--c-blue)' }}>{b.label}</div>
+            </div>
+          ) : (
+            <div key={i} style={{ display: 'flex', gap: 8, overflowX: 'auto', maxWidth: 230, paddingBottom: 4 }}>
+              {b.cards.map((c, ci) => (
+                <div key={ci} style={{ flexShrink: 0, width: 158, background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}>
+                  {c.image && urls[c.image] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%', height: 103, objectFit: 'cover' }} />}
+                  {(c.title || c.text) && <div style={{ padding: '7px 9px' }}>
+                    {c.title && <div style={{ fontWeight: 700, fontSize: '.62rem', color: '#0A0A0A' }}>{c.title}</div>}
+                    {c.text && <div style={{ fontSize: '.54rem', color: '#666', marginTop: 2, lineHeight: 1.5 }}>{c.text}</div>}
+                  </div>}
+                  {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ borderTop: '1px solid #EEF0F4', textAlign: 'center', padding: '7px 4px', fontSize: '.56rem', fontWeight: 700, color: 'var(--c-blue)' }}>{bt.label}</div>)}
+                </div>
+              ))}
             </div>
           ))}
         </div>
