@@ -1,23 +1,18 @@
-import { redirect } from 'next/navigation'
-import { createClient, getCachedUid } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
-import TemplateEditClient from '../TemplateEditClient'
+import TemplatesScreen from '../TemplatesScreen'
+import { loadFreeTemplates, ownerOrRedirect } from '../page'
 
-// Phase3-D②：自由送信テンプレ 新規作成。owner gate。
+// Phase3-D②c：新規作成も左右1画面（右ペインに空フォーム）。owner gate。
 export const runtime = 'edge'
 
 export default async function TemplateNewPage() {
-  const uid = await getCachedUid()
-  if (!uid) redirect('/console/login')
-  const supabase = await createClient()
-  const { data: prof } = await supabase.from('profiles').select('role').eq('id', uid).single()
-  if (prof?.role !== 'owner') redirect('/console')
-
+  await ownerOrRedirect()
+  const { templates, signedUrls } = await loadFreeTemplates()
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <TemplateEditClient existing={null} />
+        <TemplatesScreen initial={templates} signedUrls={signedUrls} initialSel="new" />
       </div>
     </div>
   )

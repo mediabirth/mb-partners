@@ -1,5 +1,18 @@
 'use client'
+import { useState, useEffect } from 'react'
 import type { Template } from '../messages/MessagesClient'
+
+// 狭幅判定（モバイルで list→編集 切替するため）。SSR安全（初期は false）。
+export function useIsNarrow(maxWidth = 820): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidth}px)`)
+    const on = () => setNarrow(mq.matches)
+    on(); mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [maxWidth])
+  return narrow
+}
 
 // Phase3-D②：テンプレ/自動メッセージUIの共有クライアントヘルパー。
 // ★純データ（SECTIONS/EXAMPLE 等）は messaging-sections.ts（非client）に分離（サーバーからも import するため）。

@@ -1,43 +1,22 @@
-import { redirect, notFound } from 'next/navigation'
-import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import ConsoleNav from '@/components/ConsoleNav'
-import AutoMessageEditClient from '../AutoMessageEditClient'
-import type { Template } from '../../../messages/MessagesClient'
+import AutoMessagesScreen from '../AutoMessagesScreen'
+import { loadSections, ownerOrRedirect } from '../page'
 import { SECTIONS } from '../../messaging-sections'
 
-// Phase3-D②b：自動メッセージ [category] 編集（detail）。owner gate・隔離表のみ。解決ロジックは不変。
+// Phase3-D②c：直リンクでも左右1画面（7イベント list ＋ 該当を右に開いた状態）。owner gate。
 export const runtime = 'edge'
 
-export default async function AutoMessageEditPage({ params }: { params: Promise<{ category: string }> }) {
+export default async function AutoMessageEditDirectPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params
-  const section = SECTIONS.find(s => s.key === category)
-  if (!section) notFound()
-
-  const uid = await getCachedUid()
-  if (!uid) redirect('/console/login')
-  const supabase = await createClient()
-  const { data: prof } = await supabase.from('profiles').select('role').eq('id', uid).single()
-  if (prof?.role !== 'owner') redirect('/console')
-
-  const admin = await createServiceRoleClient()
-  const { data } = await admin.from('message_templates')
-    .select('id, title, body, subject, category, channel, attachments, sort_order')
-    .eq('is_active', true).eq('category', category)
-    .order('created_at', { ascending: false }).limit(1).maybeSingle()
-  const existing = (data ?? null) as Template | null
-
-  let previewUrl: string | undefined
-  const path = existing?.attachments?.find(a => a.type === 'image')?.path
-  if (path) {
-    const { data: signed } = await admin.storage.from('message-attachments').createSignedUrl(path, 3600)
-    previewUrl = signed?.signedUrl ?? undefined
-  }
-
+  if (!SECTIONS.some(s => s.key === category)) notFound()
+  await ownerOrRedirect()
+  const { byCategory, signedUrls } = await loadSections()
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <AutoMessageEditClient section={section} existing={existing} previewUrl={previewUrl} />
+        <AutoMessagesScreen byCategory={byCategory} signedUrls={signedUrls} initialSel={category} />
       </div>
     </div>
   )
