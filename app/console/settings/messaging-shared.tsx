@@ -1,6 +1,23 @@
 'use client'
 import { useState, useEffect } from 'react'
-import type { Template } from '../messages/MessagesClient'
+import type { Template, TemplateBlock } from '../messages/MessagesClient'
+
+export type EditBlock = TemplateBlock
+
+// 既存テンプレを編集用ブロック列へ：blocks があればそれ、無ければ旧 body/attachments/buttons から合成（後方互換表示）。
+export function templateToBlocks(t: { blocks?: TemplateBlock[] | null; body?: string | null; attachments?: { type?: string; path?: string }[] | null; buttons?: { label?: string; url?: string }[] | null } | null): EditBlock[] {
+  if (!t) return []
+  if (t.blocks && t.blocks.length) return t.blocks.map(b => ({ ...b }))
+  const out: EditBlock[] = []
+  if (t.body && t.body.trim()) out.push({ type: 'text', text: t.body })
+  for (const a of t.attachments ?? []) if (a?.type === 'image' && a?.path) out.push({ type: 'image', path: a.path })
+  for (const b of t.buttons ?? []) if (b?.label && /^https?:\/\//i.test(b?.url ?? '')) out.push({ type: 'button', label: b.label, url: b.url as string })
+  return out
+}
+// 編集ブロック→保存payload（空ブロック除外）。
+export function cleanBlocks(blocks: EditBlock[]): EditBlock[] {
+  return blocks.filter(b => (b.type === 'text' && b.text.trim()) || (b.type === 'image' && b.path) || (b.type === 'button' && b.label.trim() && /^https?:\/\//i.test(b.url)))
+}
 
 // 狭幅判定（モバイルで list→編集 切替するため）。SSR安全（初期は false）。
 export function useIsNarrow(maxWidth = 820): boolean {
@@ -176,6 +193,125 @@ export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accou
             </div>
             <span style={{ flexShrink: 0, fontSize: '.46rem', color: 'rgba(255,255,255,.85)', marginBottom: 2 }}>既読<br />14:30</span>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ───── エルメ型ブロックビルダー ─────
+const blockIcon = (t: string) => t === 'text' ? '✏️' : t === 'image' ? '🖼️' : '🔘'
+const blockName = (t: string) => t === 'text' ? 'テキスト' : t === 'image' ? '画像' : 'ボタン'
+
+export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { blocks: EditBlock[]; setBlocks: (b: EditBlock[]) => void; urls: Record<string, string>; setUrls: (fn: (p: Record<string, string>) => Record<string, string>) => void; vars?: string[] }) {
+  const [focusText, setFocusText] = useState<number | null>(null)
+  const upd = (i: number, patch: Partial<EditBlock>) => setBlocks(blocks.map((b, j) => j === i ? ({ ...b, ...patch } as EditBlock) : b))
+  const del = (i: number) => setBlocks(blocks.filter((_, j) => j !== i))
+  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= blocks.length) return; const n = [...blocks]; [n[i], n[j]] = [n[j], n[i]]; setBlocks(n) }
+  const add = (t: 'text' | 'image' | 'button') => setBlocks([...blocks, t === 'text' ? { type: 'text', text: '' } : t === 'image' ? { type: 'image', path: '' } : { type: 'button', label: '', url: '' }])
+  async function pickImage(i: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
+    const up = await uploadImage(file); if (!up) return
+    setUrls(p => ({ ...p, [up.path]: up.previewUrl })); upd(i, { path: up.path } as Partial<EditBlock>)
+  }
+  function insertVar(v: string) {
+    const token = '${' + v + '}'
+    const idx = focusText != null && blocks[focusText]?.type === 'text' ? focusText : blocks.map(b => b.type).lastIndexOf('text')
+    if (idx >= 0) upd(idx, { text: ((blocks[idx] as { text: string }).text || '') + token } as Partial<EditBlock>)
+    else setBlocks([...blocks, { type: 'text', text: token }])
+  }
+  return (
+    <div>
+      {vars.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 5 }}>差し込み項目（テキストブロックに挿入）</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {vars.map(v => <button key={v} type="button" onClick={() => insertVar(v)} title={`例：${EXAMPLE[v]}`} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{VARDESC[v] ?? v}</button>)}
+          </div>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {blocks.length === 0 && <div style={{ fontSize: '.62rem', color: 'var(--t-tertiary)', padding: '10px 0' }}>下のボタンでブロックを追加してください。上から順に届きます。</div>}
+        {blocks.map((b, i) => (
+          <div key={i} style={{ border: '1px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-1)', padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '.62rem', fontWeight: 800, color: 'var(--t-secondary)' }}>{blockIcon(b.type)} {blockName(b.type)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="上へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 12, padding: 0 }}>▲</button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === blocks.length - 1} title="下へ" style={{ border: 'none', background: 'transparent', cursor: i === blocks.length - 1 ? 'default' : 'pointer', color: i === blocks.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 12, padding: 0 }}>▼</button>
+                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.58rem', fontWeight: 700 }}>削除</button>
+              </div>
+            </div>
+            {b.type === 'text' && <textarea className="ui-field" value={b.text} onChange={e => upd(i, { text: e.target.value } as Partial<EditBlock>)} onFocus={() => setFocusText(i)} rows={3} style={{ resize: 'vertical' }} placeholder="テキストを入力…" />}
+            {b.type === 'image' && (
+              <div>
+                <div style={{ marginBottom: 8 }}><ImageField imgUrl={b.path ? (urls[b.path] || '') : ''} onPick={e => pickImage(i, e)} onRemove={() => upd(i, { path: '' } as Partial<EditBlock>)} /></div>
+                <label style={{ display: 'block' }}>
+                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>タップで開くURL（任意）</span>
+                  <input className="ui-field" value={b.url ?? ''} onChange={e => upd(i, { url: e.target.value } as Partial<EditBlock>)} placeholder="例：https://mb-partners.app/app" />
+                </label>
+              </div>
+            )}
+            {b.type === 'button' && (
+              <div>
+                <label style={{ display: 'block', marginBottom: 7 }}>
+                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>ボタンの文字</span>
+                  <input className="ui-field" value={b.label} onChange={e => upd(i, { label: e.target.value } as Partial<EditBlock>)} placeholder="例：詳しく見る" />
+                </label>
+                <label style={{ display: 'block' }}>
+                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>リンク先（URL）</span>
+                  <input className="ui-field" value={b.url} onChange={e => upd(i, { url: e.target.value } as Partial<EditBlock>)} placeholder="例：https://mb-partners.app/app" />
+                </label>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        {(['text', 'image', 'button'] as const).map(t => (
+          <button key={t} type="button" onClick={() => add(t)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '7px 12px', borderRadius: 8, cursor: 'pointer' }}>＋ {blockName(t)}</button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ブロック列の実物大プレビュー（LINEトーク風 / メール体裁）。
+export function BlocksPreview({ channel, blocks, urls }: { channel: Template['channel']; blocks: EditBlock[]; urls: Record<string, string> }) {
+  const card = blocks.filter(b => (b.type === 'text' && b.text.trim()) || (b.type === 'image' && b.path) || (b.type === 'button' && b.label && /^https?:\/\//i.test(b.url)))
+  if (channel === 'email') {
+    return (
+      <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
+        <div style={{ padding: '13px' }}>
+          {card.length === 0 && <span style={{ fontSize: '.7rem', color: 'var(--t-tertiary)' }}>ブロックを追加すると、ここに表示されます</span>}
+          {card.map((b, i) => b.type === 'text' ? <div key={i} style={{ fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 10 }}>{b.text}</div>
+            : b.type === 'image' ? (urls[b.path] ? /* eslint-disable-next-line @next/next/no-img-element */ <img key={i} src={urls[b.path]} alt="" style={{ display: 'block', maxWidth: 200, borderRadius: 8, marginBottom: 10 }} /> : null)
+            : <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>)}
+        </div>
+      </div>
+    )
+  }
+  // LINE トーク風（各ブロックを順に・吹き出し/カード）
+  return (
+    <div style={{ background: '#9CB7D6', borderRadius: 14, padding: '16px 12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 16, background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}><span style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-blue)' }}>M</span></div>
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {card.length === 0 && <div style={{ fontSize: '.62rem', color: 'rgba(255,255,255,.92)' }}>ブロックを追加すると、ここに表示されます</div>}
+          {card.map((b, i) => b.type === 'text' ? (
+            <div key={i} style={{ maxWidth: 214, background: '#fff', borderRadius: 12, padding: '9px 12px', fontSize: '.7rem', lineHeight: 1.65, color: '#0A0A0A', whiteSpace: 'pre-wrap', wordBreak: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,.1)' }}>{b.text}</div>
+          ) : b.type === 'image' ? (urls[b.path] ? (
+            <div key={i} style={{ width: 214, borderRadius: 12, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,.1)', position: 'relative' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={urls[b.path]} alt="" style={{ display: 'block', width: '100%' }} />
+              {b.url && <span style={{ position: 'absolute', right: 6, bottom: 6, background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: '.48rem', padding: '2px 6px', borderRadius: 5 }}>🔗 リンク</span>}
+            </div>
+          ) : null) : (
+            <div key={i} style={{ width: 214, background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,.1)' }}>
+              <div style={{ textAlign: 'center', padding: '11px 8px', fontSize: '.68rem', fontWeight: 700, color: 'var(--c-blue)' }}>{b.label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

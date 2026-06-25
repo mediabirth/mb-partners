@@ -3,7 +3,8 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { lineChannel } from '@/lib/notify/line'
 import { getLineAccessToken } from '@/lib/notify/line-token'
 import { buildRichFlex, type FlexButton } from '@/lib/notify/line-flex'
-import { sendEmail } from '@/lib/notify'
+import { parseBlocks, blocksToLineMessages, blocksToEmailInnerHtml, legacyFromBlocks } from '@/lib/notify/blocks'
+import { sendEmail, brandedEmailHtml } from '@/lib/notify'
 
 // メッセージセンター Phase1+3A：owner の手動送信（LINE push/image・Resendメール+添付）＋ 全履歴を隔離表 messages(direction='out') へ記録。
 // ★既存 notify() ディスパッチャ（通知4種/リマインド/勝ち通知）には割り込まない＝独立した手動送信経路。
@@ -42,8 +43,9 @@ export async function POST(req: NextRequest) {
     const body = typeof b.body === 'string' ? b.body.trim().slice(0, MAX_BODY) : ''
     const images = imageAttachments(b.attachments)   // 新shape [{type:'image',path}]・Storage参照
     const buttons = richButtons(b.buttons)           // リッチ：[{label,url}] http/https・最大3
+    const blocks = parseBlocks(b.blocks)             // ★ブロック方式（順序保持）。設定時は blocks 優先
     if (!channel) return NextResponse.json({ error: 'channel が不正です' }, { status: 400 })
-    if (!body && images.length === 0 && buttons.length === 0) return NextResponse.json({ error: '本文・画像・ボタンのいずれかを入力してください' }, { status: 400 })
+    if (!body && images.length === 0 && buttons.length === 0 && blocks.length === 0) return NextResponse.json({ error: '本文・画像・ボタン・ブロックのいずれかを入力してください' }, { status: 400 })
 
     const admin = await createServiceRoleClient()
     const threadKey = partnerId ? `partner:${partnerId}` : customerEmail ? `email:${customerEmail.toLowerCase()}` : null
@@ -57,7 +59,22 @@ export async function POST(req: NextRequest) {
       if (!partnerId) return NextResponse.json({ error: 'LINEはパートナー宛のみです' }, { status: 400 })
       const { data: link } = await admin.from('partner_line_links').select('line_user_id').eq('partner_id', partnerId).maybeSingle()
       if (!link?.line_user_id) return NextResponse.json({ error: 'このパートナーはLINE未連携です' }, { status: 400 })
-      if (buttons.length > 0) {
+      if (blocks.length > 0) {
+        // ★ブロック方式（順序保持）。blocks 指定時はこちら（既存 text/image/Flex 経路には割り込まない）。
+        const token = await getLineAccessToken()
+        if (!token) { status = 'failed'; error = 'LINEトークン取得不可' }
+        else {
+          const msgs = await blocksToLineMessages(blocks, async (p) => { const { data: s } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(p, 60 * 60 * 24); return s?.signedUrl ?? null })
+          if (!msgs.length) { status = 'failed'; error = '送信内容がありません' }
+          else {
+            const res = await fetch('https://api.line.me/v2/bot/message/push', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ to: link.line_user_id, messages: msgs }),
+            })
+            if (!res.ok) { status = 'failed'; error = 'LINEブロック送信に失敗しました' }
+          }
+        }
+      } else if (buttons.length > 0) {
         // リッチ：ボタンありは Flex 1枚（hero=先頭画像・body=本文・footer=ボタン）。既存text/image経路には割り込まない。
         const token = await getLineAccessToken()
         if (!token) { status = 'failed'; error = 'LINEトークン取得不可' }
@@ -99,6 +116,15 @@ export async function POST(req: NextRequest) {
           }
         }
       }
+    } else if (blocks.length > 0) {
+      // ★ブロック方式メール：順序付きHTML（image は署名URLで inline・button は aタグ）。
+      if (!customerEmail) return NextResponse.json({ error: 'メール宛先がありません' }, { status: 400 })
+      const urlMap: Record<string, string> = {}
+      for (const bl of blocks) { if (bl.type === 'image') { const { data: s } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(bl.path, 60 * 60 * 24 * 7); if (s?.signedUrl) urlMap[bl.path] = s.signedUrl } }
+      const innerHtml = blocksToEmailInnerHtml(blocks, p => urlMap[p] ?? null)
+      const plain = legacyFromBlocks(blocks).body || '（メッセージ）'
+      const r = await sendEmail({ to: customerEmail, subject: subject || 'MB Partners', text: plain, html: brandedEmailHtml({ blocksHtml: innerHtml }) })
+      if (!r.sent) { status = 'failed'; error = r.skipped || r.error || 'メール送信に失敗しました' }
     } else {
       // email：customerEmail（顧客 or パートナーのメール）宛。画像は Storage path から base64 化して Resend 添付。
       if (!customerEmail) return NextResponse.json({ error: 'メール宛先がありません' }, { status: 400 })
@@ -118,10 +144,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 送信成否に関わらず out を記録（失敗も status='failed'＋error で残す）。添付は Storageパス参照で保存（base64は保存しない）。
-    const storedAttachments = images.length ? images.map(a => ({ type: 'image', path: a.path })) : null
+    const derived = blocks.length ? legacyFromBlocks(blocks) : null
+    const recBody = derived ? (derived.body || '[ブロック]') : body
+    const recAttachments = derived ? (derived.attachments.length ? derived.attachments : null) : (images.length ? images.map(a => ({ type: 'image', path: a.path })) : null)
     const { data: row } = await admin.from('messages').insert({
       partner_id: partnerId, customer_email: customerEmail, direction: 'out', channel,
-      subject, body, attachments: storedAttachments,
+      subject, body: recBody, attachments: recAttachments,
       status, error, sent_by: user.id, thread_key: threadKey,
     }).select('id, created_at, direction, channel, body, subject, status, error, thread_key, attachments').single()
 

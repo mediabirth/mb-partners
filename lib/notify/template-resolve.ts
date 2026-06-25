@@ -34,9 +34,11 @@ export async function resolveTemplate(category: string, vars: TemplateVars = {})
   }
 }
 
+import { parseBlocks, fillBlocks, legacyFromBlocks, type Block } from '@/lib/notify/blocks'
+
 export type TemplateImage = { type: 'image'; path: string }
 export type TemplateButton = { label: string; url: string }
-export type ResolvedTemplate = { body: string | null; attachments: TemplateImage[]; buttons: TemplateButton[] }
+export type ResolvedTemplate = { body: string | null; attachments: TemplateImage[]; buttons: TemplateButton[]; blocks: Block[] | null }
 
 /**
  * Phase3-D① additive：本文に加えてテンプレ画像も返す。未設定/例外は null。
@@ -47,10 +49,19 @@ export async function resolveTemplateMedia(category: string, vars: TemplateVars 
   try {
     const admin = await createServiceRoleClient()
     const { data } = await admin.from('message_templates')
-      .select('body, attachments, buttons')
+      .select('body, attachments, buttons, blocks')
       .eq('is_active', true).eq('category', category)
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (!data) return null
+
+    // ★blocks が明示設定されていれば blocks を正にし、body/attachments/buttons は blocks から派生（既存consumer互換）。
+    //   blocks 未設定なら従来どおり旧フィールドから（＝blocks=null の旧テンプレは byte-unchanged）。
+    const rawBlocks = fillBlocks(parseBlocks(data.blocks), vars)
+    if (rawBlocks.length) {
+      const d = legacyFromBlocks(rawBlocks)
+      return { body: d.body, attachments: d.attachments, buttons: d.buttons, blocks: rawBlocks }
+    }
+
     const rawBody = (data.body as string | undefined)?.trim()
     const body = rawBody ? fill(rawBody, vars) : null
     const attachments = (Array.isArray(data.attachments) ? data.attachments : [])
@@ -62,7 +73,7 @@ export async function resolveTemplateMedia(category: string, vars: TemplateVars 
       .filter((b: TemplateButton) => b.label && /^https?:\/\//i.test(b.url))
       .slice(0, 3)
     if (!body && attachments.length === 0 && buttons.length === 0) return null
-    return { body, attachments, buttons }
+    return { body, attachments, buttons, blocks: null }
   } catch {
     return null
   }

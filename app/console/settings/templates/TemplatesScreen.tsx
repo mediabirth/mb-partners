@@ -1,8 +1,8 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import Button from '@/components/ui/Button'
 import type { Template } from '../../messages/MessagesClient'
-import { ChannelBadge, uploadImage, useIsNarrow, ButtonsField, SectionHead, ImageField, RichPreview, type EditButton } from '../messaging-shared'
+import { ChannelBadge, useIsNarrow, BlockBuilder, BlocksPreview, templateToBlocks, cleanBlocks, type EditBlock } from '../messaging-shared'
 
 // Phase3-D②c：自由送信テンプレを左右1画面（master-detail）に統一。新規作成も右ペインで完結（別ルート遷移なし）。
 // ★既存CRUD API流用。resolve/送信/発火には触れない。
@@ -11,41 +11,23 @@ const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString('ja', {
 type Sel = string | 'new' | null
 
 // ── 右ペイン：編集フォーム（key で選択ごとにリセット）─────────────
-function Editor({ existing, previewUrl, onSaved, onDeleted, onBack }: { existing: Template | null; previewUrl?: string; onSaved: (t: Template) => void; onDeleted: (id: string) => void; onBack?: () => void }) {
+function Editor({ existing, signedUrls, onSaved, onDeleted, onBack }: { existing: Template | null; signedUrls: Record<string, string>; onSaved: (t: Template) => void; onDeleted: (id: string) => void; onBack?: () => void }) {
   const isNew = !existing
-  const initImg = existing?.attachments?.find(a => a.type === 'image')?.path ?? null
   const [kind, setKind] = useState<'line' | 'email'>(existing?.channel === 'email' ? 'email' : 'line')
   const [title, setTitle] = useState(existing?.title ?? '')
   const [subject, setSubject] = useState(existing?.subject ?? '')
-  const [body, setBody] = useState(existing?.body ?? '')
-  const [imgPath, setImgPath] = useState<string | null>(initImg)
-  const [imgUrl, setImgUrl] = useState<string>(initImg ? (previewUrl ?? '') : '')
-  const [buttons, setButtons] = useState<EditButton[]>(existing?.buttons ?? [])
+  const [blocks, setBlocks] = useState<EditBlock[]>(templateToBlocks(existing))
+  const [urls, setUrls] = useState<Record<string, string>>(signedUrls)
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const previewNarrow = useIsNarrow(1024)
-  const ref = useRef<HTMLTextAreaElement>(null)
   const channel = isNew ? kind : (existing!.channel ?? kind)
 
-  function insertVar(key: string) {
-    const token = '${' + key + '}'; const el = ref.current
-    if (!el) { setBody(b => b + token); return }
-    const s = el.selectionStart ?? body.length, e = el.selectionEnd ?? body.length
-    setBody(body.slice(0, s) + token + body.slice(e))
-    requestAnimationFrame(() => { el.focus(); el.selectionStart = el.selectionEnd = s + token.length })
-  }
-  async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
-    setErr(''); const up = await uploadImage(file)
-    if (!up) { setErr('画像アップロードに失敗しました'); return }
-    setImgPath(up.path); setImgUrl(up.previewUrl)
-  }
   async function save() {
-    if (busy || !title.trim()) return
+    const clean = cleanBlocks(blocks)
+    if (busy || !title.trim() || clean.length === 0) return
     setBusy(true); setErr('')
     try {
-      const attachments = imgPath ? [{ type: 'image', path: imgPath }] : []
-      const cleanButtons = buttons.filter(b => b.label.trim() && /^https?:\/\//i.test(b.url.trim()))
-      const payload = { title: title.trim(), body, channel, category: '自由送信', subject: channel === 'email' ? (subject.trim() || null) : null, attachments, buttons: cleanButtons }
+      const payload = { title: title.trim(), channel, category: '自由送信', subject: channel === 'email' ? (subject.trim() || null) : null, blocks: clean }
       const res = existing
         ? await fetch(`/api/console/messages/templates/${existing.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/console/messages/templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
@@ -81,44 +63,26 @@ function Editor({ existing, previewUrl, onSaved, onDeleted, onBack }: { existing
         </div>
       ) : <ChannelBadge channel={existing!.channel} />, isNew ? '' : '（作成後は変更できません）')}
       {channel === 'email' && field('件名（メール用）', <input className="ui-field" value={subject} onChange={e => setSubject(e.target.value)} placeholder="件名（任意）" />)}
+
       <div style={{ display: 'flex', flexDirection: previewNarrow ? 'column' : 'row', gap: previewNarrow ? 18 : 26, alignItems: 'flex-start', marginTop: 4 }}>
-        {/* 左：番号付きセクション */}
         <div style={{ flex: 1, minWidth: 0, width: previewNarrow ? '100%' : 'auto' }}>
-          <div style={{ marginBottom: 18 }}>
-            <SectionHead n={1} title="本文" />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-              {FREE_VARS.map(v => <button key={v} type="button" onClick={() => insertVar(v)} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{'${' + v + '}'} 挿入</button>)}
-            </div>
-            <textarea ref={ref} className="ui-field" value={body} onChange={e => setBody(e.target.value)} rows={5} style={{ resize: 'vertical' }} placeholder="本文を入力…" />
-          </div>
-
-          <div style={{ marginBottom: 18 }}>
-            <SectionHead n={2} title="画像" hint="任意・カード上部に表示" />
-            <ImageField imgUrl={imgUrl} onPick={onPickImage} onRemove={() => { setImgPath(null); setImgUrl('') }} />
-          </div>
-
-          <div>
-            <SectionHead n={3} title="ボタン" hint="任意・最大3個・押すとURLを開く" />
-            <ButtonsField buttons={buttons} setButtons={setButtons} />
-          </div>
+          <div style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 8 }}>メッセージのブロック</div>
+          <BlockBuilder blocks={blocks} setBlocks={setBlocks} urls={urls} setUrls={setUrls} />
         </div>
-
-        {/* 右：実物大プレビュー（広幅は常駐・狭幅は下） */}
         <div style={{ width: previewNarrow ? '100%' : 264, flexShrink: 0, ...(previewNarrow ? {} : { position: 'sticky' as const, top: 16 }) }}>
           <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 6 }}>実際に届くイメージ</div>
-          <RichPreview channel={channel} imgUrl={imgUrl || undefined} body={body} placeholder="本文がここに表示されます" buttons={buttons} />
+          <BlocksPreview channel={channel} blocks={blocks} urls={urls} />
         </div>
       </div>
 
       {err && <p style={{ fontSize: '.66rem', color: 'var(--c-danger)', margin: '14px 0 10px' }}>{err}</p>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
         {existing ? <Button variant="danger" size="sm" busy={busy} onClick={remove}>削除</Button> : <span />}
-        <Button variant="primary" size="md" busy={busy} disabled={!title.trim()} onClick={save}>{isNew ? '作成する' : '保存する'}</Button>
+        <Button variant="primary" size="md" busy={busy} disabled={!title.trim() || cleanBlocks(blocks).length === 0} onClick={save}>{isNew ? '作成する' : '保存する'}</Button>
       </div>
     </div>
   )
 }
-
 type Row = Template & { updated_at?: string }
 export default function TemplatesScreen({ initial, signedUrls = {}, initialSel = null }: { initial: Row[]; signedUrls?: Record<string, string>; initialSel?: Sel }) {
   const [list, setList] = useState<Row[]>(initial)
@@ -162,7 +126,7 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
       {sel === null ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: 'var(--t-tertiary)', fontSize: '.74rem', textAlign: 'center' }}>左から選択するか、「新規」で作成してください</div>
       ) : (
-        <Editor key={sel} existing={selected} previewUrl={editorPreview ? signedUrls[editorPreview] : undefined} onSaved={onSaved} onDeleted={onDeleted} onBack={narrow ? () => setSel(null) : undefined} />
+        <Editor key={sel} existing={selected} signedUrls={signedUrls} onSaved={onSaved} onDeleted={onDeleted} onBack={narrow ? () => setSel(null) : undefined} />
       )}
     </div>
   )

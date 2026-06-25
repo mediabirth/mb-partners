@@ -16,9 +16,10 @@ export type ThreadRow = {
   lastBody: string | null; lastAt: string | null
 }
 export type TemplateButton = { label: string; url: string }
+export type TemplateBlock = { type: 'text'; text: string } | { type: 'image'; path: string; url?: string } | { type: 'button'; label: string; url: string }
 export type Template = {
   id: string; title: string; body: string | null; subject: string | null; category: string | null
-  channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; buttons: TemplateButton[] | null; sort_order: number
+  channel: 'line' | 'email' | 'both' | null; attachments: Attachment[] | null; buttons: TemplateButton[] | null; blocks: TemplateBlock[] | null; sort_order: number
 }
 type PendingImage = { path: string; previewUrl: string; filename: string }
 
@@ -32,6 +33,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
   const [tplOpen, setTplOpen] = useState(false)
   const [pending, setPending] = useState<PendingImage[]>([])   // 送信前にアップロード済みの画像
   const [pendingButtons, setPendingButtons] = useState<TemplateButton[]>([])   // テンプレ由来のURLボタン
+  const [pendingBlocks, setPendingBlocks] = useState<TemplateBlock[] | null>(null)   // ブロックテンプレ（順序付き）
   const [urls, setUrls] = useState<Record<string, string>>(signedUrls)   // path→署名URL（送信後の表示用にローカル追記）
 
   const thread = threads.find(t => t.key === sel) ?? null
@@ -43,6 +45,15 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
   const usableTpls = templates.filter(t => !t.channel || t.channel === 'both' || t.channel === channel)
 
   function insertTemplate(t: Template) {
+    if (t.blocks?.length) {
+      // ブロックテンプレ：順序付きでそのまま送る（本文欄は参考表示）。
+      setPendingBlocks(t.blocks)
+      const txt = t.blocks.filter((b): b is { type: 'text'; text: string } => b.type === 'text').map(b => b.text).join('\n')
+      setBody(txt)
+      if (channel === 'email' && t.subject) setSubject(t.subject)
+      setTplOpen(false)
+      return
+    }
     setBody(prev => (prev ? prev + '\n' : '') + (t.body ?? ''))
     if (channel === 'email' && t.subject) setSubject(t.subject)
     const imgs = (t.attachments ?? []).filter(a => a.type === 'image' && a.path)
@@ -66,20 +77,21 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
   }
 
   async function send() {
-    if (busy || !thread || (!body.trim() && pending.length === 0 && pendingButtons.length === 0)) return
+    if (busy || !thread || (!body.trim() && pending.length === 0 && pendingButtons.length === 0 && !pendingBlocks)) return
     setBusy(true); setErr('')
     try {
       const attachments = pending.map(p => ({ type: 'image', path: p.path }))
       const buttons = pendingButtons.filter(b => b.label?.trim() && /^https?:\/\//i.test(b.url ?? ''))
+      const blocks = pendingBlocks ?? undefined
       const payload = channel === 'line'
-        ? { channel: 'line', partnerId: thread.partnerId, body, attachments, buttons }
-        : { channel: 'email', partnerId: thread.partnerId ?? null, customerEmail: thread.customerEmail, subject: subject || undefined, body, attachments, buttons }
+        ? { channel: 'line', partnerId: thread.partnerId, body, attachments, buttons, blocks }
+        : { channel: 'email', partnerId: thread.partnerId ?? null, customerEmail: thread.customerEmail, subject: subject || undefined, body, attachments, buttons, blocks }
       const res = await fetch('/api/console/messages/send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { setErr(j?.error || '送信に失敗しました'); return }
       if (j.message) setMsgs(prev => [...prev, j.message as Msg])
       if (!j.ok) setErr(j.error || '送信は記録されましたが配信に失敗しました')
-      setBody(''); setSubject(''); setPending([]); setPendingButtons([])
+      setBody(''); setSubject(''); setPending([]); setPendingButtons([]); setPendingBlocks(null)
     } catch { setErr('通信に失敗しました') } finally { setBusy(false) }
   }
 
@@ -192,13 +204,19 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
                 <button type="button" onClick={() => setPendingButtons([])} style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>ボタンを外す</button>
               </div>
             )}
+            {pendingBlocks && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: '.6rem', color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 7, padding: '6px 10px' }}>
+                <span style={{ fontWeight: 700 }}>🧱 ブロックテンプレ（{pendingBlocks.length}要素・順序付き）で送信</span>
+                <button type="button" onClick={() => { setPendingBlocks(null); setBody('') }} style={{ marginLeft: 'auto', fontSize: '.56rem', color: 'var(--t-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>外す</button>
+              </div>
+            )}
             {channel === 'email' && (
               <input className="ui-field" value={subject} onChange={e => setSubject(e.target.value)} placeholder="件名（任意）" style={{ marginBottom: 8 }} />
             )}
             <textarea className="ui-field" value={body} onChange={e => setBody(e.target.value)} rows={3} placeholder={channel === 'line' ? 'LINE メッセージを入力…' : 'メール本文を入力…'} style={{ resize: 'vertical' }} />
             {err && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '6px 0 0' }}>{err}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-              <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && pending.length === 0 && pendingButtons.length === 0} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
+              <Button variant="primary" size="md" busy={busy} disabled={!body.trim() && pending.length === 0 && pendingButtons.length === 0 && !pendingBlocks} onClick={send}>{channel === 'line' ? 'LINE 送信' : 'メール送信'}</Button>
             </div>
           </div>
           )}

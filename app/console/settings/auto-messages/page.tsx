@@ -20,12 +20,15 @@ async function loadSections() {
   const admin = await createServiceRoleClient()
   const keys = SECTIONS.map(s => s.key)
   const { data } = await admin.from('message_templates')
-    .select('id, title, body, subject, category, channel, attachments, buttons, sort_order')
+    .select('id, title, body, subject, category, channel, attachments, buttons, blocks, sort_order')
     .eq('is_active', true).in('category', keys).order('created_at', { ascending: false })
   const byCategory: Record<string, Template> = {}
   for (const t of (data ?? []) as Template[]) { if (t.category && !byCategory[t.category]) byCategory[t.category] = t }
   const signedUrls: Record<string, string> = {}
-  const imgPaths = [...new Set(Object.values(byCategory).flatMap(t => (t.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path)))]
+  const imgPaths = [...new Set(Object.values(byCategory).flatMap(t => [
+    ...(t.attachments ?? []).filter(a => a?.type === 'image' && a?.path).map(a => a.path),
+    ...(t.blocks ?? []).flatMap(b => b?.type === 'image' && b.path ? [b.path] : []),
+  ]))]
   if (imgPaths.length) {
     const { data: signed } = await admin.storage.from('message-attachments').createSignedUrls(imgPaths, 3600)
     for (const s of signed ?? []) { if (s.signedUrl && s.path) signedUrls[s.path] = s.signedUrl }

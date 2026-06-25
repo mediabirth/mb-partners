@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getLineAccessToken } from '@/lib/notify/line-token'
 import { resolveTemplateMedia } from '@/lib/notify/template-resolve'
 import { buildRichFlex } from '@/lib/notify/line-flex'
+import { blocksToLineMessages } from '@/lib/notify/blocks'
 
 // メッセージセンター Phase2：LINE Messaging API 受信 webhook（additive・新設）。
 // ★署名検証必須（x-line-signature を LINE_CHANNEL_SECRET で HMAC-SHA256→base64・生body比較）。不一致/欠如は 401。
@@ -43,7 +44,10 @@ export async function POST(req: NextRequest) {
               const token = await getLineAccessToken()
               if (token) {
                 let msgs: Array<Record<string, unknown>> = []
-                if (greeting.buttons.length) {
+                if (greeting.blocks?.length) {
+                  // ★ブロック方式（順序保持）。blocks 設定済テンプレのみ。
+                  msgs = await blocksToLineMessages(greeting.blocks, async (p) => { const { data: s } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(p, 60 * 60 * 24); return s?.signedUrl ?? null })
+                } else if (greeting.buttons.length) {
                   // リッチ：ボタンありは Flex 1枚（hero=先頭画像・body=本文・footer=ボタン）。
                   let imageUrl: string | null = null
                   if (greeting.attachments.length) { const { data: signed } = await admin.storage.from(ATTACH_BUCKET).createSignedUrl(greeting.attachments[0].path, 60 * 60 * 24); imageUrl = signed?.signedUrl ?? null }
