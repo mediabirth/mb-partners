@@ -51,7 +51,7 @@ export async function GET() {
   try {
     const admin = await createServiceRoleClient()
     const { data } = await admin.from('message_templates')
-      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, buttons, blocks, sort_order, is_active')
+      .select('id, created_at, updated_at, title, label, body, subject, category, channel, attachments, buttons, blocks, sort_order, is_active')
       .eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true })
     return NextResponse.json({ templates: data ?? [] })
   } catch (e) {
@@ -72,11 +72,12 @@ export async function POST(req: NextRequest) {
     const attachments = Array.isArray(b.attachments) ? b.attachments.filter((a: { type?: string; path?: string }) => a?.type === 'image' && a?.path).slice(0, 5) : null
     const buttons = parseButtons(b.buttons)
     const blocks = parseTplBlocks(b.blocks)
+    const label = typeof b.label === 'string' && b.label.trim() ? b.label.trim().slice(0, 80) : null   // 自動メッセージの表示名（任意・category非接触）
     const sort_order = Number.isFinite(b.sort_order) ? Math.trunc(b.sort_order) : 0
     const admin = await createServiceRoleClient()
     const { data, error } = await admin.from('message_templates')
-      .insert({ title, body, subject, category, channel, attachments: attachments?.length ? attachments : null, buttons: buttons.length ? buttons : null, blocks: blocks.length ? blocks : null, sort_order, created_by: g.user!.id })
-      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, buttons, blocks, sort_order, is_active').single()
+      .insert({ title, label, body, subject, category, channel, attachments: attachments?.length ? attachments : null, buttons: buttons.length ? buttons : null, blocks: blocks.length ? blocks : null, sort_order, created_by: g.user!.id })
+      .select('id, created_at, updated_at, title, label, body, subject, category, channel, attachments, buttons, blocks, sort_order, is_active').single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ template: data })
   } catch (e) {

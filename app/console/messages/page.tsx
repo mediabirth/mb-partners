@@ -18,7 +18,7 @@ export default async function ConsoleMessagesPage() {
   const [linksRes, msgsRes, tplRes] = await Promise.all([
     admin.from('partner_line_links').select('partner_id, line_user_id'),
     admin.from('messages').select('id, created_at, partner_id, customer_email, direction, channel, subject, body, status, error, thread_key, attachments').order('created_at', { ascending: true }).limit(2000),
-    admin.from('message_templates').select('id, title, body, subject, category, channel, attachments, buttons, blocks, sort_order').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
+    admin.from('message_templates').select('id, title, label, body, subject, category, channel, attachments, buttons, blocks, sort_order').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
   ])
   const links = (linksRes.data ?? []) as Array<{ partner_id: string; line_user_id: string }>
   const messages = (msgsRes.data ?? []) as Msg[]

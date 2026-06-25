@@ -29,10 +29,11 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if ('attachments' in b) { const a = Array.isArray(b.attachments) ? b.attachments.filter((x: { type?: string; path?: string }) => x?.type === 'image' && x?.path).slice(0, 5) : []; patch.attachments = a.length ? a : null }
     if ('buttons' in b) { const btns = parseButtons(b.buttons); patch.buttons = btns.length ? btns : null }
     if ('blocks' in b) { const blks = parseTplBlocks(b.blocks); patch.blocks = blks.length ? blks : null }
+    if ('label' in b) patch.label = typeof b.label === 'string' && b.label.trim() ? b.label.trim().slice(0, 80) : null
     if (Number.isFinite(b.sort_order)) patch.sort_order = Math.trunc(b.sort_order)
     const admin = await createServiceRoleClient()
     const { data, error } = await admin.from('message_templates').update(patch).eq('id', id)
-      .select('id, created_at, updated_at, title, body, subject, category, channel, attachments, buttons, blocks, sort_order, is_active').single()
+      .select('id, created_at, updated_at, title, label, body, subject, category, channel, attachments, buttons, blocks, sort_order, is_active').single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ template: data })
   } catch (e) {

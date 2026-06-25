@@ -20,7 +20,7 @@ async function loadSections() {
   const admin = await createServiceRoleClient()
   const keys = SECTIONS.map(s => s.key)
   const { data } = await admin.from('message_templates')
-    .select('id, title, body, subject, category, channel, attachments, buttons, blocks, sort_order')
+    .select('id, title, label, body, subject, category, channel, attachments, buttons, blocks, sort_order')
     .eq('is_active', true).in('category', keys).order('created_at', { ascending: false })
   const byCategory: Record<string, Template> = {}
   for (const t of (data ?? []) as Template[]) { if (t.category && !byCategory[t.category]) byCategory[t.category] = t }

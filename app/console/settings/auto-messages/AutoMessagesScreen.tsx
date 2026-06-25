@@ -11,17 +11,19 @@ import { SECTIONS, type Section } from '../messaging-sections'
 function Editor({ section, existing, signedUrls, onSaved, onReset, onBack }: { section: Section; existing: Template | null; signedUrls: Record<string, string>; onSaved: (t: Template) => void; onReset: (cat: string) => void; onBack?: () => void }) {
   const [blocks, setBlocks] = useState<EditBlock[]>(templateToBlocks(existing))
   const [urls, setUrls] = useState<Record<string, string>>(signedUrls)
+  const [label, setLabel] = useState(existing?.label ?? '')
   const [showDefault, setShowDefault] = useState(false)
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
-  const isCustom = !!existing
+  // カスタム＝実際の本文/ブロックがある時のみ（表示名だけの行は「既定の文面」のまま）。
+  const isCustom = !!(existing && (existing.blocks?.length || existing.body || existing.attachments?.length || existing.buttons?.length))
   const previewNarrow = useIsNarrow(1024)
 
   async function save() {
     const clean = cleanBlocks(blocks)
-    if (busy || clean.length === 0) return
+    if (busy || (clean.length === 0 && !label.trim() && !existing)) return
     setBusy(true); setErr('')
     try {
-      const payload = { title: section.label, category: section.key, channel: section.channel || null, blocks: clean, sort_order: 0 }
+      const payload = { title: section.label, label: label.trim() || null, category: section.key, channel: section.channel || null, blocks: clean, sort_order: 0 }
       const res = existing
         ? await fetch(`/api/console/messages/templates/${existing.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/console/messages/templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
@@ -46,9 +48,18 @@ function Editor({ section, existing, signedUrls, onSaved, onReset, onBack }: { s
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <EventIcon category={section.key} channel={section.channel} size={42} />
         <div>
-          <div style={{ fontSize: '1.05rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8 }}>{section.label}<ChannelBadge channel={section.channel} /></div>
-          <div style={{ fontSize: '.63rem', color: 'var(--muted2)', marginTop: 2 }}>{section.desc}</div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8 }}>{label.trim() || section.label}<ChannelBadge channel={section.channel} /></div>
+          <div style={{ fontSize: '.63rem', color: 'var(--muted2)', marginTop: 2 }}>{section.desc}（発火タイミングは固定）</div>
         </div>
+      </div>
+
+      {/* 表示名（label）— 表示専用・発火/categoryには非接触 */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)' }}>表示名（一覧での名前・任意）</span>
+          {label.trim() && <button type="button" onClick={() => setLabel('')} style={{ fontSize: '.56rem', color: 'var(--c-blue)', background: 'transparent', border: 'none', cursor: 'pointer' }}>既定の表示名に戻す</button>}
+        </div>
+        <input className="ui-field" value={label} onChange={e => setLabel(e.target.value)} placeholder={`例：${section.label}`} />
       </div>
 
       <button type="button" onClick={() => setShowDefault(v => !v)} style={{ border: 'none', background: 'transparent', color: 'var(--c-blue)', fontSize: '.62rem', fontWeight: 700, cursor: 'pointer', padding: '2px 0', marginBottom: 6 }}>
@@ -74,7 +85,7 @@ function Editor({ section, existing, signedUrls, onSaved, onReset, onBack }: { s
       {err && <p style={{ fontSize: '.66rem', color: 'var(--c-danger)', margin: '10px 0 0' }}>{err}</p>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
         {isCustom ? <Button variant="ghost" size="sm" busy={busy} onClick={reset}>既定に戻す</Button> : <span />}
-        <Button variant="primary" size="md" busy={busy} disabled={cleanBlocks(blocks).length === 0} onClick={save}>保存する</Button>
+        <Button variant="primary" size="md" busy={busy} disabled={cleanBlocks(blocks).length === 0 && !label.trim() && !existing} onClick={save}>保存する</Button>
       </div>
     </div>
   )
@@ -97,13 +108,14 @@ export default function AutoMessagesScreen({ byCategory, signedUrls = {}, initia
       <div className="ui-card" style={{ padding: 0, overflow: 'hidden' }}>
         {SECTIONS.map((s, i) => {
           const on = s.key === sel
-          const isCustom = !!map[s.key]
+          const row = map[s.key]
+          const isCustom = !!(row && (row.blocks?.length || row.body || row.attachments?.length || row.buttons?.length))
           return (
             <button key={s.key} type="button" onClick={() => setSel(s.key)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px', border: 'none', borderTop: i === 0 ? 'none' : '1px solid var(--c-hairline)', background: on ? 'var(--c-ghost-bg)' : 'transparent' }}>
               <EventIcon category={s.key} channel={s.channel} size={34} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row?.label || s.label}</span>
                   <ChannelBadge channel={s.channel} />
                 </div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.desc}</div>
