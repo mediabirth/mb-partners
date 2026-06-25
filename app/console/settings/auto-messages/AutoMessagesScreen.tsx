@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import Button from '@/components/ui/Button'
 import type { Template } from '../../messages/MessagesClient'
-import { ChannelBadge, EventIcon, uploadImage, useIsNarrow, ButtonsField, PreviewButtons, type EditButton } from '../messaging-shared'
+import { ChannelBadge, EventIcon, uploadImage, useIsNarrow, ButtonsField, SectionHead, ImageField, RichPreview, type EditButton } from '../messaging-shared'
 import { EXAMPLE, VARDESC, fillExample, SECTIONS, type Section } from '../messaging-sections'
 
 // Phase3-D②c：自動メッセージを左右1画面（左7イベント list ＋ 右編集）に統一。別ルート遷移なし。
@@ -19,6 +19,7 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
   const ref = useRef<HTMLTextAreaElement>(null)
   const isCustom = !!existing
   const isLine = section.channel === 'line'
+  const previewNarrow = useIsNarrow(1024)
 
   function insertVar(key: string) {
     const token = '${' + key + '}'; const el = ref.current
@@ -75,56 +76,42 @@ function Editor({ section, existing, previewUrl, onSaved, onReset, onBack }: { s
       </button>
       {showDefault && <div style={{ background: 'var(--s-1)', border: '1px solid var(--c-hairline)', borderRadius: 8, padding: '10px 12px', fontSize: '.66rem', color: 'var(--t-secondary)', whiteSpace: 'pre-wrap', marginBottom: 12 }}>{section.defaultText}</div>}
 
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 16 }}>
         <span style={{ fontSize: '.52rem', fontWeight: 800, color: isCustom ? 'var(--c-success)' : 'var(--t-tertiary)', background: isCustom ? 'rgba(30,158,106,0.1)' : 'var(--s-2)', borderRadius: 5, padding: '3px 8px' }}>{isCustom ? 'カスタム文面を使用中' : '既定の文面を使用中'}</span>
       </div>
 
-      {section.vars.length > 0 && (
-        <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 5 }}>差し込み項目（タップで本文に挿入）</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {section.vars.map(v => <button key={v} type="button" onClick={() => insertVar(v)} title={`例：${EXAMPLE[v]}`} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{VARDESC[v]}</button>)}
+      <div style={{ display: 'flex', flexDirection: previewNarrow ? 'column' : 'row', gap: previewNarrow ? 18 : 26, alignItems: 'flex-start' }}>
+        {/* 左：番号付きセクション */}
+        <div style={{ flex: 1, minWidth: 0, width: previewNarrow ? '100%' : 'auto' }}>
+          <div style={{ marginBottom: 18 }}>
+            <SectionHead n={1} title="本文" />
+            {section.vars.length > 0 && (
+              <div style={{ marginBottom: 7 }}>
+                <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 5 }}>差し込み項目（タップで本文に挿入）</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {section.vars.map(v => <button key={v} type="button" onClick={() => insertVar(v)} title={`例：${EXAMPLE[v]}`} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{VARDESC[v]}</button>)}
+                </div>
+              </div>
+            )}
+            <textarea ref={ref} className="ui-field" value={body} onChange={e => setBody(e.target.value)} rows={5} style={{ resize: 'vertical' }} placeholder={`例）${section.sample}`} />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <SectionHead n={2} title="画像" hint="任意・カード上部に表示" />
+            <ImageField imgUrl={imgUrl} onPick={onPickImage} onRemove={() => { setImgPath(null); setImgUrl('') }} />
+          </div>
+
+          <div>
+            <SectionHead n={3} title="ボタン" hint="任意・最大3個・押すとURLを開く" />
+            <ButtonsField buttons={buttons} setButtons={setButtons} />
           </div>
         </div>
-      )}
 
-      <textarea ref={ref} className="ui-field" value={body} onChange={e => setBody(e.target.value)} rows={5} style={{ resize: 'vertical' }} placeholder={`例）${section.sample}`} />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-        {imgUrl ? (
-          <div style={{ position: 'relative' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imgUrl} alt="添付画像" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
-            <button type="button" onClick={() => { setImgPath(null); setImgUrl('') }} style={{ position: 'absolute', top: -7, right: -7, width: 20, height: 20, borderRadius: 10, border: 'none', background: 'var(--c-danger)', color: '#fff', fontSize: 12, cursor: 'pointer' }}>×</button>
-          </div>
-        ) : (
-          <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>画像を追加（任意）<input type="file" accept="image/*" onChange={onPickImage} style={{ display: 'none' }} /></label>
-        )}
-        <span style={{ fontSize: '.56rem', color: 'var(--t-tertiary)' }}>{isLine ? 'LINE画像として送られます' : 'メール添付として送られます'}</span>
-      </div>
-
-      <div style={{ marginTop: 12 }}><ButtonsField buttons={buttons} setButtons={setButtons} /></div>
-
-      <div style={{ marginTop: 14 }}>
-        <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 6 }}>実際に届くイメージ{!body && '（未入力のためサンプル）'}</div>
-        {isLine ? (
-          <div style={{ background: '#7AC9A0', borderRadius: 12, padding: '14px 12px' }}>
-            <div style={{ display: 'inline-block', maxWidth: '88%', background: '#fff', borderRadius: 12, padding: '10px 12px', fontSize: '.72rem', lineHeight: 1.7, color: '#0A0A0A', whiteSpace: 'pre-wrap', wordBreak: 'break-word', boxShadow: '0 1px 2px rgba(0,0,0,.08)' }}>
-              {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', width: '100%', borderRadius: 8, marginBottom: 6 }} />}
-              {preview}
-              <PreviewButtons buttons={buttons} />
-            </div>
-          </div>
-        ) : (
-          <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
-            <div style={{ padding: '13px', fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {preview}
-              {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 180, borderRadius: 8, marginTop: 8 }} />}
-              <PreviewButtons buttons={buttons} />
-            </div>
-          </div>
-        )}
+        {/* 右：実物大プレビュー（広幅は常駐・狭幅は下） */}
+        <div style={{ width: previewNarrow ? '100%' : 264, flexShrink: 0, ...(previewNarrow ? {} : { position: 'sticky' as const, top: 16 }) }}>
+          <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 6 }}>実際に届くイメージ</div>
+          <RichPreview channel={section.channel} imgUrl={imgUrl || undefined} body={preview} placeholder="本文がここに表示されます" buttons={buttons} />
+        </div>
       </div>
 
       {err && <p style={{ fontSize: '.66rem', color: 'var(--c-danger)', margin: '10px 0 0' }}>{err}</p>}

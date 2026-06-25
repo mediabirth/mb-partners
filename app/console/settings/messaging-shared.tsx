@@ -61,17 +61,30 @@ export function ButtonsField({ buttons, setButtons }: { buttons: EditButton[]; s
         <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)' }}>ボタン（最大3個・タップでURLを開く）</div>
         {buttons.length < 3 && <button type="button" onClick={add} style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}>＋ 追加</button>}
       </div>
-      {buttons.length === 0 && <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', paddingBottom: 4 }}>ボタンなし（従来どおり画像＋本文で送信）</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {buttons.length === 0 && <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', paddingBottom: 4 }}>ボタンなし（従来どおり画像＋本文で送信）。「＋ 追加」でURLボタンを付けられます。</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {buttons.map((b, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="上へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 9, lineHeight: 1, padding: 0 }}>▲</button>
-              <button type="button" onClick={() => move(i, 1)} disabled={i === buttons.length - 1} title="下へ" style={{ border: 'none', background: 'transparent', cursor: i === buttons.length - 1 ? 'default' : 'pointer', color: i === buttons.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 9, lineHeight: 1, padding: 0 }}>▼</button>
+          <div key={i} style={{ border: '1px solid var(--c-hairline)', borderRadius: 10, padding: '11px 12px', background: 'var(--s-1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+              <span style={{ fontSize: '.58rem', fontWeight: 800, color: 'var(--t-secondary)' }}>ボタン {i + 1}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {buttons.length > 1 && (
+                  <span style={{ display: 'flex', gap: 2 }}>
+                    <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="上へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, lineHeight: 1, padding: 0 }}>▲</button>
+                    <button type="button" onClick={() => move(i, 1)} disabled={i === buttons.length - 1} title="下へ" style={{ border: 'none', background: 'transparent', cursor: i === buttons.length - 1 ? 'default' : 'pointer', color: i === buttons.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, lineHeight: 1, padding: 0 }}>▼</button>
+                  </span>
+                )}
+                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.58rem', fontWeight: 700 }}>削除</button>
+              </div>
             </div>
-            <input className="ui-field" value={b.label} onChange={e => set(i, { label: e.target.value })} placeholder="ボタンの文字（例：詳しく見る）" style={{ flex: '0 0 38%' }} />
-            <input className="ui-field" value={b.url} onChange={e => set(i, { url: e.target.value })} placeholder="https://…" style={{ flex: 1 }} />
-            <button type="button" onClick={() => del(i)} title="削除" style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 6, border: '1px solid var(--c-hairline)', background: 'var(--s-1)', color: 'var(--c-danger)', cursor: 'pointer', fontSize: 13 }}>×</button>
+            <label style={{ display: 'block', marginBottom: 7 }}>
+              <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>ボタンの文字</span>
+              <input className="ui-field" value={b.label} onChange={e => set(i, { label: e.target.value })} placeholder="例：詳しく見る" />
+            </label>
+            <label style={{ display: 'block' }}>
+              <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>リンク先（URL）</span>
+              <input className="ui-field" value={b.url} onChange={e => set(i, { url: e.target.value })} placeholder="例：https://mb-partners.app/app" />
+            </label>
           </div>
         ))}
       </div>
@@ -88,6 +101,83 @@ export function PreviewButtons({ buttons }: { buttons: EditButton[] }) {
       {valid.map((b, i) => (
         <div key={i} style={{ textAlign: 'center', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.68rem', borderRadius: 8, padding: '8px 10px' }}>{b.label}</div>
       ))}
+    </div>
+  )
+}
+
+// 番号付きセクション見出し（① 本文／② 画像／③ ボタン のリズム）。
+export function SectionHead({ n, title, hint }: { n: number; title: string; hint?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+      <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 9, background: 'var(--c-blue)', color: '#fff', fontSize: '.6rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(1px)' }}>{n}</span>
+      <span style={{ fontSize: '.78rem', fontWeight: 800 }}>{title}</span>
+      {hint && <span style={{ fontSize: '.58rem', color: 'var(--t-tertiary)' }}>{hint}</span>}
+    </div>
+  )
+}
+
+// 画像セクション（選ぶ／差し替え／削除が分かる）。
+export function ImageField({ imgUrl, onPick, onRemove }: { imgUrl: string; onPick: (e: React.ChangeEvent<HTMLInputElement>) => void; onRemove: () => void }) {
+  return imgUrl ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={imgUrl} alt="添付画像" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 9, border: '1px solid var(--line)' }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>差し替え<input type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} /></label>
+        <button type="button" onClick={onRemove} className="ui-btn ui-btn--ghost" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, color: 'var(--c-danger)', cursor: 'pointer' }}>削除</button>
+      </div>
+    </div>
+  ) : (
+    <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.64rem', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+      画像を選ぶ<input type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} />
+    </label>
+  )
+}
+
+// 実物大プレビュー：LINE用＝トーク風カード（薄青背景・アイコン・小カード・既読）、メール用＝メール体裁。
+export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accountName = 'MB Partners' }: { channel: Template['channel']; imgUrl?: string; body?: string; placeholder?: string; buttons: EditButton[]; accountName?: string }) {
+  const valid = buttons.filter(b => b.label && /^https?:\/\//i.test(b.url))
+  const text = body || ''
+  if (channel === 'email') {
+    return (
+      <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
+        <div style={{ padding: '13px', fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {text || <span style={{ color: 'var(--t-tertiary)' }}>{placeholder}</span>}
+          {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 180, borderRadius: 8, marginTop: 8 }} />}
+          {valid.length > 0 && <div style={{ marginTop: 10 }}>{valid.map((b, i) => <div key={i} style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px', margin: '0 6px 6px 0' }}>{b.label}</div>)}</div>}
+        </div>
+      </div>
+    )
+  }
+  // LINE トーク風（実物大・カード幅 ~214px）
+  return (
+    <div style={{ background: '#9CB7D6', borderRadius: 14, padding: '16px 12px 14px' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 16, background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-blue)' }}>M</span>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '.54rem', marginBottom: 3, color: 'rgba(255,255,255,.9)' }}>{accountName}</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5 }}>
+            <div style={{ width: 214, background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,.1)' }}>
+              {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', width: '100%', height: 139, objectFit: 'cover' }} />}
+              <div style={{ padding: '10px 12px', fontSize: '.7rem', lineHeight: 1.65, color: '#0A0A0A', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {text || <span style={{ color: '#94A3B8' }}>{placeholder}</span>}
+              </div>
+              {valid.length > 0 && (
+                <div style={{ borderTop: '1px solid #EEF0F4' }}>
+                  {valid.map((b, i) => (
+                    <div key={i} style={{ textAlign: 'center', padding: '10px 8px', fontSize: '.68rem', fontWeight: 700, color: 'var(--c-blue)', borderTop: i === 0 ? 'none' : '1px solid #EEF0F4' }}>{b.label}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <span style={{ flexShrink: 0, fontSize: '.46rem', color: 'rgba(255,255,255,.85)', marginBottom: 2 }}>既読<br />14:30</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
