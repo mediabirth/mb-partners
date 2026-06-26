@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import type { Template, TemplateBlock } from '../messages/MessagesClient'
+import { EXAMPLE, VARDESC } from './messaging-sections'
 
 export type EditBlock = TemplateBlock
 
@@ -296,7 +297,7 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { 
         <div style={{ marginBottom: 8 }}>
           <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 5 }}>差し込み項目（テキストブロックに挿入）</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {vars.map(v => <button key={v} type="button" onClick={() => insertVar(v)} title={`例：${EXAMPLE[v]}`} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{VARDESC[v] ?? v}</button>)}
+            {vars.map(v => <button key={v} type="button" onClick={() => insertVar(v)} title={EXAMPLE[v] ? `例：${EXAMPLE[v]}` : ''} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{VARDESC[v] ?? v}</button>)}
           </div>
         </div>
       )}
