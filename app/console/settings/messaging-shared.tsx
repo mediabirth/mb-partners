@@ -274,12 +274,30 @@ function CarouselEditor({ cards, setCards, urls, setUrls }: { cards: Card[]; set
   )
 }
 
-export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { blocks: EditBlock[]; setBlocks: (b: EditBlock[]) => void; urls: Record<string, string>; setUrls: (fn: (p: Record<string, string>) => Record<string, string>) => void; vars?: string[] }) {
+export function makeBlock(t: 'text' | 'image' | 'button' | 'carousel'): EditBlock {
+  return t === 'text' ? { type: 'text', text: '' } : t === 'image' ? { type: 'image', path: '' } : t === 'button' ? { type: 'button', label: '', url: '' } : { type: 'carousel', cards: [{}, {}] }
+}
+// 既定文面（テキスト）を「たたき台」blocks へ展開（表示/初期値生成のみ・resolve/送信は不変）。
+export function blocksFromDefaultText(text: string): EditBlock[] {
+  return text && text.trim() ? [{ type: 'text', text }] : []
+}
+// 見出し位置に常駐する「ブロック追加」メニュー。
+export function BlockAddBar({ blocks, setBlocks }: { blocks: EditBlock[]; setBlocks: (b: EditBlock[]) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {(['text', 'image', 'button', 'carousel'] as const).map(t => (
+        <button key={t} type="button" onClick={() => setBlocks([...blocks, makeBlock(t)])} className="ui-btn ui-btn--secondary" style={{ fontSize: '.58rem', padding: '5px 9px', borderRadius: 7, cursor: 'pointer' }}>＋ {blockName(t)}</button>
+      ))}
+    </div>
+  )
+}
+
+export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [], hideAdd = false }: { blocks: EditBlock[]; setBlocks: (b: EditBlock[]) => void; urls: Record<string, string>; setUrls: (fn: (p: Record<string, string>) => Record<string, string>) => void; vars?: string[]; hideAdd?: boolean }) {
   const [focusText, setFocusText] = useState<number | null>(null)
   const upd = (i: number, patch: Partial<EditBlock>) => setBlocks(blocks.map((b, j) => j === i ? ({ ...b, ...patch } as EditBlock) : b))
   const del = (i: number) => setBlocks(blocks.filter((_, j) => j !== i))
   const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= blocks.length) return; const n = [...blocks]; [n[i], n[j]] = [n[j], n[i]]; setBlocks(n) }
-  const add = (t: 'text' | 'image' | 'button' | 'carousel') => setBlocks([...blocks, t === 'text' ? { type: 'text', text: '' } : t === 'image' ? { type: 'image', path: '' } : t === 'button' ? { type: 'button', label: '', url: '' } : { type: 'carousel', cards: [{}, {}] }])
+  const add = (t: 'text' | 'image' | 'button' | 'carousel') => setBlocks([...blocks, makeBlock(t)])
   async function pickImage(i: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
     const up = await uploadImage(file); if (!up) return
@@ -339,11 +357,13 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [] }: { 
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-        {(['text', 'image', 'button', 'carousel'] as const).map(t => (
-          <button key={t} type="button" onClick={() => add(t)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '7px 12px', borderRadius: 8, cursor: 'pointer' }}>＋ {blockName(t)}</button>
-        ))}
-      </div>
+      {!hideAdd && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          {(['text', 'image', 'button', 'carousel'] as const).map(t => (
+            <button key={t} type="button" onClick={() => add(t)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '7px 12px', borderRadius: 8, cursor: 'pointer' }}>＋ {blockName(t)}</button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
