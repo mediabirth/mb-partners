@@ -4,6 +4,20 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+// オープンリダイレクト防止：?redirect は /app 配下の相対パスのみ許可。外部URL/プロトコル相対/他サーフェス/制御文字は弾き '/' へ。
+function safeRedirect(): string {
+  try {
+    if (typeof window === 'undefined') return '/'
+    const raw = new URLSearchParams(window.location.search).get('redirect')
+    if (!raw) return '/'
+    if (raw.includes('\\')) return '/'
+    for (let i = 0; i < raw.length; i++) { const c = raw.charCodeAt(i); if (c < 32 || c === 127) return '/' }
+    if (/^https?:/i.test(raw) || raw.startsWith('//')) return '/'
+    if (raw === '/app' || raw.startsWith('/app/')) return raw
+    return '/'
+  } catch { return '/' }
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail]       = useState('')
@@ -28,9 +42,8 @@ export default function LoginPage() {
       setError('メールアドレスまたはパスワードが正しくありません。')
       return
     }
-    // Redirect to root — root page routes to /app or /console based on role.
-    // This prevents admins (who have no partner record) from looping at /app.
-    router.push('/')
+    // ?redirect があれば /app 配下のみ許可して復帰（ディープリンク）。無し/不正は '/'＝role判定で /app or /console（従来挙動）。
+    router.push(safeRedirect())
     router.refresh() // flush server component cache
   }
 

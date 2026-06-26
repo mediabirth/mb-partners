@@ -29,6 +29,7 @@ export async function proxy(request: NextRequest) {
   const name = cookieNameFor(surface)
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set(SURFACE_HEADER, surface)
+  requestHeaders.set('x-mb-path', pathname)   // 下流(layout)の戻り先付与用・表示専用。認証判定には不使用。
   // spoofing 防止：クライアント由来の x-mb-uid を必ず除去（後段で検証済み値のみ set する）。
   requestHeaders.delete(UID_HEADER)
   const passthrough = () => NextResponse.next({ request: { headers: requestHeaders } })
@@ -94,7 +95,8 @@ export async function proxy(request: NextRequest) {
 
   // ── /app/** — partner portal ────────────────────────────────────────────────
   if (pathname.startsWith('/app')) {
-    if (!uid) return NextResponse.redirect(new URL('/login', request.url))
+    // 認証判定は不変。弾いた後の行き先にだけ戻り先 pathname を付与（ログイン後に目的ページへ復帰）。
+    if (!uid) return NextResponse.redirect(new URL('/login?redirect=' + encodeURIComponent(pathname), request.url))
     const role = await roleOf()
     if (role && role !== 'partner') {
       return isAppHost ? xConsole('/console') : NextResponse.redirect(new URL('/console', request.url))

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient, getCachedUid } from '@/lib/supabase/server'
 import AppNav from '@/components/AppNav'
 import SurfaceShell from '@/components/ui/SurfaceShell'
@@ -11,7 +12,11 @@ export const runtime = 'edge'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const uid = await getCachedUid()
-  if (!uid) redirect('/login')
+  if (!uid) {
+    // 認証判定は不変。弾いた後の行き先にだけ戻り先（proxy が付与した x-mb-path・/app配下のみ）を付ける。
+    const p = (await headers()).get('x-mb-path')
+    redirect(p && (p === '/app' || p.startsWith('/app/')) ? `/login?redirect=${encodeURIComponent(p)}` : '/login')
+  }
 
   const supabase = await createClient()
   const { data: profile } = await supabase
