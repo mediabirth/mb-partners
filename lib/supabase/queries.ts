@@ -48,7 +48,36 @@ export async function getServicesWithMenus(supabase: SupabaseClient) {
     (s: { name: string }) => !TEST_SERVICE_NAMES.has(s.name)
   ) as ServiceWithMenus[]
   await attachCoverageTasks(services)
+  await attachMenus(services)
   return services
+}
+
+/**
+ * 段階3：新「メニュー（1メニュー1報酬）」を各 service_menu(=新「サービス」)に additive 同梱（表示用・read-only）。
+ * ★閲覧表示のためだけ。deals/money/編集保存には一切関与しない。menus 未存在/読取失敗は fail-open（menus=[]）。
+ * menus は RLS read=authenticated だが、guide の user client でも確実に読めるよう service_role で取得。
+ */
+async function attachMenus(services: ServiceWithMenus[]) {
+  if (services.length === 0) return
+  try {
+    const { createServiceRoleClient } = await import('./server')
+    const admin = await createServiceRoleClient()
+    const ids = services.flatMap(s => s.service_menus.map(m => m.id))
+    if (ids.length === 0) return
+    const { data: rows } = await admin
+      .from('menus')
+      .select('id, service_menu_id, name, reward_type, reward_value, reward_base, reward_trigger, sort, active')
+      .in('service_menu_id', ids).eq('active', true).order('sort')
+    const byParent = new Map<string, Menu[]>()
+    for (const r of (rows ?? []) as Menu[]) {
+      const arr = byParent.get(r.service_menu_id) ?? []
+      arr.push(r)
+      byParent.set(r.service_menu_id, arr)
+    }
+    for (const svc of services) for (const m of svc.service_menus) {
+      m.menus = (byParent.get(m.id) ?? []).sort((a, b) => a.sort - b.sort)
+    }
+  } catch { /* fail-open: menus 未付与 */ }
 }
 
 /**
@@ -238,6 +267,8 @@ export type MenuRow = {
   // ③ 対応範囲の単一ソース：当該メニューに該当する required 協力タスク(cooperation_task_templates)のラベル。
   // 表示/同意UI用の read-only 派生値（getServicesWithMenus が付与）。④報酬ゲートとは無関係。
   coverage_tasks?: string[]
+  // 段階3：新「メニュー（1報酬）」を表示用に additive 同梱（read-only・getServicesWithMenus が付与）。
+  menus?: Menu[]
 }
 
 export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }

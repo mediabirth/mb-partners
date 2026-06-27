@@ -820,6 +820,30 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   })}
                 </div>
               )}
+
+              {/* 段階3：新構造プレビュー（サービス ＞ メニュー＝1報酬）。read-only・menus テーブル由来。編集は従来ドロワー。 */}
+              {refMenus.some(m => (m.menus?.length ?? 0) > 0) && (
+                <div style={{ marginTop: 10, border: '1px dashed var(--blue-bg)', borderRadius: 10, padding: '10px 14px', background: 'var(--blue-bg2)' }}>
+                  <div style={{ fontSize: '.54rem', fontWeight: 800, color: 'var(--blue-dk)', letterSpacing: '.06em', marginBottom: 6 }}>新メニュー構造（1メニュー1報酬・プレビュー）</div>
+                  {refMenus.map(m => (
+                    (m.menus?.length ?? 0) > 0 && (
+                      <div key={`nm-${m.id}`} style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 3 }}>{m.name}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {(m.menus ?? []).map(mn => (
+                            <div key={mn.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid var(--line)', borderRadius: 7, padding: '6px 10px' }}>
+                              <span style={{ fontSize: '.7rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
+                              <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
+                                {mn.reward_type === 'fixed' ? `¥${Number(mn.reward_value).toLocaleString()}` : `${mn.reward_value}%${mn.reward_base ? `・${mn.reward_base}` : ''}`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}
