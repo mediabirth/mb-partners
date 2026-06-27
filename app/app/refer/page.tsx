@@ -9,7 +9,6 @@ import { trackFunnel } from '@/lib/funnel-client'
 import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { coverageDesc } from '@/lib/coverage-descriptions'
-import { engagementLabelByKind } from '@/lib/engagement-labels'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
 type Step = 'service' | 'menu' | 'form' | 'consult'
@@ -60,12 +59,8 @@ function rewardHighlight(m: MenuRow | null, coop: boolean): string {
   return `${m.ref_base ?? '売上'}の${m.ref_value}%`
 }
 
-function RefChip({ name }: { name: string }) {
-  return <span className="chip chip-referral">{name}</span>
-}
-
 function CoopBadge() {
-  return <span className="chip chip-cooperation">伴走</span>
+  return null
 }
 
 export default function ReferPage() {
@@ -223,7 +218,7 @@ export default function ReferPage() {
     setError('')
     const ce = customerError(); if (ce) { setError(ce); return }
     if (!consent) { setError('顧客の同意確認が必要です'); return }
-    if (coopMode && !allCoverageChecked) { setError('対応範囲の各項目をご確認ください'); return }
+    if (coopMode && !allCoverageChecked) { setError('協力タスクの各項目をご確認ください'); return }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
@@ -268,7 +263,7 @@ export default function ReferPage() {
   // 協力「自分で予約」: 予約確定の瞬間に協力deal を作成して dealId を返す（同意内包）
   async function coopCreateDeal(): Promise<string | null> {
     const ce = customerError(); if (ce) { setError(ce); return null }
-    if (!allCoverageChecked) { setError('対応範囲の各項目をご確認ください'); return null }
+    if (!allCoverageChecked) { setError('協力タスクの各項目をご確認ください'); return null }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
@@ -402,17 +397,10 @@ export default function ReferPage() {
           <div style={{ padding: '10px 20px 6px' }}>
             <div className="eyebrow">相談として起票</div>
             <h2 style={{ fontSize: '.96rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>サービス未定のお客さまを起票</h2>
-            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>関わり方だけ選び、内容は面談で詰めます。サービス・金額は後から運営が確定します。</p>
+            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>内容は面談で詰めます。サービス・金額は後から運営が確定します。</p>
           </div>
           <form onSubmit={handleConsultSubmit} style={{ padding: '4px 20px 24px' }}>
-            <div className="fld">
-              <label>関わり方</label>
-              <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 4 }}>
-                {[['ref', engagementLabelByKind('ref')], ['coop', engagementLabelByKind('coop')]].map(([v, l]) => (
-                  <button type="button" key={v} onClick={() => setConsultCoop(v === 'coop')} style={{ flex: 1, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, padding: '9px 2px', borderRadius: 8, color: (v === 'coop') === consultCoop ? 'var(--txt)' : 'var(--muted2)', background: (v === 'coop') === consultCoop ? '#fff' : 'transparent', boxShadow: (v === 'coop') === consultCoop ? '0 2px 8px rgba(14,14,20,.08)' : 'none' }}>{l}</button>
-                ))}
-              </div>
-            </div>
+            {/* 是正2：相談起票の「関わり方(紹介/協力)」選択は廃止（区分語を出さない）。内容は面談で確定。 */}
             <div className="fld">
               <label>お客様区分</label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -465,7 +453,7 @@ export default function ReferPage() {
             </div>
             <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのかたちで関わりますか?</h2>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
-              メニューごとに関わり方（つなぐ／伴走）を選べます。あなたに合うかたちで。
+              ご案内するメニューを選んでください。
             </p>
           </div>
           {/* B2: メニュー単位グルーピング。各メニュー見出しの下に 紹介/協力 の選択肢 */}
@@ -498,9 +486,9 @@ export default function ReferPage() {
             ← 戻る
           </button>
           <div style={{ padding: '10px 20px 6px' }}>
-            <div className="eyebrow">{selSvc.name}{selMenu ? ` — ${selMenu.name}` : coopMode ? ' — 伴走' : ''}</div>
+            <div className="eyebrow">{selSvc.name}{selMenu ? ` — ${selMenu.name}` : ''}</div>
             <h2 style={{ fontSize: '.96rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>
-              {coopMode ? '伴走を申し込む' : 'お客さまをつなぐ'}
+              この内容で申し込む
             </h2>
           </div>
 
@@ -578,7 +566,7 @@ export default function ReferPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
                   <span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} /><span style={{ fontSize: '.56rem', color: '#7676B0', fontWeight: 700 }}>または</span><span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} />
                 </div>
-                <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } if (!allCoverageChecked) { setError('自分で予約する前に、下の「対応範囲の確認」で各項目をご確認ください'); return } setError(''); setShowSelfBook(true) }}
+                <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } if (!allCoverageChecked) { setError('自分で予約する前に、下の「協力タスクの確認」で各項目をご確認ください'); return } setError(''); setShowSelfBook(true) }}
                   className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>自分で予約する</button>
                 {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
               </>
@@ -641,7 +629,7 @@ export default function ReferPage() {
               {/* ③ 対応範囲の確認（協力時のみ）。included項目を個別に説明＋項目ごとに同意チェック。後で揉めない最も厳密な同意。 */}
               {coopMode && coopCoverage.length > 0 && (
                 <div style={{ border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '13px 14px', marginBottom: 12, background: '#fff' }}>
-                  <div style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--blue-dk)', marginBottom: 3 }}>対応範囲の確認</div>
+                  <div style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--blue-dk)', marginBottom: 3 }}>協力タスクの確認</div>
                   <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '0 0 11px', lineHeight: 1.6 }}>
                     あなたが担う各項目をご確認のうえ、すべてにチェックしてください。
                   </p>
@@ -715,16 +703,14 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
   // ③ 対応範囲タグの単一ソース＝required協力タスク（系統A coverage_steps/coop_coverage は廃止）。
   const cov   = (menu.coverage_tasks ?? []).map((label: string) => ({ label }))
   const cond  = isRef ? menu.qualification : menu.coop_condition
-  const label = engagementLabelByKind(kind)
-  const chipCls = isRef ? 'chip-referral' : 'chip-cooperation'
   const reward = fixed ? `¥${val.toLocaleString()}` : `${val}%${base ? `・${base}` : ''}`
 
   return (
     <button onClick={onPick} className="card-hover lift ui-card"
       style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span className={`chip ${chipCls}`}>{label}</span>
-        {/* 報酬は控えめに添える */}
+        {/* 是正2：区分語(つなぐ/伴走)チップは廃止。メニューは報酬・成果地点・協力タスクの条件として見せる。 */}
+        <span style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
         <span style={{ marginLeft: 'auto', fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{reward}</span>
         <span style={{ color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>›</span>
       </div>

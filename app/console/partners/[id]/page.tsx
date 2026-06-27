@@ -203,24 +203,7 @@ export default async function PartnerDetailPage({
             ))}
           </div>
 
-          {/* Channel breakdown strip */}
-          {totalDeals > 0 && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', gap: 24 }}>
-              <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', alignSelf: 'center' }}>かたち別内訳</span>
-              {[
-                { label: 'つなぐ', count: referralDeals, chip: 'chip chip-referral' },
-                { label: '伴走',   count: coopDeals,     chip: 'chip chip-cooperation' },
-                { label: '直接',   count: directDeals,   chip: 'chip chip-direct' },
-              ].filter(c => c.count > 0).map(c => (
-                <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className={c.chip}>
-                    {c.label}
-                  </span>
-                  <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}><CountUp value={c.count} />件</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* 是正2：チャネル区分(つなぐ/伴走)内訳は廃止（区分語を出さない）。 */}
 
           {/* Two-column layout */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>

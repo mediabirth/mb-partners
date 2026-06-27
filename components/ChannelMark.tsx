@@ -4,9 +4,9 @@
  * 単色フラット線アイコン＋小ラベル＋tooltip で「読まずに識別」を補助。APP・コンソール共通。
  */
 const MAP: Record<string, { label: string; color: string; bg: string; hint: string }> = {
-  referral:    { label: 'つなぐ', color: 'var(--blue)',  bg: 'var(--blue-bg)', hint: 'お客様をつなぐ' },
-  cooperation: { label: '伴走', color: '#3F7D72',       bg: '#E5EFEC',        hint: '成約まで伴走する' },
-  frontier:    { label: '伴走', color: '#3F7D72',       bg: '#E5EFEC',        hint: '成約まで伴走する' },
+  referral:    { label: '', color: 'var(--blue)',  bg: 'var(--blue-bg)', hint: '' },
+  cooperation: { label: '', color: '#3F7D72',       bg: '#E5EFEC',        hint: '' },
+  frontier:    { label: '', color: '#3F7D72',       bg: '#E5EFEC',        hint: '' },
   direct:      { label: '直販', color: 'var(--muted2)', bg: 'var(--bg2)',     hint: 'MB直販' },
 }
 

@@ -842,13 +842,13 @@ export default function DealsPage() {
                       //   種別・ステージ・フェーズ・ステータスは載せない（レーンで分かる）。詳細は案件詳細へ。
                       const intake = d.intake_type ?? 'referral_coop'
                       const partnerName = intake !== 'direct' && d.partners?.profiles ? d.partners.profiles.name : null
-                      const partnerKindLabel = engagementLabel(d.channel)
+                      const partnerKindLabel = engagementLabel(d.channel)   // 区分語は空（direct のみ）
                       const directorName = d.director_id ? (directors.find(x => x.id === d.director_id)?.name ?? null) : null
                       const deliveryName = (d._deliveries ?? []).find(a => a.delivery_id)?.deliveries?.name ?? null
                       const rejectedExp = (d._deliveries ?? []).some(a => (a._expenses ?? []).some(e => e.status === 'rejected'))
                       const revenueMissing = (d._phase ?? phaseOf(d)) === 'project' && (d.deal_items?.length ?? 0) > 0 && (d.deal_items ?? []).every(it => it.revenue == null)
                       const attention = needsBase(d) || rejectedExp || revenueMissing
-                      const meta = [directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel} ${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('　·　')
+                      const meta = [directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel ? partnerKindLabel + ' ' : ''}${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('　·　')
                       return (
                         <div
                           key={d.id}
@@ -941,7 +941,6 @@ export default function DealsPage() {
               {/* 概要：基本情報（表示専用） */}
               {detailTab === 'overview' && [
                 ['サービス', selected.services?.name ?? '相談（サービス未定）'],
-                ['かたち', engagementLabel(selected.channel)],
                 ['ソース', selected.source],
                 ['ステータス', COLS.find(c => c.key === selected.status)?.label ?? selected.status],
                 ['報酬予定', selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '未確定'],

@@ -8,6 +8,16 @@ import type { ServiceWithMenus, MenuRow, Menu } from '@/lib/supabase/queries'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BASE_OPTIONS = ['売上', '粗利', '利益', '受取収入']
+// 是正2：協力タスク6マスタ（全サービス共通の選択肢・メニューごとに使うものを選ぶ）。
+// auto=自動検知（案件進行で達成）／manual=手動（パートナーが実施）。
+const COOP_TASK_MASTER: { label: string; kind: 'auto' | 'manual' }[] = [
+  { label: 'つなぐ',           kind: 'auto' },
+  { label: 'アポイント',        kind: 'auto' },
+  { label: 'ヒヤリング',        kind: 'manual' },
+  { label: 'アシスト/フォロー', kind: 'manual' },
+  { label: '価格/条件合意',     kind: 'manual' },
+  { label: 'クロージング',      kind: 'manual' },
+]
 // ⑤ 協力報酬の料率基準は粗利に一本化（新規/編集で選べるのは粗利のみ）。
 // 既存メニューの coop_base 値（売上/利益等）は再編集しない限り保持＝後方互換。coop_base は非money（reward=base_amount×value/100）。
 const COOP_BASE_OPTIONS = ['粗利']
@@ -367,17 +377,6 @@ function TypeSeg({ value, onChange, accent }: {
   )
 }
 
-function CoverageField({ steps, onChange }: { steps: CoverageStep[]; onChange: (s: CoverageStep[]) => void }) {
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6, letterSpacing: '.04em' }}>
-        対応範囲
-      </label>
-      <CoverageEditor steps={steps} onChange={onChange} />
-    </div>
-  )
-}
-
 function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
   form: MenuForm; onChange: (f: MenuForm) => void
   onSave: () => void; onCancel: () => void; saving: boolean; error: string
@@ -418,15 +417,7 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
 
 // ─── Chips ────────────────────────────────────────────────────────────────────
 
-function RefChip() {
-  return <span className="chip chip-referral" style={{ flexShrink: 0 }}>つなぐ</span>
-}
-
-function CoopChip() {
-  return <span className="chip chip-cooperation" style={{ flexShrink: 0 }}>伴走</span>
-}
-
-// Compact reward chip for the service list summary (紹介=青 / 協力=濃色).
+// Compact reward chip for the service list summary（是正2：区分語ラベルなし・報酬のみ）。
 function RewardChip({ kind, text }: { kind: 'ref' | 'coop'; text: string }) {
   const ref = kind === 'ref'
   return (
@@ -437,7 +428,6 @@ function RewardChip({ kind, text }: { kind: 'ref' | 'coop'; text: string }) {
       background: ref ? 'var(--blue-bg)' : '#EBEBF0',
       color: ref ? 'var(--blue)' : 'var(--txt)',
     }}>
-      <span style={{ fontWeight: 800, opacity: .7, fontFamily: 'inherit' }}>{ref ? 'つなぐ' : '伴走'}</span>
       {text}
     </span>
   )
@@ -535,6 +525,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     const r = await fetch(`/api/console/task-templates/${id}`, { method: 'DELETE' })
     if (r.ok) await loadMenuTasks(); else showToast('削除に失敗しました')
   }
+  // 6マスタのチェック切替：未選択→作成（menu_id紐付け）／選択済→削除。
+  async function toggleMasterTask(serviceId: string, menuId: string, m: { label: string; kind: 'auto' | 'manual' }) {
+    const existing = (menuTasks[menuId] ?? []).find(t => t.label === m.label)
+    if (existing) { await delMenuTask(existing.id); return }
+    const r = await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: serviceId, menu_id: menuId, label: m.label, kind: m.kind, required: true, trigger_key: m.kind === 'auto' ? 'in_progress' : null, sort: COOP_TASK_MASTER.findIndex(x => x.label === m.label) }) })
+    const d = await r.json()
+    if (d.template) await loadMenuTasks(); else showToast(d.needsMigration ? 'タスクのDB適用が必要です' : (d.error ?? '追加に失敗しました'))
+  }
 
   // Batch2: 追加ドロワー（新規作成時のみ）の「最初のメニュー（任意）」インライン入力。
   const [addMenuName, setAddMenuName] = useState('')
@@ -611,8 +609,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     if (!svcForm.name) { setSvcError('サービス名を入力してください'); return }
     // インラインメニューの軽い検証（新規・withMenu・報酬入力時のみ）。
     if (!editing && withMenu) {
-      if (addRefValue && !(Number(addRefValue) > 0)) { setSvcError('つなぐ報酬（円）は0より大きい数値で入力してください'); return }
-      if (addCoopPct && !(Number(addCoopPct) > 0 && Number(addCoopPct) <= 100)) { setSvcError('伴走報酬（粗利の%）は 0〜100 で入力してください'); return }
+      if (addRefValue && !(Number(addRefValue) > 0)) { setSvcError('固定報酬（円）は0より大きい数値で入力してください'); return }
+      if (addCoopPct && !(Number(addCoopPct) > 0 && Number(addCoopPct) <= 100)) { setSvcError('報酬（粗利の%）は 0〜100 で入力してください'); return }
     }
     setSvcError('')
     startTrans(async () => {
@@ -683,7 +681,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   async function saveMenu() {
     if (!menuForm.name) { setMenuError('メニュー名を入力してください'); return }
     if (!menuForm.ref_enabled && !menuForm.coop_enabled) {
-      setMenuError('つなぐ・伴走のいずれかを有効にしてください'); return
+      setMenuError('報酬を設定してください'); return
     }
     if (menuForm.ref_enabled && menuForm.ref_type === 'rate') {
       const v = Number(menuForm.ref_value)
@@ -692,8 +690,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     }
     if (menuForm.coop_enabled && menuForm.coop_type === 'rate') {
       const v = Number(menuForm.coop_value)
-      if (!v || v <= 0 || v > 100) { setMenuError('伴走の料率は 0〜100% の範囲で入力してください'); return }
-      if (!menuForm.coop_base) { setMenuError('伴走（料率）では基準を選択してください'); return }
+      if (!v || v <= 0 || v > 100) { setMenuError('料率は 0〜100% の範囲で入力してください'); return }
+      if (!menuForm.coop_base) { setMenuError('料率では基準を選択してください'); return }
     }
     if (!editing) return
     setMenuSaving(true); setMenuError('')
@@ -791,8 +789,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 116px 116px', gap: 10, padding: '7px 14px', background: 'var(--bg2)', alignItems: 'center' }}>
                     <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>メニュー</span>
-                    <span style={{ textAlign: 'right' }}><span className="chip chip-referral">つなぐ</span></span>
-                    <span style={{ textAlign: 'right' }}><span className="chip chip-cooperation">伴走</span></span>
+                    <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>固定報酬</span>
+                    <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>成果報酬</span>
                   </div>
                   {refMenus.map((menu, idx) => {
                     const mm = menu as MenuRow & {
@@ -967,50 +965,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               </>
             )}
 
-            {/* ── C. 対応範囲（協力タスク）＝ cooperation_task_templates。旧 /console/tasks を統合 ── */}
-            {editing && (
-              <>
-                <SectionLabel>C. 対応範囲</SectionLabel>
-                <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 8, lineHeight: 1.6 }}>
-                  伴走（成果報酬）で達成すべき項目を定義します。各項目は<b>手動</b>（パートナーが実施）／<b>自動</b>（案件の進行で自動達成）を選べます。成果報酬（粗利%）のゲート判定に使われます（挙動は従来どおり）。
-                </p>
-                {taskTpls.length === 0 && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 8 }}>対応項目はまだありません。</p>}
-                {[...taskTpls].sort((a, b) => a.sort - b.sort).map(t => (
-                  <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 10px', marginBottom: 6 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '.58rem', color: 'var(--muted2)', cursor: 'pointer', flexShrink: 0 }}>
-                      <input type="checkbox" checked={t.required} onChange={() => patchTask(t.id, { required: !t.required })} />必須
-                    </label>
-                    <span style={{ flex: 1, fontSize: '.76rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: t.active ? 1 : .5 }}>{t.label}</span>
-                    <select value={t.kind} onChange={e => patchTask(t.id, { kind: e.target.value, trigger_key: e.target.value === 'auto' ? (t.trigger_key || 'in_progress') : null })} style={selSm}>
-                      <option value="manual">手動</option><option value="auto">自動</option>
-                    </select>
-                    {t.kind === 'auto' && (
-                      <select value={t.trigger_key ?? ''} onChange={e => patchTask(t.id, { trigger_key: e.target.value || null })} style={selSm}>
-                        <option value="">トリガー…</option><option value="in_progress">対応中に遷移</option><option value="meeting_set">商談を設定</option>
-                      </select>
-                    )}
-                    <button type="button" onClick={() => patchTask(t.id, { active: !t.active })} style={{ fontSize: '.54rem', fontWeight: 700, border: 'none', borderRadius: 20, padding: '2px 8px', cursor: 'pointer', color: t.active ? 'var(--green)' : 'var(--muted)', background: t.active ? 'var(--green-bg)' : 'var(--bg2)', flexShrink: 0 }}>{t.active ? '有効' : '無効'}</button>
-                    <button type="button" onClick={() => delTask(t.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem', flexShrink: 0 }}>✕</button>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
-                  <input value={tLabel} onChange={e => setTLabel(e.target.value)} placeholder="項目名（例: 価格・条件を合意）" style={{ flex: 1, minWidth: 150, border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'inherit', fontSize: '.74rem' }} />
-                  <select value={tKind} onChange={e => setTKind(e.target.value as 'manual' | 'auto')} style={selSm}><option value="manual">手動</option><option value="auto">自動</option></select>
-                  {tKind === 'auto' && <select value={tTrigger} onChange={e => setTTrigger(e.target.value)} style={selSm}><option value="">トリガー…</option><option value="in_progress">対応中に遷移</option><option value="meeting_set">商談を設定</option></select>}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '.62rem', color: 'var(--muted2)' }}><input type="checkbox" checked={tRequired} onChange={e => setTRequired(e.target.checked)} />必須</label>
-                  <button type="button" onClick={addTask} disabled={tBusy || !tLabel.trim()} className="btn btn-g" style={{ fontSize: '.72rem', padding: '7px 12px' }}>＋ 追加</button>
-                </div>
-              </>
-            )}
-
-            {/* 協力はメニュー単位（B のメニュー編集内）に一本化。サービス既定 coop_* は廃止。 */}
-
-            {/* ── D. メニュー（1報酬・新モデル）＝ menus テーブル CRUD。各サービス(=service_menu)配下に任意数。 ── */}
+            {/* ── メニュー（1メニュー1報酬）＝ menus テーブル CRUD。各サービス配下に任意数＋メニュー固有の協力タスク。 ── */}
             {editing && liveMenus.length > 0 && (
               <>
-                <SectionLabel>D. メニュー（1報酬・新モデル）</SectionLabel>
+                <SectionLabel>メニュー</SectionLabel>
                 <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 8, lineHeight: 1.6 }}>
-                  各サービスの下に「メニュー（報酬1つ＝固定 or 粗利%）」を任意数で追加できます。紹介/協力の区別はありません。<b>（②③の旧報酬は段階6まで併走）</b>
+                  各サービスの下にメニューを追加します。1メニュー＝<b>名前・報酬（固定◯円 or 粗利◯%）・トリガー・協力タスク</b>。任意数で追加できます。
                 </p>
                 {liveMenus.map(sm => (
                   <div key={`mn-${sm.id}`} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
@@ -1025,20 +985,20 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <button type="button" onClick={() => patchMenu(mn.id, { active: !mn.active })} style={{ fontSize: '.52rem', fontWeight: 700, border: 'none', borderRadius: 20, padding: '2px 7px', cursor: 'pointer', color: mn.active ? 'var(--green)' : 'var(--muted)', background: mn.active ? 'var(--green-bg)' : 'var(--bg2)', flexShrink: 0 }}>{mn.active ? '有効' : '無効'}</button>
                           <button type="button" onClick={() => delMenu(mn.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem', flexShrink: 0 }}>✕</button>
                         </div>
-                        {/* このメニュー固有の協力タスク（menu_id=mn.id） */}
+                        {/* このメニューの協力タスク：6マスタからチェックで選択（menu_id=mn.id 紐付け） */}
                         <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #F2F2F6' }}>
-                          <div style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 4 }}>このメニューの対応タスク</div>
-                          {(menuTasks[mn.id] ?? []).map(t => (
-                            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
-                              <span style={{ flex: 1, fontSize: '.66rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>・{t.label}</span>
-                              {t.required && <span style={{ fontSize: '.48rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px', flexShrink: 0 }}>必須</span>}
-                              <button type="button" onClick={() => delMenuTask(t.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.7rem', flexShrink: 0 }}>✕</button>
-                            </div>
-                          ))}
-                          <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
-                            <input value={mtLabel[mn.id] ?? ''} onChange={e => setMtLabel(p => ({ ...p, [mn.id]: e.target.value }))}
-                              placeholder="タスク名（例: 商談に同席）" style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'inherit', fontSize: '.66rem' }} />
-                            <button type="button" onClick={() => addMenuTask(sm.service_id, mn.id)} disabled={!(mtLabel[mn.id] ?? '').trim()} className="btn btn-g" style={{ fontSize: '.64rem', padding: '5px 10px' }}>＋</button>
+                          <div style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>このメニューの協力タスク（使うものを選択）</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {COOP_TASK_MASTER.map(mt => {
+                              const on = (menuTasks[mn.id] ?? []).some(t => t.label === mt.label)
+                              return (
+                                <label key={mt.label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '.66rem', cursor: 'pointer', padding: '2px 0' }}>
+                                  <input type="checkbox" checked={on} onChange={() => toggleMasterTask(sm.service_id, mn.id, mt)} style={{ accentColor: 'var(--c-blue)', width: 13, height: 13 }} />
+                                  <span style={{ flex: 1, fontWeight: on ? 700 : 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
+                                  <span style={{ fontSize: '.48rem', fontWeight: 700, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 6px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
+                                </label>
+                              )
+                            })}
                           </div>
                         </div>
                       </div>
@@ -1068,21 +1028,21 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <>
                 <SectionLabel>B. 最初のメニュー（任意）</SectionLabel>
                 <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
-                  報酬を1つだけ先に設定できます。<b>対応範囲・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
+                  報酬を1つだけ先に設定できます。<b>協力タスク・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
                 </p>
                 <Fld label="メニュー名（任意）">
                   <FInput value={addMenuName} onChange={setAddMenuName} placeholder="例: 賃貸成約時" />
                 </Fld>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Fld label="つなぐ報酬（固定額・円）">
+                  <Fld label="固定報酬（円）">
                     <FInput value={addRefValue} onChange={setAddRefValue} placeholder="30000" type="number" />
                   </Fld>
-                  <Fld label="伴走報酬（粗利の%）">
+                  <Fld label="成果報酬（粗利の%）">
                     <FInput value={addCoopPct} onChange={setAddCoopPct} placeholder="50" type="number" />
                   </Fld>
                 </div>
                 <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '2px 2px 0', lineHeight: 1.5 }}>
-                  伴走報酬の基準は<b>粗利</b>に固定です。空欄なら「名前だけ」で作成します。
+                  成果報酬の基準は<b>粗利</b>に固定です。空欄なら「名前だけ」で作成します。
                 </p>
               </>
             )}
