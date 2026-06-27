@@ -122,10 +122,12 @@ export async function getAdminServicesWithMenus(supabase: SupabaseClient) {
     .select('*, service_menus(*)')
     .order('sort')
   if (!data) return []
-  return data.map(svc => ({
+  const services = data.map(svc => ({
     ...svc,
     service_menus: [...(svc.service_menus ?? [])].sort((a: MenuRow, b: MenuRow) => a.sort - b.sort),
   })) as ServiceWithMenus[]
+  await attachMenus(services)   // 段階3：コンソール一覧の新メニュー構造プレビュー用（read-only・additive）
+  return services
 }
 
 export async function getAllDeals(supabase: SupabaseClient) {
