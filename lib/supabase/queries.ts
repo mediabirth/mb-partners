@@ -44,9 +44,46 @@ export async function getServicesWithMenus(supabase: SupabaseClient) {
     .select('*, service_menus(*)')
     .eq('active', true)
     .order('sort')
-  return (data ?? []).filter(
+  const services = (data ?? []).filter(
     (s: { name: string }) => !TEST_SERVICE_NAMES.has(s.name)
   ) as ServiceWithMenus[]
+  await attachCoverageTasks(services)
+  return services
+}
+
+/**
+ * ③ 対応範囲の単一ソース化：required かつ active な cooperation_task_templates を各メニューに
+ * coverage_tasks（ラベル配列）として付与する。突合は instantiateDealTasks と同じ
+ * （service_id 一致 ＋ menu_id が null もしくは当該メニュー一致）。
+ * ★読み取り専用。deal_tasks / requiredTasksDone / instantiateDealTasks には一切触れない。
+ * cooperation_task_templates は RLS 有効(ポリシー無)＝service_role でのみ読めるため専用クライアントで取得。
+ * テーブル未作成・読取失敗は fail-open（coverage_tasks 未設定＝空表示）。
+ */
+async function attachCoverageTasks(services: ServiceWithMenus[]) {
+  if (services.length === 0) return
+  try {
+    const { createServiceRoleClient } = await import('./server')
+    const admin = await createServiceRoleClient()
+    const { data: tpls } = await admin
+      .from('cooperation_task_templates')
+      .select('service_id, menu_id, label, sort')
+      .eq('active', true).eq('required', true).order('sort')
+    const byService = new Map<string, { menu_id: string | null; label: string; sort: number }[]>()
+    for (const t of (tpls ?? []) as { service_id: string; menu_id: string | null; label: string; sort: number }[]) {
+      const arr = byService.get(t.service_id) ?? []
+      arr.push({ menu_id: t.menu_id, label: t.label, sort: t.sort })
+      byService.set(t.service_id, arr)
+    }
+    for (const svc of services) {
+      const list = byService.get(svc.id) ?? []
+      for (const m of svc.service_menus) {
+        m.coverage_tasks = list
+          .filter(t => t.menu_id == null || t.menu_id === m.id)
+          .sort((a, b) => a.sort - b.sort)
+          .map(t => t.label)
+      }
+    }
+  } catch { /* fail-open: coverage_tasks 未設定 */ }
 }
 
 // Admin version: returns all services (including inactive), menus sorted by sort
@@ -198,6 +235,9 @@ export type MenuRow = {
   coop_base: string | null
   coop_coverage: { label: string; included: boolean }[] | null
   coop_condition: string | null
+  // ③ 対応範囲の単一ソース：当該メニューに該当する required 協力タスク(cooperation_task_templates)のラベル。
+  // 表示/同意UI用の read-only 派生値（getServicesWithMenus が付与）。④報酬ゲートとは無関係。
+  coverage_tasks?: string[]
 }
 
 export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }

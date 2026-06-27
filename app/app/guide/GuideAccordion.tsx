@@ -23,21 +23,20 @@ function fmtCoopFee(m: MenuRow) {
   return '-'
 }
 
-function CoverageTags({ steps, accent = false }: {
-  steps: { label: string; included: boolean }[] | null
+// ③ 対応範囲タグ＝required協力タスクのラベル（単一ソース）。
+function CoverageTags({ labels, accent = false }: {
+  labels: string[] | null | undefined
   accent?: boolean
 }) {
-  if (!steps) return null
-  const included = steps.filter(s => s.included)
-  if (included.length === 0) return null
+  if (!labels || labels.length === 0) return null
   return (
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
-      {included.map(s => (
-        <span key={s.label} style={{
+      {labels.map(l => (
+        <span key={l} style={{
           fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10,
           background: accent ? 'var(--blue-bg)' : '#EBEBF0',
           color: accent ? 'var(--blue)' : 'var(--txt)',
-        }}>{s.label}</span>
+        }}>{l}</span>
       ))}
     </div>
   )
@@ -62,7 +61,7 @@ function FeeRow({ m }: { m: MenuRow }) {
           {m.ref_trigger && (
             <span style={{ fontSize: '.6rem', color: 'var(--muted2)', display: 'block', marginTop: 2 }}>{m.ref_trigger}</span>
           )}
-          <CoverageTags steps={m.coverage_steps} accent />
+          <CoverageTags labels={m.coverage_tasks} accent />
           {m.qualification && (
             <small style={{ fontSize: '.6rem', color: 'var(--amber)', display: 'block', marginTop: 4 }}>
               ⚠ {m.qualification}
@@ -78,7 +77,7 @@ function FeeRow({ m }: { m: MenuRow }) {
 }
 
 function CoopFeeRow({ m }: { m: MenuRow }) {
-  const steps = (m.coop_coverage ?? []).filter(s => s.included)
+  const steps = m.coverage_tasks ?? []
   return (
     <div style={{ padding: '10px 0', borderTop: '1px solid #F2F2F6' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '8px 10px', alignItems: 'start' }}>
@@ -89,9 +88,9 @@ function CoopFeeRow({ m }: { m: MenuRow }) {
             <>
               <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>対応範囲</span>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                {steps.map(s => (
-                  <span key={s.label} style={{ fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>
-                    {s.label}
+                {steps.map(l => (
+                  <span key={l} style={{ fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>
+                    {l}
                   </span>
                 ))}
               </div>

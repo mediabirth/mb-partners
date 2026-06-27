@@ -8,6 +8,9 @@ import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BASE_OPTIONS = ['売上', '粗利', '利益', '受取収入']
+// ⑤ 協力報酬の料率基準は粗利に一本化（新規/編集で選べるのは粗利のみ）。
+// 既存メニューの coop_base 値（売上/利益等）は再編集しない限り保持＝後方互換。coop_base は非money（reward=base_amount×value/100）。
+const COOP_BASE_OPTIONS = ['粗利']
 
 const COVERAGE_DEFAULTS = [
   { label: 'つなぐ',             included: true  },
@@ -57,7 +60,7 @@ const defaultMenuForm: MenuForm = {
   coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })),
   qualification: '',
   ref_months: '',
-  coop_enabled: false, coop_type: 'rate', coop_value: '', coop_base: '',
+  coop_enabled: false, coop_type: 'rate', coop_value: '', coop_base: '粗利',
   coop_coverage: COVERAGE_DEFAULTS.map(s => ({ ...s })),
   coop_condition: '',
 }
@@ -422,8 +425,6 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
               <FInput value={f.ref_trigger} onChange={v => set({ ref_trigger: v })} placeholder="例: 賃貸成約で確定" />
             </Fld>
 
-            <CoverageField steps={f.coverage_steps} onChange={steps => set({ coverage_steps: steps })} />
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <Fld label="資格条件（任意）">
                 <FInput value={f.qualification} onChange={v => set({ qualification: v })} placeholder="例: 宅建業免許" />
@@ -458,12 +459,10 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
                 </Fld>
                 <Fld label="基準">
                   <FSelect value={f.coop_base} onChange={v => set({ coop_base: v })}
-                    options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
+                    options={COOP_BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="粗利" />
                 </Fld>
               </div>
             )}
-
-            <CoverageField steps={f.coop_coverage} onChange={steps => set({ coop_coverage: steps })} />
 
             <Fld label="資格条件（任意）">
               <FInput value={f.coop_condition} onChange={v => set({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />

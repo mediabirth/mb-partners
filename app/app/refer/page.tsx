@@ -280,8 +280,8 @@ export default function ReferPage() {
   const linkUrl    = token       ? `${location.origin}/r/${token}` : ''
   const bookingUrl = partnerCode ? `${location.origin}/book/${partnerCode}` : ''
 
-  // ③ 協力時の対応範囲（included のみ）。各項目に静的説明＋項目別チェックを出す。
-  const coopCoverage = coopMode ? (selMenu?.coop_coverage ?? []).filter(s => s.included) : []
+  // ③ 協力時の対応範囲（単一ソース＝required協力タスク）。各項目に静的説明＋項目別チェックを出す。
+  const coopCoverage = coopMode ? (selMenu?.coverage_tasks ?? []).map(label => ({ label })) : []
   const allCoverageChecked = coopCoverage.every(s => covChecked.includes(s.label))
   const coverageGateOk = !coopMode || allCoverageChecked   // 紹介は従来通り（ゲート無し）。協力は全included項目チェック必須。
   const toggleCov = (label: string) =>
@@ -699,7 +699,8 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
   const fixed = isRef ? menu.ref_type === 'fixed' : menu.coop_type === 'fixed'
   const val   = isRef ? Number(menu.ref_value) : Number(menu.coop_value ?? 0)
   const base  = isRef ? menu.ref_base : menu.coop_base
-  const cov   = ((isRef ? menu.coverage_steps : menu.coop_coverage) ?? []).filter((s: { included: boolean }) => s.included)
+  // ③ 対応範囲タグの単一ソース＝required協力タスク（系統A coverage_steps/coop_coverage は廃止）。
+  const cov   = (menu.coverage_tasks ?? []).map((label: string) => ({ label }))
   const cond  = isRef ? menu.qualification : menu.coop_condition
   const label = isRef ? '紹介' : '協力'
   const chipCls = isRef ? 'chip-referral' : 'chip-cooperation'
