@@ -609,15 +609,23 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       if (!d.name.trim() && d.rewards.every(r => !r.reward_value)) continue
       let menuId = d.id
       if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）' }) }).catch(() => {})
-      else { const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）' }) }); menuId = (await res.json().catch(() => ({})))?.menu?.id ?? null }
-      if (!menuId) continue
+      else {
+        const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）' }) })
+        const jd = await res.json().catch(() => ({}))
+        menuId = jd?.menu?.id ?? null
+        if (!menuId) { showToast(`メニュー保存に失敗: ${jd?.error ?? res.status}`); continue }
+      }
       for (let k = 0; k < d.rewards.length; k++) {
         const r = d.rewards[k]
         const payload = { reward_type: r.reward_type, reward_value: Number(r.reward_value) || 0, reward_base: r.reward_type === 'rate' ? '粗利' : null, reward_trigger: r.reward_trigger.trim() || null, sort: k }
         let rewardId = r.id
         if (rewardId) await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {})
-        else { const res = await fetch('/api/console/menu-rewards', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu_id: menuId, ...payload }) }); rewardId = (await res.json().catch(() => ({})))?.reward?.id ?? null }
-        if (!rewardId) continue
+        else {
+          const res = await fetch('/api/console/menu-rewards', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu_id: menuId, ...payload }) })
+          const jd = await res.json().catch(() => ({}))
+          rewardId = jd?.reward?.id ?? null
+          if (!rewardId) { showToast(`報酬保存に失敗: ${jd?.error ?? res.status}`); continue }
+        }
         const existing = origTasks[r.id ?? ''] ?? []
         const existingLabels = new Set(existing.map(t => t.label))
         for (const mt of COOP_TASK_MASTER) {

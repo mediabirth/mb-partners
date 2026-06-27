@@ -124,10 +124,8 @@ export default function ReferPage() {
   function pickService(svc: ServiceWithMenus) {
     setSelSvc(svc)
     setSelMenu(null); setSelMenuRef(null); setSelReward(null); setCoopMode(false)
-    // 報酬（menu_rewards）が1件でもあれば「メニュー＞報酬」選択へ。無ければサービス単位フォーム。
-    const hasRewards = svc.service_menus.some(m => (m.menus ?? []).some(mn => (mn.rewards ?? []).length > 0))
-    if (hasRewards) setStep('menu')
-    else { loadToken(svc.id); setStep('form') }
+    // 必ず「メニュー＞報酬」選択へ進む。報酬が無いサービスは menu step で「準備中」案内（申込フォームへは飛ばさない）。
+    setStep('menu')
   }
 
   // 報酬カードを選ぶ：menu_ref＝メニュー(menus.id)・reward_ref＝報酬(menu_rewards.id)・channel は reward_type 由来（内部・表示なし）。
@@ -441,21 +439,39 @@ export default function ReferPage() {
             </p>
           </div>
           {/* メニュー＞報酬カード（複数）。各報酬＝金額・成果地点・協力タスク。 */}
-          <div className="stagger" style={{ padding: '0 20px 24px' }}>
-            {selSvc.service_menus.flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu }))).filter(({ menu }) => (menu.rewards ?? []).length > 0).map(({ sm, menu }) => (
-              <div key={menu.id} style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 2px 10px' }}>
-                  <span style={{ width: 4, height: 16, borderRadius: 2, background: selSvc.color }} />
-                  <b style={{ fontSize: '.86rem', fontWeight: 900, letterSpacing: '-.01em' }}>{menu.name}</b>
+          {(() => {
+            const groups = selSvc.service_menus.flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu }))).filter(({ menu }) => (menu.rewards ?? []).length > 0)
+            if (groups.length === 0) {
+              // メニュー未作成のサービスは申込に進ませず案内表示
+              return (
+                <div style={{ padding: '8px 20px 28px' }}>
+                  <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '28px 22px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.8rem', marginBottom: 10 }} aria-hidden>🛠️</div>
+                    <b style={{ fontSize: '.86rem', display: 'block', marginBottom: 6 }}>このサービスは準備中です</b>
+                    <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>メニューがまだ登録されていません。準備が整い次第ご案内します。</p>
+                    <button onClick={() => setStep('service')} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ marginTop: 16, padding: '10px 22px' }}>サービス選択へ戻る</button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(menu.rewards ?? []).map(reward => (
-                    <RewardOption key={reward.id} reward={reward} onPick={() => pickReward(sm, menu, reward)} />
-                  ))}
-                </div>
+              )
+            }
+            return (
+              <div className="stagger" style={{ padding: '0 20px 24px' }}>
+                {groups.map(({ sm, menu }) => (
+                  <div key={menu.id} style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 2px 10px' }}>
+                      <span style={{ width: 4, height: 16, borderRadius: 2, background: selSvc.color }} />
+                      <b style={{ fontSize: '.86rem', fontWeight: 900, letterSpacing: '-.01em' }}>{menu.name}</b>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {(menu.rewards ?? []).map(reward => (
+                        <RewardOption key={reward.id} reward={reward} onPick={() => pickReward(sm, menu, reward)} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
         </div>
       )}
 
