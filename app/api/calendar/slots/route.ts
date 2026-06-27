@@ -36,6 +36,7 @@ export async function GET() {
   const now = new Date()
   const horizon = new Date(now.getTime() + HORIZON_DAYS * 24 * 60 * 60_000)
   const busy: BusyBlock[] = []
+  let busyChecked = false   // 連携時に getFreeBusy が実際に成功したか（false＝fail-open＝MB運営カレンダーの再連携が必要）。
 
   // (2) 自分の予約済み案件
   const { data: booked } = await supabase
@@ -55,7 +56,8 @@ export async function GET() {
         await admin.from('mb_calendar').update({ oauth_tokens: updated }).eq('id', 1)
       })
       busy.push(...await getFreeBusy(accessToken, 'primary', now, horizon))
-    } catch { /* fallback */ }
+      busyChecked = true
+    } catch { /* fallback：トークン失効/復号失敗等。busyChecked=false のまま＝可視化 */ }
   }
 
   const WD = ['日', '月', '火', '水', '木', '金', '土']
@@ -75,5 +77,5 @@ export async function GET() {
     if (nextDay && i >= DISPLAY_DAYS) break
   }
 
-  return NextResponse.json({ connected, days, nextDay })
+  return NextResponse.json({ connected, busyChecked, days, nextDay })
 }

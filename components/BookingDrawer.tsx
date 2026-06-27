@@ -88,10 +88,9 @@ export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail
           <p style={{ padding: '28px 0', textAlign: 'center', color: 'var(--muted2)', fontSize: '.78rem' }}>空き枠を読み込み中…</p>
         ) : days.length === 0 ? (
           <div style={{ padding: '20px 0', textAlign: 'center' }}>
-            <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 14 }}>
-              空き枠が見つかりませんでした。{connected ? '受付時間帯をご確認ください。' : 'カレンダー連携・受付時間帯を設定してください。'}
+            <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.8 }}>
+              この期間に空き枠が見つかりませんでした。別の日付をお試しください。
             </p>
-            <a href="/app/calendar" className="btn btn-g" style={{ display: 'inline-block', textDecoration: 'none' }}>カレンダー設定を開く</a>
           </div>
         ) : (
           <>

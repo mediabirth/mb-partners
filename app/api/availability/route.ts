@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
   const timeMin = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
   const timeMax = new Date(Date.UTC(year, month - 1, day, 23, 59, 59))
   const busy: BusyBlock[] = []
+  let busyChecked = false   // 連携時に getFreeBusy が実際に成功したか（false＝fail-open＝MB運営カレンダーの再連携が必要）。
 
   // (2) 当該パートナーの予約済み案件（その日）
   const { data: booked } = await admin
@@ -50,11 +51,12 @@ export async function GET(req: NextRequest) {
         await admin.from('mb_calendar').update({ oauth_tokens: updated }).eq('id', 1)
       })
       busy.push(...await getFreeBusy(accessToken, 'primary', timeMin, timeMax))
-    } catch { /* fallback */ }
+      busyChecked = true
+    } catch { /* fallback：トークン失効/復号失敗等。busyChecked=false のまま＝可視化 */ }
   }
 
   let slots = calcAvailableSlots(date, avail, busy)
   const now = Date.now()
   slots = slots.filter(s => new Date(s.start).getTime() > now + 30 * 60_000)
-  return NextResponse.json({ slots, connected })
+  return NextResponse.json({ slots, connected, busyChecked })
 }
