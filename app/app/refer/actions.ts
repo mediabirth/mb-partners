@@ -61,6 +61,9 @@ export async function submitPartnerReferral(formData: FormData) {
   const customerEmail = ((formData.get('customerEmail') as string) || '').trim()
   const memo         = formData.get('memo') as string
   const channel      = (formData.get('channel') as string) || 'referral'
+  // ③ 対応範囲の項目別同意（協力時・任意・additive）。チェック済みラベル＋同意時刻のjsonb文字列。
+  // ④報酬ゲート(deal_tasks/requiredTasksDone)・帰属(partner_id)・money とは無関係の証跡。
+  const coverageAgreedRaw = (formData.get('coverageAgreed') as string) || ''
   // L3: 相談案件（サービス未定で起票）。service_id=null・明細ゼロ・is_consultation=true。
   const isConsultation = formData.get('isConsultation') === '1'
 
@@ -135,6 +138,17 @@ export async function submitPartnerReferral(formData: FormData) {
   if (customerType === 'corporate' && contactTitle) {
     const { error: titleErr } = await supabase.from('deals').update({ contact_title: contactTitle }).eq('id', deal!.id)
     if (titleErr) { /* 列未追加(DDL前) 等は無視 */ }
+  }
+
+  // ③: 協力の対応範囲 項目別同意を記録（任意・additive・揉め防止の証跡）。
+  // coverage_agreed 列が未追加(DDL前)でも deal 作成を壊さない best-effort。
+  // ★④報酬ゲート(deal_tasks)・帰属(partner_id)・money には一切触れない申込時UI同意の記録。
+  if (channel === 'cooperation' && coverageAgreedRaw) {
+    try {
+      const parsed = JSON.parse(coverageAgreedRaw)
+      const { error: covErr } = await supabase.from('deals').update({ coverage_agreed: parsed }).eq('id', deal!.id)
+      if (covErr) { /* 列未追加(DDL前) 等は無視 */ }
+    } catch { /* 不正JSONは無視 — 申込は成立させる（後方互換） */ }
   }
 
   // L3: 相談案件は明細ゼロ・タスクなしで起票（面談後に運営が明細追加→そのとき service/タスクを割当）。

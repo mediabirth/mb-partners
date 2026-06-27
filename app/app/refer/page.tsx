@@ -8,6 +8,7 @@ import PushOptIn from '@/components/PushOptIn'
 import { trackFunnel } from '@/lib/funnel-client'
 import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
+import { coverageDesc } from '@/lib/coverage-descriptions'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
 type Step = 'service' | 'menu' | 'form' | 'consult'
@@ -83,6 +84,8 @@ export default function ReferPage() {
   const [customerEmail, setCustomerEmail] = useState('')
   const [memo, setMemo]                   = useState('')
   const [consent, setConsent]             = useState(false)
+  // ③ 協力の対応範囲 項目別同意（included項目のチェック済みラベル）。申込時UI同意・記録保存用。
+  const [covChecked, setCovChecked]       = useState<string[]>([])
   // L3: 相談（サービス未定）起票用
   const [consultNote, setConsultNote]     = useState('')
   const [consultCoop, setConsultCoop]     = useState(false)
@@ -146,7 +149,7 @@ export default function ReferPage() {
   // 協力 is per-menu now: selecting a 協力 option must set selMenu (so deal records menu_id)
   // AND coopMode=true (so channel='cooperation'). Do NOT change handleSubmit.
   function pickCoop(m: MenuRow) {
-    setSelMenu(m); setCoopMode(true); setStep('form')
+    setSelMenu(m); setCoopMode(true); setCovChecked([]); setStep('form')
   }
 
   function loadToken(serviceId: string) {
@@ -209,6 +212,7 @@ export default function ReferPage() {
     setError('')
     const ce = customerError(); if (ce) { setError(ce); return }
     if (!consent) { setError('顧客の同意確認が必要です'); return }
+    if (coopMode && !allCoverageChecked) { setError('対応範囲の各項目をご確認ください'); return }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
@@ -216,6 +220,7 @@ export default function ReferPage() {
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', coopMode ? 'cooperation' : 'referral')
+    if (coopMode) fd.set('coverageAgreed', coverageAgreedPayload())
     startTransition(async () => {
       try {
         const res = await submitPartnerReferral(fd)
@@ -251,6 +256,7 @@ export default function ReferPage() {
   // 協力「自分で予約」: 予約確定の瞬間に協力deal を作成して dealId を返す（同意内包）
   async function coopCreateDeal(): Promise<string | null> {
     const ce = customerError(); if (ce) { setError(ce); return null }
+    if (!allCoverageChecked) { setError('対応範囲の各項目をご確認ください'); return null }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
@@ -258,6 +264,7 @@ export default function ReferPage() {
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', 'cooperation')
+    fd.set('coverageAgreed', coverageAgreedPayload())
     try { const res = await submitPartnerReferral(fd); return res?.dealId ?? null } catch { return null }
   }
 
@@ -265,13 +272,21 @@ export default function ReferPage() {
     setDone(false); setStep('service'); setShowSelfBook(false)
     setSelSvc(null); setSelMenu(null); setCoopMode(false)
     setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName(''); setContactTitle('')
-    setPhone(''); setCustomerEmail(''); setMemo(''); setConsent(false); setError('')
+    setPhone(''); setCustomerEmail(''); setMemo(''); setConsent(false); setCovChecked([]); setError('')
     setConsultNote(''); setConsultCoop(false)
     setToken(null); setShowQR(false); setDealId(null); setShowBooking(false); setBookedAt(null)
   }
 
   const linkUrl    = token       ? `${location.origin}/r/${token}` : ''
   const bookingUrl = partnerCode ? `${location.origin}/book/${partnerCode}` : ''
+
+  // ③ 協力時の対応範囲（included のみ）。各項目に静的説明＋項目別チェックを出す。
+  const coopCoverage = coopMode ? (selMenu?.coop_coverage ?? []).filter(s => s.included) : []
+  const allCoverageChecked = coopCoverage.every(s => covChecked.includes(s.label))
+  const coverageGateOk = !coopMode || allCoverageChecked   // 紹介は従来通り（ゲート無し）。協力は全included項目チェック必須。
+  const toggleCov = (label: string) =>
+    setCovChecked(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label])
+  const coverageAgreedPayload = () => JSON.stringify({ labels: covChecked, at: new Date().toISOString() })
 
   if (done) {
     const hl = rewardHighlight(selMenu, coopMode)
@@ -550,7 +565,7 @@ export default function ReferPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
                   <span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} /><span style={{ fontSize: '.56rem', color: '#7676B0', fontWeight: 700 }}>または</span><span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} />
                 </div>
-                <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } setError(''); setShowSelfBook(true) }}
+                <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } if (!allCoverageChecked) { setError('自分で予約する前に、下の「対応範囲の確認」で各項目をご確認ください'); return } setError(''); setShowSelfBook(true) }}
                   className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>自分で予約する</button>
                 {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
               </>
@@ -610,6 +625,33 @@ export default function ReferPage() {
                 <label>メモ（任意）</label>
                 <input value={memo} onChange={e => setMemo(e.target.value)} placeholder={coopMode ? '担当可能なエリア・スケジュール等' : '7月に引越し希望 など'} />
               </div>
+              {/* ③ 対応範囲の確認（協力時のみ）。included項目を個別に説明＋項目ごとに同意チェック。後で揉めない最も厳密な同意。 */}
+              {coopMode && coopCoverage.length > 0 && (
+                <div style={{ border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '13px 14px', marginBottom: 12, background: '#fff' }}>
+                  <div style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--blue-dk)', marginBottom: 3 }}>対応範囲の確認</div>
+                  <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '0 0 11px', lineHeight: 1.6 }}>
+                    あなたが担う各項目をご確認のうえ、すべてにチェックしてください。
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {coopCoverage.map(s => {
+                      const on = covChecked.includes(s.label)
+                      const desc = coverageDesc(s.label)
+                      return (
+                        <label key={s.label} htmlFor={`cov-${s.label}`}
+                          style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 11px', borderRadius: 10, cursor: 'pointer',
+                            border: `1.5px solid ${on ? 'var(--blue)' : 'var(--line)'}`, background: on ? 'var(--blue-bg2)' : '#fff' }}>
+                          <input type="checkbox" id={`cov-${s.label}`} checked={on} onChange={() => toggleCov(s.label)}
+                            style={{ marginTop: 1, accentColor: 'var(--c-blue)', width: 15, height: 15, flexShrink: 0 }} />
+                          <span>
+                            <span style={{ display: 'block', fontSize: '.7rem', fontWeight: 800, color: 'var(--txt)' }}>{s.label}</span>
+                            {desc && <span style={{ display: 'block', fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.55 }}>{desc}</span>}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
                 <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }}/>
                 <label htmlFor="consent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}>
@@ -617,7 +659,7 @@ export default function ReferPage() {
                 </label>
               </div>
               {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-              <button type="submit" disabled={pending || !consent} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>
+              <button type="submit" disabled={pending || !consent || !coverageGateOk} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>
                 {pending ? '送信中…' : (coopMode ? 'この案件に協力する' : 'この内容で紹介する')}
               </button>
             </form>
