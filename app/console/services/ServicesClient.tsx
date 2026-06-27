@@ -394,81 +394,10 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
         <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例: 賃貸成約時" />
       </Fld>
 
-      {/* ── ② 紹介（referral） — 青 ── */}
-      <SectionHeader title="② つなぐ（固定報酬）" style={{ marginTop: 16, marginBottom: 6 }} />
-      <div style={{ background: 'var(--blue-bg)', border: '1px solid #DDE2FF', borderRadius: 10, padding: 13, marginTop: 4 }}>
-        <RewardBlockHead chip={<RefChip />} title="つなぐ（固定報酬）" val={f.ref_enabled} onToggle={v => set({ ref_enabled: v })} />
-
-        {f.ref_enabled && (
-          <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid #DDE2FF' }}>
-            <Fld label="報酬タイプ">
-              <TypeSeg value={f.ref_type} onChange={t => set({ ref_type: t })} accent="blue" />
-            </Fld>
-
-            {f.ref_type === 'fixed' ? (
-              <Fld label="金額（円）">
-                <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="30000" type="number" />
-              </Fld>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="率（%）">
-                  <FInput value={f.ref_value} onChange={v => set({ ref_value: v })} placeholder="10" type="number" />
-                </Fld>
-                <Fld label="基準">
-                  <FSelect value={f.ref_base} onChange={v => set({ ref_base: v })}
-                    options={BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="選択" />
-                </Fld>
-              </div>
-            )}
-
-            <Fld label="報酬発生条件（成果地点）">
-              <FInput value={f.ref_trigger} onChange={v => set({ ref_trigger: v })} placeholder="例: 賃貸成約で確定" />
-            </Fld>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <Fld label="資格条件（任意）">
-                <FInput value={f.qualification} onChange={v => set({ qualification: v })} placeholder="例: 宅建業免許" />
-              </Fld>
-              <Fld label="継続（任意・ヶ月）">
-                <FInput value={f.ref_months} onChange={v => set({ ref_months: v })} placeholder="例: 12" type="number" />
-              </Fld>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── ③ 協力（per-menu cooperation） — 濃色 ── */}
-      <SectionHeader title="③ 伴走（成果報酬）" style={{ marginTop: 16, marginBottom: 6 }} />
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13, marginTop: 4 }}>
-        <RewardBlockHead chip={<CoopChip />} title="伴走（成果報酬）" val={f.coop_enabled} onToggle={v => set({ coop_enabled: v })} />
-
-        {f.coop_enabled && (
-          <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid var(--line)' }}>
-            <Fld label="報酬タイプ">
-              <TypeSeg value={f.coop_type} onChange={t => set({ coop_type: t })} accent="dark" />
-            </Fld>
-
-            {f.coop_type === 'fixed' ? (
-              <Fld label="金額（円）">
-                <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50000" type="number" />
-              </Fld>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Fld label="料率（%）">
-                  <FInput value={f.coop_value} onChange={v => set({ coop_value: v })} placeholder="50" type="number" />
-                </Fld>
-                <Fld label="基準">
-                  <FSelect value={f.coop_base} onChange={v => set({ coop_base: v })}
-                    options={COOP_BASE_OPTIONS.map(b => ({ v: b, l: b }))} placeholder="粗利" />
-                </Fld>
-              </div>
-            )}
-
-            <Fld label="資格条件（任意）">
-              <FInput value={f.coop_condition} onChange={v => set({ coop_condition: v })} placeholder="例: 宅建業免許が必要" />
-            </Fld>
-          </div>
-        )}
+      {/* 段階6-2b：旧②③（紹介報酬/協力報酬の2セクション編集）は撤去。報酬は「D. メニュー（1報酬）」で設定。
+          旧 service_menus の ref/coop 系カラムは read-only 凍結（既存値はそのまま保持・新規には書かれない・DROPはしない）。 */}
+      <div style={{ marginTop: 12, padding: '11px 13px', background: 'var(--blue-bg2)', border: '1px dashed var(--blue-bg)', borderRadius: 10, fontSize: '.66rem', color: 'var(--blue-dk)', lineHeight: 1.6 }}>
+        報酬は下の<b>「D. メニュー（1報酬）」</b>で設定します（固定◯円 or 粗利◯%・任意数）。旧「紹介報酬／協力報酬」の2区分は廃止しました。
       </div>
 
       {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '10px 0 0' }}>{error}</p>}
