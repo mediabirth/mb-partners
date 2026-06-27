@@ -223,6 +223,8 @@ export default function DealsPage() {
   const [baseInput, setBaseInput] = useState('')
   // ① edit 実績金額 from the detail panel (any status)
   const [editingBase, setEditingBase] = useState(false)
+  // ② IA再構成：詳細ドロワーのタブ（概要/進行/金額・原価）。表示のグルーピングのみ・ハンドラ非接触。
+  const [detailTab, setDetailTab] = useState<'overview' | 'progress' | 'money'>('overview')
   const [baseEdit, setBaseEdit] = useState('')
   // N: 不成立化モーダル（理由＋メモ）
   const [lostModal, setLostModal] = useState<Deal | null>(null)
@@ -282,6 +284,9 @@ export default function DealsPage() {
     fetch(`/api/console/deals/${selected.id}/tasks`).then(r => r.ok ? r.json() : { tasks: [] }).then(d => { if (alive) setDealTasks(d.tasks ?? []) }).catch(() => {})
     return () => { alive = false }
   }, [selected])
+
+  // ② 案件を切り替えたらタブを「概要」に戻す（表示状態のリセットのみ）。
+  useEffect(() => { setDetailTab('overview'); setEditingBase(false) }, [selected?.id])
 
   // ④ 管理側で done を立て/外す（done_by=管理者）。requiredTasksDone・確定ゲート・レート計算は不変（done値を書くだけ）。
   async function toggleDealTask(taskId: string, next: boolean) {
@@ -885,7 +890,55 @@ export default function DealsPage() {
             <div className="cascade" style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
               {/* R-a：読み取り専用の進捗ステッパー（現在statusをハイライト・変更導線なし） */}
               <DealStepper status={selected.status} />
-              {[
+
+              {/* ② 次にすること：現 status を読むだけで主要操作を1つ提示。既存ハンドラ(updateStatus/reopenDeal)を呼ぶショートカット。新しい遷移/計算なし。 */}
+              {(() => {
+                const st = selected.status
+                const noItems = (selected.deal_items?.length ?? 0) === 0
+                let act: { label: string; onClick: () => void; hint?: string } | null = null
+                if (st === 'received') act = { label: '対応中にする', onClick: () => updateStatus(selected, 'in_progress') }
+                else if (st === 'in_progress') act = noItems
+                  ? { label: '明細を追加して成約へ', onClick: () => setDetailTab('money'), hint: '成約には明細が1つ以上必要です。' }
+                  : { label: '成約を確定する', onClick: () => updateStatus(selected, 'confirmed') }
+                else if (st === 'confirmed') act = { label: '支払済にする', onClick: () => updateStatus(selected, 'paid') }
+                else if (st === 'lost') {
+                  const days = selected.lost_at ? Math.floor((Date.now() - new Date(selected.lost_at).getTime()) / 86_400_000) : null
+                  if (days != null && days <= 90) act = { label: '対応中に戻す（復活）', onClick: () => reopenDeal(selected) }
+                }
+                const baseNeeded = rateInfo(selected).isRate && selected.base_amount == null && st !== 'lost' && st !== 'paid'
+                if (!act && !baseNeeded) return null
+                return (
+                  <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12 }}>
+                    <p style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--blue-dk)', letterSpacing: '.06em', marginBottom: 8 }}>次にすること</p>
+                    {act && (
+                      <button onClick={act.onClick} disabled={pending} className="btn btn-p" style={{ width: '100%', fontSize: '.76rem', padding: '10px 14px' }}>
+                        {act.label}
+                      </button>
+                    )}
+                    {act?.hint && <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.5 }}>{act.hint}</p>}
+                    {baseNeeded && (
+                      <button onClick={() => setDetailTab('progress')} className="btn btn-g" style={{ width: '100%', fontSize: '.72rem', padding: '8px 14px', marginTop: act ? 8 : 0 }}>
+                        実績金額を入力する
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* ② タブ：概要（見るだけ）／進行（状態を進める）／金額・原価（明細・P&L）。中身は同じJSX・同じハンドラを箱に振り分けるだけ。 */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg2)', borderRadius: 10, padding: 3 }}>
+                {([['overview', '概要'], ['progress', '進行'], ['money', '金額・原価']] as const).map(([k, l]) => (
+                  <button key={k} type="button" onClick={() => setDetailTab(k)}
+                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 800,
+                      background: detailTab === k ? '#fff' : 'transparent', color: detailTab === k ? 'var(--c-blue)' : 'var(--muted2)',
+                      boxShadow: detailTab === k ? '0 1px 3px rgba(14,14,20,.08)' : 'none' }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+
+              {/* 概要：基本情報（表示専用） */}
+              {detailTab === 'overview' && [
                 ['サービス', selected.services?.name ?? '相談（サービス未定）'],
                 ['チャネル', selected.channel === 'referral' ? '紹介' : selected.channel === 'direct' ? '直販' : '協力'],
                 ['ソース', selected.source],
@@ -901,15 +954,15 @@ export default function DealsPage() {
               ))}
 
               {/* ②c B2B: 法人の部署・役職を additive 表示（無い場合は非表示＝従来通り） */}
-              {selected.contact_title && (
+              {detailTab === 'overview' && selected.contact_title && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted2)' }}>部署・役職</span>
                   <span style={{ fontWeight: 700, textAlign: 'right' }}>{selected.contact_title}</span>
                 </div>
               )}
 
-              {/* F-1: フェーズ／流入経路バッジ ＋ プロジェクト実行ステータス（お金に非干渉の独立メタデータ） */}
-              {(() => {
+              {/* F-1: フェーズ／流入経路バッジ ＋ プロジェクト実行ステータス（お金に非干渉の独立メタデータ）【進行タブ】 */}
+              {detailTab === 'progress' && (() => {
                 const phase = selected._phase ?? phaseOf(selected)
                 const intake = selected.intake_type ?? 'referral_coop'
                 const ph = PHASE_STYLE[phase]
@@ -948,8 +1001,8 @@ export default function DealsPage() {
                 )
               })()}
 
-              {/* L2: 明細（サービス×金額）＋合計。成約前(received/in_progress)のみ編集可。 */}
-              {(() => {
+              {/* L2: 明細（サービス×金額）＋合計。成約前(received/in_progress)のみ編集可。【金額・原価タブ】 */}
+              {detailTab === 'money' && (() => {
                 const items = selected.deal_items ?? []
                 const editable = ['received', 'in_progress'].includes(selected.status)
                 const svc = svcMenus.find(s => s.id === itemForm.service_id)
@@ -1110,25 +1163,25 @@ export default function DealsPage() {
                 )
               })()}
 
-              {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。 */}
+              {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。【金額・原価タブ】 */}
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />
+              {detailTab === 'money' && <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />}
 
-              {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）。 */}
-              {selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
+              {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）。【概要タブ・表示専用】 */}
+              {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
                 <div style={{ marginTop: 14, padding: '11px 14px', background: 'var(--amber-bg)', borderRadius: 10 }}>
                   <p style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--amber)' }}>報酬レート：要件未達 → 紹介レート適用</p>
                   <p style={{ fontSize: '.64rem', color: 'var(--txt)', marginTop: 4, lineHeight: 1.6 }}>{selected.reward_snapshot.gate_reason}</p>
                 </div>
               )}
-              {selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
+              {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
                 <div style={{ marginTop: 14, padding: '9px 14px', background: 'var(--green-bg)', borderRadius: 10 }}>
                   <p style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--green)' }}>協力タスク達成 → 協力レート適用</p>
                 </div>
               )}
 
-              {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。 */}
-              {selected.channel === 'cooperation' && dealTasks.length > 0 && (
+              {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。【進行タブ】 */}
+              {detailTab === 'progress' && selected.channel === 'cooperation' && dealTasks.length > 0 && (
                 <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 10 }}>
                   <p style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 2 }}>対応範囲（協力タスク）</p>
                   <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて達成すると協力レートが確定）。</p>
@@ -1151,8 +1204,8 @@ export default function DealsPage() {
                 </div>
               )}
 
-              {/* ① 実績金額（率案件）— 常時表示・編集 */}
-              {rateInfo(selected).isRate && (
+              {/* ① 実績金額（率案件）— 編集（base_amount→報酬再計算は不変）。【進行タブ】 */}
+              {detailTab === 'progress' && rateInfo(selected).isRate && (
                 <div style={{ marginTop: 18, padding: '14px 16px', background: 'var(--bg2)', borderRadius: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
@@ -1200,7 +1253,8 @@ export default function DealsPage() {
                 </div>
               )}
 
-              {selected.status === 'lost' ? (
+              {/* 進行タブ：不成立詳細＋復活／ステータス変更＋管理操作（ハンドラ不変） */}
+              {detailTab === 'progress' && (selected.status === 'lost' ? (
                 /* N: 不成立の詳細＋再開 */
                 <div style={{ marginTop: 18 }}>
                   <div style={{ padding: '13px 15px', background: 'var(--red-bg)', borderRadius: 12 }}>
@@ -1263,7 +1317,7 @@ export default function DealsPage() {
                     </div>
                   )}
                 </>
-              )}
+              ))}
             </div>
           </div>
         </>
