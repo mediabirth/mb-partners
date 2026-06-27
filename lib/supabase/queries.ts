@@ -242,6 +242,21 @@ export type MenuRow = {
 
 export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }
 
+// 段階1：新「メニュー（1メニュー1報酬）」層の型。現 service_menus(=新「サービス」)の子。
+// ★スキーマ追加のみ・画面未使用（バックフィル/表示は後続段階）。既存読み書きには一切関与しない。
+export type Menu = {
+  id: string
+  service_menu_id: string          // 親＝現 service_menus（新「サービス」）
+  name: string
+  reward_type: 'fixed' | 'rate'
+  reward_value: number
+  reward_base: string | null       // rate時の基準（基本 '粗利'）
+  reward_trigger: string | null    // 成果地点
+  sort: number
+  active: boolean
+  created_at: string
+}
+
 export type DealRow = {
   id: string; customer_name: string; channel: string; source: string
   customer_type?: string | null; company_name?: string | null; contact_name?: string | null
