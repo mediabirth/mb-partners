@@ -9,6 +9,7 @@ import { trackFunnel } from '@/lib/funnel-client'
 import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
 import { coverageDesc } from '@/lib/coverage-descriptions'
+import { engagementLabelByKind } from '@/lib/engagement-labels'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
 type Step = 'service' | 'menu' | 'form' | 'consult'
@@ -64,7 +65,7 @@ function RefChip({ name }: { name: string }) {
 }
 
 function CoopBadge() {
-  return <span className="chip chip-cooperation">協力</span>
+  return <span className="chip chip-cooperation">伴走</span>
 }
 
 export default function ReferPage() {
@@ -297,7 +298,7 @@ export default function ReferPage() {
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="2.2"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
         <h2 style={{ fontSize: '1.12rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-.01em' }}>
-          {coopMode ? 'お預かりしました' : 'ご紹介ありがとうございます'}
+          {coopMode ? 'お預かりしました' : 'お申し込みありがとうございます'}
         </h2>
         <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 18 }}>
           MBが内容を確認し、次のステップへご案内します。
@@ -317,7 +318,7 @@ export default function ReferPage() {
 
         {/* 次の一歩 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
-          <button onClick={resetForNext} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>続けて紹介する</button>
+          <button onClick={resetForNext} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>続けて登録する</button>
           {dealId && !bookedAt && (
             <button onClick={() => setShowBooking(true)} className="ui-btn ui-btn--secondary ui-btn--lg lift" style={{ width: '100%' }}>商談を設定する（任意）</button>
           )}
@@ -395,7 +396,7 @@ export default function ReferPage() {
             <div className="fld">
               <label>関わり方</label>
               <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 4 }}>
-                {[['ref', '紹介'], ['coop', '協力']].map(([v, l]) => (
+                {[['ref', engagementLabelByKind('ref')], ['coop', engagementLabelByKind('coop')]].map(([v, l]) => (
                   <button type="button" key={v} onClick={() => setConsultCoop(v === 'coop')} style={{ flex: 1, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, padding: '9px 2px', borderRadius: 8, color: (v === 'coop') === consultCoop ? 'var(--txt)' : 'var(--muted2)', background: (v === 'coop') === consultCoop ? '#fff' : 'transparent', boxShadow: (v === 'coop') === consultCoop ? '0 2px 8px rgba(14,14,20,.08)' : 'none' }}>{l}</button>
                 ))}
               </div>
@@ -452,7 +453,7 @@ export default function ReferPage() {
             </div>
             <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのかたちで関わりますか?</h2>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
-              メニューごとに「紹介」か「協力」を選べます。あなたに合うかたちで。
+              メニューごとに関わり方（つなぐ／伴走）を選べます。あなたに合うかたちで。
             </p>
           </div>
           {/* B2: メニュー単位グルーピング。各メニュー見出しの下に 紹介/協力 の選択肢 */}
@@ -485,16 +486,16 @@ export default function ReferPage() {
             ← 戻る
           </button>
           <div style={{ padding: '10px 20px 6px' }}>
-            <div className="eyebrow">{selSvc.name}{selMenu ? ` — ${selMenu.name}` : coopMode ? ' — 協力' : ''}</div>
+            <div className="eyebrow">{selSvc.name}{selMenu ? ` — ${selMenu.name}` : coopMode ? ' — 伴走' : ''}</div>
             <h2 style={{ fontSize: '.96rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>
-              {coopMode ? '協力を申し込む' : 'お客さまを紹介する'}
+              {coopMode ? '伴走を申し込む' : 'お客さまをつなぐ'}
             </h2>
           </div>
 
           {/* ⑥ 報酬は控えめに添える */}
           {rewardHighlight(selMenu, coopMode) && (
             <div style={{ margin: '6px 20px 14px', display: 'flex', alignItems: 'baseline', gap: 8, color: 'var(--muted)' }}>
-              <span style={{ fontSize: '.66rem' }}>{coopMode ? '協力報酬の目安' : '紹介報酬の目安'}</span>
+              <span style={{ fontSize: '.66rem' }}>報酬の目安</span>
               <span style={{ fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, color: 'var(--txt)' }}>{rewardHighlight(selMenu, coopMode)}</span>
               <span style={{ fontSize: '.6rem' }}>（成約時）</span>
             </div>
@@ -702,7 +703,7 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
   // ③ 対応範囲タグの単一ソース＝required協力タスク（系統A coverage_steps/coop_coverage は廃止）。
   const cov   = (menu.coverage_tasks ?? []).map((label: string) => ({ label }))
   const cond  = isRef ? menu.qualification : menu.coop_condition
-  const label = isRef ? '紹介' : '協力'
+  const label = engagementLabelByKind(kind)
   const chipCls = isRef ? 'chip-referral' : 'chip-cooperation'
   const reward = fixed ? `¥${val.toLocaleString()}` : `${val}%${base ? `・${base}` : ''}`
 
@@ -715,6 +716,7 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
         <span style={{ marginLeft: 'auto', fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{reward}</span>
         <span style={{ color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>›</span>
       </div>
+      {menu.ref_trigger && <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '7px 0 0', lineHeight: 1.5 }}>成果地点：{menu.ref_trigger}</p>}
       {cov.length > 0 && (
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 9 }}>
           {cov.map((s: { label: string }) => (

@@ -7,7 +7,7 @@ function CatChip({ cat }: { cat: 'referral' | 'cooperation' }) {
   const isRef = cat === 'referral'
   return (
     <span className={`chip ${isRef ? 'chip-referral' : 'chip-cooperation'}`} style={{ flexShrink: 0 }}>
-      {isRef ? '紹介' : '協力'}
+      {isRef ? 'つなぐ' : '伴走'}
     </span>
   )
 }

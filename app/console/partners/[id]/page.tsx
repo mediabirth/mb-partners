@@ -206,10 +206,10 @@ export default async function PartnerDetailPage({
           {/* Channel breakdown strip */}
           {totalDeals > 0 && (
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', gap: 24 }}>
-              <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', alignSelf: 'center' }}>チャネル内訳</span>
+              <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', alignSelf: 'center' }}>かたち別内訳</span>
               {[
-                { label: '紹介',   count: referralDeals, chip: 'chip chip-referral' },
-                { label: '協力',   count: coopDeals,     chip: 'chip chip-cooperation' },
+                { label: 'つなぐ', count: referralDeals, chip: 'chip chip-referral' },
+                { label: '伴走',   count: coopDeals,     chip: 'chip chip-cooperation' },
                 { label: '直接',   count: directDeals,   chip: 'chip chip-direct' },
               ].filter(c => c.count > 0).map(c => (
                 <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

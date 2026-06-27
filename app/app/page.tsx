@@ -85,7 +85,7 @@ export default async function AppPage() {
       ? `確定報酬 ¥${nextPayoutAmt.toLocaleString()} が次回振込にのります。`
       : active.length > 0
         ? 'いい調子です。進行中の案件が成約すると報酬になります。'
-        : '次の紹介で、新しい報酬が生まれます。'
+        : '次のご案内で、新しい報酬が生まれます。'
 
   // Recent feed
   const dealMap = Object.fromEntries(deals.map(d => [d.id, d]))
@@ -177,12 +177,12 @@ export default async function AppPage() {
       {isEmpty && (
         <div className="page-anim" style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '26px 22px', textAlign: 'center' }}>
           <div className="celebrate-pop" style={{ fontSize: '2.2rem', marginBottom: 10 }} aria-hidden>✨</div>
-          <b style={{ fontSize: '.92rem', display: 'block', marginBottom: 6 }}>最初の紹介をしてみよう</b>
+          <b style={{ fontSize: '.92rem', display: 'block', marginBottom: 6 }}>最初のご案内をしてみよう</b>
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 16 }}>
             知り合いをひとり思い浮かべて、つなぐだけ。あとはMBが対応します。
           </p>
           <Link href="/app/refer" className="btn btn-p lift" style={{ display: 'inline-block', textDecoration: 'none', padding: '11px 26px' }}>
-            紹介をはじめる
+            はじめる
           </Link>
         </div>
       )}
@@ -237,7 +237,7 @@ export default async function AppPage() {
                     {t.label}
                   </div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
-                    {d ? customerHonorific(d) : '協力案件'}{d?.services?.name ? ` · ${d.services.name}` : ''}
+                    {d ? customerHonorific(d) : '案件'}{d?.services?.name ? ` · ${d.services.name}` : ''}
                   </div>
                 </div>
                 {t.remaining > 0 && (
@@ -266,7 +266,7 @@ export default async function AppPage() {
           {recentEvents.length === 0 ? (
             <p style={{ padding: '16px 14px', fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>
               最近のアクティビティはありません。<br/>
-              「紹介する」ボタンから案件を登録してみましょう。
+              「はじめる」ボタンから案件を登録してみましょう。
             </p>
           ) : recentEvents.slice(0, 5).map(e => {
             const deal = (e as { deal?: typeof dealMap[string] }).deal ?? dealMap[e.deal_id]

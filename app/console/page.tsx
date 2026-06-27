@@ -151,7 +151,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
   // お金の内訳（今月）— 受注額 → 各コスト → 残るMB粗利
   const costLines = [
-    { label: 'パートナー報酬（紹介/協力）', val: cur.partnerReward, color: 'var(--c-blue)' },
+    { label: 'パートナー報酬', val: cur.partnerReward, color: 'var(--c-blue)' },
     { label: 'フロンティアoverride', val: cur.frontierOverride, color: 'var(--blue-dk)' },
     { label: 'デリバリー委託費', val: cur.deliveryCost, color: 'var(--amber)' },
     { label: 'デリバリー経費（承認済）', val: cur.deliveryExpense, color: 'var(--amber)' },
@@ -389,7 +389,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             {/* 流入経路（件数・受注額・成約率を1ブロックに統合） */}
             <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
               <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>流入経路（件数・受注額・成約率）</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>紹介・協力／直営業の強み・弱み</div>
+              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>パートナー経由／直営業の強み・弱み</div>
               {intakeRate.map((r, i) => (
                 <div key={r.intake} style={{ padding: '9px 0', borderBottom: i < intakeRate.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>

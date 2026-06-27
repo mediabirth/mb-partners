@@ -10,6 +10,7 @@ import StatusPill from '@/components/ui/StatusPill'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill, DEAL_STATUS } from '@/lib/status'
+import { engagementLabel } from '@/lib/engagement-labels'
 import DeliveryProgress from './DeliveryProgress'
 
 type Deal = {
@@ -716,7 +717,7 @@ export default function DealsPage() {
         {view === 'board' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', padding: '12px 32px 0' }}>
             {([
-              ['流入経路', filterIntake, setFilterIntake, [['all', 'すべて'], ['referral_coop', '紹介・協力'], ['direct', '直営業']]],
+              ['流入経路', filterIntake, setFilterIntake, [['all', 'すべて'], ['referral_coop', 'パートナー経由'], ['direct', '直営業']]],
               ['フェーズ', filterPhase, setFilterPhase, [['all', 'すべて'], ['shodan', '商談'], ['project', 'プロジェクト']]],
             ] as const).map(([label, val, setter, opts]) => (
               <select key={label} value={val} onChange={e => setter(e.target.value)} aria-label={label}
@@ -841,7 +842,7 @@ export default function DealsPage() {
                       //   種別・ステージ・フェーズ・ステータスは載せない（レーンで分かる）。詳細は案件詳細へ。
                       const intake = d.intake_type ?? 'referral_coop'
                       const partnerName = intake !== 'direct' && d.partners?.profiles ? d.partners.profiles.name : null
-                      const partnerKindLabel = d.channel === 'cooperation' ? '協力' : '紹介'
+                      const partnerKindLabel = engagementLabel(d.channel)
                       const directorName = d.director_id ? (directors.find(x => x.id === d.director_id)?.name ?? null) : null
                       const deliveryName = (d._deliveries ?? []).find(a => a.delivery_id)?.deliveries?.name ?? null
                       const rejectedExp = (d._deliveries ?? []).some(a => (a._expenses ?? []).some(e => e.status === 'rejected'))
@@ -940,7 +941,7 @@ export default function DealsPage() {
               {/* 概要：基本情報（表示専用） */}
               {detailTab === 'overview' && [
                 ['サービス', selected.services?.name ?? '相談（サービス未定）'],
-                ['チャネル', selected.channel === 'referral' ? '紹介' : selected.channel === 'direct' ? '直販' : '協力'],
+                ['かたち', engagementLabel(selected.channel)],
                 ['ソース', selected.source],
                 ['ステータス', COLS.find(c => c.key === selected.status)?.label ?? selected.status],
                 ['報酬予定', selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '未確定'],
@@ -1126,7 +1127,7 @@ export default function DealsPage() {
                         <div style={{ marginTop: 14, padding: '12px 15px', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12 }}>
                           <p style={{ fontSize: '.62rem', fontWeight: 800, color: 'var(--blue-dk)', marginBottom: 8 }}>プロジェクトP&L（表示専用）</p>
                           <Row label="受注額（売上合計）" val={pnl.revenue} />
-                          <Row label="紹介/協力報酬" val={pnl.partnerReward} minus />
+                          <Row label="パートナー報酬" val={pnl.partnerReward} minus />
                           <Row label="フロンティアoverride" val={pnl.frontierOverride} minus />
                           <Row label="その他原価" val={pnl.otherCost} minus />
                           <Row label="デリバリー委託費" val={pnl.deliveryCost} minus />
@@ -1170,21 +1171,21 @@ export default function DealsPage() {
               {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）。【概要タブ・表示専用】 */}
               {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
                 <div style={{ marginTop: 14, padding: '11px 14px', background: 'var(--amber-bg)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--amber)' }}>報酬レート：要件未達 → 紹介レート適用</p>
+                  <p style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--amber)' }}>対応範囲が未達のため、固定報酬で確定</p>
                   <p style={{ fontSize: '.64rem', color: 'var(--txt)', marginTop: 4, lineHeight: 1.6 }}>{selected.reward_snapshot.gate_reason}</p>
                 </div>
               )}
               {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
                 <div style={{ marginTop: 14, padding: '9px 14px', background: 'var(--green-bg)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--green)' }}>協力タスク達成 → 協力レート適用</p>
+                  <p style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--green)' }}>対応範囲をすべて満たし、成果報酬（粗利%）で確定</p>
                 </div>
               )}
 
               {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。【進行タブ】 */}
               {detailTab === 'progress' && selected.channel === 'cooperation' && dealTasks.length > 0 && (
                 <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 2 }}>対応範囲（協力タスク）</p>
-                  <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて達成すると協力レートが確定）。</p>
+                  <p style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 2 }}>対応範囲</p>
+                  <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて満たすと成果報酬＝粗利%が確定）。</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {[...dealTasks].sort((a, b) => a.sort - b.sort).map(t => {
                       const auto = t.kind !== 'manual'

@@ -395,9 +395,9 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
       </Fld>
 
       {/* ── ② 紹介（referral） — 青 ── */}
-      <SectionHeader title="② 紹介報酬" style={{ marginTop: 16, marginBottom: 6 }} />
+      <SectionHeader title="② つなぐ（固定報酬）" style={{ marginTop: 16, marginBottom: 6 }} />
       <div style={{ background: 'var(--blue-bg)', border: '1px solid #DDE2FF', borderRadius: 10, padding: 13, marginTop: 4 }}>
-        <RewardBlockHead chip={<RefChip />} title="紹介報酬" val={f.ref_enabled} onToggle={v => set({ ref_enabled: v })} />
+        <RewardBlockHead chip={<RefChip />} title="つなぐ（固定報酬）" val={f.ref_enabled} onToggle={v => set({ ref_enabled: v })} />
 
         {f.ref_enabled && (
           <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid #DDE2FF' }}>
@@ -438,13 +438,13 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
       </div>
 
       {/* ── ③ 協力（per-menu cooperation） — 濃色 ── */}
-      <SectionHeader title="③ 協力報酬" style={{ marginTop: 16, marginBottom: 6 }} />
+      <SectionHeader title="③ 伴走（成果報酬）" style={{ marginTop: 16, marginBottom: 6 }} />
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 10, padding: 13, marginTop: 4 }}>
-        <RewardBlockHead chip={<CoopChip />} title="協力報酬" val={f.coop_enabled} onToggle={v => set({ coop_enabled: v })} />
+        <RewardBlockHead chip={<CoopChip />} title="伴走（成果報酬）" val={f.coop_enabled} onToggle={v => set({ coop_enabled: v })} />
 
         {f.coop_enabled && (
           <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid var(--line)' }}>
-            <Fld label="協力タイプ">
+            <Fld label="報酬タイプ">
               <TypeSeg value={f.coop_type} onChange={t => set({ coop_type: t })} accent="dark" />
             </Fld>
 
@@ -490,11 +490,11 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
 // ─── Chips ────────────────────────────────────────────────────────────────────
 
 function RefChip() {
-  return <span className="chip chip-referral" style={{ flexShrink: 0 }}>紹介</span>
+  return <span className="chip chip-referral" style={{ flexShrink: 0 }}>つなぐ</span>
 }
 
 function CoopChip() {
-  return <span className="chip chip-cooperation" style={{ flexShrink: 0 }}>協力</span>
+  return <span className="chip chip-cooperation" style={{ flexShrink: 0 }}>伴走</span>
 }
 
 // Compact reward chip for the service list summary (紹介=青 / 協力=濃色).
@@ -508,7 +508,7 @@ function RewardChip({ kind, text }: { kind: 'ref' | 'coop'; text: string }) {
       background: ref ? 'var(--blue-bg)' : '#EBEBF0',
       color: ref ? 'var(--blue)' : 'var(--txt)',
     }}>
-      <span style={{ fontWeight: 800, opacity: .7, fontFamily: 'inherit' }}>{ref ? '紹介' : '協力'}</span>
+      <span style={{ fontWeight: 800, opacity: .7, fontFamily: 'inherit' }}>{ref ? 'つなぐ' : '伴走'}</span>
       {text}
     </span>
   )
@@ -616,8 +616,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     if (!svcForm.name) { setSvcError('サービス名を入力してください'); return }
     // インラインメニューの軽い検証（新規・withMenu・報酬入力時のみ）。
     if (!editing && withMenu) {
-      if (addRefValue && !(Number(addRefValue) > 0)) { setSvcError('紹介報酬（円）は0より大きい数値で入力してください'); return }
-      if (addCoopPct && !(Number(addCoopPct) > 0 && Number(addCoopPct) <= 100)) { setSvcError('協力報酬（粗利の%）は 0〜100 で入力してください'); return }
+      if (addRefValue && !(Number(addRefValue) > 0)) { setSvcError('つなぐ報酬（円）は0より大きい数値で入力してください'); return }
+      if (addCoopPct && !(Number(addCoopPct) > 0 && Number(addCoopPct) <= 100)) { setSvcError('伴走報酬（粗利の%）は 0〜100 で入力してください'); return }
     }
     setSvcError('')
     startTrans(async () => {
@@ -688,7 +688,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   async function saveMenu() {
     if (!menuForm.name) { setMenuError('メニュー名を入力してください'); return }
     if (!menuForm.ref_enabled && !menuForm.coop_enabled) {
-      setMenuError('紹介・協力のいずれかを有効にしてください'); return
+      setMenuError('つなぐ・伴走のいずれかを有効にしてください'); return
     }
     if (menuForm.ref_enabled && menuForm.ref_type === 'rate') {
       const v = Number(menuForm.ref_value)
@@ -697,8 +697,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     }
     if (menuForm.coop_enabled && menuForm.coop_type === 'rate') {
       const v = Number(menuForm.coop_value)
-      if (!v || v <= 0 || v > 100) { setMenuError('協力の料率は 0〜100% の範囲で入力してください'); return }
-      if (!menuForm.coop_base) { setMenuError('協力（料率）では基準を選択してください'); return }
+      if (!v || v <= 0 || v > 100) { setMenuError('伴走の料率は 0〜100% の範囲で入力してください'); return }
+      if (!menuForm.coop_base) { setMenuError('伴走（料率）では基準を選択してください'); return }
     }
     if (!editing) return
     setMenuSaving(true); setMenuError('')
@@ -796,8 +796,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 116px 116px', gap: 10, padding: '7px 14px', background: 'var(--bg2)', alignItems: 'center' }}>
                     <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>メニュー</span>
-                    <span style={{ textAlign: 'right' }}><span className="chip chip-referral">紹介報酬</span></span>
-                    <span style={{ textAlign: 'right' }}><span className="chip chip-cooperation">協力報酬</span></span>
+                    <span style={{ textAlign: 'right' }}><span className="chip chip-referral">つなぐ</span></span>
+                    <span style={{ textAlign: 'right' }}><span className="chip chip-cooperation">伴走</span></span>
                   </div>
                   {refMenus.map((menu, idx) => {
                     const mm = menu as MenuRow & {
@@ -889,7 +889,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             {/* ── B. 紹介メニュー（編集時のみ） ── */}
             {editing && (
               <>
-                <SectionLabel>B. 紹介メニューと報酬</SectionLabel>
+                <SectionLabel>B. メニューと報酬</SectionLabel>
 
                 {liveMenus.map((menu, i, arr) => (
                   <div key={menu.id}>
@@ -951,9 +951,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             {/* ── C. 対応範囲（協力タスク）＝ cooperation_task_templates。旧 /console/tasks を統合 ── */}
             {editing && (
               <>
-                <SectionLabel>C. 対応範囲（協力タスク）</SectionLabel>
+                <SectionLabel>C. 対応範囲</SectionLabel>
                 <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 8, lineHeight: 1.6 }}>
-                  協力チャネルで達成すべき項目を定義します。各項目は<b>手動</b>（パートナーが実施）／<b>自動</b>（案件の進行で自動達成）を選べます。協力レートのゲート判定に使われます（挙動は従来どおり）。
+                  伴走（成果報酬）で達成すべき項目を定義します。各項目は<b>手動</b>（パートナーが実施）／<b>自動</b>（案件の進行で自動達成）を選べます。成果報酬（粗利%）のゲート判定に使われます（挙動は従来どおり）。
                 </p>
                 {taskTpls.length === 0 && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 8 }}>対応項目はまだありません。</p>}
                 {[...taskTpls].sort((a, b) => a.sort - b.sort).map(t => (
@@ -991,21 +991,21 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <>
                 <SectionLabel>B. 最初のメニュー（任意）</SectionLabel>
                 <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
-                  報酬を1つだけ先に設定できます。<b>対応範囲（協力タスク）・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
+                  報酬を1つだけ先に設定できます。<b>対応範囲・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
                 </p>
                 <Fld label="メニュー名（任意）">
                   <FInput value={addMenuName} onChange={setAddMenuName} placeholder="例: 賃貸成約時" />
                 </Fld>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Fld label="紹介報酬（固定額・円）">
+                  <Fld label="つなぐ報酬（固定額・円）">
                     <FInput value={addRefValue} onChange={setAddRefValue} placeholder="30000" type="number" />
                   </Fld>
-                  <Fld label="協力報酬（粗利の%）">
+                  <Fld label="伴走報酬（粗利の%）">
                     <FInput value={addCoopPct} onChange={setAddCoopPct} placeholder="50" type="number" />
                   </Fld>
                 </div>
                 <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '2px 2px 0', lineHeight: 1.5 }}>
-                  協力報酬の基準は<b>粗利</b>に固定です。空欄なら「名前だけ」で作成します。
+                  伴走報酬の基準は<b>粗利</b>に固定です。空欄なら「名前だけ」で作成します。
                 </p>
               </>
             )}
