@@ -181,7 +181,7 @@ export async function submitPartnerReferral(formData: FormData) {
         const { createServiceRoleClient } = await import('@/lib/supabase/server')
         const { instantiateDealTasks } = await import('@/lib/coop-tasks')
         const admin = await createServiceRoleClient()
-        await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, channel })
+        await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, menu_ref: menuRefRaw || null, channel })
       } catch { /* best-effort */ }
     }
   }

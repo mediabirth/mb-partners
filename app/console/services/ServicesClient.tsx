@@ -512,6 +512,30 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     if (r.ok) await loadMenus(liveMenus.map(m => m.id)); else { const d = await r.json().catch(() => ({})); showToast(d.error ?? '削除に失敗しました') }
   }
 
+  // 是正：協力タスクをメニュー単位で設定（cooperation_task_templates.menu_id=該当 menus.id）。
+  // 既存 task-templates API を menu_id 付きで再利用。メニューごとに固有タスク（menu_id分離）。
+  const [menuTasks, setMenuTasks] = useState<Record<string, Tpl[]>>({})   // menus.id → tasks
+  const [mtLabel, setMtLabel] = useState<Record<string, string>>({})       // menus.id → 入力中ラベル
+  async function loadMenuTasks() {
+    const d = await fetch('/api/console/task-templates').then(r => r.json()).catch(() => ({ templates: [] }))
+    const byMenu: Record<string, Tpl[]> = {}
+    for (const t of (d.templates ?? []) as Tpl[]) if (t.menu_id) { (byMenu[t.menu_id] ??= []).push(t) }
+    for (const k of Object.keys(byMenu)) byMenu[k].sort((a, b) => a.sort - b.sort)
+    setMenuTasks(byMenu)
+  }
+  async function addMenuTask(serviceId: string, menuId: string) {
+    const label = (mtLabel[menuId] ?? '').trim()
+    if (!label) return
+    const r = await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: serviceId, menu_id: menuId, label, kind: 'manual', required: true, sort: (menuTasks[menuId]?.length ?? 0) }) })
+    const d = await r.json()
+    if (d.template) { await loadMenuTasks(); setMtLabel(p => ({ ...p, [menuId]: '' })) }
+    else showToast(d.needsMigration ? 'タスクのDB適用が必要です' : (d.error ?? '追加に失敗しました'))
+  }
+  async function delMenuTask(id: string) {
+    const r = await fetch(`/api/console/task-templates/${id}`, { method: 'DELETE' })
+    if (r.ok) await loadMenuTasks(); else showToast('削除に失敗しました')
+  }
+
   // Batch2: 追加ドロワー（新規作成時のみ）の「最初のメニュー（任意）」インライン入力。
   const [addMenuName, setAddMenuName] = useState('')
   const [addRefValue, setAddRefValue] = useState('') // 紹介報酬（固定額・円）
@@ -562,6 +586,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     for (const sm of svc.service_menus) seed[sm.id] = (sm.menus ?? [])
     setMenuRows(seed); setNmParent(null); setNmName(''); setNmValue(''); setNmTrigger('')
     loadMenus(svc.service_menus.map(m => m.id)).catch(() => {})
+    setMenuTasks({}); setMtLabel({}); loadMenuTasks().catch(() => {})   // 是正：メニュー単位タスク読み込み
   }
 
   function openAdd() {
@@ -991,13 +1016,31 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   <div key={`mn-${sm.id}`} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
                     <div style={{ fontSize: '.72rem', fontWeight: 800, marginBottom: 6 }}>{sm.name}</div>
                     {(menuRows[sm.id] ?? []).map(mn => (
-                      <div key={mn.id} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: '7px 9px', marginBottom: 5 }}>
-                        <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
-                        <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
-                          {mn.reward_type === 'fixed' ? `¥${Number(mn.reward_value).toLocaleString()}` : `${mn.reward_value}%${mn.reward_base ? `・${mn.reward_base}` : ''}`}
-                        </span>
-                        <button type="button" onClick={() => patchMenu(mn.id, { active: !mn.active })} style={{ fontSize: '.52rem', fontWeight: 700, border: 'none', borderRadius: 20, padding: '2px 7px', cursor: 'pointer', color: mn.active ? 'var(--green)' : 'var(--muted)', background: mn.active ? 'var(--green-bg)' : 'var(--bg2)', flexShrink: 0 }}>{mn.active ? '有効' : '無効'}</button>
-                        <button type="button" onClick={() => delMenu(mn.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem', flexShrink: 0 }}>✕</button>
+                      <div key={mn.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: '7px 9px', marginBottom: 5 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
+                          <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
+                            {mn.reward_type === 'fixed' ? `¥${Number(mn.reward_value).toLocaleString()}` : `${mn.reward_value}%${mn.reward_base ? `・${mn.reward_base}` : ''}`}
+                          </span>
+                          <button type="button" onClick={() => patchMenu(mn.id, { active: !mn.active })} style={{ fontSize: '.52rem', fontWeight: 700, border: 'none', borderRadius: 20, padding: '2px 7px', cursor: 'pointer', color: mn.active ? 'var(--green)' : 'var(--muted)', background: mn.active ? 'var(--green-bg)' : 'var(--bg2)', flexShrink: 0 }}>{mn.active ? '有効' : '無効'}</button>
+                          <button type="button" onClick={() => delMenu(mn.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem', flexShrink: 0 }}>✕</button>
+                        </div>
+                        {/* このメニュー固有の協力タスク（menu_id=mn.id） */}
+                        <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #F2F2F6' }}>
+                          <div style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 4 }}>このメニューの対応タスク</div>
+                          {(menuTasks[mn.id] ?? []).map(t => (
+                            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+                              <span style={{ flex: 1, fontSize: '.66rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>・{t.label}</span>
+                              {t.required && <span style={{ fontSize: '.48rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px', flexShrink: 0 }}>必須</span>}
+                              <button type="button" onClick={() => delMenuTask(t.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.7rem', flexShrink: 0 }}>✕</button>
+                            </div>
+                          ))}
+                          <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
+                            <input value={mtLabel[mn.id] ?? ''} onChange={e => setMtLabel(p => ({ ...p, [mn.id]: e.target.value }))}
+                              placeholder="タスク名（例: 商談に同席）" style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'inherit', fontSize: '.66rem' }} />
+                            <button type="button" onClick={() => addMenuTask(sm.service_id, mn.id)} disabled={!(mtLabel[mn.id] ?? '').trim()} className="btn btn-g" style={{ fontSize: '.64rem', padding: '5px 10px' }}>＋</button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                     {nmParent === sm.id ? (

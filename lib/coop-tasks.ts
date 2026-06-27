@@ -6,9 +6,14 @@
  */
 type AdminClient = { from: (t: string) => any }
 
-type DealLike = { id: string; service_id: string; menu_id?: string | null; channel: string }
+type DealLike = { id: string; service_id: string; menu_id?: string | null; menu_ref?: string | null; channel: string }
 
-/** 協力deal作成時：テンプレ（service一致・menu_id null or 一致）から deal_tasks を生成。冪等(unique)。 */
+/**
+ * 協力deal作成時：テンプレから deal_tasks を生成。冪等(unique)。
+ * 新モデル＝メニュー単位タスクが正：deal.menu_ref（新 menus）固有タスク(menu_id一致)があればそれだけを使う。
+ * 無ければ従来どおり（サービス共通 menu_id=null ＋ 旧 service_menu 一致）にフォールバック。
+ * ★これはタスク（報酬ゲート requiredTasksDone の対象）の生成のみ。reward 計算式 base×value/100 には触れない。
+ */
 export async function instantiateDealTasks(admin: AdminClient, deal: DealLike): Promise<number> {
   if (deal.channel !== 'cooperation') return 0
   try {
@@ -17,7 +22,12 @@ export async function instantiateDealTasks(admin: AdminClient, deal: DealLike): 
       .select('id, label, kind, required, trigger_key, sort, menu_id')
       .eq('service_id', deal.service_id).eq('active', true).order('sort')
     if (error || !tpls?.length) return 0
-    const matched = tpls.filter((t: { menu_id: string | null }) => t.menu_id == null || t.menu_id === deal.menu_id)
+    const menuSpecific = deal.menu_ref
+      ? tpls.filter((t: { menu_id: string | null }) => t.menu_id === deal.menu_ref)
+      : []
+    const matched = menuSpecific.length > 0
+      ? menuSpecific
+      : tpls.filter((t: { menu_id: string | null }) => t.menu_id == null || t.menu_id === deal.menu_id)
     if (!matched.length) return 0
     const rows = matched.map((t: { id: string; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number }) => ({
       deal_id: deal.id, template_id: t.id, label: t.label, kind: t.kind, required: t.required, trigger_key: t.trigger_key, sort: t.sort,

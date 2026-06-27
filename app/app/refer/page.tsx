@@ -145,14 +145,12 @@ export default function ReferPage() {
     }
   }
 
-  // 段階4：選んだ service_menu＋kind から、対応する新メニュー(menus・1報酬)の id を解決。
-  // つなぐ(ref由来)＝固定報酬→referral、伴走(coop由来)＝成果報酬→cooperation。channel導出は従来のcoopModeのまま（出所＝reward_typeと8/9で一致）。
+  // 選んだ service_menu＋kind から、対応する新メニュー(menus・1報酬)の id を解決（id ベース・名前サフィックス非依存）。
+  // menus が空（未作成）なら null（menu_ref は任意・後で 勝彦 がメニューを作れば reward_type で一致）。
   function resolveMenuRef(m: MenuRow, kind: 'ref' | 'coop'): string | null {
-    const suffix = kind === 'coop' ? '（伴走）' : '（つなぐ）'
-    const list = m.menus ?? []
-    return (list.find(x => x.name.endsWith(suffix))
-      ?? list.find(x => x.reward_type === (kind === 'coop' ? 'rate' : m.ref_type))
-      ?? null)?.id ?? null
+    const want = kind === 'coop' ? 'rate' : m.ref_type
+    const list = (m.menus ?? []).filter(x => x.active)
+    return (list.find(x => x.reward_type === want) ?? list[0] ?? null)?.id ?? null
   }
 
   function pickMenu(m: MenuRow) {
