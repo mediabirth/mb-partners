@@ -3,7 +3,7 @@ import { useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { SectionHeader } from '@/components/ui/Header'
-import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
+import type { ServiceWithMenus, MenuRow, Menu } from '@/lib/supabase/queries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -547,6 +547,42 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [menuError, setMenuError]   = useState('')
   const [liveMenus, setLiveMenus]   = useState<MenuRow[]>([])
 
+  // 段階5：新「メニュー（1報酬）」CRUD。service_menu_id ごとに menus 行を管理（旧②③は併走温存）。
+  const [menuRows, setMenuRows] = useState<Record<string, Menu[]>>({})
+  const [nmParent, setNmParent] = useState<string | null>(null)   // 追加対象 service_menu_id
+  const [nmName, setNmName] = useState('')
+  const [nmType, setNmType] = useState<'fixed' | 'rate'>('fixed')
+  const [nmValue, setNmValue] = useState('')
+  const [nmTrigger, setNmTrigger] = useState('')
+  const [mnBusy, setMnBusy] = useState(false)
+  async function loadMenus(ids: string[]) {
+    const entries = await Promise.all(ids.map(async smId => {
+      const d = await fetch(`/api/console/menus?service_menu_id=${smId}`).then(r => r.json()).catch(() => ({ menus: [] }))
+      return [smId, (d.menus ?? []) as Menu[]] as const
+    }))
+    setMenuRows(Object.fromEntries(entries))
+  }
+  async function addMenu(serviceMenuId: string) {
+    if (!nmName.trim()) return
+    setMnBusy(true)
+    try {
+      const body = { service_menu_id: serviceMenuId, name: nmName.trim(), reward_type: nmType, reward_value: Number(nmValue) || 0, reward_base: nmType === 'rate' ? '粗利' : null, reward_trigger: nmTrigger || null, sort: (menuRows[serviceMenuId]?.length ?? 0) }
+      const r = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const d = await r.json()
+      if (d.menu) { await loadMenus(liveMenus.map(m => m.id)); setNmName(''); setNmValue(''); setNmTrigger(''); setNmParent(null) }
+      else showToast(d.error ?? '追加に失敗しました')
+    } finally { setMnBusy(false) }
+  }
+  async function patchMenu(id: string, patch: Record<string, unknown>) {
+    const r = await fetch(`/api/console/menus/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+    if (r.ok) await loadMenus(liveMenus.map(m => m.id)); else { const d = await r.json().catch(() => ({})); showToast(d.error ?? '更新に失敗しました') }
+  }
+  async function delMenu(id: string) {
+    if (!confirm('このメニューを削除しますか？')) return
+    const r = await fetch(`/api/console/menus/${id}`, { method: 'DELETE' })
+    if (r.ok) await loadMenus(liveMenus.map(m => m.id)); else { const d = await r.json().catch(() => ({})); showToast(d.error ?? '削除に失敗しました') }
+  }
+
   // Batch2: 追加ドロワー（新規作成時のみ）の「最初のメニュー（任意）」インライン入力。
   const [addMenuName, setAddMenuName] = useState('')
   const [addRefValue, setAddRefValue] = useState('') // 紹介報酬（固定額・円）
@@ -592,6 +628,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     // 対応範囲（協力タスク）を読み込み（best-effort）
     setTaskTpls([]); setTLabel(''); setTTrigger('')
     fetch('/api/console/task-templates').then(r => r.json()).then(d => setTaskTpls((d.templates ?? []).filter((t: Tpl) => t.service_id === svc.id))).catch(() => {})
+    // 段階5：新メニュー(1報酬)を seed（attachMenus 由来）＋最新を再取得
+    const seed: Record<string, Menu[]> = {}
+    for (const sm of svc.service_menus) seed[sm.id] = (sm.menus ?? [])
+    setMenuRows(seed); setNmParent(null); setNmName(''); setNmValue(''); setNmTrigger('')
+    loadMenus(svc.service_menus.map(m => m.id)).catch(() => {})
   }
 
   function openAdd() {
@@ -1009,6 +1050,46 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             )}
 
             {/* 協力はメニュー単位（B のメニュー編集内）に一本化。サービス既定 coop_* は廃止。 */}
+
+            {/* ── D. メニュー（1報酬・新モデル）＝ menus テーブル CRUD。各サービス(=service_menu)配下に任意数。 ── */}
+            {editing && liveMenus.length > 0 && (
+              <>
+                <SectionLabel>D. メニュー（1報酬・新モデル）</SectionLabel>
+                <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 8, lineHeight: 1.6 }}>
+                  各サービスの下に「メニュー（報酬1つ＝固定 or 粗利%）」を任意数で追加できます。紹介/協力の区別はありません。<b>（②③の旧報酬は段階6まで併走）</b>
+                </p>
+                {liveMenus.map(sm => (
+                  <div key={`mn-${sm.id}`} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+                    <div style={{ fontSize: '.72rem', fontWeight: 800, marginBottom: 6 }}>{sm.name}</div>
+                    {(menuRows[sm.id] ?? []).map(mn => (
+                      <div key={mn.id} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: '7px 9px', marginBottom: 5 }}>
+                        <span style={{ flex: 1, fontSize: '.72rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
+                        <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
+                          {mn.reward_type === 'fixed' ? `¥${Number(mn.reward_value).toLocaleString()}` : `${mn.reward_value}%${mn.reward_base ? `・${mn.reward_base}` : ''}`}
+                        </span>
+                        <button type="button" onClick={() => patchMenu(mn.id, { active: !mn.active })} style={{ fontSize: '.52rem', fontWeight: 700, border: 'none', borderRadius: 20, padding: '2px 7px', cursor: 'pointer', color: mn.active ? 'var(--green)' : 'var(--muted)', background: mn.active ? 'var(--green-bg)' : 'var(--bg2)', flexShrink: 0 }}>{mn.active ? '有効' : '無効'}</button>
+                        <button type="button" onClick={() => delMenu(mn.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem', flexShrink: 0 }}>✕</button>
+                      </div>
+                    ))}
+                    {nmParent === sm.id ? (
+                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
+                        <input value={nmName} onChange={e => setNmName(e.target.value)} placeholder="メニュー名" style={{ flex: 1, minWidth: 120, border: '1.5px solid var(--line)', borderRadius: 7, padding: '6px 8px', fontFamily: 'inherit', fontSize: '.72rem' }} />
+                        <select value={nmType} onChange={e => setNmType(e.target.value as 'fixed' | 'rate')} style={selSm}><option value="fixed">固定額</option><option value="rate">粗利%</option></select>
+                        <input value={nmValue} onChange={e => setNmValue(e.target.value)} placeholder={nmType === 'fixed' ? '円' : '%'} inputMode="numeric" style={{ width: 70, border: '1.5px solid var(--line)', borderRadius: 7, padding: '6px 8px', fontFamily: 'Inter', fontSize: '.72rem' }} />
+                        <input value={nmTrigger} onChange={e => setNmTrigger(e.target.value)} placeholder="成果地点（任意）" style={{ flex: 1, minWidth: 100, border: '1.5px solid var(--line)', borderRadius: 7, padding: '6px 8px', fontFamily: 'inherit', fontSize: '.7rem' }} />
+                        <button type="button" onClick={() => addMenu(sm.id)} disabled={mnBusy || !nmName.trim()} className="btn btn-g" style={{ fontSize: '.7rem', padding: '6px 11px' }}>追加</button>
+                        <button type="button" onClick={() => setNmParent(null)} style={{ fontSize: '.66rem', color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer' }}>取消</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => { setNmParent(sm.id); setNmName(''); setNmType('fixed'); setNmValue(''); setNmTrigger('') }}
+                        style={{ width: '100%', padding: '6px 0', borderRadius: 7, border: '1.5px dashed var(--blue)', background: 'var(--blue-bg2)', color: 'var(--blue)', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginTop: 3 }}>
+                        ＋ メニューを追加
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
 
             {/* ── Batch2: 新規作成時のみ「最初のメニュー（任意）」をインライン化（気軽に追加） ── */}
             {!editing && (
