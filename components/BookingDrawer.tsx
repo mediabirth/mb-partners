@@ -1,8 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-
-type Slot = { start: string; end: string }
-type Day = { date: string; label: string; weekday?: string; count?: number; slots: Slot[] }
+import SlotPicker, { type Slot, type Day } from './SlotPicker'
 
 /**
  * in-app 商談予約ドロワー。
@@ -40,8 +38,6 @@ export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail
       .catch(() => setError('空き枠を取得できませんでした'))
       .finally(() => setLoading(false))
   }, [])
-
-  const day = days.find(d => d.date === selDate) ?? null
 
   async function confirm(slot: Slot) {
     setSaving(true); setError('')
@@ -97,42 +93,15 @@ export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '6px 0 12px', lineHeight: 1.6 }}>
               空いている日時から選ぶだけ。{connected ? 'Googleカレンダーの予定を避けて表示しています。' : ''}
             </p>
-            {/* 日付チップ（空き枠数を表示・空きのない日はグレーアウト・次の空き日が既定選択） */}
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 14 }}>
-              {days.map(d => {
-                const active = d.date === selDate
-                const empty = (d.count ?? d.slots.length) === 0
-                return (
-                  <button key={d.date} onClick={() => { if (!empty) { setSelDate(d.date); setSelSlot(null) } }} disabled={empty}
-                    style={{
-                      flexShrink: 0, minWidth: 56, padding: '7px 11px', borderRadius: 11,
-                      border: `1.5px solid ${active ? 'var(--blue)' : empty ? 'var(--line)' : 'var(--blue-bg)'}`,
-                      background: active ? 'var(--blue)' : empty ? 'var(--bg2)' : '#fff',
-                      color: active ? '#fff' : empty ? 'var(--muted2)' : 'var(--txt)',
-                      opacity: empty ? .55 : 1, cursor: empty ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                    }}>
-                    <div style={{ fontSize: '.72rem', fontWeight: 800 }}>{d.label}{d.weekday ? `(${d.weekday})` : ''}</div>
-                    <div style={{ fontSize: '.54rem', fontWeight: 700, marginTop: 2, color: active ? 'rgba(255,255,255,.9)' : empty ? 'var(--muted2)' : 'var(--blue)' }}>
-                      {empty ? '満' : `${d.count ?? d.slots.length}枠`}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            {/* 時間枠（即時表示）。ワンタップ＝選択（即予約はしない） */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {(day?.slots ?? []).map(s => {
-                const sel = selSlot?.start === s.start
-                return (
-                  <button key={s.start} onClick={() => setSelSlot(s)} className="lift"
-                    style={{ padding: '11px 0', borderRadius: 10, fontSize: '.8rem', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer',
-                      border: `1.5px solid ${sel ? 'var(--blue)' : 'var(--blue-bg)'}`,
-                      background: sel ? 'var(--blue)' : 'var(--blue-bg2)', color: sel ? '#fff' : 'var(--blue-dk)' }}>
-                    {fmtTime(s.start)}
-                  </button>
-                )
-              })}
-            </div>
+            {/* 日付チップ＋時間枠（共通 SlotPicker・次の空き日が既定選択） */}
+            <SlotPicker
+              days={days}
+              selectedDate={selDate}
+              selectedSlot={selSlot}
+              onSelectDate={d => { setSelDate(d); setSelSlot(null) }}
+              onSelectSlot={s => setSelSlot(s)}
+              connected={connected}
+            />
             {/* 顧客メール（任意）— 入力すると確認・リマインドをお客様にも送信。未入力ならスキップ。 */}
             <div style={{ marginTop: 14 }}>
               <label style={{ display: 'block', fontSize: '.64rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>顧客メールアドレス（任意）</label>
