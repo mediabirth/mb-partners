@@ -547,6 +547,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [menuError, setMenuError]   = useState('')
   const [liveMenus, setLiveMenus]   = useState<MenuRow[]>([])
 
+  // Batch2: 追加ドロワー（新規作成時のみ）の「最初のメニュー（任意）」インライン入力。
+  const [addMenuName, setAddMenuName] = useState('')
+  const [addRefValue, setAddRefValue] = useState('') // 紹介報酬（固定額・円）
+  const [addCoopPct, setAddCoopPct]   = useState('') // 協力報酬（粗利の%・基準は粗利固定＝Batch1⑤準拠）
+
   // C. 対応範囲（協力タスク）= cooperation_task_templates。サービス編集に統合（旧 /console/tasks）。
   type Tpl = { id: string; service_id: string; menu_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
   const [taskTpls, setTaskTpls] = useState<Tpl[]>([])
@@ -593,18 +598,27 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     setSvcForm({ ...defaultServiceForm })
     setEditing(null); setShowAdd(true)
     setLiveMenus([]); setMenuEditId(null); setSvcError('')
+    setAddMenuName(''); setAddRefValue(''); setAddCoopPct('')
   }
 
   function closeDrawer() {
     setEditing(null); setShowAdd(false); setMenuEditId(null); setSvcError('')
+    setAddMenuName(''); setAddRefValue(''); setAddCoopPct('')
   }
 
   const setF = (patch: Partial<ServiceForm>) => setSvcForm(f => ({ ...f, ...patch }))
 
   // ── Service save ──────────────────────────────────────────────────────────
-  function saveService(e: React.FormEvent) {
-    e.preventDefault()
+  // Batch2: 新規作成時は withMenu=true で「最初のメニュー（任意）」も同時作成（報酬入力がある時のみ）。
+  // 「名前だけで作る」は withMenu=false。編集時(editing)は従来どおり（インラインメニューは無関係）。
+  function submitService(e: React.FormEvent | undefined, withMenu: boolean) {
+    e?.preventDefault?.()
     if (!svcForm.name) { setSvcError('サービス名を入力してください'); return }
+    // インラインメニューの軽い検証（新規・withMenu・報酬入力時のみ）。
+    if (!editing && withMenu) {
+      if (addRefValue && !(Number(addRefValue) > 0)) { setSvcError('紹介報酬（円）は0より大きい数値で入力してください'); return }
+      if (addCoopPct && !(Number(addCoopPct) > 0 && Number(addCoopPct) <= 100)) { setSvcError('協力報酬（粗利の%）は 0〜100 で入力してください'); return }
+    }
     setSvcError('')
     startTrans(async () => {
       const url    = editing ? `/api/console/services/${editing.id}` : '/api/console/services'
@@ -614,10 +628,39 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       const data = await res.json()
       if (editing) {
         setServices(prev => prev.map(s => s.id === editing.id ? { ...s, ...data.service, service_menus: liveMenus } : s))
+        showToast('保存しました — パートナー画面へ反映')
       } else {
-        setServices(prev => [...prev, { ...data.service, service_menus: [] }])
+        // 最初のメニュー（任意）：報酬入力があれば1メニューを同時作成（紹介=固定額 / 協力=rate・基準=粗利）。
+        let createdMenus: MenuRow[] = []
+        const hasReward = !!addRefValue || !!addCoopPct
+        if (withMenu && hasReward) {
+          const payload = {
+            name:           addMenuName.trim() || svcForm.name,
+            ref_enabled:    !!addRefValue,
+            ref_type:       'fixed',
+            ref_value:      addRefValue ? Number(addRefValue) : 0,
+            ref_base:       null,
+            ref_trigger:    null,
+            coverage_steps: null,
+            qualification:  null,
+            ref_months:     null,
+            coop_enabled:   !!addCoopPct,
+            coop_type:      addCoopPct ? 'rate' : null,
+            coop_value:     addCoopPct ? Number(addCoopPct) : null,
+            coop_base:      addCoopPct ? '粗利' : null,
+            coop_coverage:  null,
+            coop_condition: null,
+          }
+          try {
+            const mres = await fetch(`/api/console/services/${data.service.id}/menus`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+            })
+            if (mres.ok) { const { menu } = await mres.json(); createdMenus = [menu] }
+          } catch { /* メニュー作成失敗してもサービスは作成済み（後から編集で追加可） */ }
+        }
+        setServices(prev => [...prev, { ...data.service, service_menus: createdMenus }])
+        showToast(createdMenus.length ? 'サービスとメニューを追加しました' : 'サービスを追加しました')
       }
-      showToast(editing ? '保存しました — パートナー画面へ反映' : 'サービスを追加しました')
       closeDrawer()
     })
   }
@@ -795,7 +838,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         zIndex: 50, overflowY: 'auto', transition: 'right .3s cubic-bezier(.4,0,.2,1)',
       }}>
         {drawerOpen && (
-          <form key={editing?.id ?? 'new'} onSubmit={saveService} className="cascade" style={{ padding: '24px 26px 88px' }}>
+          <form key={editing?.id ?? 'new'} onSubmit={e => submitService(e, true)} className="cascade" style={{ padding: '24px 26px 88px' }}>
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
@@ -943,14 +986,44 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
             {/* 協力はメニュー単位（B のメニュー編集内）に一本化。サービス既定 coop_* は廃止。 */}
 
+            {/* ── Batch2: 新規作成時のみ「最初のメニュー（任意）」をインライン化（気軽に追加） ── */}
+            {!editing && (
+              <>
+                <SectionLabel>B. 最初のメニュー（任意）</SectionLabel>
+                <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
+                  報酬を1つだけ先に設定できます。<b>対応範囲（協力タスク）・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
+                </p>
+                <Fld label="メニュー名（任意）">
+                  <FInput value={addMenuName} onChange={setAddMenuName} placeholder="例: 賃貸成約時" />
+                </Fld>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <Fld label="紹介報酬（固定額・円）">
+                    <FInput value={addRefValue} onChange={setAddRefValue} placeholder="30000" type="number" />
+                  </Fld>
+                  <Fld label="協力報酬（粗利の%）">
+                    <FInput value={addCoopPct} onChange={setAddCoopPct} placeholder="50" type="number" />
+                  </Fld>
+                </div>
+                <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '2px 2px 0', lineHeight: 1.5 }}>
+                  協力報酬の基準は<b>粗利</b>に固定です。空欄なら「名前だけ」で作成します。
+                </p>
+              </>
+            )}
+
             {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{svcError}</p>}
 
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button type="submit" disabled={submitting || !svcForm.name} className="btn btn-p"
                 style={{ width: '100%', opacity: submitting || !svcForm.name ? .5 : 1 }}>
-                {submitting ? '保存中…' : '保存してパートナー画面へ反映'}
+                {submitting ? '保存中…' : editing ? '保存してパートナー画面へ反映' : '作成してパートナー画面へ公開'}
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }} />
               </button>
+              {!editing && (addRefValue || addCoopPct) && (
+                <button type="button" onClick={() => submitService(undefined, false)} disabled={submitting || !svcForm.name}
+                  style={{ width: '100%', padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 700, cursor: submitting || !svcForm.name ? 'not-allowed' : 'pointer', opacity: submitting || !svcForm.name ? .5 : 1, fontFamily: 'inherit' }}>
+                  名前だけで作る（報酬は後で）
+                </button>
+              )}
             </div>
           </form>
         )}
