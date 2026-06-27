@@ -205,6 +205,9 @@ export default function DealsPage() {
   const [deals, setDeals]           = useState<Deal[]>([])
   const [loading, setLoading]       = useState(true)
   const [selected, setSelected]     = useState<Deal | null>(null)
+  // ④ 対応範囲（協力タスク）：管理側が done を確認して立てる（パートナー自己申告から移管）。done値の読み書きのみ・money計算不変。
+  const [dealTasks, setDealTasks]   = useState<{ id: string; label: string; kind: string; required: boolean; done: boolean; sort: number }[]>([])
+  const [taskBusy, setTaskBusy]     = useState<string | null>(null)
   const [profile, setProfile]       = useState<{ name: string; color: string } | null>(null)
   const [pending, startTransition]  = useTransition()
   const [toast, setToast]           = useState('')
@@ -271,6 +274,26 @@ export default function DealsPage() {
     const id = new URLSearchParams(window.location.search).get('deal')
     if (id) { const d = deals.find(x => x.id === id); if (d) setSelected(d) }
   }, [deals])
+
+  // ④ 選択中 deal が協力なら deal_tasks を読み込む（管理側表示）。それ以外はクリア。
+  useEffect(() => {
+    if (!selected || selected.channel !== 'cooperation') { setDealTasks([]); return }
+    let alive = true
+    fetch(`/api/console/deals/${selected.id}/tasks`).then(r => r.ok ? r.json() : { tasks: [] }).then(d => { if (alive) setDealTasks(d.tasks ?? []) }).catch(() => {})
+    return () => { alive = false }
+  }, [selected])
+
+  // ④ 管理側で done を立て/外す（done_by=管理者）。requiredTasksDone・確定ゲート・レート計算は不変（done値を書くだけ）。
+  async function toggleDealTask(taskId: string, next: boolean) {
+    if (!selected || taskBusy) return
+    setTaskBusy(taskId)
+    setDealTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: next } : t))   // optimistic
+    try {
+      const r = await fetch(`/api/console/deals/${selected.id}/tasks`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskId, done: next }) })
+      if (!r.ok) setDealTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !next } : t))
+      else showToast(next ? '対応済にしました' : '未対応に戻しました')
+    } catch { setDealTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !next } : t)) } finally { setTaskBusy(null) }
+  }
 
   function showToast(msg: string) {
     setToast(msg)
@@ -1101,6 +1124,30 @@ export default function DealsPage() {
               {selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
                 <div style={{ marginTop: 14, padding: '9px 14px', background: 'var(--green-bg)', borderRadius: 10 }}>
                   <p style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--green)' }}>協力タスク達成 → 協力レート適用</p>
+                </div>
+              )}
+
+              {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。 */}
+              {selected.channel === 'cooperation' && dealTasks.length > 0 && (
+                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 10 }}>
+                  <p style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 2 }}>対応範囲（協力タスク）</p>
+                  <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて達成すると協力レートが確定）。</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {[...dealTasks].sort((a, b) => a.sort - b.sort).map(t => {
+                      const auto = t.kind !== 'manual'
+                      return (
+                        <button key={t.id} type="button" onClick={() => !auto && toggleDealTask(t.id, !t.done)} disabled={auto || taskBusy === t.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', background: 'none', border: 'none', borderBottom: '1px solid #F4F4F8', textAlign: 'left', width: '100%', cursor: auto ? 'default' : 'pointer', opacity: taskBusy === t.id ? .6 : 1, fontFamily: 'inherit' }}>
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.done ? 'var(--green)' : '#fff', border: `2px solid ${t.done ? 'var(--green)' : 'var(--line)'}`, color: '#fff' }}>
+                            {t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: t.done ? 500 : 600, color: t.done ? 'var(--muted2)' : 'var(--txt)', textDecoration: t.done ? 'line-through' : 'none' }}>{t.label}</span>
+                          {t.required && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 7px' }}>必須</span>}
+                          {auto && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 700, color: 'var(--muted)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>自動</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 
