@@ -7,7 +7,7 @@ import BookingDrawer from '@/components/BookingDrawer'
 import PushOptIn from '@/components/PushOptIn'
 import { trackFunnel } from '@/lib/funnel-client'
 import CountUp from '@/components/CountUp'
-import type { ServiceWithMenus, MenuRow } from '@/lib/supabase/queries'
+import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
 import { coverageDesc } from '@/lib/coverage-descriptions'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
@@ -82,8 +82,9 @@ export default function ReferPage() {
   const [consent, setConsent]             = useState(false)
   // ③ 協力の対応範囲 項目別同意（included項目のチェック済みラベル）。申込時UI同意・記録保存用。
   const [covChecked, setCovChecked]       = useState<string[]>([])
-  // 段階4：選択された新メニュー(menus・1報酬)の id。新規 deal の deals.menu_ref に書く（additive）。
+  // 選択されたメニュー(menus.id)＝deals.menu_ref／報酬(menu_rewards)＝deals.reward_ref。
   const [selMenuRef, setSelMenuRef]       = useState<string | null>(null)
+  const [selReward, setSelReward]         = useState<MenuReward | null>(null)
   // L3: 相談（サービス未定）起票用
   const [consultNote, setConsultNote]     = useState('')
   const [consultCoop, setConsultCoop]     = useState(false)
@@ -122,40 +123,21 @@ export default function ReferPage() {
 
   function pickService(svc: ServiceWithMenus) {
     setSelSvc(svc)
-    setSelMenu(null)
-    setCoopMode(false)
-    const refMenus  = svc.service_menus.filter(m => m.ref_enabled !== false)
-    const coopMenus = svc.service_menus.filter(m => m.coop_enabled === true)
-    const total     = refMenus.length + coopMenus.length
-
-    if (total === 0) {
-      // no per-menu engagement options — server falls back to service-level
-      loadToken(svc.id); setStep('form')
-    } else if (total === 1 && refMenus.length === 1) {
-      setSelMenu(refMenus[0]); loadToken(svc.id); setStep('form')
-    } else if (total === 1 && coopMenus.length === 1) {
-      pickCoop(coopMenus[0])
-    } else {
-      setStep('menu')
-    }
+    setSelMenu(null); setSelMenuRef(null); setSelReward(null); setCoopMode(false)
+    // 報酬（menu_rewards）が1件でもあれば「メニュー＞報酬」選択へ。無ければサービス単位フォーム。
+    const hasRewards = svc.service_menus.some(m => (m.menus ?? []).some(mn => (mn.rewards ?? []).length > 0))
+    if (hasRewards) setStep('menu')
+    else { loadToken(svc.id); setStep('form') }
   }
 
-  // 選んだ service_menu＋kind から、対応する新メニュー(menus・1報酬)の id を解決（id ベース・名前サフィックス非依存）。
-  // menus が空（未作成）なら null（menu_ref は任意・後で 勝彦 がメニューを作れば reward_type で一致）。
-  function resolveMenuRef(m: MenuRow, kind: 'ref' | 'coop'): string | null {
-    const want = kind === 'coop' ? 'rate' : m.ref_type
-    const list = (m.menus ?? []).filter(x => x.active)
-    return (list.find(x => x.reward_type === want) ?? list[0] ?? null)?.id ?? null
-  }
-
-  function pickMenu(m: MenuRow) {
-    setSelMenu(m); setSelMenuRef(resolveMenuRef(m, 'ref')); setCoopMode(false); loadToken(selSvc!.id); setStep('form')
-  }
-
-  // 協力 is per-menu now: selecting a 協力 option must set selMenu (so deal records menu_id)
-  // AND coopMode=true (so channel='cooperation'). Do NOT change handleSubmit.
-  function pickCoop(m: MenuRow) {
-    setSelMenu(m); setSelMenuRef(resolveMenuRef(m, 'coop')); setCoopMode(true); setCovChecked([]); setStep('form')
+  // 報酬カードを選ぶ：menu_ref＝メニュー(menus.id)・reward_ref＝報酬(menu_rewards.id)・channel は reward_type 由来（内部・表示なし）。
+  function pickReward(serviceMenu: MenuRow, menu: Menu, reward: MenuReward) {
+    setSelMenu(serviceMenu)            // deals.menu_id（旧 service_menu・後方互換）
+    setSelMenuRef(menu.id)             // deals.menu_ref（メニュー）
+    setSelReward(reward)               // deals.reward_ref（報酬）＋ reward_snapshot 源
+    setCoopMode(reward.reward_type === 'rate')
+    setCovChecked([])
+    loadToken(selSvc!.id); setStep('form')
   }
 
   function loadToken(serviceId: string) {
@@ -226,7 +208,8 @@ export default function ReferPage() {
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', coopMode ? 'cooperation' : 'referral')
-    if (selMenuRef) fd.set('menuRef', selMenuRef)   // 段階4：新メニュー参照（additive）
+    if (selMenuRef) fd.set('menuRef', selMenuRef)   // メニュー参照
+    if (selReward) fd.set('rewardRef', selReward.id) // 報酬参照（reward_snapshot 源）
     if (coopMode) fd.set('coverageAgreed', coverageAgreedPayload())
     startTransition(async () => {
       try {
@@ -271,14 +254,15 @@ export default function ReferPage() {
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', 'cooperation')
-    if (selMenuRef) fd.set('menuRef', selMenuRef)   // 段階4：新メニュー参照（additive）
+    if (selMenuRef) fd.set('menuRef', selMenuRef)
+    if (selReward) fd.set('rewardRef', selReward.id)
     fd.set('coverageAgreed', coverageAgreedPayload())
     try { const res = await submitPartnerReferral(fd); return res?.dealId ?? null } catch { return null }
   }
 
   function resetForNext() {
     setDone(false); setStep('service'); setShowSelfBook(false)
-    setSelSvc(null); setSelMenu(null); setSelMenuRef(null); setCoopMode(false)
+    setSelSvc(null); setSelMenu(null); setSelMenuRef(null); setSelReward(null); setCoopMode(false)
     setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName(''); setContactTitle('')
     setPhone(''); setCustomerEmail(''); setMemo(''); setConsent(false); setCovChecked([]); setError('')
     setConsultNote(''); setConsultCoop(false)
@@ -288,8 +272,8 @@ export default function ReferPage() {
   const linkUrl    = token       ? `${location.origin}/r/${token}` : ''
   const bookingUrl = partnerCode ? `${location.origin}/book/${partnerCode}` : ''
 
-  // ③ 協力時の対応範囲（単一ソース＝required協力タスク）。各項目に静的説明＋項目別チェックを出す。
-  const coopCoverage = coopMode ? (selMenu?.coverage_tasks ?? []).map(label => ({ label })) : []
+  // ③ 協力タスク同意（選んだ報酬の協力タスク）。各項目に静的説明＋項目別チェックを出す。
+  const coopCoverage = coopMode ? (selReward?.tasks ?? []).map(label => ({ label })) : []
   const allCoverageChecked = coopCoverage.every(s => covChecked.includes(s.label))
   const coverageGateOk = !coopMode || allCoverageChecked   // 紹介は従来通り（ゲート無し）。協力は全included項目チェック必須。
   const toggleCov = (label: string) =>
@@ -451,22 +435,23 @@ export default function ReferPage() {
               <ServiceAvatar logoPath={selSvc.logo_path} icon={selSvc.icon} color={selSvc.color} name={selSvc.name} size={20} />
               {selSvc.name}
             </div>
-            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのかたちで関わりますか?</h2>
+            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>メニューを選ぶ</h2>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
-              ご案内するメニューを選んでください。
+              メニューの報酬を選んでください。
             </p>
           </div>
-          {/* B2: メニュー単位グルーピング。各メニュー見出しの下に 紹介/協力 の選択肢 */}
+          {/* メニュー＞報酬カード（複数）。各報酬＝金額・成果地点・協力タスク。 */}
           <div className="stagger" style={{ padding: '0 20px 24px' }}>
-            {selSvc.service_menus.filter(m => m.ref_enabled !== false || m.coop_enabled === true).map(m => (
-              <div key={m.id} style={{ marginBottom: 20 }}>
+            {selSvc.service_menus.flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu }))).filter(({ menu }) => (menu.rewards ?? []).length > 0).map(({ sm, menu }) => (
+              <div key={menu.id} style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 2px 10px' }}>
                   <span style={{ width: 4, height: 16, borderRadius: 2, background: selSvc.color }} />
-                  <b style={{ fontSize: '.86rem', fontWeight: 900, letterSpacing: '-.01em' }}>{m.name}</b>
+                  <b style={{ fontSize: '.86rem', fontWeight: 900, letterSpacing: '-.01em' }}>{menu.name}</b>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {m.ref_enabled !== false && <EngageOption menu={m} kind="ref" accent={selSvc.color} onPick={() => pickMenu(m)} />}
-                  {m.coop_enabled === true && <EngageOption menu={m} kind="coop" accent={selSvc.color} onPick={() => pickCoop(m)} />}
+                  {(menu.rewards ?? []).map(reward => (
+                    <RewardOption key={reward.id} reward={reward} onPick={() => pickReward(sm, menu, reward)} />
+                  ))}
                 </div>
               </div>
             ))}
@@ -692,37 +677,27 @@ export default function ReferPage() {
   )
 }
 
-// ⑤⑥: 関わり方の選択肢（紹介/協力）。枠の色を排しリスト然と。対応範囲はオシャレなタグ。報酬は控えめに添える。
-function EngageOption({ menu, kind, accent: _accent, onPick }: {
-  menu: MenuRow; kind: 'ref' | 'coop'; accent: string; onPick: () => void
-}) {
-  const isRef = kind === 'ref'
-  const fixed = isRef ? menu.ref_type === 'fixed' : menu.coop_type === 'fixed'
-  const val   = isRef ? Number(menu.ref_value) : Number(menu.coop_value ?? 0)
-  const base  = isRef ? menu.ref_base : menu.coop_base
-  // ③ 対応範囲タグの単一ソース＝required協力タスク（系統A coverage_steps/coop_coverage は廃止）。
-  const cov   = (menu.coverage_tasks ?? []).map((label: string) => ({ label }))
-  const cond  = isRef ? menu.qualification : menu.coop_condition
-  const reward = fixed ? `¥${val.toLocaleString()}` : `${val}%${base ? `・${base}` : ''}`
-
+// 報酬カード（確定モック app_partner_reward_with_trigger_tasks_view）：金額・成果地点・協力タスクpill。区分語なし。
+function RewardOption({ reward, onPick }: { reward: MenuReward; onPick: () => void }) {
+  const amount = reward.reward_type === 'fixed'
+    ? `¥${Number(reward.reward_value).toLocaleString()}`
+    : `粗利${reward.reward_value}%`
+  const tasks = reward.tasks ?? []
   return (
     <button onClick={onPick} className="card-hover lift ui-card"
       style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* 是正2：区分語(関わり方の区分)チップは廃止。メニューは報酬・成果地点・協力タスクの条件として見せる。 */}
-        <span style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
-        <span style={{ marginLeft: 'auto', fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{reward}</span>
-        <span style={{ color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>›</span>
+        <span style={{ fontFamily: 'Inter', fontSize: '.95rem', fontWeight: 800, color: 'var(--c-blue)', whiteSpace: 'nowrap' }}>{amount}</span>
+        <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>このメニューで紹介する ›</span>
       </div>
-      {menu.ref_trigger && <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '7px 0 0', lineHeight: 1.5 }}>成果地点：{menu.ref_trigger}</p>}
-      {cov.length > 0 && (
+      {reward.reward_trigger && <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '8px 0 0', lineHeight: 1.5 }}>成果地点：{reward.reward_trigger}</p>}
+      {tasks.length > 0 && (
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 9 }}>
-          {cov.map((s: { label: string }) => (
-            <span key={s.label} style={{ fontSize: '.57rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'var(--bg2)', color: 'var(--muted)', border: '1px solid var(--line)' }}>{s.label}</span>
+          {tasks.map(t => (
+            <span key={t} style={{ fontSize: '.57rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'var(--bg2)', color: 'var(--muted)', border: '1px solid var(--line)' }}>{t}</span>
           ))}
         </div>
       )}
-      {cond && <p style={{ fontSize: '.61rem', color: 'var(--muted2)', margin: '7px 0 0', lineHeight: 1.5 }}>※ {cond}</p>}
     </button>
   )
 }

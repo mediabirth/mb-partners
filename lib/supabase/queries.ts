@@ -64,16 +64,34 @@ async function attachMenus(services: ServiceWithMenus[]) {
     const admin = await createServiceRoleClient()
     const ids = services.flatMap(s => s.service_menus.map(m => m.id))
     if (ids.length === 0) return
-    const { data: rows } = await admin
-      .from('menus')
-      .select('id, service_menu_id, name, reward_type, reward_value, reward_base, reward_trigger, sort, active')
+    // メニュー（名前のみ）
+    const { data: menuRows } = await admin
+      .from('menus').select('id, service_menu_id, name, sort, active')
       .in('service_menu_id', ids).eq('active', true).order('sort')
-    const byParent = new Map<string, Menu[]>()
-    for (const r of (rows ?? []) as Menu[]) {
-      const arr = byParent.get(r.service_menu_id) ?? []
-      arr.push(r)
-      byParent.set(r.service_menu_id, arr)
+    const menus = (menuRows ?? []) as Menu[]
+    const menuIds = menus.map(m => m.id)
+    // 報酬（複数・メニューの子）
+    const { data: rewardRows } = menuIds.length
+      ? await admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base, reward_trigger, sort, active').in('menu_id', menuIds).eq('active', true).order('sort')
+      : { data: [] as MenuReward[] }
+    const rewards = (rewardRows ?? []) as MenuReward[]
+    // 協力タスク（報酬単位 reward_id 紐付け）
+    const rewardIds = rewards.map(r => r.id)
+    const { data: taskRows } = rewardIds.length
+      ? await admin.from('cooperation_task_templates').select('reward_id, label, sort').not('reward_id', 'is', null).in('reward_id', rewardIds).eq('active', true).order('sort')
+      : { data: [] as { reward_id: string; label: string; sort: number }[] }
+    const tasksByReward = new Map<string, string[]>()
+    for (const t of (taskRows ?? []) as { reward_id: string; label: string }[]) {
+      const arr = tasksByReward.get(t.reward_id) ?? []; arr.push(t.label); tasksByReward.set(t.reward_id, arr)
     }
+    const rewardsByMenu = new Map<string, MenuReward[]>()
+    for (const r of rewards) {
+      r.tasks = tasksByReward.get(r.id) ?? []
+      const arr = rewardsByMenu.get(r.menu_id) ?? []; arr.push(r); rewardsByMenu.set(r.menu_id, arr)
+    }
+    for (const m of menus) m.rewards = (rewardsByMenu.get(m.id) ?? []).sort((a, b) => a.sort - b.sort)
+    const byParent = new Map<string, Menu[]>()
+    for (const m of menus) { const arr = byParent.get(m.service_menu_id) ?? []; arr.push(m); byParent.set(m.service_menu_id, arr) }
     for (const svc of services) for (const m of svc.service_menus) {
       m.menus = (byParent.get(m.id) ?? []).sort((a, b) => a.sort - b.sort)
     }
@@ -277,17 +295,27 @@ export type ServiceWithMenus = ServiceRow & { service_menus: MenuRow[] }
 
 // 段階1：新「メニュー（1メニュー1報酬）」層の型。現 service_menus(=新「サービス」)の子。
 // ★スキーマ追加のみ・画面未使用（バックフィル/表示は後続段階）。既存読み書きには一切関与しない。
+// メニュー＝名前のみ。報酬は menu_rewards（複数）に正規化。
 export type Menu = {
   id: string
-  service_menu_id: string          // 親＝現 service_menus（新「サービス」）
+  service_menu_id: string          // 親＝service_menus（サービス）
   name: string
-  reward_type: 'fixed' | 'rate'
-  reward_value: number
-  reward_base: string | null       // rate時の基準（基本 '粗利'）
-  reward_trigger: string | null    // 成果地点
   sort: number
   active: boolean
-  created_at: string
+  rewards?: MenuReward[]           // 報酬（複数）・表示用に付与
+}
+
+// 報酬（メニューの子・複数）。各報酬にトリガーと協力タスク。
+export type MenuReward = {
+  id: string
+  menu_id: string
+  reward_type: 'fixed' | 'rate'
+  reward_value: number
+  reward_base: string | null
+  reward_trigger: string | null
+  sort: number
+  active: boolean
+  tasks?: string[]                 // この報酬の協力タスク（cooperation_task_templates.reward_id 紐付けラベル）
 }
 
 export type DealRow = {

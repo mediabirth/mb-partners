@@ -57,6 +57,10 @@ type SvcWithMenus = { id: string; name: string; service_menus?: SvcMenu[] }
 // ⑧ Determine whether a deal's reward is %-based (needs a real-amount base).
 // cooperation → selected menu's coop_* (fixed = no base)。協力dealはmenu_idバックフィル済でメニュー一本化。
 function rateInfo(d: Deal): { isRate: boolean; rate: number | null; baseLabel: string } {
+  // 新モデル：申し込まれた報酬(menu_rewards)が reward_snapshot に焼かれていればそれを正とする（計算式は不変）。
+  const rs = d.reward_snapshot as { reward_type?: string; reward_value?: number; reward_base?: string } | null
+  if (rs?.reward_type === 'rate') return { isRate: true, rate: Number(rs.reward_value ?? 0), baseLabel: rs.reward_base ?? '粗利' }
+  if (rs?.reward_type === 'fixed') return { isRate: false, rate: null, baseLabel: rs.reward_base ?? '粗利' }
   if (d.channel === 'cooperation') {
     const m = d.service_menus
     if (m?.coop_enabled) {

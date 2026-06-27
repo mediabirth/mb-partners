@@ -67,6 +67,7 @@ export async function submitPartnerReferral(formData: FormData) {
   // 段階4：選択された新メニュー(menus・1報酬)の id。新規 deal の deals.menu_ref に記録（additive）。
   // ★既存 menu_id(旧 service_menus 参照)・channel・money計算・reward_snapshot 凍結は不変。menu_ref を足すだけ。
   const menuRefRaw = (formData.get('menuRef') as string) || ''
+  const rewardRefRaw = (formData.get('rewardRef') as string) || ''   // 申し込まれた報酬（menu_rewards）
   // L3: 相談案件（サービス未定で起票）。service_id=null・明細ゼロ・is_consultation=true。
   const isConsultation = formData.get('isConsultation') === '1'
 
@@ -100,6 +101,21 @@ export async function submitPartnerReferral(formData: FormData) {
     amount = menu?.ref_type === 'fixed' ? Number(menu.ref_value) : 0
   }
 
+  // 新モデル：申し込まれた報酬（menu_rewards）があれば amount/reward_snapshot をその報酬から（計算式は不変＝固定即額/率は確定時）。
+  // snapshot は rateInfo 互換のため reward_* と ref_* の両キーで焼く。
+  let rewardSnapshot: Record<string, unknown> | null = menu ?? null
+  if (rewardRefRaw) {
+    const { data: mr } = await supabase.from('menu_rewards').select('*').eq('id', rewardRefRaw).single()
+    if (mr) {
+      amount = mr.reward_type === 'fixed' ? Number(mr.reward_value || 0) : 0
+      rewardSnapshot = {
+        ...mr,
+        reward_type: mr.reward_type, reward_value: mr.reward_value, reward_base: mr.reward_base, reward_trigger: mr.reward_trigger,
+        ref_type: mr.reward_type, ref_value: mr.reward_value, ref_base: mr.reward_base,
+      }
+    }
+  }
+
   const { data: deal, error } = await supabase
     .from('deals')
     .insert({
@@ -115,7 +131,7 @@ export async function submitPartnerReferral(formData: FormData) {
       status: 'received',
       consent: true,
       amount: isConsultation ? 0 : amount,
-      reward_snapshot: isConsultation ? null : (menu ?? null),
+      reward_snapshot: isConsultation ? null : rewardSnapshot,
       internal_memo: [isConsultation && '【相談（サービス未定）】', phone && `TEL: ${phone}`, memo].filter(Boolean).join('\n') || null,
       created_by: user.id,
     })
@@ -145,6 +161,10 @@ export async function submitPartnerReferral(formData: FormData) {
 
   // 段階4：新メニュー参照 menu_ref を記録（任意・additive・best-effort）。
   // ★money計算・reward_snapshot・channel・既存 menu_id には触れない。新規案件を新モデルへ繋ぐ追跡列のみ。
+  if (rewardRefRaw) {
+    const { error: rrErr } = await supabase.from('deals').update({ reward_ref: rewardRefRaw }).eq('id', deal!.id)
+    if (rrErr) { /* 列未追加 等は無視 */ }
+  }
   if (menuRefRaw) {
     const { error: menuRefErr } = await supabase.from('deals').update({ menu_ref: menuRefRaw }).eq('id', deal!.id)
     if (menuRefErr) { /* 列未追加・不正id 等は無視（申込は成立） */ }
@@ -181,7 +201,7 @@ export async function submitPartnerReferral(formData: FormData) {
         const { createServiceRoleClient } = await import('@/lib/supabase/server')
         const { instantiateDealTasks } = await import('@/lib/coop-tasks')
         const admin = await createServiceRoleClient()
-        await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, menu_ref: menuRefRaw || null, channel })
+        await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, menu_ref: menuRefRaw || null, reward_ref: rewardRefRaw || null, channel })
       } catch { /* best-effort */ }
     }
   }

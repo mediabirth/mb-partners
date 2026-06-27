@@ -6,7 +6,7 @@
  */
 type AdminClient = { from: (t: string) => any }
 
-type DealLike = { id: string; service_id: string; menu_id?: string | null; menu_ref?: string | null; channel: string }
+type DealLike = { id: string; service_id: string; menu_id?: string | null; menu_ref?: string | null; reward_ref?: string | null; channel: string }
 
 /**
  * 協力deal作成時：テンプレから deal_tasks を生成。冪等(unique)。
@@ -19,15 +19,21 @@ export async function instantiateDealTasks(admin: AdminClient, deal: DealLike): 
   try {
     const { data: tpls, error } = await admin
       .from('cooperation_task_templates')
-      .select('id, label, kind, required, trigger_key, sort, menu_id')
+      .select('id, label, kind, required, trigger_key, sort, menu_id, reward_id')
       .eq('service_id', deal.service_id).eq('active', true).order('sort')
     if (error || !tpls?.length) return 0
+    // 新モデル：申し込まれた報酬(reward_ref)固有のタスク(reward_id一致)を優先。
+    const rewardSpecific = deal.reward_ref
+      ? tpls.filter((t: { reward_id: string | null }) => t.reward_id === deal.reward_ref)
+      : []
     const menuSpecific = deal.menu_ref
       ? tpls.filter((t: { menu_id: string | null }) => t.menu_id === deal.menu_ref)
       : []
-    const matched = menuSpecific.length > 0
-      ? menuSpecific
-      : tpls.filter((t: { menu_id: string | null }) => t.menu_id == null || t.menu_id === deal.menu_id)
+    const matched = rewardSpecific.length > 0
+      ? rewardSpecific
+      : menuSpecific.length > 0
+        ? menuSpecific
+        : tpls.filter((t: { menu_id: string | null }) => t.menu_id == null || t.menu_id === deal.menu_id)
     if (!matched.length) return 0
     const rows = matched.map((t: { id: string; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number }) => ({
       deal_id: deal.id, template_id: t.id, label: t.label, kind: t.kind, required: t.required, trigger_key: t.trigger_key, sort: t.sort,

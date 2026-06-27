@@ -34,15 +34,19 @@ const COVERAGE_DEFAULTS = [
 
 type CoverageStep = { label: string; included: boolean }
 
-// 確定モック：1メニュー＝名前・報酬(固定/粗利%)・トリガー・協力タスク(6マスタ選択)。draft方式（保存で一括反映）。
-type MenuDraft = {
-  id: string | null            // null=新規
-  service_menu_id: string      // 親サービス（services配下の service_menu）
-  name: string
+// 確定モック：メニュー＝名前＋報酬(複数)。報酬＝固定/粗利%・トリガー・協力タスク(6マスタ選択)。draft方式（保存で一括反映）。
+type RewardDraft = {
+  id: string | null            // null=新規 menu_reward
   reward_type: 'fixed' | 'rate'
   reward_value: string
   reward_trigger: string
-  tasks: string[]              // チェックした協力タスクのラベル
+  tasks: string[]              // この報酬の協力タスクラベル
+}
+type MenuDraft = {
+  id: string | null            // null=新規メニュー
+  service_menu_id: string
+  name: string
+  rewards: RewardDraft[]
 }
 
 // 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
@@ -548,66 +552,78 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   // ── メニュー編集（確定モック menu_edit_simplified_final・draft方式・保存で一括反映） ──
   const [menuDrafts, setMenuDrafts] = useState<MenuDraft[]>([])
   const [origMenuIds, setOrigMenuIds] = useState<string[]>([])
-  const [origTasks, setOrigTasks] = useState<Record<string, Tpl[]>>({})   // menus.id → 既存タスク行(削除用id)
-  const setDraft = (i: number, patch: Partial<MenuDraft>) => setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, ...patch } : d))
-  const toggleDraftTask = (i: number, label: string) =>
-    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, tasks: d.tasks.includes(label) ? d.tasks.filter(l => l !== label) : [...d.tasks, label] } : d))
-  // サービス編集を開いた時：menus＋メニュー単位タスクを取得して draft に seed。
+  const [origRewardParent, setOrigRewardParent] = useState<Record<string, string>>({})  // reward_id → menu_id（削除判定）
+  const [origTasks, setOrigTasks] = useState<Record<string, Tpl[]>>({})   // reward_id → 既存タスク行(削除用id)
+  const setMenuField = (i: number, patch: Partial<MenuDraft>) => setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, ...patch } : d))
+  const setRewardField = (i: number, ri: number, patch: Partial<RewardDraft>) =>
+    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.map((r, k) => k === ri ? { ...r, ...patch } : r) } : d))
+  const addReward = (i: number) =>
+    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: [...d.rewards, { id: null, reward_type: 'fixed', reward_value: '', reward_trigger: '', tasks: [] }] } : d))
+  const removeReward = (i: number, ri: number) =>
+    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.filter((_, k) => k !== ri) } : d))
+  const toggleRewardTask = (i: number, ri: number, label: string) =>
+    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.map((r, k) => k === ri ? { ...r, tasks: r.tasks.includes(label) ? r.tasks.filter(l => l !== label) : [...r.tasks, label] } : r) } : d))
+
+  // サービス編集を開いた時：menus＋報酬(menu_rewards)＋報酬単位タスクを draft に seed。
   async function loadMenuEditor(svc: ServiceWithMenus) {
-    const smIds = svc.service_menus.map(m => m.id)
-    const menusByParent: Record<string, Menu[]> = {}
-    await Promise.all(smIds.map(async smId => {
-      const d = await fetch(`/api/console/menus?service_menu_id=${smId}`).then(r => r.json()).catch(() => ({ menus: [] }))
-      menusByParent[smId] = (d.menus ?? []) as Menu[]
-    }))
+    // 全タスク（reward_id 紐付け）を取得
     const td = await fetch('/api/console/task-templates').then(r => r.json()).catch(() => ({ templates: [] }))
-    const tasksByMenu: Record<string, Tpl[]> = {}
-    for (const t of (td.templates ?? []) as Tpl[]) if (t.menu_id) (tasksByMenu[t.menu_id] ??= []).push(t)
+    const tasksByReward: Record<string, Tpl[]> = {}
+    const origT: Record<string, Tpl[]> = {}
+    for (const t of (td.templates ?? []) as Tpl[]) if (t.reward_id) { (tasksByReward[t.reward_id] ??= []).push(t); (origT[t.reward_id] ??= []).push(t) }
     const drafts: MenuDraft[] = []
-    for (const sm of svc.service_menus) for (const mn of (menusByParent[sm.id] ?? []).sort((a, b) => a.sort - b.sort)) {
-      drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, reward_type: mn.reward_type, reward_value: String(mn.reward_value ?? ''), reward_trigger: mn.reward_trigger ?? '', tasks: (tasksByMenu[mn.id] ?? []).map(t => t.label) })
+    const origMids: string[] = []
+    const rewardParent: Record<string, string> = {}
+    for (const sm of svc.service_menus) {
+      const md = await fetch(`/api/console/menus?service_menu_id=${sm.id}`).then(r => r.json()).catch(() => ({ menus: [] }))
+      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number }[]).sort((a, b) => a.sort - b.sort)) {
+        origMids.push(mn.id)
+        const rd = await fetch(`/api/console/menu-rewards?menu_id=${mn.id}`).then(r => r.json()).catch(() => ({ rewards: [] }))
+        const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate'; reward_value: number; reward_trigger: string | null }[])
+          .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
+        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, rewards })
+      }
     }
-    setMenuDrafts(drafts)
-    setOrigMenuIds(drafts.filter(d => d.id).map(d => d.id as string))
-    setOrigTasks(tasksByMenu)
+    setMenuDrafts(drafts); setOrigMenuIds(origMids); setOrigRewardParent(rewardParent); setOrigTasks(origT)
   }
   function addMenuDraft() {
     const defaultSm = editing?.service_menus[0]?.id
     if (!defaultSm) { showToast('先にサービスを保存してください'); return }
-    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', reward_type: 'fixed', reward_value: '', reward_trigger: '', tasks: [] }])
+    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_trigger: '', tasks: [] }] }])
   }
   function removeMenuDraft(i: number) {
     const d = menuDrafts[i]
     if (d.id && !confirm('このメニューを削除しますか？')) return
     setMenuDrafts(p => p.filter((_, j) => j !== i))
   }
-  // 保存：draft を menus＋協力タスク紐付けに反映（作成/更新/削除＋タスク同期）。money計算には触れない。
+  // 保存：draft を menus＋menu_rewards＋報酬単位タスク(reward_id)に反映。money計算式には触れない。
   async function reconcileMenus() {
     if (!editing) return
-    const keepIds = new Set(menuDrafts.filter(d => d.id).map(d => d.id as string))
-    for (const oid of origMenuIds) if (!keepIds.has(oid)) {
-      await fetch(`/api/console/menus/${oid}`, { method: 'DELETE' }).catch(() => {})
-    }
+    const keepMenus = new Set(menuDrafts.filter(d => d.id).map(d => d.id as string))
+    const keepRewards = new Set(menuDrafts.flatMap(d => d.rewards).filter(r => r.id).map(r => r.id as string))
+    // 削除（メニュー＝CASCADEで報酬/タスクも消える・報酬＝CASCADEでタスクも消える）
+    for (const oid of origMenuIds) if (!keepMenus.has(oid)) await fetch(`/api/console/menus/${oid}`, { method: 'DELETE' }).catch(() => {})
+    for (const [rid, parentMenu] of Object.entries(origRewardParent)) if (keepMenus.has(parentMenu) && !keepRewards.has(rid)) await fetch(`/api/console/menu-rewards/${rid}`, { method: 'DELETE' }).catch(() => {})
+    // メニュー upsert → 報酬 upsert → タスク同期
     for (const d of menuDrafts) {
-      if (!d.name.trim() && !d.reward_value) continue
-      const payload = { name: d.name.trim() || '（無題）', reward_type: d.reward_type, reward_value: Number(d.reward_value) || 0, reward_base: d.reward_type === 'rate' ? '粗利' : null, reward_trigger: d.reward_trigger.trim() || null }
+      if (!d.name.trim() && d.rewards.every(r => !r.reward_value)) continue
       let menuId = d.id
-      if (menuId) {
-        await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {})
-      } else {
-        const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, ...payload }) })
-        menuId = (await res.json().catch(() => ({})))?.menu?.id ?? null
-      }
+      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）' }) }).catch(() => {})
+      else { const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）' }) }); menuId = (await res.json().catch(() => ({})))?.menu?.id ?? null }
       if (!menuId) continue
-      const existing = origTasks[d.id ?? ''] ?? []
-      const existingLabels = new Set(existing.map(t => t.label))
-      for (const mt of COOP_TASK_MASTER) {
-        const want = d.tasks.includes(mt.label), have = existingLabels.has(mt.label)
-        if (want && !have) {
-          await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: editing.id, menu_id: menuId, label: mt.label, kind: mt.kind, required: true, trigger_key: mt.kind === 'auto' ? 'in_progress' : null, sort: COOP_TASK_MASTER.findIndex(x => x.label === mt.label) }) }).catch(() => {})
-        } else if (!want && have) {
-          const tid = existing.find(t => t.label === mt.label)?.id
-          if (tid) await fetch(`/api/console/task-templates/${tid}`, { method: 'DELETE' }).catch(() => {})
+      for (let k = 0; k < d.rewards.length; k++) {
+        const r = d.rewards[k]
+        const payload = { reward_type: r.reward_type, reward_value: Number(r.reward_value) || 0, reward_base: r.reward_type === 'rate' ? '粗利' : null, reward_trigger: r.reward_trigger.trim() || null, sort: k }
+        let rewardId = r.id
+        if (rewardId) await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {})
+        else { const res = await fetch('/api/console/menu-rewards', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu_id: menuId, ...payload }) }); rewardId = (await res.json().catch(() => ({})))?.reward?.id ?? null }
+        if (!rewardId) continue
+        const existing = origTasks[r.id ?? ''] ?? []
+        const existingLabels = new Set(existing.map(t => t.label))
+        for (const mt of COOP_TASK_MASTER) {
+          const want = r.tasks.includes(mt.label), have = existingLabels.has(mt.label)
+          if (want && !have) await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: editing.id, reward_id: rewardId, label: mt.label, kind: mt.kind, required: true, trigger_key: mt.kind === 'auto' ? 'in_progress' : null, sort: COOP_TASK_MASTER.findIndex(x => x.label === mt.label) }) }).catch(() => {})
+          else if (!want && have) { const tid = existing.find(t => t.label === mt.label)?.id; if (tid) await fetch(`/api/console/task-templates/${tid}`, { method: 'DELETE' }).catch(() => {}) }
         }
       }
     }
@@ -619,7 +635,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [addCoopPct, setAddCoopPct]   = useState('') // 協力報酬（粗利の%・基準は粗利固定＝Batch1⑤準拠）
 
   // C. 対応範囲（協力タスク）= cooperation_task_templates。サービス編集に統合（旧 /console/tasks）。
-  type Tpl = { id: string; service_id: string; menu_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
+  type Tpl = { id: string; service_id: string; menu_id: string | null; reward_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
   const [taskTpls, setTaskTpls] = useState<Tpl[]>([])
   const [tLabel, setTLabel] = useState('')
   const [tKind, setTKind] = useState<'manual' | 'auto'>('manual')
@@ -663,7 +679,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     for (const sm of svc.service_menus) seed[sm.id] = (sm.menus ?? [])
     setMenuRows(seed); setNmParent(null); setNmName(''); setNmValue(''); setNmTrigger('')
     setMenuTasks({}); setMtLabel({})
-    setMenuDrafts([]); setOrigMenuIds([]); setOrigTasks({})
+    setMenuDrafts([]); setOrigMenuIds([]); setOrigRewardParent({}); setOrigTasks({})
     loadMenuEditor(svc).catch(() => {})   // 確定モックのメニュー編集に seed
   }
 
@@ -907,8 +923,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           {(m.menus ?? []).map(mn => (
                             <div key={mn.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid var(--line)', borderRadius: 7, padding: '6px 10px' }}>
                               <span style={{ fontSize: '.7rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
-                              <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
-                                {mn.reward_type === 'fixed' ? `¥${Number(mn.reward_value).toLocaleString()}` : `${mn.reward_value}%${mn.reward_base ? `・${mn.reward_base}` : ''}`}
+                              <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.66rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
+                                {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : `${r.reward_value}%`).join(' / ') || '報酬未設定'}
                               </span>
                             </div>
                           ))}
@@ -1046,64 +1062,74 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               </>
             )}
 
-            {/* ── メニュー（確定モック menu_edit_simplified_final・draft方式） ── */}
+            {/* ── メニュー（確定モック menu_edit_reward_with_trigger_tasks_console・メニュー＞報酬複数） ── */}
             {editing && (
               <>
                 <SectionLabel>メニュー</SectionLabel>
                 <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 10, lineHeight: 1.6 }}>
-                  このサービスのメニューを必要なだけ追加できます。1メニュー＝報酬ひとつ。
+                  このサービスのメニューを必要なだけ追加できます。1メニューの中に<b>報酬を複数</b>、報酬ごとにトリガーと協力タスクを設定します。
                 </p>
 
                 {menuDrafts.map((d, i) => (
-                  <div key={d.id ?? `new-${i}`} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 10, background: '#fff' }}>
-                    {/* 1) メニュー名 ＋ 削除 */}
+                  <div key={d.id ?? `new-${i}`} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 12, background: '#fff' }}>
+                    {/* メニュー名 ＋ メニュー削除 */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <input value={d.name} onChange={e => setDraft(i, { name: e.target.value })} placeholder="メニュー名"
+                      <input value={d.name} onChange={e => setMenuField(i, { name: e.target.value })} placeholder="メニュー名"
                         style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.84rem', fontWeight: 700 }} />
                       <button type="button" onClick={() => removeMenuDraft(i)}
-                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 700, padding: '8px 2px', flexShrink: 0 }}>削除</button>
+                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 700, padding: '8px 2px', flexShrink: 0, whiteSpace: 'nowrap' }}>メニューを削除</button>
                     </div>
 
-                    {/* 2) 報酬：固定（円）/ 粗利（%）トグル ＋ 金額 */}
-                    <div style={{ marginTop: 12 }}>
-                      <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>報酬</label>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          {([['fixed', '固定（円）'], ['rate', '粗利（%）']] as const).map(([v, l]) => (
-                            <button type="button" key={v} onClick={() => setDraft(i, { reward_type: v })}
-                              style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 700,
-                                background: d.reward_type === v ? 'var(--c-blue)' : 'var(--bg2)', color: d.reward_type === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
-                          ))}
+                    {/* 報酬ブロック（複数） */}
+                    {d.rewards.map((r, ri) => (
+                      <div key={r.id ?? `nr-${ri}`} style={{ marginTop: 12, border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '12px 12px', background: 'var(--blue-bg2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--blue-dk)' }}>報酬{ri + 1}</span>
+                          <button type="button" onClick={() => removeReward(i, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 700 }}>削除</button>
                         </div>
-                        <input value={d.reward_value} onChange={e => setDraft(i, { reward_value: e.target.value })} inputMode="numeric"
-                          placeholder={d.reward_type === 'fixed' ? '30000' : '50'}
-                          style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.82rem', textAlign: 'right' }} />
+                        {/* 固定（円）/ 粗利（%）＋金額 */}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {([['fixed', '固定（円）'], ['rate', '粗利（%）']] as const).map(([v, l]) => (
+                              <button type="button" key={v} onClick={() => setRewardField(i, ri, { reward_type: v })}
+                                style={{ padding: '8px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700,
+                                  background: r.reward_type === v ? 'var(--c-blue)' : '#fff', color: r.reward_type === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+                            ))}
+                          </div>
+                          <input value={r.reward_value} onChange={e => setRewardField(i, ri, { reward_value: e.target.value })} inputMode="numeric"
+                            placeholder={r.reward_type === 'fixed' ? '30000' : '50'}
+                            style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
+                        </div>
+                        {/* トリガー */}
+                        <div style={{ marginTop: 10 }}>
+                          <label style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>トリガー（成果地点）</label>
+                          <input value={r.reward_trigger} onChange={e => setRewardField(i, ri, { reward_trigger: e.target.value })} placeholder="例: 賃貸成約で確定"
+                            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', boxSizing: 'border-box', background: '#fff' }} />
+                        </div>
+                        {/* 協力タスク（この報酬で必要なもの） */}
+                        <div style={{ marginTop: 10 }}>
+                          <label style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク（この報酬で必要なものを選ぶ）</label>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {COOP_TASK_MASTER.map(mt => {
+                              const on = r.tasks.includes(mt.label)
+                              return (
+                                <label key={mt.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
+                                  <input type="checkbox" checked={on} onChange={() => toggleRewardTask(i, ri, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
+                                  <span style={{ flex: 1, fontWeight: on ? 700 : 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
+                                  <span style={{ fontSize: '.48rem', fontWeight: 700, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
 
-                    {/* 3) トリガー（成果地点） */}
-                    <div style={{ marginTop: 12 }}>
-                      <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>トリガー（成果地点）</label>
-                      <input value={d.reward_trigger} onChange={e => setDraft(i, { reward_trigger: e.target.value })} placeholder="例: 賃貸成約で確定"
-                        style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.8rem', boxSizing: 'border-box' }} />
-                    </div>
-
-                    {/* 4) 協力タスク（6マスタ・チェックで選択） */}
-                    <div style={{ marginTop: 12 }}>
-                      <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>協力タスク（このメニューで必要なものを選ぶ）</label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {COOP_TASK_MASTER.map(mt => {
-                          const on = d.tasks.includes(mt.label)
-                          return (
-                            <label key={mt.label} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: '.74rem', cursor: 'pointer', padding: '5px 0' }}>
-                              <input type="checkbox" checked={on} onChange={() => toggleDraftTask(i, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 15, height: 15 }} />
-                              <span style={{ flex: 1, fontWeight: on ? 700 : 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
-                              <span style={{ fontSize: '.5rem', fontWeight: 700, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
+                    {/* ＋報酬を追加 */}
+                    <button type="button" onClick={() => addReward(i)}
+                      style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: '#fff', color: 'var(--blue)', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 }}>
+                      ＋ 報酬を追加
+                    </button>
                   </div>
                 ))}
 

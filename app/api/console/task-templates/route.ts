@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   const row = {
     service_id: b.service_id,
     menu_id: b.menu_id || null,
+    reward_id: b.reward_id || null,   // 報酬単位の協力タスク紐付け（新モデルの正）
     label: String(b.label).trim().slice(0, 120),
     kind: b.kind === 'auto' ? 'auto' : 'manual',
     required: b.required !== false,
