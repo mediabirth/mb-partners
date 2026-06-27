@@ -64,6 +64,9 @@ export async function submitPartnerReferral(formData: FormData) {
   // ③ 対応範囲の項目別同意（協力時・任意・additive）。チェック済みラベル＋同意時刻のjsonb文字列。
   // ④報酬ゲート(deal_tasks/requiredTasksDone)・帰属(partner_id)・money とは無関係の証跡。
   const coverageAgreedRaw = (formData.get('coverageAgreed') as string) || ''
+  // 段階4：選択された新メニュー(menus・1報酬)の id。新規 deal の deals.menu_ref に記録（additive）。
+  // ★既存 menu_id(旧 service_menus 参照)・channel・money計算・reward_snapshot 凍結は不変。menu_ref を足すだけ。
+  const menuRefRaw = (formData.get('menuRef') as string) || ''
   // L3: 相談案件（サービス未定で起票）。service_id=null・明細ゼロ・is_consultation=true。
   const isConsultation = formData.get('isConsultation') === '1'
 
@@ -138,6 +141,13 @@ export async function submitPartnerReferral(formData: FormData) {
   if (customerType === 'corporate' && contactTitle) {
     const { error: titleErr } = await supabase.from('deals').update({ contact_title: contactTitle }).eq('id', deal!.id)
     if (titleErr) { /* 列未追加(DDL前) 等は無視 */ }
+  }
+
+  // 段階4：新メニュー参照 menu_ref を記録（任意・additive・best-effort）。
+  // ★money計算・reward_snapshot・channel・既存 menu_id には触れない。新規案件を新モデルへ繋ぐ追跡列のみ。
+  if (menuRefRaw) {
+    const { error: menuRefErr } = await supabase.from('deals').update({ menu_ref: menuRefRaw }).eq('id', deal!.id)
+    if (menuRefErr) { /* 列未追加・不正id 等は無視（申込は成立） */ }
   }
 
   // ③: 協力の対応範囲 項目別同意を記録（任意・additive・揉め防止の証跡）。

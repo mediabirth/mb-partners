@@ -87,6 +87,8 @@ export default function ReferPage() {
   const [consent, setConsent]             = useState(false)
   // ③ 協力の対応範囲 項目別同意（included項目のチェック済みラベル）。申込時UI同意・記録保存用。
   const [covChecked, setCovChecked]       = useState<string[]>([])
+  // 段階4：選択された新メニュー(menus・1報酬)の id。新規 deal の deals.menu_ref に書く（additive）。
+  const [selMenuRef, setSelMenuRef]       = useState<string | null>(null)
   // L3: 相談（サービス未定）起票用
   const [consultNote, setConsultNote]     = useState('')
   const [consultCoop, setConsultCoop]     = useState(false)
@@ -143,14 +145,24 @@ export default function ReferPage() {
     }
   }
 
+  // 段階4：選んだ service_menu＋kind から、対応する新メニュー(menus・1報酬)の id を解決。
+  // つなぐ(ref由来)＝固定報酬→referral、伴走(coop由来)＝成果報酬→cooperation。channel導出は従来のcoopModeのまま（出所＝reward_typeと8/9で一致）。
+  function resolveMenuRef(m: MenuRow, kind: 'ref' | 'coop'): string | null {
+    const suffix = kind === 'coop' ? '（伴走）' : '（つなぐ）'
+    const list = m.menus ?? []
+    return (list.find(x => x.name.endsWith(suffix))
+      ?? list.find(x => x.reward_type === (kind === 'coop' ? 'rate' : m.ref_type))
+      ?? null)?.id ?? null
+  }
+
   function pickMenu(m: MenuRow) {
-    setSelMenu(m); setCoopMode(false); loadToken(selSvc!.id); setStep('form')
+    setSelMenu(m); setSelMenuRef(resolveMenuRef(m, 'ref')); setCoopMode(false); loadToken(selSvc!.id); setStep('form')
   }
 
   // 協力 is per-menu now: selecting a 協力 option must set selMenu (so deal records menu_id)
   // AND coopMode=true (so channel='cooperation'). Do NOT change handleSubmit.
   function pickCoop(m: MenuRow) {
-    setSelMenu(m); setCoopMode(true); setCovChecked([]); setStep('form')
+    setSelMenu(m); setSelMenuRef(resolveMenuRef(m, 'coop')); setCoopMode(true); setCovChecked([]); setStep('form')
   }
 
   function loadToken(serviceId: string) {
@@ -221,6 +233,7 @@ export default function ReferPage() {
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', coopMode ? 'cooperation' : 'referral')
+    if (selMenuRef) fd.set('menuRef', selMenuRef)   // 段階4：新メニュー参照（additive）
     if (coopMode) fd.set('coverageAgreed', coverageAgreedPayload())
     startTransition(async () => {
       try {
@@ -265,13 +278,14 @@ export default function ReferPage() {
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', 'cooperation')
+    if (selMenuRef) fd.set('menuRef', selMenuRef)   // 段階4：新メニュー参照（additive）
     fd.set('coverageAgreed', coverageAgreedPayload())
     try { const res = await submitPartnerReferral(fd); return res?.dealId ?? null } catch { return null }
   }
 
   function resetForNext() {
     setDone(false); setStep('service'); setShowSelfBook(false)
-    setSelSvc(null); setSelMenu(null); setCoopMode(false)
+    setSelSvc(null); setSelMenu(null); setSelMenuRef(null); setCoopMode(false)
     setCustomerType('individual'); setCustomerName(''); setCompanyName(''); setContactName(''); setContactTitle('')
     setPhone(''); setCustomerEmail(''); setMemo(''); setConsent(false); setCovChecked([]); setError('')
     setConsultNote(''); setConsultCoop(false)
