@@ -94,9 +94,13 @@ function Section({ title, total, count, defaultOpen, accent, children }: { title
   )
 }
 
+type Forecast = { month: string; total_net: number; partner_count: number; items: { partner_id: string; name: string; color: string | null; deal_count: number; gross: number; withholding: number; net: number }[] }
+
 export default function PayoutsPage() {
   const { data, mutate } = useSWR<{ batches: Batch[] }>('/api/console/payouts')
   const batches = data?.batches ?? []
+  // ④ 締め前「今月の支払見込み」（読み取り集計・close_month非実行）。
+  const { data: fc } = useSWR<Forecast>('/api/console/payouts/forecast')
   const [pending, setPending] = useState<Pending[]>([])
   const [frozen, setFrozen] = useState<Frozen[]>([])
   const [dname, setDname] = useState<Record<string, string>>({})
@@ -190,6 +194,35 @@ export default function PayoutsPage() {
     ...frozen.filter(f => f.status === 'paid').map(f => deliveryRow(f, false)),
   ]
 
+  // ── ④ ダッシュボード集計（既存データの読み取り集計のみ・money計算/書き込み非接触） ──
+  const jstYm = (() => { const j = new Date(Date.now() + 9 * 3600_000); return `${j.getUTCFullYear()}-${String(j.getUTCMonth() + 1).padStart(2, '0')}` })()
+  const curBatch = batches.find(b => b.month.substring(0, 7) === jstYm)
+  // 今月：open batch があればそれ優先、無ければ confirmed 見込み（forecast）。
+  const thisMonthNet = curBatch ? curBatch.payout_items.reduce((s, it) => s + pNet(it), 0) : (fc?.total_net ?? 0)
+  const thisMonthPartners = curBatch ? curBatch.payout_items.length : (fc?.partner_count ?? 0)
+  const thisMonthConfirmed = !!curBatch
+  // 月別（全batch・month降順は既存。net=combined_net合算・人数）
+  const byMonth = batches.map(b => ({ month: b.month, status: b.status, net: b.payout_items.reduce((s, it) => s + pNet(it), 0), partners: b.payout_items.length }))
+  const monthMax = Math.max(thisMonthNet, ...byMonth.map(m => m.net), 1)
+  // パートナー別累計（payout_items 横断・net合算）
+  const partnerTotals = (() => {
+    const m = new Map<string, { name: string; color: string | null; total: number; months: number }>()
+    for (const b of batches) for (const it of b.payout_items) {
+      const cur = m.get(it.partner_id) ?? { name: it.partners?.profiles?.name ?? it.partners?.code ?? '—', color: it.partners?.profiles?.color ?? null, total: 0, months: 0 }
+      cur.total += pNet(it); cur.months += 1
+      m.set(it.partner_id, cur)
+    }
+    return [...m.values()].sort((a, b) => b.total - a.total)
+  })()
+  const partnerMax = Math.max(...partnerTotals.map(p => p.total), 1)
+  // 延滞アラート：確定済み(closed)で未払いのまま日数が経過（翌月末払い≒30日超で要対応）。表示のみ。
+  const overdueDays = (() => {
+    const closed = batches.filter(b => b.status === 'closed' && b.closed_at)
+    if (!closed.length) return null
+    return Math.max(...closed.map(b => Math.floor((Date.now() - new Date(b.closed_at as string).getTime()) / 86_400_000)))
+  })()
+  const overdue = overdueDays != null && overdueDays > 30
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
@@ -200,6 +233,71 @@ export default function PayoutsPage() {
         </div>
 
         <div className="page-anim" style={{ padding: '26px 28px', maxWidth: 880 }}>
+
+          {/* ④ ダッシュボード（読み取り集計・表示のみ） */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+            {/* 今月の支払見込み */}
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--muted2)' }}>{monthLabel(`${jstYm}-01`)}の支払{thisMonthConfirmed ? '' : '見込み'}</span>
+                <span style={{ fontSize: '.52rem', fontWeight: 800, color: thisMonthConfirmed ? 'var(--green)' : 'var(--amber)', background: thisMonthConfirmed ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>
+                  {thisMonthConfirmed ? '確定済み' : '締め後に確定'}
+                </span>
+              </div>
+              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 900, color: 'var(--c-blue)', lineHeight: 1.1 }}>{yen(thisMonthNet)}</div>
+              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>対象 {thisMonthPartners} 名{!thisMonthConfirmed && ' · 確定済み案件の見込み（締めで確定）'}</div>
+            </div>
+            {/* 要支払い（即振込）＋延滞 */}
+            <div style={{ background: '#fff', border: `1px solid ${overdue ? 'var(--red)' : 'var(--line)'}`, borderRadius: 16, padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+                <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--muted2)' }}>要支払い（即振込）</span>
+                {overdue && <span style={{ fontSize: '.52rem', fontWeight: 800, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '2px 8px' }}>延滞 {overdueDays}日</span>}
+              </div>
+              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 900, color: dueTotal > 0 ? 'var(--green)' : 'var(--muted2)', lineHeight: 1.1 }}>{yen(dueTotal)}</div>
+              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>{due.length} 件{dueTotal === 0 ? ' · すべて支払済み' : overdue ? ' · 早めの振込を' : ''}</div>
+            </div>
+          </div>
+
+          {/* 月別の支払い（過去遡り・読み取り集計） */}
+          {byMonth.length > 0 && (
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '16px 20px', marginBottom: 18 }}>
+              <b style={{ fontSize: '.78rem' }}>月別の支払い</b>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 12 }}>
+                {byMonth.map(m => (
+                  <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 64, flexShrink: 0, fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>{monthLabel(m.month)}</span>
+                    <div style={{ flex: 1, height: 18, background: 'var(--bg2)', borderRadius: 5, overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.max(4, Math.round(m.net / monthMax * 100))}%`, height: '100%', borderRadius: 5, background: m.status === 'paid' ? 'var(--muted2)' : m.status === 'closed' ? 'var(--green)' : 'var(--amber)' }} />
+                    </div>
+                    <span className="tnum" style={{ width: 92, textAlign: 'right', fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 800 }}>{yen(m.net)}</span>
+                    <span style={{ width: 38, textAlign: 'right', fontSize: '.58rem', color: 'var(--muted2)' }}>{m.partners}名</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* パートナー別 累計支払（読み取り集計） */}
+          {partnerTotals.length > 0 && (
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '16px 20px', marginBottom: 20 }}>
+              <b style={{ fontSize: '.78rem' }}>パートナー別 累計支払</b>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+                {partnerTotals.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Avatar name={p.name} color={p.color} size={28} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '.72rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                      <div style={{ height: 6, background: 'var(--bg2)', borderRadius: 4, marginTop: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.max(4, Math.round(p.total / partnerMax * 100))}%`, height: '100%', borderRadius: 4, background: 'var(--c-blue)' }} />
+                      </div>
+                    </div>
+                    <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 800, flexShrink: 0 }}>{yen(p.total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ① 要支払い（主役・最上段） */}
           <div style={{ marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 4px 8px' }}>
