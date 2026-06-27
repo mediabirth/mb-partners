@@ -203,7 +203,7 @@ export default async function PartnerDetailPage({
             ))}
           </div>
 
-          {/* 是正2：チャネル区分(つなぐ/伴走)内訳は廃止（区分語を出さない）。 */}
+          {/* 是正2：チャネル区分(関わり方の区分)内訳は廃止（区分語を出さない）。 */}
 
           {/* Two-column layout */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>

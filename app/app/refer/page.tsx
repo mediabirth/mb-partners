@@ -709,7 +709,7 @@ function EngageOption({ menu, kind, accent: _accent, onPick }: {
     <button onClick={onPick} className="card-hover lift ui-card"
       style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* 是正2：区分語(つなぐ/伴走)チップは廃止。メニューは報酬・成果地点・協力タスクの条件として見せる。 */}
+        {/* 是正2：区分語(関わり方の区分)チップは廃止。メニューは報酬・成果地点・協力タスクの条件として見せる。 */}
         <span style={{ fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
         <span style={{ marginLeft: 'auto', fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{reward}</span>
         <span style={{ color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>›</span>
