@@ -38,8 +38,9 @@ type CoverageStep = { label: string; included: boolean }
 // 確定モック：メニュー＝名前＋報酬(複数)。報酬＝固定/粗利%・トリガー・協力タスク(6マスタ選択)。draft方式（保存で一括反映）。
 type RewardDraft = {
   id: string | null            // null=新規 menu_reward
-  reward_type: 'fixed' | 'rate'
-  reward_value: string
+  reward_type: 'fixed' | 'rate' | 'continuous'  // continuous=継続（毎月）
+  reward_value: string         // 継続のとき＝毎月の率(%)
+  reward_months: string        // 継続のデフォルト期間（月数）
   reward_trigger: string
   tasks: string[]              // この報酬の協力タスクラベル
 }
@@ -559,7 +560,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const setRewardField = (i: number, ri: number, patch: Partial<RewardDraft>) =>
     setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.map((r, k) => k === ri ? { ...r, ...patch } : r) } : d))
   const addReward = (i: number) =>
-    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: [...d.rewards, { id: null, reward_type: 'fixed', reward_value: '', reward_trigger: '', tasks: [] }] } : d))
+    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: [...d.rewards, { id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] } : d))
   const removeReward = (i: number, ri: number) =>
     setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.filter((_, k) => k !== ri) } : d))
   const toggleRewardTask = (i: number, ri: number, label: string) =>
@@ -580,8 +581,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number }[]).sort((a, b) => a.sort - b.sort)) {
         origMids.push(mn.id)
         const rd = await fetch(`/api/console/menu-rewards?menu_id=${mn.id}`).then(r => r.json()).catch(() => ({ rewards: [] }))
-        const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate'; reward_value: number; reward_trigger: string | null }[])
-          .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
+        const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: number; reward_trigger: string | null; default_months: number | null }[])
+          .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_months: r.default_months != null ? String(r.default_months) : '', reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
         drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, rewards })
       }
     }
@@ -590,7 +591,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function addMenuDraft() {
     const defaultSm = editing?.service_menus[0]?.id
     if (!defaultSm) { showToast('先にサービスを保存してください'); return }
-    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_trigger: '', tasks: [] }] }])
+    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
   }
   function removeMenuDraft(i: number) {
     const d = menuDrafts[i]
@@ -618,7 +619,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       }
       for (let k = 0; k < d.rewards.length; k++) {
         const r = d.rewards[k]
-        const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'rate' ? '粗利' : null, reward_trigger: r.reward_trigger.trim() || null, sort: k }
+        const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'fixed' ? null : '粗利', reward_trigger: r.reward_trigger.trim() || null, default_months: r.reward_type === 'continuous' ? (parseAmount(r.reward_months) || null) : null, sort: k }
         let rewardId = r.id
         if (rewardId) await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {})
         else {
@@ -907,7 +908,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
                       <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
                       <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: (mn.rewards?.length ?? 0) > 0 ? 'var(--txt)' : 'var(--muted)' }}>
-                        {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : `${r.reward_value}%${r.reward_base ? `・${r.reward_base}` : ''}`).join(' / ') || '報酬未設定'}
+                        {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : r.reward_type === 'continuous' ? `継続 ${r.reward_value}%/月${r.default_months ? `・${r.default_months}ヶ月` : ''}` : `${r.reward_value}%${r.reward_base ? `・${r.reward_base}` : ''}`).join(' / ') || '報酬未設定'}
                       </span>
                     </div>
                   ))}
@@ -1066,19 +1067,37 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--blue-dk)' }}>報酬{ri + 1}</span>
                           <button type="button" onClick={() => removeReward(i, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 700 }}>削除</button>
                         </div>
-                        {/* 固定（円）/ 粗利（%）＋金額 */}
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {([['fixed', '固定（円）'], ['rate', '粗利（%）']] as const).map(([v, l]) => (
-                              <button type="button" key={v} onClick={() => setRewardField(i, ri, { reward_type: v })}
-                                style={{ padding: '8px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700,
-                                  background: r.reward_type === v ? 'var(--c-blue)' : '#fff', color: r.reward_type === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
-                            ))}
-                          </div>
+                        {/* 報酬タイプ：固定（円）/ 粗利（%）/ 継続（毎月）の3択 */}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {([['fixed', '固定（円）'], ['rate', '粗利（%）'], ['continuous', '継続（毎月）']] as const).map(([v, l]) => (
+                            <button type="button" key={v} onClick={() => setRewardField(i, ri, { reward_type: v })}
+                              style={{ padding: '8px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700,
+                                background: r.reward_type === v ? 'var(--c-blue)' : '#fff', color: r.reward_type === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+                          ))}
+                        </div>
+                        {/* 金額/率（継続時は「毎月の率」＋「期間」） */}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
                           <input value={r.reward_value} onChange={e => setRewardField(i, ri, { reward_value: e.target.value })} inputMode="numeric"
                             placeholder={r.reward_type === 'fixed' ? '30000' : '50'}
                             style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
+                          <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700, flexShrink: 0 }}>
+                            {r.reward_type === 'fixed' ? '円' : r.reward_type === 'rate' ? '%（粗利）' : '%（毎月の粗利）'}
+                          </span>
                         </div>
+                        {r.reward_type === 'continuous' && (
+                          <>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                              <label style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', flexShrink: 0 }}>期間（デフォルト）</label>
+                              <input value={r.reward_months} onChange={e => setRewardField(i, ri, { reward_months: e.target.value })} inputMode="numeric"
+                                placeholder="12"
+                                style={{ width: 80, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
+                              <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700 }}>ヶ月</span>
+                            </div>
+                            <p style={{ fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.6, margin: '7px 0 0', background: 'var(--bg2)', borderRadius: 7, padding: '8px 10px' }}>
+                              成立後、毎月の粗利を案件ボードで入力すると、その{r.reward_value || '◯'}%が毎月のパートナー報酬になります（期間は案件ごとに変更できます）。
+                            </p>
+                          </>
+                        )}
                         {/* トリガー */}
                         <div style={{ marginTop: 10 }}>
                           <label style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>トリガー（成果地点）</label>

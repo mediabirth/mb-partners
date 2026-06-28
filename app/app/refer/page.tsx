@@ -136,7 +136,7 @@ export default function ReferPage() {
     setSelMenu(serviceMenu)            // deals.menu_id（旧 service_menu・後方互換）
     setSelMenuRef(menu.id)             // deals.menu_ref（メニュー）
     setSelReward(reward)               // deals.reward_ref（報酬）＋ reward_snapshot 源
-    setCoopMode(reward.reward_type === 'rate')
+    setCoopMode(reward.reward_type === 'rate' || reward.reward_type === 'continuous')  // 継続も粗利ベース＝協力
     setCovChecked([])
     loadToken(selSvc!.id); setStep('form')
   }
@@ -715,7 +715,9 @@ export default function ReferPage() {
 function RewardOption({ reward, onPick }: { reward: MenuReward; onPick: () => void }) {
   const amount = reward.reward_type === 'fixed'
     ? `¥${Number(reward.reward_value).toLocaleString()}`
-    : `粗利${reward.reward_value}%`
+    : reward.reward_type === 'continuous'
+      ? `継続 粗利${reward.reward_value}%/月`
+      : `粗利${reward.reward_value}%`
   const tasks = reward.tasks ?? []
   return (
     <button onClick={onPick} className="card-hover lift ui-card"

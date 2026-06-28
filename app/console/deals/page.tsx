@@ -12,13 +12,15 @@ import EmptyState from '@/components/ui/EmptyState'
 import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill, DEAL_STATUS } from '@/lib/status'
 import { engagementLabel } from '@/lib/engagement-labels'
 import DeliveryProgress from './DeliveryProgress'
+import ContinuousMonthly from './ContinuousMonthly'
 
 type Deal = {
   id: string; customer_name: string; channel: string; source: string
   customer_type?: string | null; company_name?: string | null; contact_name?: string | null; contact_title?: string | null
   status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
   lost_at?: string | null; lost_reason?: string | null; lost_note?: string | null
-  reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; effective_kind?: string; gate_reason?: string } | null
+  reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; effective_kind?: string; gate_reason?: string; reward_type?: string; reward_value?: number; months?: number } | null
+  continuous_months?: number | null
   service_menus: { coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
   services: { name: string; icon: string; color: string; logo_path?: string | null } | null
   partners: { code: string; profiles: { name: string; color: string } | null } | null
@@ -56,9 +58,17 @@ type SvcWithMenus = { id: string; name: string; service_menus?: SvcMenu[] }
 
 // ⑧ Determine whether a deal's reward is %-based (needs a real-amount base).
 // cooperation → selected menu's coop_* (fixed = no base)。協力dealはmenu_idバックフィル済でメニュー一本化。
+// 継続報酬（毎月）の情報。月次入力は continuous_payouts、率は凍結 snapshot、期間は deal 優先。
+function continuousInfo(d: Deal): { isContinuous: boolean; rate: number; months: number | null } {
+  const rs = d.reward_snapshot as { reward_type?: string; reward_value?: number; months?: number } | null
+  if (rs?.reward_type === 'continuous') return { isContinuous: true, rate: Number(rs.reward_value ?? 0), months: d.continuous_months ?? rs.months ?? null }
+  return { isContinuous: false, rate: 0, months: null }
+}
 function rateInfo(d: Deal): { isRate: boolean; rate: number | null; baseLabel: string } {
   // 新モデル：申し込まれた報酬(menu_rewards)が reward_snapshot に焼かれていればそれを正とする（計算式は不変）。
   const rs = d.reward_snapshot as { reward_type?: string; reward_value?: number; reward_base?: string } | null
+  // 継続は月次入力で扱う＝単発の率ベース(base_amount)UIには乗せない。
+  if (rs?.reward_type === 'continuous') return { isRate: false, rate: null, baseLabel: rs.reward_base ?? '粗利' }
   if (rs?.reward_type === 'rate') return { isRate: true, rate: Number(rs.reward_value ?? 0), baseLabel: rs.reward_base ?? '粗利' }
   if (rs?.reward_type === 'fixed') return { isRate: false, rate: null, baseLabel: rs.reward_base ?? '粗利' }
   if (d.channel === 'cooperation') {
@@ -1255,6 +1265,11 @@ export default function DealsPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* 継続報酬：月次入力セクション（継続案件のみ・通常案件には出さない） */}
+              {detailTab === 'progress' && continuousInfo(selected).isContinuous && (
+                <ContinuousMonthly deal={selected} onChanged={() => refreshDeals(selected.id)} />
               )}
 
               {/* 進行タブ：不成立詳細＋復活／ステータス変更＋管理操作（ハンドラ不変） */}

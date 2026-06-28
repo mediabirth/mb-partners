@@ -104,15 +104,20 @@ export async function submitPartnerReferral(formData: FormData) {
   // 新モデル：申し込まれた報酬（menu_rewards）があれば amount/reward_snapshot をその報酬から（計算式は不変＝固定即額/率は確定時）。
   // snapshot は rateInfo 互換のため reward_* と ref_* の両キーで焼く。
   let rewardSnapshot: Record<string, unknown> | null = menu ?? null
+  let continuousMonths: number | null = null   // 継続案件の期間（メニューの default_months を凍結・案件ごと後で変更可）
   if (rewardRefRaw) {
     const { data: mr } = await supabase.from('menu_rewards').select('*').eq('id', rewardRefRaw).single()
     if (mr) {
+      // fixed=即額／rate・continuous=確定時(または月次)に算出＝作成時 amount は 0。継続も 0（毎月は continuous_payouts）。
       amount = mr.reward_type === 'fixed' ? Number(mr.reward_value || 0) : 0
       rewardSnapshot = {
         ...mr,
         reward_type: mr.reward_type, reward_value: mr.reward_value, reward_base: mr.reward_base, reward_trigger: mr.reward_trigger,
         ref_type: mr.reward_type, ref_value: mr.reward_value, ref_base: mr.reward_base,
+        // 継続条件を凍結（メニュー側の率・期間が後で変わっても確定済み月は不変）。
+        months: mr.reward_type === 'continuous' ? (mr.default_months ?? null) : null,
       }
+      if (mr.reward_type === 'continuous') continuousMonths = mr.default_months ?? null
     }
   }
 
@@ -132,6 +137,7 @@ export async function submitPartnerReferral(formData: FormData) {
       consent: true,
       amount: isConsultation ? 0 : amount,
       reward_snapshot: isConsultation ? null : rewardSnapshot,
+      continuous_months: isConsultation ? null : continuousMonths,
       internal_memo: [isConsultation && '【相談（サービス未定）】', phone && `TEL: ${phone}`, memo].filter(Boolean).join('\n') || null,
       created_by: user.id,
     })

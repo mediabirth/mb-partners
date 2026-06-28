@@ -20,10 +20,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!(await requireWrite(supabase))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const b = await req.json()
   const patch: Record<string, unknown> = {}
-  if (b.reward_type === 'fixed' || b.reward_type === 'rate') patch.reward_type = b.reward_type
+  if (b.reward_type === 'fixed' || b.reward_type === 'rate' || b.reward_type === 'continuous') patch.reward_type = b.reward_type
   if (b.reward_value != null) patch.reward_value = parseAmount(b.reward_value)
   if ('reward_base' in b) patch.reward_base = b.reward_base || null
   if ('reward_trigger' in b) patch.reward_trigger = b.reward_trigger ? String(b.reward_trigger).trim() : null
+  if ('default_months' in b) patch.default_months = b.reward_type === 'continuous' ? (parseAmount(b.default_months) || null) : null
   if (b.sort != null) patch.sort = Number(b.sort) || 0
   if (typeof b.active === 'boolean') patch.active = b.active
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })

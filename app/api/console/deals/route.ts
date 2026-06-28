@@ -91,7 +91,7 @@ export async function GET() {
   const admin = await createServiceRoleClient()
   const SEL_BASE = `
       id, customer_name, customer_type, company_name, contact_name, contact_title, channel, source, status, amount, base_amount,
-      fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot,
+      fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot, reward_ref, continuous_months,
       service_menus(coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, logo_path),
       partners(code, frontier_id, frontier_linked_at, profiles(name, color))`

@@ -75,7 +75,7 @@ async function attachMenus(services: ServiceWithMenus[]) {
     const menuIds = menus.map(m => m.id)
     // 報酬（複数・メニューの子）
     const { data: rewardRows } = menuIds.length
-      ? await admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base, reward_trigger, sort, active').in('menu_id', menuIds).eq('active', true).order('sort')
+      ? await admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base, reward_trigger, default_months, sort, active').in('menu_id', menuIds).eq('active', true).order('sort')
       : { data: [] as MenuReward[] }
     const rewards = (rewardRows ?? []) as MenuReward[]
     // 協力タスク（報酬単位 reward_id 紐付け）
@@ -157,7 +157,7 @@ export async function getAllDeals(supabase: SupabaseClient) {
     .select(`
       id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount, base_amount,
       fixed_month, consent, meeting_at, created_at, updated_at,
-      service_id, internal_memo, reward_snapshot,
+      service_id, internal_memo, reward_snapshot, reward_ref, continuous_months,
       services(id, name, subtitle, icon, color),
       partners(id, code, profiles(name, color))
     `)
@@ -312,10 +312,11 @@ export type Menu = {
 export type MenuReward = {
   id: string
   menu_id: string
-  reward_type: 'fixed' | 'rate'
-  reward_value: number
+  reward_type: 'fixed' | 'rate' | 'continuous'   // continuous=継続（毎月）
+  reward_value: number             // 継続のとき＝毎月の率(%)
   reward_base: string | null
   reward_trigger: string | null
+  default_months: number | null    // 継続のデフォルト期間（月数）
   sort: number
   active: boolean
   tasks?: string[]                 // この報酬の協力タスク（cooperation_task_templates.reward_id 紐付けラベル）

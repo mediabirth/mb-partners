@@ -34,13 +34,15 @@ export async function POST(req: NextRequest) {
   if (!(await requireWrite(supabase))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const b = await req.json()
   if (!b.menu_id) return NextResponse.json({ error: 'menu_id は必須です' }, { status: 400 })
-  const rewardType = b.reward_type === 'rate' ? 'rate' : 'fixed'
+  const rewardType = b.reward_type === 'rate' ? 'rate' : b.reward_type === 'continuous' ? 'continuous' : 'fixed'
+  // 継続/率は base を持つ（既定 粗利）。継続は default_months（デフォルト期間）も保持。
   const row = {
     menu_id: b.menu_id,
     reward_type: rewardType,
     reward_value: parseAmount(b.reward_value),
-    reward_base: rewardType === 'rate' ? (b.reward_base || '粗利') : null,
+    reward_base: rewardType === 'fixed' ? null : (b.reward_base || '粗利'),
     reward_trigger: b.reward_trigger ? String(b.reward_trigger).trim() : null,
+    default_months: rewardType === 'continuous' ? (parseAmount(b.default_months) || null) : null,
     sort: Number(b.sort) || 0,
     active: b.active !== false,
   }
