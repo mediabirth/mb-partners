@@ -862,8 +862,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       <div className="page-anim stagger" style={{ padding: '28px', maxWidth: 860 }}>
         {services.length === 0 && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>}
         {services.map(svc => {
-          // 全メニューを表示（各行で ref_enabled/coop_enabled に応じて 紹介/協力 chip。category は廃止）
-          const refMenus = svc.service_menus.filter(m => (m.ref_enabled ?? true) || m.coop_enabled === true)
+          // ★一覧の「メニュー・報酬」は新 menus/menu_rewards のみを唯一のソースに統一。
+          //   旧 service_menus.ref/coop（¥30,000 等の残骸）は表示しない＝APP refer と完全一致。
+          const newMenus = svc.service_menus.flatMap(sm => (sm.menus ?? []))
           return (
             <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
@@ -889,56 +890,25 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </button>
               </div>
 
-              {/* BR-C2: メニュー＝価格表（行整列・金額右揃え・紹介/協力列・該当なしは ー）。 */}
-              {refMenus.length > 0 && (
-                <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 116px 116px', gap: 10, padding: '7px 14px', background: 'var(--bg2)', alignItems: 'center' }}>
-                    <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>メニュー</span>
-                    <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>固定報酬</span>
-                    <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>成果報酬</span>
-                  </div>
-                  {refMenus.map((menu, idx) => {
-                    const mm = menu as MenuRow & {
-                      ref_enabled?: boolean | null
-                      coop_enabled?: boolean | null; coop_type?: 'fixed' | 'rate' | null
-                      coop_value?: number | null; coop_base?: string | null
-                    }
-                    const showRef  = (mm.ref_enabled ?? true)
-                    const showCoop = mm.coop_enabled && mm.coop_value != null
-                    const coopText = mm.coop_type === 'fixed'
-                      ? `¥${Number(mm.coop_value).toLocaleString()}`
-                      : `${mm.coop_value}%${mm.coop_base ? `・${mm.coop_base}` : ''}`
-                    return (
-                      <div key={menu.id} style={{ display: 'grid', gridTemplateColumns: '1fr 116px 116px', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
-                        <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
-                        <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: showRef ? 'var(--txt)' : 'var(--muted)' }}>{showRef ? fmtRef(menu) : '—'}</span>
-                        <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: showCoop ? 'var(--txt)' : 'var(--muted)' }}>{showCoop ? coopText : '—'}</span>
-                      </div>
-                    )
-                  })}
+              {/* ★メニュー＝価格表。新 menus/menu_rewards のみが唯一のソース（APP refer と同一）。
+                 空なら旧残骸を出さず「メニュー未登録」。各行＝menus.name ＋ menu_rewards（固定¥/粗利%）。 */}
+              {newMenus.length === 0 ? (
+                <div style={{ marginTop: 12, border: '1px dashed var(--line)', borderRadius: 10, padding: '14px', textAlign: 'center', background: 'var(--bg2)' }}>
+                  <span style={{ fontSize: '.68rem', color: 'var(--muted2)', fontWeight: 600 }}>メニュー未登録（「編集」からメニュー＞報酬を作成）</span>
                 </div>
-              )}
-
-              {/* 段階3：新構造プレビュー（サービス ＞ メニュー＝1報酬）。read-only・menus テーブル由来。編集は従来ドロワー。 */}
-              {refMenus.some(m => (m.menus?.length ?? 0) > 0) && (
-                <div style={{ marginTop: 10, border: '1px dashed var(--blue-bg)', borderRadius: 10, padding: '10px 14px', background: 'var(--blue-bg2)' }}>
-                  <div style={{ fontSize: '.54rem', fontWeight: 800, color: 'var(--blue-dk)', letterSpacing: '.06em', marginBottom: 6 }}>新メニュー構造（1メニュー1報酬・プレビュー）</div>
-                  {refMenus.map(m => (
-                    (m.menus?.length ?? 0) > 0 && (
-                      <div key={`nm-${m.id}`} style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 3 }}>{m.name}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {(m.menus ?? []).map(mn => (
-                            <div key={mn.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid var(--line)', borderRadius: 7, padding: '6px 10px' }}>
-                              <span style={{ fontSize: '.7rem', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
-                              <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.66rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
-                                {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : `${r.reward_value}%`).join(' / ') || '報酬未設定'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
+              ) : (
+                <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '7px 14px', background: 'var(--bg2)', alignItems: 'center' }}>
+                    <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>メニュー</span>
+                    <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>報酬</span>
+                  </div>
+                  {newMenus.map((mn, idx) => (
+                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
+                      <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
+                      <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: (mn.rewards?.length ?? 0) > 0 ? 'var(--txt)' : 'var(--muted)' }}>
+                        {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : `${r.reward_value}%${r.reward_base ? `・${r.reward_base}` : ''}`).join(' / ') || '報酬未設定'}
+                      </span>
+                    </div>
                   ))}
                 </div>
               )}
