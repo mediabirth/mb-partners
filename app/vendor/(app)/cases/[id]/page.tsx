@@ -34,16 +34,16 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
         {svc ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={46} /> : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={46} />}
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.deal?.customer_name ?? '案件'}</h1>
+            <h1 style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{brief ?? a.deal?.customer_name ?? '案件'}</h1>
             <StatusPill size="sm" {...dealStatus(a.deal?.status ?? '')} />
           </div>
-          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{svc?.name ?? 'サービス'}</div>
+          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{a.deal?.customer_name ?? '顧客'} · {svc?.name ?? 'サービス'}</div>
         </div>
       </div>
 
       {/* BR-V2：vendor固有＝プロジェクト管理ワークスペースの主役フレーミング＋全体進捗％。 */}
       {(() => {
-        const items = tasks
+        const items = tasks.filter(t => t.type === 'task')
         const done = items.filter(t => t.status === 'done').length
         const pct = items.length ? Math.round((done / items.length) * 100) : 0
         return (
@@ -53,7 +53,7 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
               <span style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: 'var(--c-blue)' }}>{pct}<span style={{ fontSize: '.66rem', fontWeight: 600, color: 'var(--muted2)' }}>%</span></span>
             </div>
             <div style={{ height: 8, borderRadius: 5, background: '#fff', overflow: 'hidden', border: '1px solid var(--blue-bg)' }}><div className="bar-grow" style={{ width: `${pct}%`, height: '100%', background: 'var(--c-blue)', borderRadius: 5 }} /></div>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6 }}>タスク・マイルストーン {done}/{items.length} 完了 · 実行を進めると報酬につながります</div>
+            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6 }}>タスク {done}/{items.length} 完了 · 実行を進めると委託費の確定につながります</div>
           </div>
         )
       })()}
@@ -87,15 +87,23 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
       {/* ワークスペース：タスク完了・成果物・進捗メモ/フラグ */}
       <VendorWorkspace assignmentId={id} tasks={tasks} deliverables={deliverables} updates={updates} />
 
-      {/* このプロジェクトのお金（結果として下流） */}
-      <div style={{ padding: '8px 20px 0' }}>
-        <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>このプロジェクトのお金</h2>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>委託費</span>
-          <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.9rem', fontWeight: 800 }}>¥{a.base_fee.toLocaleString()}</span>
-        </div>
-        <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '6px 2px 0' }}>支払（委託費＋承認済経費）は「報酬」タブで確認できます。</p>
-      </div>
+      {/* この案件の委託費（納品後に確定） */}
+      {(() => {
+        const delivered = deliverables.length > 0
+        return (
+          <div style={{ padding: '8px 20px 0' }}>
+            <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>この案件の委託費</h2>
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '.72rem', color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 7 }}>
+                委託費
+                <span style={{ fontSize: '.5rem', fontWeight: 700, color: delivered ? 'var(--green)' : 'var(--amber)', background: delivered ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>{delivered ? '納品済・確定' : '納品後に確定'}</span>
+              </span>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.9rem', fontWeight: 800 }}>¥{a.base_fee.toLocaleString()}</span>
+            </div>
+            <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '6px 2px 0' }}>支払（委託費＋承認済経費）は「委託費」タブで確認できます。</p>
+          </div>
+        )
+      })()}
       {/* 経費申請（既存・案件内から） */}
       <VendorCaseExpense assignmentId={id} label={a.deal?.customer_name ?? '案件'} initial={myExpenses} />
     </div>

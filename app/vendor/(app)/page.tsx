@@ -39,9 +39,11 @@ export default async function VendorHome() {
   // プロジェクトごとの 未完タスク・次マイルストーン
   const projects = active.map(a => {
     const tks = tasksOf(a.id)
-    const pendingTasks = tks.filter(t => t.type === 'task' && t.status !== 'done')
+    const doTasks = tks.filter(t => t.type === 'task')
+    const doneCount = doTasks.filter(t => t.status === 'done').length
+    const pendingTasks = doTasks.filter(t => t.status !== 'done')
     const nextMs = tks.filter(t => t.type === 'milestone' && t.status !== 'done').sort((x, y) => x.sort - y.sort)[0] ?? null
-    return { a, pending: pendingTasks.length, nextMs }
+    return { a, pending: pendingTasks.length, done: doneCount, total: doTasks.length, nextMs }
   })
 
   // 今やること：未完タスク・必要成果物の未提出・差戻し経費
@@ -59,6 +61,8 @@ export default async function VendorHome() {
 
   const unpaid = b.payouts.filter(p => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0)
   const notifs = deriveVendorNotifs(b).slice(0, 4)
+  // 納品待ち＝needs_deliverable かつ未提出のタスク数（ホームの3チップ用）。
+  const awaitingDelivery = b.assignments.flatMap(a => tasksOf(a.id)).filter(t => t.needs_deliverable && !b.deliverables.some(d => d.task_id === t.id)).length
 
   // Step1 表示用の再配置のみ（新規取得なし／金額の値・計算・クエリは無改修）。
   // 対象月＝未払いがあればその直近期、無ければ直近期。pendingTotal は既存ヒーローと同一集計。
@@ -80,9 +84,9 @@ export default async function VendorHome() {
           <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%', animation: 'spin 30s linear infinite' }} />
           <div style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%', animation: 'spin 20s linear infinite reverse' }} />
         </div>
-        {/* ① 小キャプション「支払予定 · 対象月」＋状態チップ（履歴なし新規は非表示） */}
+        {/* ① 小キャプション「今月の委託費見込み」＋状態チップ（履歴なし新規は非表示） */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-          <span style={{ fontSize: '.6rem', opacity: .9 }}>支払予定{targetPeriod ? ` · ${fmtPeriod(targetPeriod)}` : ''}</span>
+          <span style={{ fontSize: '.6rem', opacity: .9 }}>今月の委託費見込み{targetPeriod ? ` · ${fmtPeriod(targetPeriod)}` : ''}</span>
           {payState !== 'none' && (
             <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
           )}
@@ -111,9 +115,9 @@ export default async function VendorHome() {
         )}
         {/* ③ 区切り線 ④ 3チップ（担当案件 / 未完タスク / 要対応） */}
         <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>担当案件<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{b.assignments.length}件</b></div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>未完タスク<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{pendingTotal}件</b></div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>要対応<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{todoList.length}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>進行中<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{active.length}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>やること<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{todoList.length}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>納品待ち<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{awaitingDelivery}件</b></div>
         </div>
       </div>
 
@@ -151,20 +155,29 @@ export default async function VendorHome() {
       <div style={{ padding: '0 20px' }}>
         {projects.length === 0 ? (
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', padding: '4px 2px 16px' }}>進行中のプロジェクトはありません。</p>
-        ) : projects.slice(0, 4).map(({ a, pending, nextMs }) => {
+        ) : projects.slice(0, 4).map(({ a, pending, done, total, nextMs }) => {
+          const pct = total > 0 ? Math.round(done / total * 100) : 0
           return (
             <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift ui-card" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* V-b：担当案件リストと同じサービスバッジ（ServiceAvatar）に統一。タイトル先頭文字（【）表示をやめる。 */}
                 {(() => { const svc = a.deal?.services; return svc
                   ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={40} />
                   : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={40} /> })()}
-                <b style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{a.deal?.customer_name ?? '案件'}</b>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b style={{ fontSize: '.82rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.brief ?? a.deal?.customer_name ?? '案件'}</b>
+                  {a.brief && <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>{a.deal?.customer_name ?? ''}</span>}
+                </div>
                 <StatusPill size="sm" {...dealStatus(a.deal?.status ?? '')} />
+              </div>
+              {/* 進捗バー（done/total） */}
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'var(--bg2)', overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: pct === 100 ? 'var(--green)' : 'var(--c-blue)' }} />
+                </div>
+                <span className="tnum" style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, flexShrink: 0, fontFamily: 'Inter' }}>{done}/{total}</span>
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <span>未完タスク <b style={{ color: pending > 0 ? 'var(--c-blue)' : 'var(--muted2)' }}>{pending}</b></span>
-                {/* V-e：マイルストーン未設定のときはテキストを描画しない（未完タスク件数等は不変）。 */}
                 {nextMs && (
                   <span>次のマイルストーン: <b style={{ color: 'var(--txt)' }}>{nextMs.title}</b>{nextMs.due_date ? ` (${nextMs.due_date.slice(5)})` : ''}</span>
                 )}

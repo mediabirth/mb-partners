@@ -13,6 +13,8 @@ export default function VendorWorkspace({ assignmentId, tasks, deliverables, upd
   const [toast, setToast] = useState('')
   const show = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2600) }
   const doTasks = [...tasks].filter(t => t.type === 'task').sort((a, b) => a.sort - b.sort)
+  const nextTask = doTasks.find(t => t.status !== 'done') ?? null
+  const messages = [...updates].filter(u => u.kind === 'message').sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
 
   async function toggleTask(t: VTask) {
     setBusy(true)
@@ -24,8 +26,21 @@ export default function VendorWorkspace({ assignmentId, tasks, deliverables, upd
 
   return (
     <div style={{ padding: '8px 20px 0' }}>
+      {/* 次にやること（強調カード） */}
+      {nextTask && (
+        <div style={{ marginTop: 14, background: 'linear-gradient(135deg,#4733E6,#3A28CE)', borderRadius: 14, padding: '14px 16px', color: '#fff' }}>
+          <div style={{ fontSize: '.56rem', fontWeight: 700, opacity: .85, marginBottom: 4 }}>次にやること</div>
+          <div style={{ fontSize: '.92rem', fontWeight: 800, letterSpacing: '-.01em' }}>{nextTask.title}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            {nextTask.due_date && <span style={{ fontSize: '.6rem', opacity: .9 }}>期限 {nextTask.due_date.slice(5).replace('-', '/')}</span>}
+            {nextTask.needs_deliverable && <span style={{ fontSize: '.52rem', fontWeight: 700, background: 'rgba(255,255,255,.2)', borderRadius: 20, padding: '2px 9px' }}>成果物が必要</span>}
+            <button onClick={() => toggleTask(nextTask)} disabled={busy} style={{ marginLeft: 'auto', fontSize: '.64rem', fontWeight: 700, color: 'var(--c-blue)', background: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>完了にする</button>
+          </div>
+        </div>
+      )}
+
       {/* やること（tasks） */}
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '14px 0 8px' }}>やること</h2>
+      <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>やること</h2>
       {doTasks.length === 0 ? (
         <p style={{ fontSize: '.68rem', color: 'var(--muted2)', padding: '4px 2px' }}>MB がタスクを設定するとここに表示されます。</p>
       ) : (
@@ -71,30 +86,54 @@ export default function VendorWorkspace({ assignmentId, tasks, deliverables, upd
         )}
       </div>
 
-      {/* 進捗メモ / 課題フラグ */}
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>進捗メモ / 課題フラグ</h2>
-      <UpdatePoster assignmentId={assignmentId} onDone={() => router.refresh()} onError={show} />
-      <div style={{ marginTop: 10 }}>
-        {updates.length === 0 ? (
-          <p style={{ fontSize: '.66rem', color: 'var(--muted2)', padding: '4px 2px' }}>まだ投稿はありません。</p>
+      {/* MB とのやり取り（双方向チャット） */}
+      <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>MB とのやり取り</h2>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '12px 12px 10px' }}>
+        {messages.length === 0 ? (
+          <p style={{ fontSize: '.66rem', color: 'var(--muted2)', padding: '8px 2px', textAlign: 'center' }}>MB とのメッセージがここに表示されます。</p>
         ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {updates.map(u => (
-              <div key={u.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 9 }}>
-                <span style={{ flexShrink: 0 }}>{u.kind === 'flag' ? '🚩' : '📝'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.72rem', lineHeight: 1.6 }}>{u.body}</div>
-                  <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 3 }}>
-                    {u.created_at ? new Date(u.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                    {u.kind === 'flag' && <span style={{ marginLeft: 7, fontWeight: 700, color: u.status === 'resolved' ? 'var(--green)' : 'var(--amber)' }}>{u.status === 'resolved' ? '解決済' : '対応中'}</span>}
-                  </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 4 }}>
+            {messages.map(m => {
+              const mine = m.sender === 'vendor'
+              return (
+                <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+                  {!mine && <span style={{ fontSize: '.52rem', color: 'var(--muted2)', fontWeight: 700, margin: '0 0 2px 4px' }}>MB</span>}
+                  <div style={{ maxWidth: '78%', padding: '8px 12px', borderRadius: 13, fontSize: '.74rem', lineHeight: 1.55,
+                    background: mine ? 'var(--c-blue)' : 'var(--bg2)', color: mine ? '#fff' : 'var(--txt)',
+                    borderBottomRightRadius: mine ? 4 : 13, borderBottomLeftRadius: mine ? 13 : 4 }}>{m.body}</div>
+                  <span style={{ fontSize: '.5rem', color: 'var(--muted)', margin: '2px 4px 0' }}>{m.created_at ? new Date(m.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
+        <ChatComposer assignmentId={assignmentId} onDone={() => router.refresh()} onError={show} />
       </div>
       {toast && <div style={{ position: 'fixed', bottom: 'calc(92px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: '.74rem', fontWeight: 600, zIndex: 120 }}>{toast}</div>}
+    </div>
+  )
+}
+
+function ChatComposer({ assignmentId, onDone, onError }: { assignmentId: string; onDone: () => void; onError: (m: string) => void }) {
+  const [body, setBody] = useState('')
+  const [busy, setBusy] = useState(false)
+  async function send() {
+    if (!body.trim()) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/vendor/updates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delivery_assignment_id: assignmentId, kind: 'message', body: body.trim() }) })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.update) { setBody(''); onDone() }
+      else { onError(d.error ?? '送信に失敗しました'); setBusy(false) }
+    } catch { onError('送信に失敗しました'); setBusy(false) }
+  }
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, paddingTop: 10, borderTop: '1px solid #F2F2F6' }}>
+      <input value={body} onChange={e => setBody(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) send() }} placeholder="メッセージを入力" disabled={busy}
+        style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 999, padding: '9px 14px', fontFamily: 'inherit', fontSize: '.76rem' }} />
+      <button onClick={send} disabled={busy || !body.trim()} aria-label="送信" style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: busy || !body.trim() ? 'default' : 'pointer', background: body.trim() ? 'var(--c-blue)' : 'var(--bg2)', color: body.trim() ? '#fff' : 'var(--muted2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
     </div>
   )
 }

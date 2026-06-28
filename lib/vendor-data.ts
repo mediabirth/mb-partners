@@ -11,17 +11,25 @@ export type VExpense = { id: string; assignment_id: string; kind: string; amount
 export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null }
 export type VTask = { id: string; assignment_id: string; title: string; type: string; needs_deliverable: boolean; due_date: string | null; sort: number; status: string; done_at: string | null }
 export type VDeliverable = { id: string; assignment_id: string; task_id: string | null; file_name: string | null; note: string | null; created_at: string | null; has_file: boolean }
-export type VUpdate = { id: string; assignment_id: string; kind: string; body: string; status: string | null; created_at: string | null }
+export type VUpdate = { id: string; assignment_id: string; kind: string; body: string; status: string | null; sender: string; created_at: string | null }
+export type VSchedule = { id: string; assignment_id: string; row_type: 'proposal' | 'event'; label: string | null; event_type: string | null; event_date: string | null; proposed_dates: string[] | null; status: string; sort: number }
+export type VDelivery = {
+  id: string; name: string; kind: string | null
+  nickname: string | null; display_code: string | null; phone: string | null; address: string | null
+  tax_type: string | null; bank_name: string | null; bank_branch: string | null; bank_account: string | null
+  bank_holder_kana: string | null; invoice_number: string | null; contact_email: string | null
+}
 export type VendorBundle = {
   userId: string
   profile: { name: string | null; color: string | null; avatar_url: string | null }
-  delivery: { id: string; name: string; kind: string | null }
+  delivery: VDelivery
   assignments: VAssign[]
   expenses: VExpense[]
   payouts: VPayout[]
   tasks: VTask[]
   deliverables: VDeliverable[]
   updates: VUpdate[]
+  schedule: VSchedule[]
 }
 
 export async function loadVendorBundle(): Promise<VendorBundle | null> {
@@ -31,7 +39,7 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
 
   const [{ data: prof }, { data: dlv }] = await Promise.all([
     admin.from('profiles').select('name, color, avatar_url').eq('id', v.userId).maybeSingle(),
-    admin.from('deliveries').select('id, name, kind').eq('id', v.deliveryId).maybeSingle(),
+    admin.from('deliveries').select('id, name, kind, nickname, display_code, phone, address, tax_type, bank_name, bank_branch, bank_account, bank_holder_kana, invoice_number, contact_email').eq('id', v.deliveryId).maybeSingle(),
   ])
 
   // 【perf】3サーフェスのうち vendor だけ逐次await の waterfall で残っていた取得を、console/app と同じ並列方式へ。
@@ -72,27 +80,37 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
   })
 
   const assignIds = assignments.map(a => a.id)
-  // 並列ステップ2：tasks / deliverables / updates / expenses は assignIds のみ依存 → 同時実行（best-effort）。
-  let tasks: VTask[] = [], deliverables: VDeliverable[] = [], updates: VUpdate[] = [], expenses: VExpense[] = []
+  // 並列ステップ2：tasks / deliverables / updates / expenses / schedule は assignIds のみ依存 → 同時実行（best-effort）。
+  let tasks: VTask[] = [], deliverables: VDeliverable[] = [], updates: VUpdate[] = [], expenses: VExpense[] = [], schedule: VSchedule[] = []
   if (assignIds.length) {
-    const [tData, dData, uData, eData] = await Promise.all([
+    const [tData, dData, uData, eData, sData] = await Promise.all([
       q(admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').in('delivery_assignment_id', assignIds).order('sort', { ascending: true })),
       q(admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, file_path, note, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
-      q(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
+      q(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, sender, created_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
       q(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, status, evidence_path, created_at, approved_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false })),
+      q(admin.from('delivery_schedule').select('id, delivery_assignment_id, row_type, label, event_type, event_date, proposed_dates, status, sort').in('delivery_assignment_id', assignIds).order('sort', { ascending: true })),
     ])
     tasks = (tData ?? []).map((t: Record<string, unknown>) => ({ id: t.id as string, assignment_id: t.delivery_assignment_id as string, title: t.title as string, type: t.type as string, needs_deliverable: !!t.needs_deliverable, due_date: (t.due_date as string) ?? null, sort: (t.sort as number) ?? 0, status: t.status as string, done_at: (t.done_at as string) ?? null }))
     deliverables = (dData ?? []).map((d: Record<string, unknown>) => ({ id: d.id as string, assignment_id: d.delivery_assignment_id as string, task_id: (d.task_id as string) ?? null, file_name: (d.file_name as string) ?? null, note: (d.note as string) ?? null, created_at: (d.created_at as string) ?? null, has_file: !!d.file_path }))
-    updates = (uData ?? []).map((u: Record<string, unknown>) => ({ id: u.id as string, assignment_id: u.delivery_assignment_id as string, kind: u.kind as string, body: u.body as string, status: (u.status as string) ?? null, created_at: (u.created_at as string) ?? null }))
+    updates = (uData ?? []).map((u: Record<string, unknown>) => ({ id: u.id as string, assignment_id: u.delivery_assignment_id as string, kind: u.kind as string, body: u.body as string, status: (u.status as string) ?? null, sender: (u.sender as string) ?? 'vendor', created_at: (u.created_at as string) ?? null }))
     expenses = (eData ?? []).map((e: Record<string, unknown>) => ({ id: e.id as string, assignment_id: e.delivery_assignment_id as string, kind: e.kind as string, amount: (e.amount as number) ?? 0, status: e.status as string, has_evidence: !!e.evidence_path, created_at: (e.created_at as string) ?? null, approved_at: (e.approved_at as string) ?? null }))
+    schedule = (sData ?? []).map((s: Record<string, unknown>) => ({ id: s.id as string, assignment_id: s.delivery_assignment_id as string, row_type: s.row_type as 'proposal' | 'event', label: (s.label as string) ?? null, event_type: (s.event_type as string) ?? null, event_date: (s.event_date as string) ?? null, proposed_dates: (s.proposed_dates as string[]) ?? null, status: s.status as string, sort: (s.sort as number) ?? 0 }))
   }
 
+  const d = (dlv ?? {}) as Record<string, unknown>
   return {
     userId: v.userId,
     profile: { name: prof?.name ?? v.deliveryName, color: prof?.color ?? '#4733E6', avatar_url: (prof as { avatar_url?: string | null } | null)?.avatar_url ?? null },
-    delivery: { id: v.deliveryId, name: dlv?.name ?? v.deliveryName, kind: dlv?.kind ?? null },
+    delivery: {
+      id: v.deliveryId, name: (d.name as string) ?? v.deliveryName, kind: (d.kind as string) ?? null,
+      nickname: (d.nickname as string) ?? null, display_code: (d.display_code as string) ?? null,
+      phone: (d.phone as string) ?? null, address: (d.address as string) ?? null, tax_type: (d.tax_type as string) ?? null,
+      bank_name: (d.bank_name as string) ?? null, bank_branch: (d.bank_branch as string) ?? null,
+      bank_account: (d.bank_account as string) ?? null, bank_holder_kana: (d.bank_holder_kana as string) ?? null,
+      invoice_number: (d.invoice_number as string) ?? null, contact_email: (d.contact_email as string) ?? null,
+    },
     assignments, expenses, payouts: (pos ?? []) as VPayout[],
-    tasks, deliverables, updates,
+    tasks, deliverables, updates, schedule,
   }
 }
 

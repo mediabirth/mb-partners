@@ -17,9 +17,9 @@ export default async function VendorRewards() {
 
   return (
     <div className="page-anim">
-      {/* F-4：報酬ヒーロー（app と同一の見え方）。計算はデリバリー支払のまま・表示のみ統一。 */}
+      {/* 委託費ヒーロー（app と同一の見え方・共有RewardHero）。ベンダーの金銭は全面「委託費」言語。 */}
       <RewardHero
-        label="報酬（支払）合計"
+        label="委託費 合計"
         amount={total}
         items={[
           { key: 'unpaid', label: '未払い', value: unpaid, format: 'yen' },
@@ -28,7 +28,7 @@ export default async function VendorRewards() {
         ]}
       />
 
-      {/* BR-V2：報酬は「完了したプロジェクトの結果」という位置づけを明示（見た目は app と共通）。 */}
+      {/* 委託費は「完了したプロジェクトの結果」という位置づけを明示（見た目は app と共通）。 */}
       <p style={{ fontSize: '.62rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '12px 20px 0' }}>完了したプロジェクトの委託費・承認済み経費が、確定後にここへ反映されます。</p>
 
       <div style={{ padding: '18px 20px 6px' }}><h2 className="ty-h2">支払明細</h2></div>
