@@ -6,6 +6,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { parseAmount } from '@/lib/num'
 
 async function requireWrite(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   const row = {
     menu_id: b.menu_id,
     reward_type: rewardType,
-    reward_value: Number(b.reward_value) || 0,
+    reward_value: parseAmount(b.reward_value),
     reward_base: rewardType === 'rate' ? (b.reward_base || '粗利') : null,
     reward_trigger: b.reward_trigger ? String(b.reward_trigger).trim() : null,
     sort: Number(b.sort) || 0,

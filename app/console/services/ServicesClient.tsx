@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { SectionHeader } from '@/components/ui/Header'
 import type { ServiceWithMenus, MenuRow, Menu } from '@/lib/supabase/queries'
+import { parseAmount } from '@/lib/num'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -617,7 +618,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       }
       for (let k = 0; k < d.rewards.length; k++) {
         const r = d.rewards[k]
-        const payload = { reward_type: r.reward_type, reward_value: Number(r.reward_value) || 0, reward_base: r.reward_type === 'rate' ? '粗利' : null, reward_trigger: r.reward_trigger.trim() || null, sort: k }
+        const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'rate' ? '粗利' : null, reward_trigger: r.reward_trigger.trim() || null, sort: k }
         let rewardId = r.id
         if (rewardId) await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {})
         else {
@@ -713,8 +714,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     if (!svcForm.name) { setSvcError('サービス名を入力してください'); return }
     // インラインメニューの軽い検証（新規・withMenu・報酬入力時のみ）。
     if (!editing && withMenu) {
-      if (addRefValue && !(Number(addRefValue) > 0)) { setSvcError('固定報酬（円）は0より大きい数値で入力してください'); return }
-      if (addCoopPct && !(Number(addCoopPct) > 0 && Number(addCoopPct) <= 100)) { setSvcError('報酬（粗利の%）は 0〜100 で入力してください'); return }
+      if (addRefValue && !(parseAmount(addRefValue) > 0)) { setSvcError('固定報酬（円）は0より大きい数値で入力してください'); return }
+      if (addCoopPct && !(parseAmount(addCoopPct) > 0 && parseAmount(addCoopPct) <= 100)) { setSvcError('報酬（粗利の%）は 0〜100 で入力してください'); return }
     }
     setSvcError('')
     startTrans(async () => {
@@ -736,7 +737,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             name:           addMenuName.trim() || svcForm.name,
             ref_enabled:    !!addRefValue,
             ref_type:       'fixed',
-            ref_value:      addRefValue ? Number(addRefValue) : 0,
+            ref_value:      addRefValue ? parseAmount(addRefValue) : 0,
             ref_base:       null,
             ref_trigger:    null,
             coverage_steps: null,
@@ -744,7 +745,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             ref_months:     null,
             coop_enabled:   !!addCoopPct,
             coop_type:      addCoopPct ? 'rate' : null,
-            coop_value:     addCoopPct ? Number(addCoopPct) : null,
+            coop_value:     addCoopPct ? parseAmount(addCoopPct) : null,
             coop_base:      addCoopPct ? '粗利' : null,
             coop_coverage:  null,
             coop_condition: null,
