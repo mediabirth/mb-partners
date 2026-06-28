@@ -70,7 +70,7 @@ export default async function ConsoleApplicationsPage() {
 
         <div style={{ padding: '24px 28px 44px' }}>
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 16 }}>
-            外向け募集ページ <b>/join</b> からの応募（新しい順・全{rows.length}件）。閲覧専用です。
+            応募一覧（全{rows.length}件）
           </p>
 
           {rows.length === 0 ? (

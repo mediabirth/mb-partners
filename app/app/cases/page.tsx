@@ -126,8 +126,6 @@ export default async function CasesPage({
           <h2 className="ty-h2">案件</h2>
           <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{filtered.length}件</span>
         </div>
-        {/* ②A 帰属の安心感：これは“あなたの紹介”であることを明示 */}
-        <p style={{ fontSize: '.63rem', color: 'var(--muted2)', margin: '0 2px', lineHeight: 1.6 }}>あなたが紹介した案件の進捗です。各案件が今どの段階かを確認できます。</p>
       </div>
 
       {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計）＋(a)支払済/未払い分割 */}

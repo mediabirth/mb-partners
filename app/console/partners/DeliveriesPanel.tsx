@@ -51,9 +51,6 @@ export default function DeliveriesPanel() {
 
   return (
     <div style={{ maxWidth: 760 }}>
-      <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 18 }}>
-        案件の明細（サービス）に割り当てる実行委託先（カメラマン・エンジニア等）。委託費は案件のプロジェクトP&Lに原価として反映されます（パートナー報酬・支払とは別ストリーム）。「招待」で /vendor ポータルへ連携できます。
-      </p>
       {!ready && (
         <div style={{ background: 'var(--amber-bg)', borderRadius: 10, padding: '12px 14px', fontSize: '.72rem', color: '#7A5A14', marginBottom: 18 }}>
           テーブル未作成です。<b>docs/reports/batchA2a_all_ddl.sql</b> を Supabase で実行すると有効になります。

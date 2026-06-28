@@ -70,7 +70,6 @@ function Editor({ existing, signedUrls, onSaved, onDeleted, onBack }: { existing
           <BlockBuilder blocks={blocks} setBlocks={setBlocks} urls={urls} setUrls={setUrls} />
         </div>
         <div style={{ width: previewNarrow ? '100%' : 264, flexShrink: 0, ...(previewNarrow ? {} : { position: 'sticky' as const, top: 16 }) }}>
-          <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 6 }}>実際に届くイメージ</div>
           <BlocksPreview channel={channel} blocks={blocks} urls={urls} />
         </div>
       </div>
@@ -102,7 +101,7 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
         <Button variant="primary" size="sm" onClick={() => setSel('new')}>新規</Button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {list.length === 0 && <div style={{ fontSize: '.66rem', color: 'var(--t-tertiary)', padding: '14px 4px' }}>まだありません。「新規」から作成できます。</div>}
+        {list.length === 0 && <div style={{ fontSize: '.66rem', color: 'var(--t-tertiary)', padding: '14px 4px' }}>まだありません</div>}
         {list.map(t => {
           const on = t.id === sel
           const hasImg = (t.attachments ?? []).some(a => a.type === 'image')
@@ -124,7 +123,7 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
   const EditorPane = (
     <div style={{ flex: 1, minWidth: 0, padding: narrow ? '0' : '0 4px 0 26px' }}>
       {sel === null ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: 'var(--t-tertiary)', fontSize: '.74rem', textAlign: 'center' }}>左から選択するか、「新規」で作成してください</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: 'var(--t-tertiary)', fontSize: '.74rem', textAlign: 'center' }} />
       ) : (
         <Editor key={sel} existing={selected} signedUrls={signedUrls} onSaved={onSaved} onDeleted={onDeleted} onBack={narrow ? () => setSel(null) : undefined} />
       )}
@@ -136,7 +135,6 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
       <div style={{ marginBottom: 18 }}>
         <a href="/console/settings" style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none' }}>← 設定に戻る</a>
         <h1 style={{ fontSize: '1.4rem', fontWeight: 900, marginTop: 6 }}>自由送信テンプレート</h1>
-        <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 4 }}>メッセージ画面で手動送信するときに挿入できる定型文です。</p>
       </div>
       {narrow ? (showEditor ? EditorPane : ListPane) : (
         <div style={{ display: 'flex', alignItems: 'flex-start' }}>{ListPane}{EditorPane}</div>

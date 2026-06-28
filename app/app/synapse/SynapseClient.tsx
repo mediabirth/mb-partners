@@ -80,7 +80,6 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
             <span style={{ fontSize: '1.9rem', fontWeight: 900, letterSpacing: '-.02em', color: 'var(--blue-dk)', lineHeight: 1 }}>{entries.length}</span>
             <span style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--muted2)' }}>のつながり</span>
           </div>
-          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>繋いだ人も、これから繋ぐ人も。ぜんぶあなたの資産。</p>
         </div>
       </div>
 

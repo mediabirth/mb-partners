@@ -27,7 +27,6 @@ export default async function VendorSchedule() {
     <div className="page-anim">
       <div style={{ padding: '22px 20px 4px' }}>
         <h2 className="ty-h2">スケジュール</h2>
-        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>日程の確定待ち・これからの予定をまとめて確認できます。</p>
       </div>
 
       {/* 日程の確定待ち（双方向） */}

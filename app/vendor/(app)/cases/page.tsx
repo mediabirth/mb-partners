@@ -28,7 +28,7 @@ export default async function VendorCases() {
       </div>
       <div style={{ padding: '0 20px 20px' }}>
         {b.assignments.length === 0 ? (
-          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '20px 0' }}>担当している案件はまだありません。MB が案件を割り当てるとここに表示されます。</p>
+          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '20px 0' }}>担当している案件はまだありません</p>
         ) : b.assignments.map(a => {
           const st = ST[a.deal?.status ?? ''] ?? { label: a.deal?.status ?? '—', c: 'var(--muted2)', bg: 'var(--bg2)' }
           const svc = a.deal?.services

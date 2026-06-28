@@ -1027,7 +1027,7 @@ export default function DealsPage() {
                       {!editable && <span style={{ fontSize: '.56rem', color: 'var(--muted)', fontWeight: 700 }}>成約後はロック</span>}
                     </div>
                     <div style={{ background: 'var(--bg2)', borderRadius: 12, overflow: 'hidden' }}>
-                      {items.length === 0 && <p style={{ padding: '12px 14px', fontSize: '.66rem', color: 'var(--muted2)' }}>明細なし（相談案件 等）</p>}
+                      {items.length === 0 && <p style={{ padding: '12px 14px', fontSize: '.66rem', color: 'var(--muted2)' }}>明細なし</p>}
                       {[...items].sort((a, b) => a.sort - b.sort).map(it => (
                         <div key={it.id} style={{ padding: '10px 12px', borderBottom: '1px solid #ECECF1' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1301,10 +1301,6 @@ export default function DealsPage() {
                 <>
                   <div style={{ marginTop: 18 }}>
                     <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 8 }}>ステータス変更</p>
-                    {/* L3: 明細0件は成約不可（成約ボタン無効化＋ヒント）。 */}
-                    {NEXT[selected.status] === 'confirmed' && (selected.deal_items?.length ?? 0) === 0 && (
-                      <p style={{ fontSize: '.62rem', color: 'var(--amber)', marginBottom: 8, lineHeight: 1.6 }}>サービス明細を1つ以上追加すると成約できます。</p>
-                    )}
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {NEXT[selected.status] && (() => {
                         const blockConfirm = NEXT[selected.status] === 'confirmed' && (selected.deal_items?.length ?? 0) === 0
@@ -1384,7 +1380,7 @@ export default function DealsPage() {
           <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
             <b style={{ fontSize: '.92rem', display: 'block' }}>不成立（見送り）にする</b>
             <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
-              {lostModal.customer_name} — 成功報酬制のため報酬は発生しません。記録は保持され、後から再開できます。
+              {lostModal.customer_name} を不成立にします。
             </p>
             <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', margin: '16px 0 8px' }}>失注理由</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
@@ -1426,7 +1422,6 @@ export default function DealsPage() {
         <div onClick={() => !directBusy && setDirectModal(false)} className="modal-fade" style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 430, maxWidth: '92vw', background: '#fff', borderRadius: 16, padding: '22px 24px', boxShadow: '0 24px 64px rgba(14,14,20,.24)' }}>
             <b style={{ fontSize: '.92rem' }}>直営業プロジェクトを起票</b>
-            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '6px 0 16px', lineHeight: 1.6 }}>商談を経ず確定したプロジェクトを作成します（フェーズ＝プロジェクト／状態＝未着手）。受注額はMB粗利に反映され、パートナー報酬には入りません。</p>
             <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>お客様名</label>
             <input value={directForm.customer_name} disabled={directBusy} autoFocus onChange={e => setDirectForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="お客様名 / 企業名"
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.8rem', margin: '5px 0 14px' }} />

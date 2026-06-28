@@ -85,7 +85,7 @@ export default async function AppPage() {
       ? `確定報酬 ¥${nextPayoutAmt.toLocaleString()} が次回振込にのります。`
       : active.length > 0
         ? 'いい調子です。進行中の案件が成約すると報酬になります。'
-        : '次のご案内で、新しい報酬が生まれます。'
+        : ''
 
   // Recent feed
   const dealMap = Object.fromEntries(deals.map(d => [d.id, d]))
@@ -265,8 +265,7 @@ export default async function AppPage() {
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
           {recentEvents.length === 0 ? (
             <p style={{ padding: '16px 14px', fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>
-              最近のアクティビティはありません。<br/>
-              「はじめる」ボタンから案件を登録してみましょう。
+              最近のアクティビティはありません。
             </p>
           ) : recentEvents.slice(0, 5).map(e => {
             const deal = (e as { deal?: typeof dealMap[string] }).deal ?? dealMap[e.deal_id]

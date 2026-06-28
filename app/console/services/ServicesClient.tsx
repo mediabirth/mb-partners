@@ -286,7 +286,7 @@ function LogoUpload({ logoPath, name, onUpload }: { logoPath: string; name: stri
       <div style={{ flex: 1 }}>
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
           style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: uploading ? .6 : 1 }}>
-          {uploading ? 'アップロード中…' : logoPath ? '画像を変更' : '画像を選択（PNG/SVG推奨）'}
+          {uploading ? 'アップロード中…' : logoPath ? '画像を変更' : '画像を選択'}
         </button>
         {logoPath && (
           <button type="button" onClick={() => onUpload('')}
@@ -1046,9 +1046,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             {editing && (
               <>
                 <SectionLabel>メニュー</SectionLabel>
-                <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 10, lineHeight: 1.6 }}>
-                  このサービスのメニューを必要なだけ追加できます。1メニューの中に<b>報酬を複数</b>、報酬ごとにトリガーと協力タスクを設定します。
-                </p>
 
                 {menuDrafts.map((d, i) => (
                   <div key={d.id ?? `new-${i}`} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 12, background: '#fff' }}>
@@ -1093,9 +1090,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                                 style={{ width: 80, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
                               <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700 }}>ヶ月</span>
                             </div>
-                            <p style={{ fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.6, margin: '7px 0 0', background: 'var(--bg2)', borderRadius: 7, padding: '8px 10px' }}>
-                              成立後、毎月の粗利を案件ボードで入力すると、その{r.reward_value || '◯'}%が毎月のパートナー報酬になります（期間は案件ごとに変更できます）。
-                            </p>
                           </>
                         )}
                         {/* トリガー */}
@@ -1139,12 +1133,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               </>
             )}
 
-            {/* 新規作成時：まず名前を保存→編集画面でメニューを追加（モック準拠）。旧インライン追加は撤去。 */}
-            {!editing && (
-              <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '6px 2px 0', lineHeight: 1.6 }}>
-                サービス名を保存すると、編集画面でメニューを追加できます。
-              </p>
-            )}
             {false && (
               <>
                 <SectionLabel>B. 最初のメニュー（任意）</SectionLabel>

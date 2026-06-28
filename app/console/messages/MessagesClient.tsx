@@ -108,7 +108,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {threads.length === 0 ? (
-            <EmptyState title="相手がいません" hint="LINE連携パートナー、または送信した顧客がここに並びます。" compact />
+            <EmptyState title="相手がいません" compact />
           ) : threads.map(t => {
             const on = t.key === sel
             return (
@@ -135,7 +135,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
             <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', marginTop: 2 }}>{thread.kind === 'unknown' ? '未連携の送信者（受信のみ・連携後に返信可能）' : channel === 'line' ? 'LINE で送受信' : 'メールで送受信'}</div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {threadMsgs.length === 0 ? <EmptyState title="まだメッセージはありません" hint="下のボックスから送信できます。" compact />
+            {threadMsgs.length === 0 ? <EmptyState title="まだメッセージはありません" compact />
               : threadMsgs.map(m => (
                 <div key={m.id} style={{ alignSelf: m.direction === 'out' ? 'flex-end' : 'flex-start', maxWidth: '72%' }}>
                   <div style={{ background: m.direction === 'out' ? 'var(--c-blue)' : 'var(--s-2)', color: m.direction === 'out' ? '#fff' : 'var(--txt)', borderRadius: 12, padding: '9px 13px', fontSize: '.76rem', lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>

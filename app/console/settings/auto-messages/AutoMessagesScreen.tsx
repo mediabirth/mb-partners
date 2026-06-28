@@ -63,7 +63,7 @@ function Editor({ section, existing, signedUrls, onSaved, onReset, onBack }: { s
     return (
       <div style={{ maxWidth: 460 }}>
         {header}
-        <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)', margin: '6px 0 8px' }}>いま届いている文面（既定）</div>
+        <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)', margin: '6px 0 8px' }}>プレビュー</div>
         {defaultBlocks.length > 0
           ? <BlocksPreview channel={section.channel} blocks={defaultBlocks} urls={urls} />
           : <div style={{ background: 'var(--s-1)', border: '1px solid var(--c-hairline)', borderRadius: 10, padding: '12px 14px', fontSize: '.68rem', color: 'var(--t-secondary)', whiteSpace: 'pre-wrap' }}>{section.defaultText}</div>}
@@ -145,7 +145,6 @@ export default function AutoMessagesScreen({ byCategory, signedUrls = {}, initia
                   <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row?.label || s.label}</span>
                   <ChannelBadge channel={s.channel} />
                 </div>
-                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.desc}</div>
               </div>
               <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: isCustom ? 'var(--c-blue)' : 'var(--t-tertiary)', background: isCustom ? 'var(--c-ghost-bg)' : 'var(--s-2)', borderRadius: 5, padding: '2px 7px' }}>{isCustom ? 'カスタム' : '既定のまま'}</span>
             </button>
@@ -157,7 +156,7 @@ export default function AutoMessagesScreen({ byCategory, signedUrls = {}, initia
   const EditorPane = (
     <div style={{ flex: 1, minWidth: 0, padding: narrow ? 0 : '0 4px 0 26px' }}>
       {!section ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 220, color: 'var(--t-tertiary)', fontSize: '.74rem', textAlign: 'center' }}>左のイベントを選ぶと、ここで編集できます</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 220, color: 'var(--t-tertiary)', fontSize: '.74rem', textAlign: 'center' }} />
       ) : (
         <Editor key={section.key} section={section} existing={existing} signedUrls={signedUrls} onSaved={onSaved} onReset={onReset} onBack={narrow ? () => setSel(null) : undefined} />
       )}
@@ -169,7 +168,6 @@ export default function AutoMessagesScreen({ byCategory, signedUrls = {}, initia
       <div style={{ marginBottom: 18 }}>
         <a href="/console/settings" style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none' }}>← 設定に戻る</a>
         <h1 style={{ fontSize: '1.4rem', fontWeight: 900, marginTop: 6 }}>自動メッセージ</h1>
-        <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 4 }}>各イベントで自動送信される文面・画像。左のイベントを選んで右で編集します。未設定なら既定の文面が使われます。</p>
       </div>
       {narrow ? (section ? EditorPane : ListPane) : (
         <div style={{ display: 'flex', alignItems: 'flex-start' }}>{ListPane}{EditorPane}</div>

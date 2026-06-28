@@ -240,7 +240,6 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
             <SynapseCrest size={18} />
             <b style={{ fontSize: '.82rem', fontWeight: 800, color: 'var(--blue-dk)' }}>つなげる候補</b>
           </div>
-          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 11, lineHeight: 1.6 }}>需要の重なりから、高確度のつなぎ方だけを示します。</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             {candidates.map((cand, i) => (
               <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 11, padding: '11px 12px' }}>
@@ -334,7 +333,6 @@ export default function SynapseDetailClient({ contact, aiEnabled, history, candi
       {/* 3. このつながりを紹介する（既存フローへ・情報を引き継ぐ・憲法Button secondary・遷移ロジック不変） */}
       <div style={{ margin: '26px 20px 0', textAlign: 'center' }}>
         <Button variant="secondary" size="sm" href={referHref} style={{ borderRadius: 999 }}>このつながりを紹介する →</Button>
-        <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 7 }}>いまの情報を引き継いで紹介できます。</p>
       </div>
 
       {/* 4. 削除（控えめ） */}

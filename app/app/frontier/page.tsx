@@ -104,7 +104,7 @@ export default async function FrontierPage() {
       <div style={{ padding: '22px 20px 6px' }}>
         <h2 style={{ fontSize: '.92rem', fontWeight: 800, marginBottom: 12 }}>あなたのチーム</h2>
         {subList.length === 0 ? (
-          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 14 }}>まだパートナーがいません。下の招待リンクから仲間を増やしましょう。</p>
+          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 14 }}>まだパートナーがいません。</p>
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             {subList.map(s => {

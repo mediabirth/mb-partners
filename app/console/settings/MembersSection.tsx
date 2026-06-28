@@ -35,7 +35,7 @@ export default function MembersSection() {
   return (
     <div>
       <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 14 }}>
-        MB内部メンバー（オーナー／マネージャー）を管理します。案件詳細の<b>MB担当（ディレクター）</b>はここのメンバーから選択されます。
+        案件の<b>MB担当（ディレクター）</b>はここのメンバーから選びます。
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, alignItems: 'center', marginBottom: 16 }}>
         <input value={name} onChange={e => setName(e.target.value)} placeholder="お名前（任意）" style={{ ...inp, width: 150 }} />
@@ -43,7 +43,7 @@ export default function MembersSection() {
         <button onClick={invite} disabled={busy} className="btn btn-p" style={{ fontSize: '.74rem', padding: '8px 16px' }}>メンバーを招待</button>
       </div>
       {loading ? <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>読み込み中…</p> : list.length === 0 ? (
-        <p style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>メンバーがいません。招待したメンバーがここに表示されます。</p>
+        <p style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>メンバーがいません</p>
       ) : (
         <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
           {list.map((m, i) => (

@@ -91,7 +91,7 @@ function TodoTab({ assignmentId, doTasks, nextId, deliverables, onChange, onErro
     <div style={{ padding: '8px 20px 24px' }}>
       <h2 style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', margin: '8px 0 8px' }}>タスク</h2>
       {doTasks.length === 0 ? (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '20px 16px', textAlign: 'center', fontSize: '.7rem', color: 'var(--muted2)' }}>MB がタスクを設定するとここに表示されます。</div>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '20px 16px', textAlign: 'center', fontSize: '.7rem', color: 'var(--muted2)' }}>タスクはまだありません</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {doTasks.map(t => {
@@ -125,7 +125,7 @@ function TodoTab({ assignmentId, doTasks, nextId, deliverables, onChange, onErro
       {showForm && <DeliverableUploader assignmentId={assignmentId} tasks={doTasks.filter(t => t.needs_deliverable)} onDone={() => { setShowForm(false); onChange() }} onError={onError} />}
       <div style={{ marginTop: showForm ? 10 : 0 }}>
         {deliverables.length === 0 ? (
-          !showForm && <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 12, padding: '16px', textAlign: 'center', fontSize: '.68rem', color: 'var(--muted2)' }}>まだ成果物はありません。完了したら「提出する」から納品しましょう。</div>
+          !showForm && <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 12, padding: '16px', textAlign: 'center', fontSize: '.68rem', color: 'var(--muted2)' }}>まだ成果物はありません</div>
         ) : (
           <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
             {deliverables.map((d, i) => (
@@ -162,7 +162,6 @@ function MessageTab({ assignmentId, messages, onChange, onError }: { assignmentI
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '28px 18px', textAlign: 'center' }}>
           <div style={{ fontSize: '1.6rem', marginBottom: 8 }} aria-hidden>💬</div>
           <div style={{ fontSize: '.74rem', fontWeight: 700 }}>MB とのメッセージ</div>
-          <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>進捗や相談は下の入力欄からいつでも送れます。</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

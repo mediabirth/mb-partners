@@ -466,7 +466,7 @@ export default function ReferPage() {
                   <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '28px 22px', textAlign: 'center' }}>
                     <div style={{ fontSize: '1.8rem', marginBottom: 10 }} aria-hidden>🛠️</div>
                     <b style={{ fontSize: '.86rem', display: 'block', marginBottom: 6 }}>このサービスは準備中です</b>
-                    <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>メニューがまだ登録されていません。準備が整い次第ご案内します。</p>
+                    <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7 }}>メニューがまだ登録されていません</p>
                     <button onClick={() => setStep('service')} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ marginTop: 16, padding: '10px 22px' }}>サービス選択へ戻る</button>
                   </div>
                 </div>

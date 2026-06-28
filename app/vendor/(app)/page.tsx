@@ -130,7 +130,6 @@ export default async function VendorHome() {
           <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '20px 16px', textAlign: 'center' }}>
             <div style={{ fontSize: '1.4rem', marginBottom: 6 }} aria-hidden>✅</div>
             <div style={{ fontSize: '.74rem', fontWeight: 700 }}>対応が必要な項目はありません</div>
-            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>進行中の案件から次のタスクを進めましょう。</div>
           </div>
         ) : (
           <>

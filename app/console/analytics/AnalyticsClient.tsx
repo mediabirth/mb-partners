@@ -138,7 +138,7 @@ export default function AnalyticsClient() {
       {/* ファネル＋弱点 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, marginBottom: 22 }}>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
-          <SectionHeader title="ファネル（クリックで該当案件へ）" />
+          <SectionHeader title="ファネル" />
           <div style={{ marginTop: 12 }}>
             {funnel.map(f => {
               const w = Math.round((f.n / funnelMax) * 100)

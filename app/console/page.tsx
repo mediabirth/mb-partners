@@ -301,11 +301,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                     月間目標 ¥{monthlyTarget.toLocaleString()} の <b>{targetPct}%</b>（残り ¥{Math.max(0, monthlyTarget - mbMargin).toLocaleString()}）
                   </div>
                 </div>
-              ) : (
-                <div style={{ fontSize: '.64rem', color: 'rgba(255,255,255,.7)', marginTop: 10 }}>
-                  月間目標は設定からご登録ください（進捗バーを表示します）。
-                </div>
-              )}
+              ) : null}
               <div style={{ fontSize: '.66rem', color: 'rgba(255,255,255,.8)', marginTop: 12, lineHeight: 1.7 }}>
                 総受注額 <b className="tnum">¥{cur.revenue.toLocaleString()}</b> − コスト計 <b className="tnum">¥{totalCost.toLocaleString()}</b> = MB粗利 <b className="tnum">¥{mbMargin.toLocaleString()}</b>（成約{curWon}件）
               </div>
@@ -331,7 +327,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           )}
 
           {/* ② お金の内訳（今月）：受注額 → 各コスト → 残るMB粗利 */}
-          <SectionTitle title="お金の内訳" subtitle={`${isCurrentMonth ? '今月' : selMonthLabel}・受注額から出ていくお金を引いて、残るMB粗利`} />
+          <SectionTitle title="お金の内訳" />
           <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <WaterRow label="総受注額" val={cur.revenue} pct={100} color="var(--c-blue)" head />
             {costLines.map((c, i) => (
@@ -343,7 +339,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           </div>
 
           {/* ③ パイプライン（受注前の見込み・平均・商談ステージを1セクションに集約） */}
-          <SectionTitle title="パイプライン" subtitle="受注前の見込み額と平均（成約前のヘルス）。意味の違う金額はラベルで区別" />
+          <SectionTitle title="パイプライン" />
           <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
               <StatCard label="対応中の見込み" value={`¥${pipeline.toLocaleString()}`} accent="blue" sub="商談中のみ（来月見込み）" />
@@ -351,7 +347,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               <StatCard label="平均受注額" value={`¥${avgRevenue.toLocaleString()}`} accent="green" sub={`成約 ${wonCountAll} 件の平均`} />
             </div>
             <div style={{ borderTop: '1px solid #F2F2F6', paddingTop: 12 }}>
-              <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>商談ステージ別（件数・見込み額）</div>
+              <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>商談ステージ別</div>
               {shodanStages.map((s, i) => (
                 <Link key={s.key} href={`/console/deals`} className="lift" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < shodanStages.length - 1 ? '1px solid #F2F2F6' : 'none', textDecoration: 'none', color: 'var(--txt)' }}>
                   <StatusPill {...dealStatus(s.key)} />
@@ -363,7 +359,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           </div>
 
           {/* ④ 成約・ファネル（成約率＋流入経路を同セクションに集約） */}
-          <SectionTitle title="成約・ファネル" subtitle="商談→成約の歩留まりと、流入経路ごとの成果。当月成約率（上のKPI）とは別指標" />
+          <SectionTitle title="成約・ファネル" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
             {/* 商談→成約ファネル（全体成約率を見出しに集約＝重複表示を1回に） */}
             <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
@@ -371,7 +367,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                 <b style={{ fontSize: '.84rem' }}>商談 → 成約 ファネル</b>
                 <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>全体成約率 <b style={{ fontFamily: 'Inter', fontSize: '.92rem', color: 'var(--green)' }}>{winRateAll}%</b></span>
               </div>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>成約 {funnel.won} / 商談化 {shodanTotal} 件（成約÷商談化・直営業は商談を経ないため除外）</div>
+              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>成約 {funnel.won} / 商談化 {shodanTotal} 件</div>
               {([['受付', funnel.received, 'var(--amber)'], ['商談中', funnel.inProgress, 'var(--c-blue)'], ['成約', funnel.won, 'var(--green)'], ['不成立', funnel.lost, 'var(--muted2)']] as const).map(([label, n, color]) => {
                 const w = shodanTotal > 0 ? Math.round((n / shodanTotal) * 100) : 0
                 return (
@@ -389,7 +385,6 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             {/* 流入経路（件数・受注額・成約率を1ブロックに統合） */}
             <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
               <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>流入経路（件数・受注額・成約率）</b>
-              <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 16 }}>パートナー経由／直営業の強み・弱み</div>
               {intakeRate.map((r, i) => (
                 <div key={r.intake} style={{ padding: '9px 0', borderBottom: i < intakeRate.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -419,13 +414,12 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           </div>
 
           {/* ⑥ 要対応（アラート＋停滞＋直近商談を1セクションに統合）＋最近の動き */}
-          <SectionTitle title="要対応・最近の動き" subtitle="対応が必要な項目と、直近のアクティビティ" />
+          <SectionTitle title="要対応・最近の動き" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
             {/* 要対応（統合）：アラート → 停滞中 → 直近の商談 */}
             <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ padding: '15px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontSize: '.84rem' }}>要対応{alerts.length > 0 && <span style={{ color: 'var(--red)', marginLeft: 6 }}>{alerts.length}</span>}</b>
-                <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>クリックで該当案件へ</span>
               </div>
               {/* アラート（差戻し経費・期日超過・課題フラグ・受注額未入力） */}
               {alerts.length === 0 ? (
@@ -530,7 +524,6 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           <details className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 8 }}>
             <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '14px 20px', fontSize: '.82rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>詳細（プロジェクト実行・MB担当別・デリバリー別）</span>
-              <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 600 }}>クリックで展開</span>
             </summary>
             <div style={{ padding: '4px 20px 20px' }}>
               {/* プロジェクト実行：1行サマリーに圧縮（ロジック・件数は不変） */}
@@ -554,8 +547,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               {/* MB担当別 / デリバリー別 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 14 }}>
                 <div>
-                  <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2 }}>MB担当別の粗利</b>
-                  <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 12 }}>{isCurrentMonth ? '今月' : selMonthLabel}の成約・担当別</div>
+                  <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 12 }}>MB担当別の粗利</b>
                   {directorRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>該当データがありません。</p> : directorRows.map((d, i) => {
                     const w = Math.round((Math.max(0, d.margin) / Math.max(1, directorRows[0].margin)) * 100)
                     return (

@@ -90,7 +90,6 @@ export function ButtonsField({ buttons, setButtons }: { buttons: EditButton[]; s
         <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)' }}>ボタン（最大3個・タップでURLを開く）</div>
         {buttons.length < 3 && <button type="button" onClick={add} style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}>＋ 追加</button>}
       </div>
-      {buttons.length === 0 && <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', paddingBottom: 4 }}>ボタンなし（従来どおり画像＋本文で送信）。「＋ 追加」でURLボタンを付けられます。</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {buttons.map((b, i) => (
           <div key={i} style={{ border: '1px solid var(--c-hairline)', borderRadius: 10, padding: '11px 12px', background: 'var(--s-1)' }}>
@@ -232,7 +231,6 @@ function CarouselEditor({ cards, setCards, urls, setUrls }: { cards: Card[]; set
   const delBtn = (i: number, bi: number) => upd(i, { buttons: (cards[i].buttons ?? []).filter((_, j) => j !== bi) })
   return (
     <div>
-      <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 6 }}>カードを横に並べて送れます（画像だけでもOK）。2枚以上推奨・最大10枚。</div>
       <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
         {cards.map((c, i) => (
           <div key={i} style={{ flexShrink: 0, width: 210, border: '1px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-0)', padding: '10px' }}>
@@ -313,14 +311,13 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [], hide
     <div>
       {vars.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 5 }}>差し込み項目（テキストブロックに挿入）</div>
+          <div style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', marginBottom: 5 }}>差し込み項目</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {vars.map(v => <button key={v} type="button" onClick={() => insertVar(v)} title={EXAMPLE[v] ? `例：${EXAMPLE[v]}` : ''} style={{ fontSize: '.58rem', border: '1px solid var(--c-ring-soft)', background: 'var(--c-ghost-bg)', color: 'var(--c-blue)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>{VARDESC[v] ?? v}</button>)}
           </div>
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {blocks.length === 0 && <div style={{ fontSize: '.62rem', color: 'var(--t-tertiary)', padding: '10px 0' }}>下のボタンでブロックを追加してください。上から順に届きます。</div>}
         {blocks.map((b, i) => (
           <div key={i} style={{ border: '1px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-1)', padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>

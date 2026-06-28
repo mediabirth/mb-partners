@@ -229,7 +229,6 @@ export default function PayoutsPage() {
       <div style={{ flex: 1, marginLeft: 230 }}>
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
           <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>支払管理</h1>
-          <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2 }}>誰に・いくら払うか。各行をひらくと内訳が見られます。</p>
         </div>
 
         <div className="page-anim" style={{ padding: '26px 28px', maxWidth: 880 }}>
@@ -254,7 +253,7 @@ export default function PayoutsPage() {
                 {overdue && <span style={{ fontSize: '.52rem', fontWeight: 800, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '2px 8px' }}>延滞 {overdueDays}日</span>}
               </div>
               <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 900, color: dueTotal > 0 ? 'var(--green)' : 'var(--muted2)', lineHeight: 1.1 }}>{yen(dueTotal)}</div>
-              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>{due.length} 件{dueTotal === 0 ? ' · すべて支払済み' : overdue ? ' · 早めの振込を' : ''}</div>
+              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>{due.length} 件</div>
             </div>
           </div>
 

@@ -180,7 +180,6 @@ export default function SettingsPage() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.84rem', fontWeight: 800 }}>自由送信テンプレート</div>
-                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>手動送信で挿入できる定型文（LINE用／メール用・画像つき）</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 700, marginTop: 4 }}>{msgFreeCount == null ? '　' : `${msgFreeCount}件登録済み`}</div>
               </div>
               <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
@@ -191,7 +190,6 @@ export default function SettingsPage() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.84rem', fontWeight: 800 }}>自動メッセージ</div>
-                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>成約・賞賛・受付確認など、各イベントで自動送信される文面と画像</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 700, marginTop: 4 }}>{msgAutoCount == null ? '　' : `7イベント · ${msgAutoCount}件カスタム`}</div>
               </div>
               <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
@@ -206,7 +204,7 @@ export default function SettingsPage() {
 
           {/* QR: ダッシュボード月間目標 */}
           <SectionCard title="ダッシュボード">
-            <RowItem label="月間目標（運営取り分）" desc="ダッシュボードのヒーローに進捗バーを表示します。未設定なら前月比のみ。">
+            <RowItem label="月間目標（運営取り分）" desc="ダッシュボードに進捗バーを表示">
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: 'var(--muted2)', fontSize: '.8rem' }}>¥</span>
                 <input
@@ -223,10 +221,10 @@ export default function SettingsPage() {
 
           {/* 4. 通知設定 */}
           <SectionCard title="通知設定">
-            <RowItem label="メール通知" desc="新規案件・ステータス変更・支払完了時にメールを受信">
+            <RowItem label="メール通知">
               <Toggle on={notifEmail} onChange={setNotifEmail} />
             </RowItem>
-            <RowItem label="Slack 通知" desc="Slack に通知を送信（Webhook はサーバー側に設定）">
+            <RowItem label="Slack 通知">
               <Toggle on={notifSlack} onChange={setNotifSlack} />
             </RowItem>
             {notifSlack && (
@@ -247,7 +245,7 @@ export default function SettingsPage() {
           <SectionCard title="監査ログ">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', flex: 1, lineHeight: 1.6, minWidth: 160 }}>
-                管理操作の履歴（直近50件）
+                履歴
               </p>
               <select
                 value={auditCategory}
@@ -270,7 +268,7 @@ export default function SettingsPage() {
             {auditLoading ? (
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>読み込み中…</p>
             ) : auditLogs.length === 0 ? (
-              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>ログがありません。設定変更や承認などの操作がここに記録・表示されます。</p>
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '10px 0' }}>ログがありません</p>
             ) : (
               <div>
                 {auditLogs.map((log, i) => (

@@ -3,9 +3,9 @@ import { useState } from 'react'
 
 type Kind = 'partner' | 'frontier' | 'delivery'
 const KINDS: { id: Kind; label: string; note: string }[] = [
-  { id: 'partner', label: 'パートナー', note: '紹介（リファラル）パートナーとして招待します。' },
-  { id: 'frontier', label: 'フロンティア', note: 'このリンクで登録すると「フロンティア（統括パートナー）」になります。' },
-  { id: 'delivery', label: 'デリバリー', note: '業務委託先（デリバリー）として招待します。名称（屋号）が必要です。' },
+  { id: 'partner', label: 'パートナー', note: '' },
+  { id: 'frontier', label: 'フロンティア', note: '' },
+  { id: 'delivery', label: 'デリバリー', note: '' },
 ]
 
 export default function InviteForm() {
@@ -50,8 +50,7 @@ export default function InviteForm() {
   return (
     <div style={{ padding: '24px 28px', maxWidth: 560 }}>
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '24px 24px' }}>
-        <h2 style={{ fontSize: '.88rem', fontWeight: 800, marginBottom: 4 }}>招待する</h2>
-        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 18 }}>ロールを選んで招待リンクを発行します。</p>
+        <h2 style={{ fontSize: '.88rem', fontWeight: 800, marginBottom: 18 }}>招待する</h2>
 
         <form onSubmit={handleSubmit}>
           {/* ロール選択（統一導線） */}

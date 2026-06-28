@@ -53,7 +53,7 @@ export default function DeliveryProgress({ deal, onRefresh }: { deal: Deal; onRe
 
       {/* a. プロジェクト概要/スコープ */}
       <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
-        <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 6 }}>プロジェクト概要 / スコープ（vendorへ共有・お金情報は含めない）</div>
+        <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 6 }}>プロジェクト概要 / スコープ</div>
         <textarea value={brief} onChange={e => setBrief(e.target.value)} rows={3} placeholder="目的・対応範囲・前提・成果物の方向性など" disabled={briefBusy}
           style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.74rem', resize: 'vertical', background: '#fff' }} />
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 6 }}>
@@ -63,7 +63,7 @@ export default function DeliveryProgress({ deal, onRefresh }: { deal: Deal; onRe
       </div>
 
       {assigns.length === 0 ? (
-        <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>デリバリー割当がありません。明細にデリバリーを割り当てると、タスク/マイルストーンを設計できます。</p>
+        <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>デリバリー割当がありません。</p>
       ) : assigns.map(a => {
         const tasks = [...(a._tasks ?? [])].sort((x, y) => x.sort - y.sort)
         const updates = a._updates ?? []
@@ -94,7 +94,7 @@ export default function DeliveryProgress({ deal, onRefresh }: { deal: Deal; onRe
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
               <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 6 }}>vendor 実行シグナル（成果物・進捗メモ・課題フラグ）</div>
               {deliverables.length === 0 && updates.length === 0 ? (
-                <p style={{ fontSize: '.6rem', color: 'var(--muted)' }}>まだシグナルはありません（vendor がタスク完了・成果物提出・メモ投稿を行うと表示されます／V-2）。</p>
+                <p style={{ fontSize: '.6rem', color: 'var(--muted)' }}>まだシグナルはありません。</p>
               ) : (
                 <>
                   {deliverables.map(dl => <div key={dl.id} style={{ fontSize: '.64rem', padding: '3px 0' }}>📎 {dl.file_name ?? '成果物'}{dl.note ? ` · ${dl.note}` : ''}</div>)}
