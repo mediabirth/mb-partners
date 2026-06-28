@@ -65,8 +65,11 @@ function CoopBadge() {
 
 export default function ReferPage() {
   const router = useRouter()
-  // 4: services は不変マスタ。SWRでキャッシュ（CDNキャッシュ済＋クライアントでも再取得抑制）
-  const { data: services = [] } = useSWR<ServiceWithMenus[]>('/api/services')
+  // 4: services は不変マスタ。SWRでキャッシュ（CDNキャッシュ済＋クライアントでも再取得抑制）。
+  // ★この取得だけは shouldRetryOnError を有効化：マスタ取得が一時失敗(503/network)しても
+  //   「サービスがない」を貼り付かせず自動リトライで復帰させる（グローバルは金額stale防止でfalse）。
+  const { data: services = [], error: svcError, isLoading: svcLoading, mutate: refetchServices } =
+    useSWR<ServiceWithMenus[]>('/api/services', { shouldRetryOnError: true, errorRetryCount: 10, errorRetryInterval: 1500 })
   const [step, setStep]                   = useState<Step>('service')
   const [selSvc, setSelSvc]               = useState<ServiceWithMenus | null>(null)
   const [selMenu, setSelMenu]             = useState<MenuRow | null>(null)
@@ -336,6 +339,21 @@ export default function ReferPage() {
             </p>
           </div>
           <div className="stagger" style={{ padding: '0 20px' }}>
+            {/* ★サービス一覧が空＝取得中/取得失敗のときは「サービスがない」を誤表示せず、
+               読み込み/再試行UIを出す（503自動リトライと併用で復帰可能に・silent empty 撲滅）。 */}
+            {services.length === 0 && (svcLoading || svcError) && (
+              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '26px 18px', marginBottom: 12, textAlign: 'center' }}>
+                {svcError ? (
+                  <>
+                    <div style={{ fontSize: '.84rem', fontWeight: 800, marginBottom: 6 }}>サービスの読み込みに失敗しました</div>
+                    <div style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.6, marginBottom: 14 }}>通信状況をご確認のうえ、再読み込みしてください。</div>
+                    <button onClick={() => refetchServices()} className="ui-btn ui-btn--primary lift" style={{ padding: '9px 22px' }}>再読み込み</button>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>サービスを読み込んでいます…</div>
+                )}
+              </div>
+            )}
             {/* ② サービス選択: ロゴ＋名前＋一言コピーのみ（費用は出さない）。ブランドカラーのアクセント＋tap lift/shine */}
             {services.map(svc => {
               const copy = svc.subtitle || svc.description || ''

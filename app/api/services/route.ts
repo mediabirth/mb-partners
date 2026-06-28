@@ -9,11 +9,18 @@ export const runtime = 'edge'
 export async function GET() {
   const supabase = await createServiceRoleClient()
   const services = await getServicesWithMenus(supabase)
-  // ★毒入りキャッシュ防止：マスタ取得が（デプロイ瞬間の一時失敗等で）空になった場合は
-  // 絶対に CDN キャッシュさせない。空配列が s-maxage で最大15分 stale 配信され
-  // 「サービスがない」状態が貼り付く事故を恒久的に塞ぐ。中身がある時だけキャッシュ可。
-  const headers = services.length > 0
-    ? { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' }
-    : { 'Cache-Control': 'no-store' }
-  return NextResponse.json(services, { headers })
+  // ★services マスタは常に複数件存在する不変マスタ。空配列＝取得失敗（DB一時障害/cold start等）と断定する。
+  //   これを 200 [] で返すと APP は「サービスがない」を描画し、クライアント SWR は
+  //   shouldRetryOnError:false で復帰不能になる（＝コンソールは server-read で出るが APP は client-fetch が
+  //   一度失敗すると貼り付く「見え方が割れる」事故の正体）。よって空は 200 ではなく 503(no-store) で返し、
+  //   クライアントに「エラー＝リトライ」させる。中身がある時だけ CDN キャッシュ可。
+  if (!services || services.length === 0) {
+    return NextResponse.json(
+      { error: 'services_unavailable' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+  return NextResponse.json(services, {
+    headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
+  })
 }

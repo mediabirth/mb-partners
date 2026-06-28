@@ -39,11 +39,14 @@ export async function getDealWithEvents(supabase: SupabaseClient, dealId: string
 const TEST_SERVICE_NAMES = new Set(['テスト', 'APIテスト', 'テスト用', 'test', 'Test'])
 
 export async function getServicesWithMenus(supabase: SupabaseClient) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('services')
     .select('*, service_menus(*)')
     .eq('active', true)
     .order('sort')
+  // ★取得失敗を握り潰さない（観測性）。data は [] にフォールバックするが、呼び出し側
+  //   （/api/services は空→503）が「失敗」を判別できるよう error をログに残す。
+  if (error) console.error('[getServicesWithMenus] services query failed:', error.message)
   const services = (data ?? []).filter(
     (s: { name: string }) => !TEST_SERVICE_NAMES.has(s.name)
   ) as ServiceWithMenus[]
