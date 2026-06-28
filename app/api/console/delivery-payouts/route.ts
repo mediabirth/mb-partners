@@ -90,5 +90,24 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin.from('delivery_payout_items').insert(rows).select('id, amount')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const total = (data ?? []).reduce((s: number, r: { amount: number }) => s + (r.amount ?? 0), 0)
+
+  // ★ベンダー「メール通知」：委託費が確定したら本人へ通知（best-effort・お金ロジック非接触）。
+  // 宛先は deliveries.contact_email、無ければ auth email。Resend 未設定/宛先なしは静かにスキップ。
+  try {
+    const { data: dlv } = await admin.from('deliveries').select('name, contact_email, auth_user_id').eq('id', deliveryId).maybeSingle()
+    let to = (dlv?.contact_email as string) || null
+    if (!to && dlv?.auth_user_id) { const { data: u } = await admin.auth.admin.getUserById(dlv.auth_user_id as string); to = u?.user?.email ?? null }
+    if (to) {
+      const { sendEmail } = await import('@/lib/notify')
+      const mm = period.split('-')[1] ?? ''
+      await sendEmail({
+        to,
+        subject: `${Number(mm)}月の委託費が確定しました`,
+        text: `${dlv?.name ?? ''} 様\n${period} の委託費 ¥${total.toLocaleString()} が確定しました。\nアプリの「委託費」からご確認いただけます。`,
+        buttons: [{ label: '委託費を確認する', url: 'https://mb-partners.app/vendor/rewards' }],
+      })
+    }
+  } catch { /* best-effort：通知失敗は支払凍結に影響しない */ }
+
   return NextResponse.json({ frozen: data, count: (data ?? []).length, total })
 }
