@@ -42,8 +42,8 @@ export default function SchedulePicker({ id, label, dates }: { id: string; label
         })}
       </div>
       {err && <p style={{ fontSize: '.64rem', color: 'var(--red)', marginBottom: 8 }}>{err}</p>}
-      <button onClick={confirm} disabled={busy || !sel} className="ui-btn ui-btn--primary" style={{ width: '100%', justifyContent: 'center' }}>
-        {busy ? '確定中…' : 'この日程で確定する'}
+      <button onClick={confirm} disabled={busy || !sel} className="ui-btn ui-btn--primary" style={{ width: '100%', justifyContent: 'center', ...((busy || !sel) ? { background: 'var(--bg2)', color: 'var(--muted2)', border: '1px solid var(--line)', opacity: 1 } : {}) }}>
+        {busy ? '確定中…' : sel ? `${fmtD(sel)}（${wd(sel)}）で確定する` : '候補日を選んでください'}
       </button>
     </div>
   )

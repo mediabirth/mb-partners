@@ -121,29 +121,35 @@ export default async function VendorHome() {
         </div>
       </div>
 
-      {/* 今やること（Step4：空でもセクションは消さず静かな空状態カードを表示。判定は既存配列lengthのみ） */}
-      <div style={{ padding: '20px 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* 今やること（最優先1件のみ大カード＋「ほか○件」。3件並べない＝焦点を1つに） */}
+      <div style={{ padding: '22px 20px 8px' }}>
         <h2 className="ty-h2">今やること</h2>
-        {todoList.length > 1 && (
-          <span style={{ fontSize: '.55rem', fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999, background: 'var(--blue-bg)', color: 'var(--c-blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todoList.length}</span>
+      </div>
+      <div style={{ padding: '0 20px' }}>
+        {todoList.length === 0 ? (
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '20px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '1.4rem', marginBottom: 6 }} aria-hidden>✅</div>
+            <div style={{ fontSize: '.74rem', fontWeight: 700 }}>対応が必要な項目はありません</div>
+            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>進行中の案件から次のタスクを進めましょう。</div>
+          </div>
+        ) : (
+          <>
+            <Link href={todoList[0].href} className="card-hover lift" style={{ display: 'flex', gap: 12, alignItems: 'center', background: '#fff', border: '1.5px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px', textDecoration: 'none', color: 'var(--txt)', boxShadow: '0 2px 12px rgba(71,51,230,.08)' }}>
+              <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: todoList[0].dot }} />
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.84rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{todoList[0].title}</div>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{todoList[0].sub}</div>
+              </div>
+              <span style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--c-blue)', flexShrink: 0 }}>進む ›</span>
+            </Link>
+            {todoList.length > 1 && (
+              <Link href={todoList[1].href} style={{ display: 'block', textAlign: 'center', fontSize: '.64rem', color: 'var(--muted2)', textDecoration: 'none', padding: '11px 0 2px', fontWeight: 600 }}>ほか {todoList.length - 1} 件</Link>
+            )}
+          </>
         )}
       </div>
-      {todoList.length === 0 ? (
-        <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '18px 16px', textAlign: 'center', fontSize: '.7rem', color: 'var(--muted2)' }}>対応が必要な項目はありません</div>
-      ) : (
-        <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
-          {todoList.map(t => (
-            <Link key={t.key} href={t.href} className="row-hover lift" style={{ display: 'flex', gap: 11, padding: '13px 14px', borderBottom: '1px solid #F2F2F6', textDecoration: 'none', color: 'var(--txt)', alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.dot, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.sub}</div>
-              </div>
-              <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
-            </Link>
-          ))}
-        </div>
-      )}
 
       {/* 進行中プロジェクト */}
       <div style={{ padding: '22px 20px 8px' }}>
@@ -187,34 +193,7 @@ export default async function VendorHome() {
         })}
       </div>
 
-      {/* 最近の動き */}
-      <div style={{ padding: '10px 20px 6px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-          <h2 className="ty-h2">最近の動き</h2>
-          <Link href="/vendor/inbox" style={{ fontSize: '.66rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>通知へ →</Link>
-        </div>
-      </div>
-      {notifs.length === 0 ? (
-        <p style={{ padding: '4px 20px 20px', fontSize: '.7rem', color: 'var(--muted2)' }}>まだ動きはありません。</p>
-      ) : (
-        <div>
-          {notifs.map(n => {
-            const rel = relTime(n.at)
-            return (
-            <Link key={n.id} href={n.href ?? '/vendor/inbox'} className="row-hover lift" style={{ display: 'flex', gap: 11, padding: '12px 20px', borderBottom: '1px solid var(--line)', textDecoration: 'none', alignItems: 'center' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: NOTIF_DOT[n.icon] ?? 'var(--c-blue)', flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.title}</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.sub}</div>
-              </div>
-              {/* Step3：取得済みなら相対時刻を右に。チェブロンは位置統一 */}
-              {rel && <span style={{ fontSize: '.58rem', color: 'var(--muted)', flexShrink: 0 }}>{rel}</span>}
-              <span style={{ color: 'var(--muted)', fontSize: '.75rem', flexShrink: 0 }}>›</span>
-            </Link>
-            )
-          })}
-        </div>
-      )}
+      {/* ★「最近の動き」の長いリストはホームから撤去（通知タブで見る）。 */}
       {/* BR-DIAG2：版数スタンプ（本番 vendor が新ビルドを描画しているかの決定的証拠）。 */}
       <div style={{ textAlign: 'center', fontSize: '.5rem', color: 'var(--muted)', padding: '14px 0 6px', fontFamily: 'Inter' }}>build {BUILD_STAMP}</div>
     </div>

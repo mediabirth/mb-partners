@@ -1,14 +1,19 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import VendorStatusSteps from '@/components/VendorStatusSteps'
 import { loadVendorBundle } from '@/lib/vendor-data'
-import VendorWorkspace from './VendorWorkspace'
-import VendorCaseExpense from './VendorCaseExpense'
-import StatusPill from '@/components/ui/StatusPill'
-import { dealStatus } from '@/lib/status'
+import VendorCaseTabs from './VendorCaseTabs'
 
 export const runtime = 'edge'
+
+// ベンダー語の状態チップ（パートナー語「成約」等は使わない）。
+const VST: Record<string, { label: string; c: string; bg: string }> = {
+  received: { label: '準備中', c: 'var(--amber)', bg: 'var(--amber-bg)' },
+  in_progress: { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' },
+  confirmed: { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' },
+  paid: { label: '完了', c: 'var(--green)', bg: 'var(--green-bg)' },
+  lost: { label: '終了', c: 'var(--muted2)', bg: 'var(--bg2)' },
+}
 
 export default async function VendorCaseDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -20,92 +25,46 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
   const tasks = b.tasks.filter(t => t.assignment_id === id)
   const deliverables = b.deliverables.filter(d => d.assignment_id === id)
   const updates = b.updates.filter(u => u.assignment_id === id)
-  const milestones = tasks.filter(t => t.type === 'milestone').sort((x, y) => x.sort - y.sort)
-  const myExpenses = b.expenses.filter(e => e.assignment_id === id)
+  const expenses = b.expenses.filter(e => e.assignment_id === id)
   const brief = a.brief
+  const st = VST[a.deal?.status ?? ''] ?? { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' }
+
+  // 進捗バー（タスク完了率・1つに統合：旧「プロジェクト管理%」＋ステップ表示は廃止）。
+  const doTasks = tasks.filter(t => t.type === 'task')
+  const done = doTasks.filter(t => t.status === 'done').length
+  const total = doTasks.length
+  const pct = total ? Math.round(done / total * 100) : 0
 
   return (
     <div className="page-anim">
+      {/* 上部固定：戻る＋ヘッダ＋進捗バー1つ */}
       <div style={{ padding: '12px 20px 0' }}>
         <Link href="/vendor/cases" style={{ fontSize: '.7rem', color: 'var(--muted2)', textDecoration: 'none' }}>← 担当案件</Link>
       </div>
-      {/* Header */}
-      <div style={{ padding: '10px 20px 16px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 13, alignItems: 'center' }}>
+      <div style={{ padding: '10px 20px 14px', display: 'flex', gap: 13, alignItems: 'center' }}>
         {svc ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={46} /> : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={46} />}
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{brief ?? a.deal?.customer_name ?? '案件'}</h1>
-            <StatusPill size="sm" {...dealStatus(a.deal?.status ?? '')} />
+            <h1 style={{ fontSize: '1.12rem', fontWeight: 800, letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{brief ?? a.deal?.customer_name ?? '案件'}</h1>
+            <span style={{ flexShrink: 0, fontSize: '.56rem', fontWeight: 700, color: st.c, background: st.bg, borderRadius: 20, padding: '2px 10px' }}>{st.label}</span>
           </div>
           <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{a.deal?.customer_name ?? '顧客'} · {svc?.name ?? 'サービス'}</div>
         </div>
       </div>
 
-      {/* BR-V2：vendor固有＝プロジェクト管理ワークスペースの主役フレーミング＋全体進捗％。 */}
-      {(() => {
-        const items = tasks.filter(t => t.type === 'task')
-        const done = items.filter(t => t.status === 'done').length
-        const pct = items.length ? Math.round((done / items.length) * 100) : 0
-        return (
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--line)', background: 'var(--blue-bg2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span className="eyebrow" style={{ color: 'var(--c-blue)' }}>プロジェクト管理</span>
-              <span style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, color: 'var(--c-blue)' }}>{pct}<span style={{ fontSize: '.66rem', fontWeight: 600, color: 'var(--muted2)' }}>%</span></span>
-            </div>
-            <div style={{ height: 8, borderRadius: 5, background: '#fff', overflow: 'hidden', border: '1px solid var(--blue-bg)' }}><div className="bar-grow" style={{ width: `${pct}%`, height: '100%', background: 'var(--c-blue)', borderRadius: 5 }} /></div>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6 }}>タスク {done}/{items.length} 完了 · 実行を進めると委託費の確定につながります</div>
-          </div>
-        )
-      })()}
-
-      {/* 進行フロー（マイルストーン） */}
-      <div style={{ padding: '18px 20px 8px', borderBottom: '1px solid var(--line)' }}>
-        <VendorStatusSteps status={a.deal?.status ?? 'received'} />
-        {milestones.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 6 }}>マイルストーン</div>
-            {milestones.map(m => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: '.72rem' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: m.status === 'done' ? 'var(--green)' : 'var(--line)', flexShrink: 0 }} />
-                <span style={{ flex: 1, fontWeight: 600, color: m.status === 'done' ? 'var(--muted2)' : 'var(--txt)' }}>{m.title}</span>
-                {m.due_date && <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>{m.due_date.slice(5)}</span>}
-                <span style={{ fontSize: '.52rem', fontWeight: 700, color: m.status === 'done' ? 'var(--green)' : 'var(--muted2)' }}>{m.status === 'done' ? '達成' : '未'}</span>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* 進捗バー（1つに統合） */}
+      <div style={{ padding: '0 20px 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>実行の進捗</span>
+          <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: pct === 100 ? 'var(--green)' : 'var(--c-blue)' }}>{done}/{total} 完了</span>
+        </div>
+        <div style={{ height: 8, borderRadius: 99, background: 'var(--bg2)', overflow: 'hidden' }}>
+          <div className="bar-grow" style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: pct === 100 ? 'var(--green)' : 'var(--c-blue)' }} />
+        </div>
       </div>
 
-      {/* 概要/スコープ（read-only） */}
-      {brief && (
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--line)' }}>
-          <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 5 }}>プロジェクト概要 / スコープ</div>
-          <p style={{ fontSize: '.74rem', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{brief}</p>
-        </div>
-      )}
-
-      {/* ワークスペース：タスク完了・成果物・進捗メモ/フラグ */}
-      <VendorWorkspace assignmentId={id} tasks={tasks} deliverables={deliverables} updates={updates} />
-
-      {/* この案件の委託費（納品後に確定） */}
-      {(() => {
-        const delivered = deliverables.length > 0
-        return (
-          <div style={{ padding: '8px 20px 0' }}>
-            <h2 style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--muted2)', margin: '18px 0 8px' }}>この案件の委託費</h2>
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '.72rem', color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 7 }}>
-                委託費
-                <span style={{ fontSize: '.5rem', fontWeight: 700, color: delivered ? 'var(--green)' : 'var(--amber)', background: delivered ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>{delivered ? '納品済・確定' : '納品後に確定'}</span>
-              </span>
-              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.9rem', fontWeight: 800 }}>¥{a.base_fee.toLocaleString()}</span>
-            </div>
-            <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '6px 2px 0' }}>支払（委託費＋承認済経費）は「委託費」タブで確認できます。</p>
-          </div>
-        )
-      })()}
-      {/* 経費申請（既存・案件内から） */}
-      <VendorCaseExpense assignmentId={id} label={a.deal?.customer_name ?? '案件'} initial={myExpenses} />
+      {/* 3タブ（やること / メッセージ / お金） */}
+      <VendorCaseTabs assignmentId={id} customerLabel={a.deal?.customer_name ?? '案件'} baseFee={a.base_fee} tasks={tasks} deliverables={deliverables} updates={updates} expenses={expenses} />
     </div>
   )
 }

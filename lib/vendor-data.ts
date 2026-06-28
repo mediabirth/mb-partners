@@ -8,7 +8,7 @@ import { resolveVendor } from '@/lib/vendor-auth'
 
 export type VAssign = { id: string; base_fee: number; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
 export type VExpense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean; created_at: string | null; approved_at: string | null }
-export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null }
+export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null; customer_name: string | null; service: { name: string; icon: string; color: string; logo_path: string | null } | null }
 export type VTask = { id: string; assignment_id: string; title: string; type: string; needs_deliverable: boolean; due_date: string | null; sort: number; status: string; done_at: string | null }
 export type VDeliverable = { id: string; assignment_id: string; task_id: string | null; file_name: string | null; note: string | null; created_at: string | null; has_file: boolean }
 export type VUpdate = { id: string; assignment_id: string; kind: string; body: string; status: string | null; sender: string; created_at: string | null }
@@ -65,14 +65,28 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     }
     return raw
   })()
-  const payoutsP = admin
-    .from('delivery_payout_items')
-    .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at')
-    .eq('delivery_id', v.deliveryId)
-    .order('period', { ascending: false })
+  // 委託費明細はサービスアイコン表示用に deal/service を同梱（列無しでも壊さない staged フォールバック）。
+  const payoutsP: Promise<Record<string, unknown>[] | null> = (async () => {
+    let raw = (await admin
+      .from('delivery_payout_items')
+      .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at, deals(customer_name, services(name, icon, color, logo_path))')
+      .eq('delivery_id', v.deliveryId)
+      .order('period', { ascending: false })).data as Record<string, unknown>[] | null
+    if (!raw) {
+      raw = (await admin
+        .from('delivery_payout_items')
+        .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at')
+        .eq('delivery_id', v.deliveryId)
+        .order('period', { ascending: false })).data as Record<string, unknown>[] | null
+    }
+    return raw
+  })()
 
-  const [rawAssigns, payoutsRes] = await Promise.all([assignmentsP, payoutsP])
-  const pos = payoutsRes.data
+  const [rawAssigns, rawPayouts] = await Promise.all([assignmentsP, payoutsP])
+  const pos: VPayout[] = (rawPayouts ?? []).map((p: Record<string, unknown>) => {
+    const deal = (p.deals as { customer_name?: string; services?: VPayout['service'] } | null) ?? null
+    return { id: p.id as string, amount: (p.amount as number) ?? 0, base_fee: (p.base_fee as number) ?? 0, expense_total: (p.expense_total as number) ?? 0, period: p.period as string, status: p.status as string, paid_at: (p.paid_at as string) ?? null, frozen_at: (p.frozen_at as string) ?? null, customer_name: deal?.customer_name ?? null, service: deal?.services ?? null }
+  })
 
   const assignments: VAssign[] = (rawAssigns ?? []).map((a: Record<string, unknown>) => {
     const deal = (a.deals as VAssign['deal']) ?? null
@@ -109,7 +123,7 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
       bank_account: (d.bank_account as string) ?? null, bank_holder_kana: (d.bank_holder_kana as string) ?? null,
       invoice_number: (d.invoice_number as string) ?? null, contact_email: (d.contact_email as string) ?? null,
     },
-    assignments, expenses, payouts: (pos ?? []) as VPayout[],
+    assignments, expenses, payouts: pos,
     tasks, deliverables, updates, schedule,
   }
 }
