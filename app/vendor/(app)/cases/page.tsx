@@ -9,9 +9,9 @@ export const runtime = 'edge'
 const ST: Record<string, { label: string; c: string; bg: string }> = {
   received: { label: '受付', c: 'var(--amber)', bg: 'var(--amber-bg)' },
   in_progress: { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' },
-  confirmed: { label: '成約', c: 'var(--green)', bg: 'var(--green-bg)' },
-  paid: { label: '完了', c: 'var(--muted2)', bg: 'var(--bg2)' },
-  lost: { label: '見送り', c: 'var(--red)', bg: 'var(--red-bg)' },
+  confirmed: { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' },
+  paid: { label: '完了', c: 'var(--green)', bg: 'var(--green-bg)' },
+  lost: { label: '終了', c: 'var(--muted2)', bg: 'var(--bg2)' },
 }
 
 export default async function VendorCases() {

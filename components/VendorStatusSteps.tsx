@@ -1,5 +1,5 @@
-// app の案件ステータス・タイムライン（ステップ表示）を踏襲。vendor 案件カード/詳細で共通利用。
-const STEPS = ['受付', '対応中', '成約', '完了']
+// vendor 案件カードのステータス・タイムライン。ベンダー語（パートナー語「成約」は使わない）。
+const STEPS = ['受付', '実行中', '確定', '完了']
 const STEP_OF: Record<string, number> = { received: 0, in_progress: 1, confirmed: 2, paid: 3 }
 
 export default function VendorStatusSteps({ status }: { status: string }) {
