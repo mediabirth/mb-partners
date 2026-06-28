@@ -78,7 +78,7 @@ export default function VendorWorkspace({ assignmentId, tasks, deliverables, upd
                 <FileThumb id={d.id} hasFile={d.has_file} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '.74rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.file_name ?? '成果物'}</div>
-                  <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{d.created_at ? new Date(d.created_at).toLocaleDateString('ja') : ''}{d.note ? ` · ${d.note}` : ''}</div>
+                  <div suppressHydrationWarning style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{d.created_at ? new Date(d.created_at).toLocaleDateString('ja') : ''}{d.note ? ` · ${d.note}` : ''}</div>
                 </div>
               </div>
             ))}
@@ -101,7 +101,7 @@ export default function VendorWorkspace({ assignmentId, tasks, deliverables, upd
                   <div style={{ maxWidth: '78%', padding: '8px 12px', borderRadius: 13, fontSize: '.74rem', lineHeight: 1.55,
                     background: mine ? 'var(--c-blue)' : 'var(--bg2)', color: mine ? '#fff' : 'var(--txt)',
                     borderBottomRightRadius: mine ? 4 : 13, borderBottomLeftRadius: mine ? 13 : 4 }}>{m.body}</div>
-                  <span style={{ fontSize: '.5rem', color: 'var(--muted)', margin: '2px 4px 0' }}>{m.created_at ? new Date(m.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                  <span suppressHydrationWarning style={{ fontSize: '.5rem', color: 'var(--muted)', margin: '2px 4px 0' }}>{m.created_at ? new Date(m.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
                 </div>
               )
             })}
