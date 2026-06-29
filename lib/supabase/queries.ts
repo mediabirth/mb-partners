@@ -50,8 +50,8 @@ export async function getServicesWithMenus(supabase: SupabaseClient) {
   const services = (data ?? []).filter(
     (s: { name: string }) => !TEST_SERVICE_NAMES.has(s.name)
   ) as ServiceWithMenus[]
-  await attachCoverageTasks(services)
-  await attachMenus(services)
+  // G: 両者は services の別プロパティ（coverage_tasks / menus）を独立に付与＝相互依存なし → 並列化（結果不変）。
+  await Promise.all([attachCoverageTasks(services), attachMenus(services)])
   return services
 }
 

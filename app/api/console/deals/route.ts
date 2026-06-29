@@ -116,59 +116,45 @@ export async function GET() {
     ;({ data: deals } = await admin.from('deals').select(SEL_BASE).order('created_at', { ascending: false }))
   }
 
-  // A2a: デリバリー割当を読取（best-effort・テーブル未作成なら空）。明細単位の割当行＋案件合計委託費。
+  // G: デリバリー系5本（割当/経費/タスク/メモ/成果物）は取得が相互独立 → 1回の Promise.all へ。
+  // 集計ループは従来と同一順序で実行（das→exps→tks→ups→dvb）＝結果(委託費/承認済経費合計/件数)は完全一致。
+  // best-effort（テーブル未作成は data:null→空）。
+  const safeQ = (p: PromiseLike<{ data: unknown }>) => Promise.resolve(p).then(r => r, () => ({ data: null as unknown }))
+  const [dasR, expsR, tksR, upsR, dvbR] = await Promise.all([
+    safeQ(admin.from('delivery_assignments').select('id, deal_id, deal_item_id, delivery_id, base_fee, status, deliveries(name, kind)')),
+    safeQ(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, evidence_path, status, approved_at, note, created_at').order('created_at', { ascending: true })),
+    safeQ(admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').order('sort', { ascending: true })),
+    safeQ(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').order('created_at', { ascending: false })),
+    safeQ(admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, note, created_at').order('created_at', { ascending: false })),
+  ])
+
+  // A2a: デリバリー割当 → 明細単位の割当行＋案件合計委託費。
   const deliveryByDeal: Record<string, { rows: Record<string, unknown>[]; cost: number }> = {}
   const assignToDeal: Record<string, string> = {}
-  try {
-    const { data: das } = await admin
-      .from('delivery_assignments')
-      .select('id, deal_id, deal_item_id, delivery_id, base_fee, status, deliveries(name, kind)')
-    for (const a of (das ?? []) as Array<Record<string, unknown> & { id: string; deal_id: string; base_fee: number }>) {
-      const ent = (deliveryByDeal[a.deal_id] ??= { rows: [], cost: 0 })
-      ent.rows.push(a)
-      ent.cost += a.base_fee ?? 0
-      assignToDeal[a.id] = a.deal_id
-    }
-  } catch { /* テーブル未作成 → 0 */ }
+  for (const a of ((dasR.data ?? []) as Array<Record<string, unknown> & { id: string; deal_id: string; base_fee: number }>)) {
+    const ent = (deliveryByDeal[a.deal_id] ??= { rows: [], cost: 0 })
+    ent.rows.push(a)
+    ent.cost += a.base_fee ?? 0
+    assignToDeal[a.id] = a.deal_id
+  }
 
-  // A2b: 経費申請を読取（best-effort）。割当ごとにぶら下げ、承認済(approved)合計を案件別に集計。
+  // A2b: 経費申請 → 割当ごとにぶら下げ、承認済(approved)合計を案件別に集計（assignToDeal を使うため das の後）。
   const expensesByAssign: Record<string, unknown[]> = {}
   const approvedExpenseByDeal: Record<string, number> = {}
-  try {
-    const { data: exps } = await admin
-      .from('expense_claims')
-      .select('id, delivery_assignment_id, kind, amount, evidence_path, status, approved_at, note, created_at')
-      .order('created_at', { ascending: true })
-    for (const e of (exps ?? []) as Array<{ id: string; delivery_assignment_id: string; amount: number; status: string; evidence_path: string | null }>) {
-      const row = { ...e, has_evidence: !!e.evidence_path }
-      ;(expensesByAssign[e.delivery_assignment_id] ??= []).push(row)
-      const dealId = assignToDeal[e.delivery_assignment_id]
-      if (dealId && e.status === 'approved') approvedExpenseByDeal[dealId] = (approvedExpenseByDeal[dealId] ?? 0) + (e.amount ?? 0)
-    }
-  } catch { /* テーブル未作成 → 0 */ }
+  for (const e of ((expsR.data ?? []) as Array<{ id: string; delivery_assignment_id: string; amount: number; status: string; evidence_path: string | null }>)) {
+    const row = { ...e, has_evidence: !!e.evidence_path }
+    ;(expensesByAssign[e.delivery_assignment_id] ??= []).push(row)
+    const dealId = assignToDeal[e.delivery_assignment_id]
+    if (dealId && e.status === 'approved') approvedExpenseByDeal[dealId] = (approvedExpenseByDeal[dealId] ?? 0) + (e.amount ?? 0)
+  }
 
-  // V-1: デリバリー実行構造（タスク/マイルストーン）＋進捗メモ/フラグ＋成果物を割当ごとに付与（best-effort）。お金非接触。
+  // V-1: タスク/メモ/成果物を割当ごとに付与（お金非接触）。
   const tasksByAssign: Record<string, unknown[]> = {}
   const updatesByAssign: Record<string, unknown[]> = {}
   const deliverablesByAssign: Record<string, unknown[]> = {}
-  try {
-    const { data: tks } = await admin.from('delivery_tasks')
-      .select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at')
-      .order('sort', { ascending: true })
-    for (const t of (tks ?? []) as Array<{ delivery_assignment_id: string }>) (tasksByAssign[t.delivery_assignment_id] ??= []).push(t)
-  } catch { /* 未作成 */ }
-  try {
-    const { data: ups } = await admin.from('delivery_updates')
-      .select('id, delivery_assignment_id, kind, body, status, created_at')
-      .order('created_at', { ascending: false })
-    for (const u of (ups ?? []) as Array<{ delivery_assignment_id: string }>) (updatesByAssign[u.delivery_assignment_id] ??= []).push(u)
-  } catch { /* 未作成 */ }
-  try {
-    const { data: dvb } = await admin.from('delivery_deliverables')
-      .select('id, delivery_assignment_id, task_id, file_name, note, created_at')
-      .order('created_at', { ascending: false })
-    for (const x of (dvb ?? []) as Array<{ delivery_assignment_id: string }>) (deliverablesByAssign[x.delivery_assignment_id] ??= []).push(x)
-  } catch { /* 未作成 */ }
+  for (const t of ((tksR.data ?? []) as Array<{ delivery_assignment_id: string }>)) (tasksByAssign[t.delivery_assignment_id] ??= []).push(t)
+  for (const u of ((upsR.data ?? []) as Array<{ delivery_assignment_id: string }>)) (updatesByAssign[u.delivery_assignment_id] ??= []).push(u)
+  for (const x of ((dvbR.data ?? []) as Array<{ delivery_assignment_id: string }>)) (deliverablesByAssign[x.delivery_assignment_id] ??= []).push(x)
 
   // A1: 各案件のフロンティアoverride を読取で算出して付与（既存lib/frontierの式・保存値非接触）。
   const { dealFrontierOverride } = await import('@/lib/pnl')

@@ -46,17 +46,17 @@ export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregat
   // best-effort 読取：テーブル/列未適用での throw を null に畳む（従来 try/catch と同義）。クエリ・select は不変。
   const safe = (p: PromiseLike<{ data: unknown }>) => Promise.resolve(p).then(r => r, () => ({ data: null as unknown }))
   const itemsP     = safe(admin.from('deal_items').select('deal_id, revenue'))
+  // F: delivery_assignments / expense_claims はそれぞれ1回だけ取得し2用途で使い回す（旧コードは同データを二重取得していた）。
+  // assignsP は id/deal_id/delivery_id を含むため旧 assigns2（列サブセット）の用途も賄える。expenses は同一select。
   const assignsP   = safe(admin.from('delivery_assignments').select('id, deal_id, delivery_id, base_fee, deliveries(name)'))
   const expensesP  = safe(admin.from('expense_claims').select('delivery_assignment_id, amount, status'))
-  const assigns2P  = safe(admin.from('delivery_assignments').select('id, deal_id, delivery_id'))
-  const expenses2P = safe(admin.from('expense_claims').select('delivery_assignment_id, amount, status'))
   const partnersP  = safe(admin.from('partners').select('id, frontier_id, frontier_linked_at'))
   const profilesP  = safe(admin.from('profiles').select('id, name').neq('role', 'partner'))
 
   // 逐次 await の waterfall を1回の Promise.all へ。各クエリは独立・共有可変状態なし。
   // 以降の集計（map構築）は従来と同一の順序・同一ロジックで実行＝結果(表示額)は完全一致。
-  const [deals, itemsRes, assignsRes, expensesRes, assigns2Res, expenses2Res, partnersRes, profilesRes] = await Promise.all([
-    dealsP, itemsP, assignsP, expensesP, assigns2P, expenses2P, partnersP, profilesP,
+  const [deals, itemsRes, assignsRes, expensesRes, partnersRes, profilesRes] = await Promise.all([
+    dealsP, itemsP, assignsP, expensesP, partnersP, profilesP,
   ])
 
   // ② 明細（受注額/売上）
@@ -92,8 +92,8 @@ export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregat
   // 経費を vendor別に帰属（割当id→delivery_id を引くため再走査）
   {
     const assignDelivery: Record<string, { dealId: string; deliveryId: string | null }> = {}
-    for (const a of (assigns2Res.data ?? []) as Array<{ id: string; deal_id: string; delivery_id: string | null }>) assignDelivery[a.id] = { dealId: a.deal_id, deliveryId: a.delivery_id }
-    for (const e of (expenses2Res.data ?? []) as Array<{ delivery_assignment_id: string; amount: number; status: string }>) {
+    for (const a of (assignsRes.data ?? []) as Array<{ id: string; deal_id: string; delivery_id: string | null }>) assignDelivery[a.id] = { dealId: a.deal_id, deliveryId: a.delivery_id }
+    for (const e of (expensesRes.data ?? []) as Array<{ delivery_assignment_id: string; amount: number; status: string }>) {
       if (e.status !== 'approved') continue
       const link = assignDelivery[e.delivery_assignment_id]
       if (!link?.deliveryId) continue
