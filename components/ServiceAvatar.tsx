@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import { getServiceColors } from './ServiceIcon'
 
 /**
@@ -17,8 +18,7 @@ export default function ServiceAvatar({
 
   if (logoPath && !errored) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={logoPath}
         alt={name}
         width={size}
