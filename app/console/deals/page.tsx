@@ -11,8 +11,10 @@ import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill, DEAL_STATUS } from '@/lib/status'
 import { engagementLabel } from '@/lib/engagement-labels'
-import DeliveryProgress from './DeliveryProgress'
-import ContinuousMonthly from './ContinuousMonthly'
+import dynamic from 'next/dynamic'
+// A: ドロワー内でのみ使う重い子を遅延読込（初回バンドルから除外・押下/展開時に取得）。
+const DeliveryProgress = dynamic(() => import('./DeliveryProgress'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 120, borderRadius: 12 }} /> })
+const ContinuousMonthly = dynamic(() => import('./ContinuousMonthly'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 200, borderRadius: 12, marginTop: 18 }} /> })
 
 type Deal = {
   id: string; customer_name: string; channel: string; source: string

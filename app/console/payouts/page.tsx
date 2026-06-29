@@ -232,6 +232,17 @@ export default function PayoutsPage() {
         </div>
 
         <div className="page-anim" style={{ padding: '26px 28px', maxWidth: 880 }}>
+          {/* B: 取得中はブランクでなく骨組みskeleton（pop-in/ガクッ防止） */}
+          {data === undefined ? (
+            <div className="stagger">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+                <div className="ui-skeleton" style={{ height: 110, borderRadius: 16 }} />
+                <div className="ui-skeleton" style={{ height: 110, borderRadius: 16 }} />
+              </div>
+              <div className="ui-skeleton" style={{ height: 180, borderRadius: 16, marginBottom: 16 }} />
+              <div className="ui-skeleton" style={{ height: 140, borderRadius: 16 }} />
+            </div>
+          ) : (<>
 
           {/* ④ ダッシュボード（読み取り集計・表示のみ） */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
@@ -320,6 +331,7 @@ export default function PayoutsPage() {
           <Section title="支払済み" count={paidRows.length} defaultOpen={false} accent="var(--muted2)">
             {paidRows.map(r => <PayRow key={r.key} row={r} busy={busy} />)}
           </Section>
+          </>)}
         </div>
       </div>
       {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99 }}>{toast}</div>}

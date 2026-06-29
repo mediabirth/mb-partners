@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAdminServicesWithMenus } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
-import ServicesClient from './ServicesClient'
+import ServicesClientLazy from './ServicesClientLazy'
 
 export const runtime = 'edge'
 
@@ -24,7 +24,7 @@ export default async function ServicesPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <ServicesClient initialServices={services} />
+        <ServicesClientLazy initialServices={services} />
       </div>
     </div>
   )

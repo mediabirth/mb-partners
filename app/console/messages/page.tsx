@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
-import MessagesClient, { type ThreadRow, type Msg } from './MessagesClient'
+import MessagesClientLazy from './MessagesClientLazy'
+import { type ThreadRow, type Msg } from './MessagesClient'
 
 // メッセージセンター Phase1：相手リスト（LINE連携パートナー＋顧客メール）＋スレッド＋送信ボックス。
 // ★読取は service_role（owner gate）。messages 隔離表のみ。money/deals/帰属 非接触。
@@ -76,7 +77,7 @@ export default async function ConsoleMessagesPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <MessagesClient threads={threads} messages={messages} signedUrls={signedUrls} templates={templates} />
+        <MessagesClientLazy threads={threads} messages={messages} signedUrls={signedUrls} templates={templates} />
       </div>
     </div>
   )

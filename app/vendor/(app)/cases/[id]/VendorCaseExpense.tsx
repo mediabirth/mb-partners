@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import VendorExpenseSheet from '@/components/VendorExpenseSheet'
+import dynamic from 'next/dynamic'
+// A: 経費申請モーダルは開いた時だけ読み込む（初回バンドルから除外）。
+const VendorExpenseSheet = dynamic(() => import('@/components/VendorExpenseSheet'), { ssr: false })
 
 type Expense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean }
 const EXP_ST: Record<string, { label: string; c: string; bg: string }> = {

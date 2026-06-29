@@ -10,6 +10,7 @@ type Badges = { pendingPartners: number; openInquiries: number }
 let cachedIdentity: Identity = null
 let cachedBadges: Badges | null = null
 let inflight: Promise<void> | null = null
+let badgesAt = 0  // 最終 badge 取得時刻。focus 復帰時に古い時だけ更新（継続ポーリングはしない・古い数字の貼り付き防止）。
 
 const Ctx = createContext<{ identity: Identity; badges: Badges; ready: boolean }>({
   identity: null,
@@ -50,6 +51,7 @@ export default function ConsoleSessionProvider({ children }: { children: React.R
           pendingPartners: b?.pendingPartners ?? 0,
           openInquiries: b?.openInquiries ?? 0,
         }
+        badgesAt = Date.now()
       }))
     run.then(() => {
       if (!active) return
@@ -58,6 +60,23 @@ export default function ConsoleSessionProvider({ children }: { children: React.R
       setReady(true)
     })
     return () => { active = false }
+  }, [])
+
+  // C: タブ復帰時に badge が60秒以上古ければだけ再取得（承認待ち/問い合わせ件数の鮮度確保・継続ポーリング無し）。
+  // identity は不変なので再取得しない。ナビ毎の再取得もしない（上の module cache）。
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - badgesAt < 60_000) return
+      fetch('/api/console/badge-counts').then(r => (r.ok ? r.json() : null)).then(b => {
+        if (!b) return
+        cachedBadges = { pendingPartners: b.pendingPartners ?? 0, openInquiries: b.openInquiries ?? 0 }
+        badgesAt = Date.now()
+        setBadges(cachedBadges)
+      }).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   return <Ctx.Provider value={{ identity, badges, ready }}>{children}</Ctx.Provider>
