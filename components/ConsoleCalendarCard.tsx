@@ -13,6 +13,7 @@ type Settings = {
   slot_minutes: number; buffer_minutes: number
   google_email?: string | null
 }
+type Account = { id: string; account_label: string; google_email: string | null; active: boolean; is_default: boolean }
 
 export default function ConsoleCalendarCard() {
   const [s, setS] = useState<Settings>({ business_start: '09:00', business_end: '18:00', no_weekend: true, no_holiday: true, slot_minutes: 30, buffer_minutes: 0 })
@@ -21,15 +22,19 @@ export default function ConsoleCalendarCard() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [addLabel, setAddLabel] = useState('')
 
   useEffect(() => {
     fetch('/api/console/calendar').then(r => r.json()).then(d => {
       if (d.settings) setS(v => ({ ...v, ...d.settings }))
       setConnected(!!d.connected); setReady(d.ready !== false)
+      if (Array.isArray(d.accounts)) setAccounts(d.accounts)
       // 連携直後/失敗のフラッシュ
       const p = new URLSearchParams(window.location.search)
       if (p.get('calendar') === 'connected') setNote('Googleカレンダーと連携しました。')
-      if (p.get('calendar_error')) setNote(`連携エラー: ${p.get('calendar_error')}（mb_calendar 未作成の可能性）`)
+      if (p.get('calendar') === 'added') setNote('追加のカレンダーアカウントを連携しました。')
+      if (p.get('calendar_error')) setNote(`連携エラー: ${p.get('calendar_error')}`)
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
@@ -78,6 +83,47 @@ export default function ConsoleCalendarCard() {
         <a href="/api/auth/google" style={{ flexShrink: 0, display: 'inline-block', background: '#4285F4', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: '.74rem', fontWeight: 700, textDecoration: 'none' }}>
           {connected ? '再連携' : 'Googleと連携する'}
         </a>
+      </div>
+
+      {/* ②-2 段階A：連携アカウント一覧 ＋ 追加導線（振り分けはまだ無し＝挙動ゼロ変化） */}
+      <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+        <div style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>連携中のアカウント</div>
+        {accounts.length === 0 ? (
+          <div style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{loading ? '確認中…' : '未連携'}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {accounts.map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 10px', background: '#fff', border: '1px solid var(--line)', borderRadius: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {a.account_label}
+                    {a.is_default && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2,#EEEBFF)', borderRadius: 5, padding: '1px 6px' }}>既定</span>}
+                  </div>
+                  {a.google_email && <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.google_email}</div>}
+                </div>
+                <span style={{ flexShrink: 0, fontSize: '.6rem', fontWeight: 700, color: a.active ? 'var(--green)' : 'var(--muted2)' }}>{a.active ? '✓ 有効' : '無効'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          <input
+            value={addLabel}
+            onChange={e => setAddLabel(e.target.value)}
+            placeholder="表示名（例: 勝彦）"
+            maxLength={60}
+            style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.74rem' }}
+          />
+          <a
+            href={`/api/auth/google?mode=mb_add${addLabel.trim() ? `&label=${encodeURIComponent(addLabel.trim())}` : ''}`}
+            style={{ flexShrink: 0, display: 'inline-block', background: '#0E0E14', color: '#fff', borderRadius: 8, padding: '9px 14px', fontSize: '.72rem', fontWeight: 700, textDecoration: 'none' }}
+          >
+            ＋ アカウント追加
+          </a>
+        </div>
+        <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 2px 0', lineHeight: 1.6 }}>
+          追加したアカウントは連携のみ保存されます。どのブランドの商談をどのアカウントに入れるかの割り当ては次の段階で対応します。
+        </p>
       </div>
 
       {/* ③ 設定 */}

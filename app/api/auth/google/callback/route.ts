@@ -28,19 +28,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/app/calendar?error=missing_params`)
   }
 
-  // state をデコード。mode='mb'(MB運営) か partner_id(個人) を判定
+  // state をデコード。mode='mb'(MB運営) / 'mb_add'(追加アカウント) / partner_id(個人) を判定
   let partnerId: string | null = null
   let isMb = false
+  let isMbAdd = false
+  let addLabel = ''
   try {
     const decoded = JSON.parse(Buffer.from(state, 'base64url').toString())
     if (decoded.mode === 'mb') isMb = true
+    else if (decoded.mode === 'mb_add') { isMbAdd = true; addLabel = (decoded.label || '').toString().slice(0, 60) }
     else { partnerId = decoded.partner_id; if (!partnerId) throw new Error('no id') }
   } catch {
     return NextResponse.redirect(`${appUrl}/app/calendar?error=invalid_state`)
   }
-  // 連携後の戻り先
-  const okUrl  = isMb ? `${appUrl}/console/settings?calendar=connected` : `${appUrl}/app/calendar?connected=1`
-  const errUrl = (e: string) => isMb ? `${appUrl}/console/settings?calendar_error=${e}` : `${appUrl}/app/calendar?error=${e}`
+  // 連携後の戻り先（mb / mb_add は同じコンソール設定へ。mb_add は calendar=added で区別）
+  const toConsole = isMb || isMbAdd
+  const okUrl  = toConsole ? `${appUrl}/console/settings?calendar=${isMbAdd ? 'added' : 'connected'}` : `${appUrl}/app/calendar?connected=1`
+  const errUrl = (e: string) => toConsole ? `${appUrl}/console/settings?calendar_error=${e}` : `${appUrl}/app/calendar?error=${e}`
 
   // code → tokens 交換
   let tokens: { access_token: string; refresh_token: string; expires_in: number }
@@ -83,6 +87,18 @@ export async function GET(req: NextRequest) {
   })
 
   const supabase = await createServiceRoleClient()
+
+  if (isMbAdd) {
+    // 段階A：追加アカウントは mb_calendars に新行 INSERT（既存 mb_calendar(id=1) には触れない）。
+    const { error: addErr } = await supabase
+      .from('mb_calendars')
+      .insert({ account_label: addLabel || googleEmail || 'アカウント', google_email: googleEmail, oauth_tokens: encrypted, active: true })
+    if (addErr) {
+      console.error('[OAuth callback] mb_calendars insert error:', addErr.message)
+      return NextResponse.redirect(errUrl('mb_add_failed'))
+    }
+    return NextResponse.redirect(okUrl)
+  }
 
   if (isMb) {
     // MB運営カレンダー: mb_calendar(id=1) に保存
