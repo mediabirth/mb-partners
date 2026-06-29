@@ -253,6 +253,16 @@ function ServiceLogo({ logoPath, name, size = 44, icon = 'arrows', color = '#473
   return <ServiceAvatar logoPath={logoPath} icon={icon} color={color} name={name} size={size} />
 }
 
+// 並び替え用の上下ボタン（モバイルでも確実にタップできる方式）。
+function ReorderBtn({ label, onClick, disabled, small }: { label: string; onClick: () => void; disabled?: boolean; small?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={label === '▲' ? '上へ移動' : '下へ移動'}
+      style={{ width: small ? 18 : 24, height: small ? 14 : 16, lineHeight: 1, fontSize: small ? '.5rem' : '.58rem', border: '1px solid var(--line)', borderRadius: 4, background: disabled ? 'var(--bg2)' : '#fff', color: disabled ? 'var(--line)' : 'var(--muted2)', cursor: disabled ? 'default' : 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {label}
+    </button>
+  )
+}
+
 // ─── Logo Upload ──────────────────────────────────────────────────────────────
 
 function LogoUpload({ logoPath, name, onUpload }: { logoPath: string; name: string; onUpload: (url: string) => void }) {
@@ -778,6 +788,34 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     })
   }
 
+  // 並び替え（sort のみ更新・money/中身は非接触）。表示順 = sort 昇順。
+  // 入れ替え後に sort=index へ採番し直し、変わった行だけ PATCH（楽観更新）。
+  function moveBrand(i: number, dir: -1 | 1) {
+    const j = i + dir
+    if (j < 0 || j >= services.length) return
+    const arr = [...services]
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    const renum = arr.map((s, idx) => ({ ...s, sort: idx }))
+    const changed = renum.filter(s => (services.find(o => o.id === s.id)?.sort ?? -1) !== s.sort)
+    setServices(renum)
+    for (const s of changed) fetch(`/api/console/services/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: s.sort }) }).catch(() => {})
+  }
+  function moveMenu(svcId: string, flat: Menu[], i: number, dir: -1 | 1) {
+    const j = i + dir
+    if (j < 0 || j >= flat.length) return
+    const arr = [...flat]
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    const renum = arr.map((m, idx) => ({ ...m, sort: idx }))
+    const sortById: Record<string, number> = {}
+    for (const m of renum) sortById[m.id] = m.sort
+    setServices(prev => prev.map(s => s.id !== svcId ? s : ({
+      ...s,
+      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id in sortById ? { ...m, sort: sortById[m.id] } : m) })),
+    })))
+    const changed = renum.filter(m => (flat.find(o => o.id === m.id)?.sort ?? -1) !== m.sort)
+    for (const m of changed) fetch(`/api/console/menus/${m.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: m.sort }) }).catch(() => {})
+  }
+
   // ── Menu CRUD ─────────────────────────────────────────────────────────────
   function startAddMenu() {
     setMenuForm({ ...defaultMenuForm, coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })) })
@@ -863,10 +901,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       {/* ── Service list ── */}
       <div className="page-anim stagger" style={{ padding: '28px', maxWidth: 860 }}>
         {services.length === 0 && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>}
-        {services.map(svc => {
+        {services.map((svc, si) => {
           // ★一覧の「メニュー・報酬」は新 menus/menu_rewards のみを唯一のソースに統一。
           //   旧 service_menus.ref/coop（¥30,000 等の残骸）は表示しない＝APP refer と完全一致。
-          const newMenus = svc.service_menus.flatMap(sm => (sm.menus ?? []))
+          //   メニュー表示は menus.sort 昇順（並び替え結果＝コンソール↔APP一致）。
+          const newMenus = svc.service_menus.flatMap(sm => (sm.menus ?? [])).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
           return (
             <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
@@ -885,6 +924,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     </span>
                   </div>
                   {svc.subtitle && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.subtitle}</div>}
+                </div>
+                {/* 並び替え（上下・モバイル確実）。sortのみ更新。 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                  <ReorderBtn label="▲" onClick={() => moveBrand(si, -1)} disabled={si === 0} />
+                  <ReorderBtn label="▼" onClick={() => moveBrand(si, 1)} disabled={si === services.length - 1} />
                 </div>
                 <button onClick={() => openEdit(svc)}
                   style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, flexShrink: 0 }}>
@@ -905,7 +949,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>報酬</span>
                   </div>
                   {newMenus.map((mn, idx) => (
-                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
+                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <ReorderBtn label="▲" small onClick={() => moveMenu(svc.id, newMenus, idx, -1)} disabled={idx === 0} />
+                        <ReorderBtn label="▼" small onClick={() => moveMenu(svc.id, newMenus, idx, 1)} disabled={idx === newMenus.length - 1} />
+                      </div>
                       <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
                       <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: (mn.rewards?.length ?? 0) > 0 ? 'var(--txt)' : 'var(--muted)' }}>
                         {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : r.reward_type === 'continuous' ? `継続 ${r.reward_value}%/月${r.default_months ? `・${r.default_months}ヶ月` : ''}` : `${r.reward_value}%${r.reward_base ? `・${r.reward_base}` : ''}`).join(' / ') || '報酬未設定'}

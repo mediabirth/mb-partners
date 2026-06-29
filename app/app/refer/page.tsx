@@ -458,7 +458,7 @@ export default function ReferPage() {
           </div>
           {/* メニュー＞報酬カード（複数）。各報酬＝金額・成果地点・協力タスク。 */}
           {(() => {
-            const groups = selSvc.service_menus.flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu }))).filter(({ menu }) => (menu.rewards ?? []).length > 0)
+            const groups = selSvc.service_menus.flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu }))).filter(({ menu }) => (menu.rewards ?? []).length > 0).sort((a, b) => ((a.menu as { sort?: number }).sort ?? 0) - ((b.menu as { sort?: number }).sort ?? 0))
             if (groups.length === 0) {
               // メニュー未作成のサービスは申込に進ませず案内表示
               return (
