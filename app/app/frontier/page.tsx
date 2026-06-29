@@ -62,89 +62,190 @@ export default async function FrontierPage() {
     .map(s => ({ s, ...(perSub[s.id] ?? { override: 0, count: 0, gross: 0 }) }))
     .sort((a, b) => b.gross - a.gross)[0]
 
+  // 前月比（既存 deals から先月の override を表示用に集計・式は既存と同一・money計算/payout に非接触）。
+  const lastDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastYm = `${lastDate.getFullYear()}-${String(lastDate.getMonth() + 1).padStart(2, '0')}`
+  let lastMonthOverride = 0
+  for (const d of deals) {
+    const linkedAt = linkedAtById[d.partner_id!]
+    const ref = d.fixed_month ?? d.created_at
+    if (dealMonth(d) === lastYm && linkedAt && withinWindow(linkedAt, ref)) lastMonthOverride += Math.round(d.amount * OVERRIDE_RATE)
+  }
+  const momDelta = monthOverride - lastMonthOverride
+
+  // ★表示専用の見込み試算（あくまでイメージ・実際の payout / オーバーライド確定額には一切影響しない）。
+  //   平均成約額：チーム実績があればそれ、無ければ説明用サンプル。式＝人数×平均×率（既存 OVERRIDE_RATE 流用）。
+  const SAMPLE_DEAL = 100_000
+  const teamGross = Object.values(perSub).reduce((s, p) => s + p.gross, 0)
+  const teamCount = Object.values(perSub).reduce((s, p) => s + p.count, 0)
+  const avgDeal = teamCount > 0 ? Math.round(teamGross / teamCount) : SAMPLE_DEAL
+  const teamN = subList.length
+  const projFull = Math.round(teamN * avgDeal * OVERRIDE_RATE)                 // 今のチームがフル稼働した月見込み
+  const milestoneTarget = teamN < 3 ? 3 : teamN < 5 ? 5 : teamN < 10 ? 10 : teamN < 20 ? 20 : teamN + 10
+  const milestoneNeed = Math.max(0, milestoneTarget - teamN)
+  const milestoneIncome = Math.round(milestoneTarget * avgDeal * OVERRIDE_RATE)
+  const milestonePct = milestoneTarget > 0 ? Math.min(100, Math.round((teamN / milestoneTarget) * 100)) : 0
+  const ratePct = Math.round(OVERRIDE_RATE * 100)
+  const ZERO_INVITE = 5
+  const zeroProj = Math.round(ZERO_INVITE * SAMPLE_DEAL * OVERRIDE_RATE)
+
+  // 出し分け：チーム0〜1名 かつ 収入0 ＝ ゼロ状態UI。
+  const isZero = teamN <= 1 && monthOverride === 0
+
+  // ── ゼロ状態 ───────────────────────────────────────────────
+  if (isZero) {
+    return (
+      <div className="page-anim" style={{ paddingBottom: 8 }}>
+        {/* ① ヒーロー：これから育つ */}
+        <div className="shine" style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
+            <div style={{ position: 'absolute', inset: 30, border: '1.5px solid rgba(255,255,255,.2)', borderRadius: '50%' }} />
+          </div>
+          <div style={{ fontSize: '.92rem', fontWeight: 800, letterSpacing: '-.01em', position: 'relative' }}>あなたのチーム収入は、ここから育ちます</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10, position: 'relative' }}>
+            <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.1rem', letterSpacing: '-.02em' }}>¥0</span>
+            <span style={{ fontSize: '.66rem', opacity: .85 }}>→ 育てる</span>
+          </div>
+          <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative' }}>
+            <div style={{ fontSize: '.6rem', opacity: .85 }}>チーム<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{teamN}名</b></div>
+            <div style={{ fontSize: '.6rem', opacity: .85 }}>今月稼働<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{activeSubs}名</b></div>
+            <div style={{ fontSize: '.6rem', opacity: .85 }}>次の節目<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{milestoneTarget}名</b></div>
+          </div>
+        </div>
+
+        {/* ② 知っていますか？＝オーバーライドの仕組み */}
+        <div style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
+          <div style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--c-blue)', letterSpacing: '.06em', marginBottom: 7 }}>知っていますか？</div>
+          <p style={{ fontSize: '.74rem', lineHeight: 1.7, margin: 0 }}>
+            あなたが招待した仲間が成約すると、その<b>{ratePct}%</b>が<b>12ヶ月間</b>あなたのオーバーライド収入になります。
+          </p>
+          <div style={{ marginTop: 12, background: 'var(--blue-bg2)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '1.1rem' }} aria-hidden>📈</span>
+            <div style={{ fontSize: '.7rem', lineHeight: 1.6 }}>
+              例えば <b>{ZERO_INVITE}名</b>招いてフル稼働なら、月 <b className="tnum" style={{ color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{zeroProj.toLocaleString()}</b> の見込み
+              <span style={{ display: 'block', fontSize: '.54rem', color: 'var(--muted2)', marginTop: 2 }}>※ イメージの試算です</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ③ 最初の一歩（3ステップ・2,3は薄く） */}
+        <div style={{ padding: '20px 20px 6px' }}>
+          <h2 style={{ fontSize: '.82rem', fontWeight: 800, marginBottom: 12 }}>最初の一歩</h2>
+          {[
+            { n: 1, t: '最初の仲間を招待する', s: '下のボタンから招待リンクを送るだけ', active: true },
+            { n: 2, t: '仲間が成約する', s: `成約額の${ratePct}%があなたの収入に`, active: false },
+            { n: 3, t: 'チームを育てる', s: '仲間が増えるほど収入が積み上がる', active: false },
+          ].map(step => (
+            <div key={step.n} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '11px 0', opacity: step.active ? 1 : .45 }}>
+              <span style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: step.active ? 'var(--c-blue)' : 'var(--bg2)', color: step.active ? '#fff' : 'var(--muted2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.72rem', fontWeight: 800, fontFamily: 'Inter' }}>{step.n}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '.78rem', fontWeight: 700 }}>{step.t}</div>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>{step.s}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ④ 招待CTA */}
+        <div style={{ padding: '8px 20px 6px' }}>
+          <div style={{ fontSize: '.74rem', fontWeight: 800, textAlign: 'center', marginBottom: 10 }}>さあ、最初の仲間を招待しよう</div>
+          <FrontierInvite />
+        </div>
+        <div style={{ height: 16 }} />
+      </div>
+    )
+  }
+
+  // ── 数字入り（アクティブ）状態 ─────────────────────────────
   return (
     <div className="page-anim" style={{ paddingBottom: 8 }}>
-      {/* Hero: 今月のオーバーライド */}
+      {/* ① 収入ヒーロー：今月のオーバーライド収入＋前月比＋3指標 */}
       <div className="shine" style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ fontSize: '.56rem', letterSpacing: '.22em', opacity: .85, textTransform: 'uppercase', marginBottom: 7 }}>今月のオーバーライド</div>
-        <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.02em', lineHeight: 1.05 }}>
+        <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
+          <div style={{ position: 'absolute', inset: 30, border: '1.5px solid rgba(255,255,255,.2)', borderRadius: '50%' }} />
+        </div>
+        <div style={{ fontSize: '.56rem', letterSpacing: '.22em', opacity: .85, textTransform: 'uppercase', marginBottom: 7, position: 'relative' }}>今月のオーバーライド収入</div>
+        <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.02em', lineHeight: 1.05, position: 'relative' }}>
           <span style={{ fontSize: '1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span><CountUp value={monthOverride} />
         </div>
-        <div style={{ fontSize: '.64rem', opacity: .85, marginTop: 8 }}>あなたのチーム {subList.length}名・今月稼働 {activeSubs}名（チーム成約の{Math.round(OVERRIDE_RATE * 100)}%）</div>
+        {/* 前月比（先月データがある時のみ・トレンドアイコン） */}
+        {(lastMonthOverride > 0 || momDelta !== 0) && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: '.66rem', background: 'rgba(255,255,255,.16)', borderRadius: 999, padding: '3px 10px', position: 'relative' }}>
+            <span aria-hidden>{momDelta >= 0 ? '▲' : '▼'}</span>
+            先月より {momDelta >= 0 ? '+' : '−'}¥{Math.abs(momDelta).toLocaleString()}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative' }}>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>チーム<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{teamN}名</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>今月稼働<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{activeSubs}名</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>稼働率<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{utilization}%</b></div>
+        </div>
       </div>
 
-      {/* KPI */}
-      <div className="stagger" style={{ display: 'flex', gap: 10, margin: '14px 20px 0' }}>
-        <Kpi label="チーム" value={subList.length} unit="名" />
-        <Kpi label="稼働率" value={utilization} unit="%" />
-        <Kpi label="今月新規" value={newThisMonth} unit="名" />
-      </div>
-
-      {/* MVP */}
-      {mvp && mvp.gross > 0 && (
-        <div style={{ margin: '14px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {/* MVP スパーク（単色フラット） */}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2 L14.6 9.4 L22 12 L14.6 14.6 L12 22 L9.4 14.6 L2 12 L9.4 9.4 Z" fill="var(--c-blue)"/>
-            </svg>
-          </span>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700 }}>今月のMVPパートナー</div>
-            <div style={{ fontSize: '.82rem', fontWeight: 800 }}>{(mvp.s as any).profiles?.name ?? mvp.s.code}</div>
+      {/* ② 次のマイルストーン */}
+      {milestoneNeed > 0 && (
+        <div style={{ margin: '14px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ fontSize: '.78rem', fontWeight: 800 }}>あと<span style={{ color: 'var(--c-blue)' }}>{milestoneNeed}名</span>で 月<span className="tnum" style={{ color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{milestoneIncome.toLocaleString()}</span></div>
+            <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>見込み</span>
           </div>
-          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.95rem' }}>¥{mvp.gross.toLocaleString()}</div>
-            <div style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>成約 {mvp.count}件</div>
+          <div style={{ height: 8, borderRadius: 99, background: 'var(--bg2)', overflow: 'hidden', margin: '10px 0 6px' }}>
+            <div className="bar-grow" style={{ width: `${milestonePct}%`, height: '100%', borderRadius: 99, background: 'var(--c-blue)' }} />
           </div>
+          <div style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>チーム {teamN}名 → 目標 {milestoneTarget}名</div>
         </div>
       )}
 
-      {/* チームカード */}
+      {/* ③ フル稼働したら */}
+      <div style={{ margin: '14px 20px 0', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: '1.3rem' }} aria-hidden>🚀</span>
+        <div style={{ fontSize: '.72rem', lineHeight: 1.6 }}>
+          今のチーム <b>{teamN}名</b> が毎月成約すると、月 <b className="tnum" style={{ color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{projFull.toLocaleString()}</b> のオーバーライド見込み
+          <span style={{ display: 'block', fontSize: '.54rem', color: 'var(--muted2)', marginTop: 2 }}>※ イメージの試算です</span>
+        </div>
+      </div>
+
+      {/* ④ あなたのチーム（メンバーカード） */}
       <div style={{ padding: '22px 20px 6px' }}>
         <h2 style={{ fontSize: '.92rem', fontWeight: 800, marginBottom: 12 }}>あなたのチーム</h2>
-        {subList.length === 0 ? (
-          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 14 }}>まだパートナーがいません。</p>
-        ) : (
-          <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-            {subList.map(s => {
-              const st = perSub[s.id] ?? { override: 0, count: 0, gross: 0 }
-              const linkedAt = s.frontier_linked_at
-              const expired = linkedAt ? !withinWindow(linkedAt, now.toISOString()) : true
-              return (
-                <div key={s.id} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ width: 30, height: 30, borderRadius: '50%', background: (s as any).profiles?.color ?? 'var(--c-blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.74rem', fontWeight: 700, flexShrink: 0 }}>
-                      {((s as any).profiles?.name ?? s.code)[0]}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '.82rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(s as any).profiles?.name ?? s.code}</div>
-                      <div style={{ fontSize: '.58rem', color: expired ? 'var(--muted2)' : 'var(--green)', marginTop: 1 }}>{expired ? '対象期間外' : 'オーバーライド対象'}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.92rem', color: 'var(--c-blue)' }}>＋¥{st.override.toLocaleString()}</div>
-                      <div style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>今月成約 {st.count}件</div>
+        <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          {subList.map(s => {
+            const st = perSub[s.id] ?? { override: 0, count: 0, gross: 0 }
+            const status = st.count >= 2 ? { t: '絶好調', e: '🔥', c: 'var(--red)', bg: 'var(--red-bg)' }
+              : st.count === 1 ? { t: '好調', e: '⚡', c: 'var(--amber)', bg: 'var(--amber-bg)' }
+              : { t: 'これから', e: '🌱', c: 'var(--muted2)', bg: 'var(--bg2)' }
+            return (
+              <div key={s.id} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: (s as any).profiles?.color ?? 'var(--c-blue)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.78rem', fontWeight: 700, flexShrink: 0 }}>
+                    {((s as any).profiles?.name ?? s.code)[0]}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '.82rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(s as any).profiles?.name ?? s.code}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 3, fontSize: '.54rem', fontWeight: 700, color: status.c, background: status.bg, borderRadius: 20, padding: '2px 8px' }}>
+                      <span aria-hidden>{status.e}</span>{status.t}・今月成約 {st.count}件
                     </div>
                   </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.92rem', color: 'var(--c-blue)' }}>＋¥{st.override.toLocaleString()}</div>
+                    <div style={{ fontSize: '.54rem', color: 'var(--muted2)' }}>貢献額</div>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-        <FrontierInvite />
+              </div>
+            )
+          })}
+        </div>
+
+        {/* ⑤ 招待CTA */}
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px', textAlign: 'center', marginBottom: 4 }}>
+          <div style={{ fontSize: '.78rem', fontWeight: 800, marginBottom: 3 }}>仲間を増やすほど、収入が増える</div>
+          <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 12 }}>新しい仲間の成約 {ratePct}% が 12ヶ月あなたの収入に</div>
+          <FrontierInvite />
+        </div>
       </div>
       <div style={{ height: 16 }} />
-    </div>
-  )
-}
-
-function Kpi({ label, value, unit }: { label: string; value: number; unit: string }) {
-  return (
-    <div className="card-hover ui-card" style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '12px 12px' }}>
-      <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700 }}>{label}</div>
-      <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem', marginTop: 3 }}>
-        <CountUp value={value} /><small style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', marginLeft: 2 }}>{unit}</small>
-      </div>
     </div>
   )
 }
