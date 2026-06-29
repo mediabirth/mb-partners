@@ -69,7 +69,7 @@ async function attachMenus(services: ServiceWithMenus[]) {
     if (ids.length === 0) return
     // メニュー（名前のみ）
     const { data: menuRows } = await admin
-      .from('menus').select('id, service_menu_id, name, sort, active')
+      .from('menus').select('id, service_menu_id, name, sort, active, calendar_account_id')
       .in('service_menu_id', ids).eq('active', true).order('sort')
     const menus = (menuRows ?? []) as Menu[]
     const menuIds = menus.map(m => m.id)
@@ -305,6 +305,7 @@ export type Menu = {
   name: string
   sort: number
   active: boolean
+  calendar_account_id?: string | null   // 段階B：担当カレンダーアカウント（null=既定）
   rewards?: MenuReward[]           // 報酬（複数）・表示用に付与
 }
 

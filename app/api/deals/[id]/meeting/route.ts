@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { createCentralMeetEvent } from '@/lib/mb-calendar-event'
+import { createCentralMeetEvent, resolveCalendarAccountId } from '@/lib/mb-calendar-event'
 
 // node ランタイム（Google連携・暗号化トークンを扱うため）
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // 案件は本人のものに限定
   const { data: deal } = await supabase
     .from('deals')
-    .select('id, customer_name, partner_id, service_id')
+    .select('id, customer_name, partner_id, service_id, menu_ref')
     .eq('id', id)
     .eq('partner_id', partner.id)
     .single()
@@ -46,6 +46,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   } catch { /* best-effort */ }
 
+  // 段階B：商談を入れるアカウントを解決（menu→service→既定 id=1）。未割当なら null＝従来どおり id=1。
+  const accountId = await resolveCalendarAccountId(admin, {
+    menuRef: (deal as { menu_ref?: string | null }).menu_ref ?? null,
+    serviceId: (deal as { service_id?: string | null }).service_id ?? null,
+  })
+
   // MB中心アカウントで予定＋Meetを作成（best-effort：未連携/失敗でも meeting_at は保存）。
   let eventId: string | null = null
   let meetingUrl: string | null = null
@@ -59,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       partnerName:  profile?.name ?? null,
       clientEmail:  customerEmail,
       clientName:   deal.customer_name,
-    })
+    }, accountId)
     eventId = r.eventId
     meetingUrl = r.meetingUrl
   } catch { /* best-effort */ }
