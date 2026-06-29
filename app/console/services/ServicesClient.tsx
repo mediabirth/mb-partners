@@ -800,7 +800,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     setServices(renum)
     for (const s of changed) fetch(`/api/console/services/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: s.sort }) }).catch(() => {})
   }
-  function moveMenu(svcId: string, flat: Menu[], i: number, dir: -1 | 1) {
+  // ★リスト表示のメニュー並び替え（ドロワーの moveMenu とは別物）。
+  // 以前は両方 moveMenu 同名で、関数巻き上げにより後者(ドロワー版/(mid,dir))がスコープを上書き→
+  // リストの▲▼が editing=null で即return＝メニューだけ動かなかった真因。名前を分離して解消。
+  function moveListMenu(svcId: string, flat: Menu[], i: number, dir: -1 | 1) {
     const j = i + dir
     if (j < 0 || j >= flat.length) return
     const arr = [...flat]
@@ -951,8 +954,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   {newMenus.map((mn, idx) => (
                     <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <ReorderBtn label="▲" small onClick={() => moveMenu(svc.id, newMenus, idx, -1)} disabled={idx === 0} />
-                        <ReorderBtn label="▼" small onClick={() => moveMenu(svc.id, newMenus, idx, 1)} disabled={idx === newMenus.length - 1} />
+                        <ReorderBtn label="▲" small onClick={() => moveListMenu(svc.id, newMenus, idx, -1)} disabled={idx === 0} />
+                        <ReorderBtn label="▼" small onClick={() => moveListMenu(svc.id, newMenus, idx, 1)} disabled={idx === newMenus.length - 1} />
                       </div>
                       <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
                       <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: (mn.rewards?.length ?? 0) > 0 ? 'var(--txt)' : 'var(--muted)' }}>
