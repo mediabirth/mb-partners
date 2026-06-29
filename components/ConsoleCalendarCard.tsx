@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import EditBlock from '@/components/ui/EditBlock'
+import Avatar from '@/components/ui/Avatar'
 
 /**
- * ②③ コンソールのカレンダー設定UI（MB運営）。
- * - ② Google連携（OAuth開始）。接続済みならメール表示。
- * - ③ 営業時間 / 土日NG / 祝日NG / 枠間隔 / バッファ を mb_calendar に保存。
- * mb_calendar 未作成時は保存で「DB適用が必要」を表示（halt しない）。
+ * ②③ コンソールのカレンダー設定UI（member-centric・段階2）。
+ * - ② MBメンバー（owner/manager）×各自のカレンダー連携状況。本人のみ「連携/解除」。
+ * - ③ 営業時間 / 土日NG / 祝日NG / 枠間隔 / バッファ を mb_calendar に保存（org 予約ポリシー）。
  */
 type Settings = {
   business_start: string; business_end: string
@@ -14,31 +14,44 @@ type Settings = {
   slot_minutes: number; buffer_minutes: number
   google_email?: string | null
 }
-type Account = { id: string; account_label: string; google_email: string | null; active: boolean; is_default: boolean }
+type Member = { user_id: string; name: string | null; role: string; color: string | null; avatar_url: string | null; connected: boolean; google_email: string | null; is_self: boolean }
+const ROLE_JP: Record<string, string> = { owner: 'オーナー', manager: 'マネージャー', admin: '管理者', staff: 'スタッフ' }
 
 export default function ConsoleCalendarCard() {
   const [s, setS] = useState<Settings>({ business_start: '09:00', business_end: '18:00', no_weekend: true, no_holiday: true, slot_minutes: 30, buffer_minutes: 0 })
-  const [connected, setConnected] = useState(false)
   const [ready, setReady] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [addLabel, setAddLabel] = useState('')
+  const [members, setMembers] = useState<Member[]>([])
+  const [unlinking, setUnlinking] = useState(false)
   const snapRef = useRef<Settings | null>(null)   // 営業時間/枠/バッファ 編集のキャンセル用スナップショット
 
-  useEffect(() => {
-    fetch('/api/console/calendar').then(r => r.json()).then(d => {
+  function loadMembers() {
+    return fetch('/api/console/calendar').then(r => r.json()).then(d => {
       if (d.settings) setS(v => ({ ...v, ...d.settings }))
-      setConnected(!!d.connected); setReady(d.ready !== false)
-      if (Array.isArray(d.accounts)) setAccounts(d.accounts)
-      // 連携直後/失敗のフラッシュ
-      const p = new URLSearchParams(window.location.search)
-      if (p.get('calendar') === 'connected') setNote('Googleカレンダーと連携しました。')
-      if (p.get('calendar') === 'added') setNote('追加のカレンダーアカウントを連携しました。')
-      if (p.get('calendar_error')) setNote(`連携エラー: ${p.get('calendar_error')}`)
-    }).catch(() => {}).finally(() => setLoading(false))
+      setReady(d.ready !== false)
+      if (Array.isArray(d.members)) setMembers(d.members)
+    })
+  }
+
+  useEffect(() => {
+    loadMembers().catch(() => {}).finally(() => setLoading(false))
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('calendar') === 'member_connected') setNote('あなたのGoogleカレンダーを連携しました。')
+    else if (p.get('calendar') === 'connected') setNote('Googleカレンダーと連携しました。')
+    if (p.get('calendar_error')) setNote(`連携エラー: ${p.get('calendar_error')}`)
   }, [])
+
+  async function unlinkMine() {
+    if (!confirm('あなたのカレンダー連携を解除しますか？')) return
+    setUnlinking(true); setNote('')
+    try {
+      const r = await fetch('/api/console/calendar/link', { method: 'DELETE' })
+      if (r.ok) { await loadMembers(); setNote('カレンダー連携を解除しました。') }
+      else setNote('解除に失敗しました。')
+    } catch { setNote('解除に失敗しました。') } finally { setUnlinking(false) }
+  }
 
   async function save() {
     setSaving(true); setNote('')
@@ -74,57 +87,42 @@ export default function ConsoleCalendarCard() {
         営業時間と連携Googleの予定（busy）から、パートナー／顧客の予約画面に表示する空き枠を算出します。
       </p>
 
-      {/* ② Google連携 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '.78rem', fontWeight: 700 }}>Googleカレンダー連携</div>
-          <div style={{ fontSize: '.62rem', color: connected ? 'var(--green)' : 'var(--muted2)', marginTop: 2 }}>
-            {loading ? '確認中…' : connected ? `✓ 連携済み${s.google_email ? `（${s.google_email}）` : ''}` : 'MB運営アカウントを接続し、実際の空き時間で枠を生成'}
-          </div>
-        </div>
-        <a href="/api/auth/google" style={{ flexShrink: 0, display: 'inline-block', background: '#4285F4', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: '.74rem', fontWeight: 700, textDecoration: 'none' }}>
-          {connected ? '再連携' : 'Googleと連携する'}
-        </a>
-      </div>
-
-      {/* ②-2 段階A：連携アカウント一覧 ＋ 追加導線（振り分けはまだ無し＝挙動ゼロ変化） */}
+      {/* ② 連携中のアカウント＝MBメンバー×各自のカレンダー連携状況。本人のみ「連携/解除」。 */}
       <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
         <div style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>連携中のアカウント</div>
-        {accounts.length === 0 ? (
-          <div style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{loading ? '確認中…' : '未連携'}</div>
+        {members.length === 0 ? (
+          <div style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{loading ? '確認中…' : 'メンバーがいません'}</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {accounts.map(a => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 10px', background: '#fff', border: '1px solid var(--line)', borderRadius: 8 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '.74rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {a.account_label}
-                    {a.is_default && <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2,#EEEBFF)', borderRadius: 5, padding: '1px 6px' }}>既定</span>}
+            {members.map(m => (
+              <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', background: '#fff', border: '1px solid var(--line)', borderRadius: 8 }}>
+                <Avatar name={m.name ?? '?'} color={m.color} src={m.avatar_url} size={30} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '.76rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name ?? '—'}</span>
+                    <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', flexShrink: 0 }}>{ROLE_JP[m.role] ?? m.role}{m.is_self ? '・あなた' : ''}</span>
                   </div>
-                  {a.google_email && <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.google_email}</div>}
+                  <div style={{ fontSize: '.62rem', marginTop: 1, color: m.connected ? 'var(--green)' : 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.connected ? `✓ 連携済み（${m.google_email}）` : '未連携'}
+                  </div>
                 </div>
-                <span style={{ flexShrink: 0, fontSize: '.6rem', fontWeight: 700, color: a.active ? 'var(--green)' : 'var(--muted2)' }}>{a.active ? '✓ 有効' : '無効'}</span>
+                <div style={{ flexShrink: 0 }}>
+                  {m.is_self ? (
+                    m.connected ? (
+                      <button onClick={unlinkMine} disabled={unlinking} style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontFamily: 'inherit', opacity: unlinking ? .6 : 1 }}>解除</button>
+                    ) : (
+                      <a href="/api/auth/google?mode=member" style={{ display: 'inline-block', background: '#4285F4', color: '#fff', borderRadius: 8, padding: '7px 13px', fontSize: '.7rem', fontWeight: 700, textDecoration: 'none' }}>連携する</a>
+                    )
+                  ) : (
+                    <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 600 }}>本人のみ連携可</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          <input
-            value={addLabel}
-            onChange={e => setAddLabel(e.target.value)}
-            placeholder="表示名（例: 勝彦）"
-            maxLength={60}
-            style={{ flex: 1, minWidth: 0, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.74rem' }}
-          />
-          <a
-            href={`/api/auth/google?mode=mb_add${addLabel.trim() ? `&label=${encodeURIComponent(addLabel.trim())}` : ''}`}
-            style={{ flexShrink: 0, display: 'inline-block', background: '#0E0E14', color: '#fff', borderRadius: 8, padding: '9px 14px', fontSize: '.72rem', fontWeight: 700, textDecoration: 'none' }}
-          >
-            ＋ アカウント追加
-          </a>
-        </div>
         <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 2px 0', lineHeight: 1.6 }}>
-          追加したアカウントは連携のみ保存されます。どのブランドの商談をどのアカウントに入れるかの割り当ては次の段階で対応します。
+          各メンバーが自分のログインで自分のGoogleカレンダーを連携します。連携の操作は本人のみ可能です。
         </p>
       </div>
 

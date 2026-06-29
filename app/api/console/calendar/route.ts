@@ -17,32 +17,32 @@ async function requireOwner(supabase: Awaited<ReturnType<typeof createClient>>) 
 
 export async function GET() {
   const supabase = await createClient()
-  if (!(await requireOwner(supabase))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const me = await requireOwner(supabase)
+  if (!me) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
   const { data, error } = await admin.from('mb_calendar').select('*').eq('id', 1).single()
 
-  // 段階A：追加アカウント一覧（mb_calendars）。表示専用・oauth_tokens は返さない。未作成でも壊さない。
-  // 既定アカウント（mb_calendar id=1）も先頭に並べ、UI は「既定＋追加」をまとめて表示する。
-  const accounts: { id: string; account_label: string; google_email: string | null; active: boolean; is_default: boolean }[] = []
-  if (data && !error) {
-    accounts.push({
-      id: 'default', account_label: 'MB運営（既定）',
-      google_email: (data as any).google_email ?? null,
-      active: !!(data as any).active && !!(data as any).oauth_tokens, is_default: true,
-    })
-  }
+  // 段階2：MBメンバー（owner/manager）×各自のカレンダー連携状況。oauth_tokens は返さない（連携有無のみ）。
+  // is_self＝ログイン本人の行（連携/解除ボタンを出す対象）。
+  const members: { user_id: string; name: string | null; role: string; color: string | null; avatar_url: string | null; connected: boolean; google_email: string | null; is_self: boolean }[] = []
   try {
-    const { data: extra } = await admin.from('mb_calendars').select('id, account_label, google_email, active, created_at').order('created_at', { ascending: true })
-    for (const a of (extra ?? [])) {
-      accounts.push({ id: a.id, account_label: a.account_label, google_email: a.google_email ?? null, active: !!a.active, is_default: false })
+    const { data: profs } = await admin.from('profiles').select('id, name, role, color, avatar_url').in('role', ['owner', 'manager']).order('role').order('name')
+    const { data: links } = await admin.from('member_calendar_links').select('user_id, google_email, active')
+    const linkBy = new Map((links ?? []).map(l => [l.user_id as string, l]))
+    for (const p of (profs ?? [])) {
+      const lk = linkBy.get(p.id) as { google_email: string | null; active: boolean } | undefined
+      members.push({
+        user_id: p.id, name: p.name, role: p.role, color: p.color, avatar_url: (p as any).avatar_url ?? null,
+        connected: !!(lk && lk.active && lk.google_email), google_email: lk?.google_email ?? null, is_self: p.id === me.id,
+      })
     }
-  } catch { /* mb_calendars 未作成でも既定のみで返す */ }
+  } catch { /* member_calendar_links 未作成でもメンバー一覧は返す */ }
 
   if (error || !data) {
-    return NextResponse.json({ settings: MB_DEFAULTS, connected: false, ready: false, accounts })
+    return NextResponse.json({ settings: MB_DEFAULTS, connected: false, ready: false, members })
   }
   const { oauth_tokens, ...settings } = data as Record<string, unknown>
-  return NextResponse.json({ settings, connected: !!(data as any).active && !!oauth_tokens, ready: true, accounts })
+  return NextResponse.json({ settings, connected: !!(data as any).active && !!oauth_tokens, ready: true, members })
 }
 
 export async function POST(req: NextRequest) {

@@ -4,7 +4,7 @@
  * code → token 交換 → calendar_links に upsert → /app/calendar にリダイレクト
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { encryptTokens } from '@/lib/google-token'
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
@@ -28,22 +28,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${appUrl}/app/calendar?error=missing_params`)
   }
 
-  // state をデコード。mode='mb'(MB運営) / 'mb_add'(追加アカウント) / partner_id(個人) を判定
+  // state をデコード。mode='mb'(MB運営) / 'member'(自分のカレンダー) / partner_id(個人) を判定
   let partnerId: string | null = null
   let isMb = false
-  let isMbAdd = false
-  let addLabel = ''
+  let isMember = false
+  let stateUid = ''
   try {
     const decoded = JSON.parse(Buffer.from(state, 'base64url').toString())
     if (decoded.mode === 'mb') isMb = true
-    else if (decoded.mode === 'mb_add') { isMbAdd = true; addLabel = (decoded.label || '').toString().slice(0, 60) }
+    else if (decoded.mode === 'member') { isMember = true; stateUid = (decoded.uid || '').toString() }
     else { partnerId = decoded.partner_id; if (!partnerId) throw new Error('no id') }
   } catch {
     return NextResponse.redirect(`${appUrl}/app/calendar?error=invalid_state`)
   }
-  // 連携後の戻り先（mb / mb_add は同じコンソール設定へ。mb_add は calendar=added で区別）
-  const toConsole = isMb || isMbAdd
-  const okUrl  = toConsole ? `${appUrl}/console/settings?calendar=${isMbAdd ? 'added' : 'connected'}` : `${appUrl}/app/calendar?connected=1`
+  // 連携後の戻り先（mb / member は同じコンソール設定へ。member は calendar=member_connected で区別）
+  const toConsole = isMb || isMember
+  const okUrl  = toConsole ? `${appUrl}/console/settings?calendar=${isMember ? 'member_connected' : 'connected'}` : `${appUrl}/app/calendar?connected=1`
   const errUrl = (e: string) => toConsole ? `${appUrl}/console/settings?calendar_error=${e}` : `${appUrl}/app/calendar?error=${e}`
 
   // code → tokens 交換
@@ -88,14 +88,25 @@ export async function GET(req: NextRequest) {
 
   const supabase = await createServiceRoleClient()
 
-  if (isMbAdd) {
-    // 段階A：追加アカウントは mb_calendars に新行 INSERT（既存 mb_calendar(id=1) には触れない）。
-    const { error: addErr } = await supabase
-      .from('mb_calendars')
-      .insert({ account_label: addLabel || googleEmail || 'アカウント', google_email: googleEmail, oauth_tokens: encrypted, active: true })
-    if (addErr) {
-      console.error('[OAuth callback] mb_calendars insert error:', addErr.message)
-      return NextResponse.redirect(errUrl('mb_add_failed'))
+  if (isMember) {
+    // 段階2：自分のカレンダー連携 → member_calendar_links の自分の user_id 行へ upsert。
+    // ★セッション本人を優先（他人 uid 注入を無効化）。読めなければ state.uid（認証済み開始時にサーバが付与）。
+    let uid = stateUid
+    try {
+      const ssr = await createClient()
+      const { data: { user: sess } } = await ssr.auth.getUser()
+      if (sess?.id) uid = sess.id
+    } catch { /* セッション読めない時は state.uid を使用 */ }
+    if (!uid) return NextResponse.redirect(errUrl('member_no_user'))
+    // ガード：対象は owner/manager 等の非partner profile のみ（partner 行へは書かない）。
+    const { data: prof } = await supabase.from('profiles').select('role').eq('id', uid).single()
+    if (!prof || prof.role === 'partner') return NextResponse.redirect(errUrl('member_forbidden'))
+    const { error: mErr } = await supabase
+      .from('member_calendar_links')
+      .upsert({ user_id: uid, google_email: googleEmail, oauth_tokens: encrypted, active: true, connected_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    if (mErr) {
+      console.error('[OAuth callback] member_calendar_links upsert error:', mErr.message)
+      return NextResponse.redirect(errUrl('member_save_failed'))
     }
     return NextResponse.redirect(okUrl)
   }
