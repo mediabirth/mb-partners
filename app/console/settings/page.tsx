@@ -88,6 +88,27 @@ export default function SettingsPage() {
       .catch(() => {})
   }, [])
 
+  // 段階C：自分の通知宛先（member_notification_prefs）。
+  const [myMailTo, setMyMailTo] = useState('')
+  const [myMailOn, setMyMailOn] = useState(true)
+  const [myMailSaving, setMyMailSaving] = useState(false)
+  useEffect(() => {
+    fetch('/api/console/settings/notify-prefs')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d) { setMyMailTo(d.email_to ?? ''); setMyMailOn(d.email_enabled ?? true) } })
+      .catch(() => {})
+  }, [])
+  async function saveMyMail() {
+    setMyMailSaving(true)
+    try {
+      await fetch('/api/console/settings/notify-prefs', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_to: myMailTo, email_enabled: myMailOn }),
+      })
+      showToast('通知メールの宛先を保存しました')
+    } catch { /* best-effort */ } finally { setMyMailSaving(false) }
+  }
+
   useEffect(() => {
     setAuditLoading(true)
     const url = auditCategory
@@ -239,6 +260,23 @@ export default function SettingsPage() {
               </div>
             )}
             <button onClick={saveNotif} disabled={notifSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
+          </SectionCard>
+
+          {/* 段階C: あなたの通知メール（member_notification_prefs・各自の宛先） */}
+          <SectionCard title="あなたの通知メール">
+            <RowItem label="受信する" desc="運営通知をこのアドレスでも受け取る">
+              <Toggle on={myMailOn} onChange={setMyMailOn} />
+            </RowItem>
+            <RowItem label="宛先メール" desc="あなた個人の受信先（空欄で受信なし）">
+              <input
+                type="email"
+                value={myMailTo}
+                onChange={e => setMyMailTo(e.target.value)}
+                placeholder="you@example.com"
+                style={{ width: 220, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.82rem' }}
+              />
+            </RowItem>
+            <button onClick={saveMyMail} disabled={myMailSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{myMailSaving ? '保存中…' : '保存する'}</button>
           </SectionCard>
 
           {/* 5. 監査ログ */}

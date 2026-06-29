@@ -57,5 +57,14 @@ export async function POST(req: NextRequest) {
   }
 
   await service.from('invites').update({ used_at: new Date().toISOString(), name: name.trim() }).eq('token', token)
+
+  // 段階C：通知宛先の初期化（本人メール・有効）。冪等 upsert・best-effort（失敗で承認は止めない）。
+  try {
+    await service.from('member_notification_prefs').upsert(
+      { user_id: userId, email_to: email, email_enabled: true },
+      { onConflict: 'user_id' }
+    )
+  } catch { /* prefs 未作成等は無視 */ }
+
   return NextResponse.json({ ok: true }, { status: 200 })
 }

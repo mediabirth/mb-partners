@@ -106,9 +106,37 @@ export async function sendEmail(params: {
   }
 }
 
-/** 運営の受信先（OPS_NOTIFY_EMAIL）へメール。未設定ならスキップ。 */
+/**
+ * 段階C：運営宛先の解決。組織宛先（OPS_NOTIFY_EMAIL・据置フォールバック）＋
+ * member_notification_prefs の email_enabled な email_to 全員（重複除去）。
+ * prefs が空/未作成/読取不能なら OPS のみ＝従来と完全同一（非破壊）。best-effort。
+ */
+async function resolveOpsRecipients(): Promise<string[]> {
+  const set = new Set<string>()
+  const ops = process.env.OPS_NOTIFY_EMAIL
+  if (ops) set.add(ops.trim().toLowerCase())
+  try {
+    const { createServiceRoleClient } = await import('./supabase/server')
+    const svc = await createServiceRoleClient()
+    const { data } = await svc.from('member_notification_prefs').select('email_to, email_enabled')
+    for (const r of (data ?? []) as { email_to: string | null; email_enabled: boolean }[]) {
+      if (r.email_enabled && r.email_to && r.email_to.includes('@')) set.add(r.email_to.trim().toLowerCase())
+    }
+  } catch { /* prefs 未作成/読取不能 → OPS のみ（従来動作） */ }
+  return [...set]
+}
+
+/** 運営の受信先へメール。OPS_NOTIFY_EMAIL ＋ メンバー宛先（prefs）全員へ配信。未設定/宛先なしならスキップ。 */
 export async function sendOpsEmail(subject: string, text: string, html?: string): Promise<SendResult> {
-  const to = process.env.OPS_NOTIFY_EMAIL
-  if (!to) return { sent: false, skipped: 'OPS_NOTIFY_EMAIL 未設定' }
-  return sendEmail({ to, subject, text, html })
+  const recipients = await resolveOpsRecipients()
+  if (recipients.length === 0) return { sent: false, skipped: 'OPS_NOTIFY_EMAIL 未設定' }
+  // 各宛先へ個別送信（1件失敗が他を止めない・best-effort）。1件でも送れたら sent:true。
+  let anySent = false
+  let lastErr: string | undefined
+  for (const to of recipients) {
+    const r = await sendEmail({ to, subject, text, html })
+    if (r.sent) anySent = true
+    else if (r.error) lastErr = r.error
+  }
+  return anySent ? { sent: true } : { sent: false, error: lastErr ?? 'no recipient sent' }
 }
