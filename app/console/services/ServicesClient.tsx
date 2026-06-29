@@ -478,14 +478,16 @@ function Btn2({ label, onClick, danger }: { label: string; onClick: () => void; 
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type CalAccount = { id: string; account_label: string; google_email: string | null; active: boolean; is_default: boolean }
+type CalMember = { user_id: string; name: string | null; role: string; connected: boolean; google_email: string | null }
 
 export default function ServicesClient({ initialServices }: { initialServices: ServiceWithMenus[] }) {
   const [services, setServices]  = useState(initialServices)
-  // 段階B：担当カレンダーアカウント一覧（mb_calendars＋既定）。割当UIのプルダウン用。
-  const [calAccounts, setCalAccounts] = useState<CalAccount[]>([])
+  // 段階3a：担当メンバー候補（連携済みの owner/manager のみ）。割当UIのプルダウン用。
+  const [calMembers, setCalMembers] = useState<CalMember[]>([])
   useEffect(() => {
-    fetch('/api/console/calendar').then(r => r.json()).then(d => { if (Array.isArray(d.accounts)) setCalAccounts(d.accounts) }).catch(() => {})
+    fetch('/api/console/calendar').then(r => r.json()).then(d => {
+      if (Array.isArray(d.members)) setCalMembers((d.members as CalMember[]).filter(m => m.connected))
+    }).catch(() => {})
   }, [])
   const [editing, setEditing]    = useState<ServiceWithMenus | null>(null)
   const [showAdd, setShowAdd]    = useState(false)
@@ -826,22 +828,22 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     for (const m of changed) fetch(`/api/console/menus/${m.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: m.sort }) }).catch(() => {})
   }
 
-  // 段階B：メニューの担当カレンダーアカウントを保存（''=既定へ）。楽観更新＋PATCH。money非接触。
-  function setMenuAccount(svcId: string, menuId: string, accountId: string) {
-    const val = accountId || null
+  // 段階3a：メニューの担当メンバーを保存（''=既定owner へ）。楽観更新＋PATCH。money非接触。
+  function setMenuMember(svcId: string, menuId: string, memberId: string) {
+    const val = memberId || null
     setServices(prev => prev.map(s => s.id !== svcId ? s : ({
       ...s,
-      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id === menuId ? { ...m, calendar_account_id: val } : m) })),
+      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id === menuId ? { ...m, calendar_member_id: val } : m) })),
     })))
-    fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendar_account_id: val }) })
-      .then(() => showToast('担当カレンダーを保存しました')).catch(() => {})
+    fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendar_member_id: val }) })
+      .then(() => showToast('担当メンバーを保存しました')).catch(() => {})
   }
-  // 段階B：ブランド既定の担当カレンダーアカウントを保存（''=既定へ）。
-  function setBrandAccount(svcId: string, accountId: string) {
-    const val = accountId || null
-    setServices(prev => prev.map(s => s.id !== svcId ? s : ({ ...s, calendar_account_id: val } as ServiceWithMenus)))
-    fetch(`/api/console/services/${svcId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendar_account_id: val }) })
-      .then(() => showToast('ブランドの担当カレンダーを保存しました')).catch(() => {})
+  // 段階3a：ブランド既定の担当メンバーを保存（''=既定owner へ）。
+  function setBrandMember(svcId: string, memberId: string) {
+    const val = memberId || null
+    setServices(prev => prev.map(s => s.id !== svcId ? s : ({ ...s, calendar_member_id: val } as ServiceWithMenus)))
+    fetch(`/api/console/services/${svcId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendar_member_id: val }) })
+      .then(() => showToast('ブランドの担当メンバーを保存しました')).catch(() => {})
   }
 
   // ── Menu CRUD ─────────────────────────────────────────────────────────────
@@ -934,9 +936,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           //   旧 service_menus.ref/coop（¥30,000 等の残骸）は表示しない＝APP refer と完全一致。
           //   メニュー表示は menus.sort 昇順（並び替え結果＝コンソール↔APP一致）。
           const newMenus = svc.service_menus.flatMap(sm => (sm.menus ?? [])).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-          // 段階B：追加アカウントが1つ以上ある時だけ割当UIを出す（無ければ全て既定＝従来表示）。
-          const hasExtraAccounts = calAccounts.some(a => !a.is_default)
-          const brandAcc = (svc as { calendar_account_id?: string | null }).calendar_account_id ?? ''
+          // 段階3a：連携済みメンバーが1人以上いる時だけ割当UIを出す（いなければ全て既定owner＝従来表示）。
+          const hasMembers = calMembers.length > 0
+          const brandMember = (svc as { calendar_member_id?: string | null }).calendar_member_id ?? ''
           return (
             <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
@@ -967,18 +969,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </button>
               </div>
 
-              {/* 段階B：ブランド既定の担当カレンダー（追加アカウントがある時のみ。メニュー未指定はここに従う） */}
-              {hasExtraAccounts && (
+              {/* 段階3a：ブランド既定の担当メンバー（連携済みメンバーがいる時のみ。メニュー個別指定が優先） */}
+              {hasMembers && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)' }}>ブランド既定カレンダー</span>
+                  <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)' }}>ブランド担当メンバー</span>
                   <select
-                    value={brandAcc}
-                    onChange={e => setBrandAccount(svc.id, e.target.value)}
-                    title="このブランドの商談を入れる既定カレンダー（メニュー個別指定が優先）"
+                    value={brandMember}
+                    onChange={e => setBrandMember(svc.id, e.target.value)}
+                    title="このブランドの商談を入れる担当メンバー（メニュー個別指定が優先）"
                     style={{ border: '1px solid var(--line)', borderRadius: 7, padding: '5px 9px', fontFamily: 'inherit', fontSize: '.66rem', color: 'var(--muted2)', background: '#fff' }}
                   >
-                    <option value="">📅 既定（MB運営）</option>
-                    {calAccounts.filter(a => !a.is_default).map(a => <option key={a.id} value={a.id}>📅 {a.account_label}</option>)}
+                    <option value="">👤 既定（MB運営・神原勝彦）</option>
+                    {calMembers.map(m => <option key={m.user_id} value={m.user_id}>👤 {m.name}</option>)}
                   </select>
                 </div>
               )}
@@ -1003,15 +1005,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       </div>
                       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
-                        {hasExtraAccounts && (
+                        {hasMembers && (
                           <select
-                            value={mn.calendar_account_id ?? ''}
-                            onChange={e => setMenuAccount(svc.id, mn.id, e.target.value)}
-                            title="このメニューの商談を入れるカレンダー"
-                            style={{ maxWidth: 220, border: '1px solid var(--line)', borderRadius: 7, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', color: 'var(--muted2)', background: '#fff' }}
+                            value={mn.calendar_member_id ?? ''}
+                            onChange={e => setMenuMember(svc.id, mn.id, e.target.value)}
+                            title="このメニューの商談を入れる担当メンバー"
+                            style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 7, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', color: 'var(--muted2)', background: '#fff' }}
                           >
-                            <option value="">📅 既定（{svc.calendar_account_id ? 'ブランド設定' : 'MB運営'}）</option>
-                            {calAccounts.filter(a => !a.is_default).map(a => <option key={a.id} value={a.id}>📅 {a.account_label}</option>)}
+                            <option value="">👤 既定（{brandMember ? 'ブランド担当' : 'MB運営・神原勝彦'}）</option>
+                            {calMembers.map(m => <option key={m.user_id} value={m.user_id}>👤 {m.name}</option>)}
                           </select>
                         )}
                       </div>

@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { createCentralMeetEvent, resolveCalendarAccountId } from '@/lib/mb-calendar-event'
+import { createCentralMeetEvent, resolveCalendarMemberId } from '@/lib/mb-calendar-event'
 
 // node ランタイム（Google連携・暗号化トークンを扱うため）
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -46,8 +46,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   } catch { /* best-effort */ }
 
-  // 段階B：商談を入れるアカウントを解決（menu→service→既定 id=1）。未割当なら null＝従来どおり id=1。
-  const accountId = await resolveCalendarAccountId(admin, {
+  // 段階3a：商談を入れる担当メンバーを解決（menu→service→既定owner）。未割当=null→owner(kthk.kmbr)。
+  const memberId = await resolveCalendarMemberId(admin, {
     menuRef: (deal as { menu_ref?: string | null }).menu_ref ?? null,
     serviceId: (deal as { service_id?: string | null }).service_id ?? null,
   })
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       partnerName:  profile?.name ?? null,
       clientEmail:  customerEmail,
       clientName:   deal.customer_name,
-    }, accountId)
+    }, memberId)
     eventId = r.eventId
     meetingUrl = r.meetingUrl
   } catch { /* best-effort */ }

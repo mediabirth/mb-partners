@@ -1,9 +1,10 @@
 /**
- * Batch M / 段階B: MB中心アカウントで商談予定を作成し Google Meet を生成する共通ヘルパー。
- * - 段階A までは mb_calendar(id=1) 単一。段階B で「指定アカウント(mb_calendars)」での作成に対応。
- * - 解決順は呼び元が resolveCalendarAccountId(menu→service→null) で決め、accountId として渡す。
- *   accountId=null（未割当）→ 従来どおり mb_calendar(id=1=kthk.kmbr) で作成（byte互換）。
- *   accountId 指定 → そのアカウントのトークンで calendars/primary に作成＝そのアカウントが organizer＝Meetホスト。
+ * 商談予定＋Google Meet 作成の共通ヘルパー（段階3a：member-centric 振り分け）。
+ * - 解決順は呼び元が resolveCalendarMemberId(menu→service→null) で決め、memberId として渡す。
+ *   memberId 指定＆連携済み → その担当メンバーのトークンで calendars/primary に作成
+ *     ＝そのメンバーが organizer＝Meetホスト。refresh は member_calendar_links の該当行へ書き戻し。
+ *   未割当(memberId=null) / 担当が未連携 → 既定 owner(member_calendar_links) → さらに無ければ
+ *     mb_calendar(id=1) にフォールバック（＝従来 kthk.kmbr と同一トークン・段階1で移送済＝byte互換・非破壊）。
  * - best-effort：未連携／失敗時は { eventId:null, meetingUrl:null, skipped|error }（throw しない）。
  * node ランタイム専用（google-token が node crypto を使用）。
  */
@@ -18,7 +19,7 @@ export type CentralEventResult = {
   meetingUrl: string | null
   skipped?: string
   error?: string
-  account?: string   // 'default' | mb_calendars.id（どのアカウントで作成したかの実測用・additive）
+  account?: string   // 'member:<uid>' | 'owner' | 'default'（どの経路で作成したかの実測用・additive）
 }
 
 type TokenSource = {
@@ -28,46 +29,56 @@ type TokenSource = {
 }
 
 /**
- * 商談をどのカレンダーアカウントに入れるか解決する。
- * 解決順：menus.calendar_account_id → services.calendar_account_id → null(=既定 mb_calendar id=1)。
- * best-effort：列未作成/参照切れ等は null（＝従来どおり id=1）にフォールバック。
+ * 商談をどの担当メンバーのカレンダーに入れるか解決する。
+ * 解決順：menus.calendar_member_id → services.calendar_member_id → null(=既定 owner)。
+ * best-effort：列未作成/参照切れ等は null（＝既定 owner）にフォールバック。
  */
-export async function resolveCalendarAccountId(
+export async function resolveCalendarMemberId(
   admin: AdminClient,
   opts: { menuRef?: string | null; serviceId?: string | null }
 ): Promise<string | null> {
   try {
     if (opts.menuRef) {
-      const { data } = await admin.from('menus').select('calendar_account_id').eq('id', opts.menuRef).single()
-      if (data?.calendar_account_id) return data.calendar_account_id as string
+      const { data } = await admin.from('menus').select('calendar_member_id').eq('id', opts.menuRef).single()
+      if (data?.calendar_member_id) return data.calendar_member_id as string
     }
     if (opts.serviceId) {
-      const { data } = await admin.from('services').select('calendar_account_id').eq('id', opts.serviceId).single()
-      if (data?.calendar_account_id) return data.calendar_account_id as string
+      const { data } = await admin.from('services').select('calendar_member_id').eq('id', opts.serviceId).single()
+      if (data?.calendar_member_id) return data.calendar_member_id as string
     }
-  } catch { /* best-effort：解決不能なら既定へ */ }
+  } catch { /* best-effort：解決不能なら既定 owner へ */ }
   return null
 }
 
-/** mb_calendars 指定行のトークン源。使えない（無効/未連携/復号失敗）なら null。 */
-async function accountTokenSource(admin: AdminClient, accountId: string): Promise<TokenSource | null> {
+/** member_calendar_links の指定ユーザー行のトークン源。未連携/無効/復号失敗なら null。 */
+async function memberTokenSource(admin: AdminClient, userId: string): Promise<TokenSource | null> {
   try {
-    const { data } = await admin.from('mb_calendars').select('oauth_tokens, active').eq('id', accountId).single()
+    const { data } = await admin.from('member_calendar_links').select('oauth_tokens, active').eq('user_id', userId).single()
     if (!data || !data.active || !data.oauth_tokens) return null
     const tokens = decryptTokens(data.oauth_tokens as StoredTokens)
     return {
       tokens,
       writeback: async (refreshed) => {
         const updated = encryptTokens({ access_token: refreshed.access_token, refresh_token: tokens.refresh_token, expires_at: refreshed.expires_at })
-        await admin.from('mb_calendars').update({ oauth_tokens: updated, updated_at: new Date().toISOString() }).eq('id', accountId)
+        await admin.from('member_calendar_links').update({ oauth_tokens: updated, updated_at: new Date().toISOString() }).eq('user_id', userId)
       },
-      label: accountId,
+      label: `member:${userId}`,
     }
   } catch { return null }
 }
 
-/** 既定 mb_calendar(id=1) のトークン源（従来動作・byte互換）。未連携なら null。 */
-async function defaultTokenSource(admin: AdminClient): Promise<TokenSource | null> {
+/** 既定 owner（member_calendar_links の owner 行）のトークン源。未連携なら null。 */
+async function ownerTokenSource(admin: AdminClient): Promise<TokenSource | null> {
+  try {
+    const { data: owner } = await admin.from('profiles').select('id').eq('role', 'owner').limit(1).single()
+    if (!owner?.id) return null
+    const src = await memberTokenSource(admin, owner.id as string)
+    return src ? { ...src, label: 'owner' } : null
+  } catch { return null }
+}
+
+/** 最終フォールバック＝mb_calendar(id=1)（従来動作・byte互換）。未連携なら null。 */
+async function legacyDefaultSource(admin: AdminClient): Promise<TokenSource | null> {
   const mb = await getMbCalendar(admin)
   if (!mb || !mb.active || !mb.oauth_tokens) return null
   const tokens = decryptTokens(mb.oauth_tokens as StoredTokens)
@@ -93,13 +104,14 @@ export async function createCentralMeetEvent(
     clientEmail?: string | null
     clientName?: string | null
   },
-  accountId?: string | null
+  memberId?: string | null
 ): Promise<CentralEventResult> {
-  // 指定アカウント → 使えなければ既定へフォールバック（非破壊）。
+  // 担当メンバー → 既定owner → mb_calendar(id=1)。いずれも安全側フォールバック（非破壊）。
   let source: TokenSource | null = null
-  if (accountId) source = await accountTokenSource(admin, accountId)
-  if (!source) source = await defaultTokenSource(admin)
-  if (!source) return { eventId: null, meetingUrl: null, skipped: 'mb_calendar 未連携' }
+  if (memberId) source = await memberTokenSource(admin, memberId)
+  if (!source) source = await ownerTokenSource(admin)
+  if (!source) source = await legacyDefaultSource(admin)
+  if (!source) return { eventId: null, meetingUrl: null, skipped: 'カレンダー未連携' }
 
   try {
     const accessToken = await getValidAccessToken(source.tokens, source.writeback)
