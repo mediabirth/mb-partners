@@ -21,7 +21,7 @@ export async function GET() {
   const admin = await createServiceRoleClient()
   // 内部メンバー＝非partner・非vendor（= 案件の MB担当 director と同一の母集合）。
   // ※ user_role enum に 'admin' は無いため .in([...,'admin']) は使わない（enumエラー回避）。
-  const { data } = await admin.from('profiles').select('id, name, email, role, color').neq('role', 'partner').neq('role', 'vendor').order('name')
+  const { data } = await admin.from('profiles').select('id, name, email, role, color, avatar_url').neq('role', 'partner').neq('role', 'vendor').order('name')
   return NextResponse.json({ members: data ?? [] })
 }
 

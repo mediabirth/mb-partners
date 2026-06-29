@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import EditBlock from '@/components/ui/EditBlock'
 
 /**
  * ②③ コンソールのカレンダー設定UI（MB運営）。
@@ -24,6 +25,7 @@ export default function ConsoleCalendarCard() {
   const [note, setNote] = useState('')
   const [accounts, setAccounts] = useState<Account[]>([])
   const [addLabel, setAddLabel] = useState('')
+  const snapRef = useRef<Settings | null>(null)   // 営業時間/枠/バッファ 編集のキャンセル用スナップショット
 
   useEffect(() => {
     fetch('/api/console/calendar').then(r => r.json()).then(d => {
@@ -126,29 +128,49 @@ export default function ConsoleCalendarCard() {
         </p>
       </div>
 
-      {/* ③ 設定 */}
-      <Row label="営業時間" desc="この時間帯の中で枠を生成">
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input type="time" value={s.business_start} onChange={e => setS(v => ({ ...v, business_start: e.target.value }))} style={inp} />
-          <span style={{ color: 'var(--muted2)' }}>〜</span>
-          <input type="time" value={s.business_end} onChange={e => setS(v => ({ ...v, business_end: e.target.value }))} style={inp} />
-        </span>
-      </Row>
+      {/* ③ 設定：営業時間/枠/バッファ＝表示/編集モード。土日/祝日トグルは現状のまま（即編集）。 */}
+      <div style={{ borderTop: '1px solid #F2F2F6', paddingTop: 6, marginTop: 4 }}>
+        <EditBlock
+          onEdit={() => { snapRef.current = s }}
+          onCancel={() => { if (snapRef.current) setS(snapRef.current) }}
+          onSave={async () => { await save() }}
+          view={
+            <div>
+              <Row label="営業時間" desc="この時間帯の中で枠を生成"><b style={{ fontSize: '.82rem' }}>{s.business_start} 〜 {s.business_end}</b></Row>
+              <Row label="枠の間隔"><b style={{ fontSize: '.82rem' }}>{s.slot_minutes}分</b></Row>
+              <Row label="前後のバッファ" desc="予定の前後に確保する余白"><b style={{ fontSize: '.82rem' }}>{s.buffer_minutes}分</b></Row>
+            </div>
+          }
+          edit={
+            <div>
+              <Row label="営業時間" desc="この時間帯の中で枠を生成">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="time" value={s.business_start} onChange={e => setS(v => ({ ...v, business_start: e.target.value }))} style={inp} />
+                  <span style={{ color: 'var(--muted2)' }}>〜</span>
+                  <input type="time" value={s.business_end} onChange={e => setS(v => ({ ...v, business_end: e.target.value }))} style={inp} />
+                </span>
+              </Row>
+              <Row label="枠の間隔">
+                <select value={s.slot_minutes} onChange={e => setS(v => ({ ...v, slot_minutes: Number(e.target.value) }))} style={inp}>
+                  {[15, 30, 45, 60, 90].map(v => <option key={v} value={v}>{v}分</option>)}
+                </select>
+              </Row>
+              <Row label="前後のバッファ" desc="予定の前後に確保する余白">
+                <select value={s.buffer_minutes} onChange={e => setS(v => ({ ...v, buffer_minutes: Number(e.target.value) }))} style={inp}>
+                  {[0, 10, 15, 30].map(v => <option key={v} value={v}>{v}分</option>)}
+                </select>
+              </Row>
+            </div>
+          }
+        />
+      </div>
+
+      {/* 土日/祝日トグル（即編集・現状維持）。変更後は下の「保存する」で確定。 */}
       <Row label="土日を予約不可" desc="土曜・日曜は枠を出さない"><Tg on={s.no_weekend} set={v => setS(p => ({ ...p, no_weekend: v }))} /></Row>
       <Row label="祝日を予約不可" desc="日本の祝日は枠を出さない"><Tg on={s.no_holiday} set={v => setS(p => ({ ...p, no_holiday: v }))} /></Row>
-      <Row label="枠の間隔">
-        <select value={s.slot_minutes} onChange={e => setS(v => ({ ...v, slot_minutes: Number(e.target.value) }))} style={inp}>
-          {[15, 30, 45, 60, 90].map(v => <option key={v} value={v}>{v}分</option>)}
-        </select>
-      </Row>
-      <Row label="前後のバッファ" desc="予定の前後に確保する余白">
-        <select value={s.buffer_minutes} onChange={e => setS(v => ({ ...v, buffer_minutes: Number(e.target.value) }))} style={inp}>
-          {[0, 10, 15, 30].map(v => <option key={v} value={v}>{v}分</option>)}
-        </select>
-      </Row>
 
       <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={save} disabled={saving} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px', opacity: saving ? .6 : 1 }}>{saving ? '保存中…' : '保存する'}</button>
+        <button onClick={save} disabled={saving} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px', opacity: saving ? .6 : 1 }}>{saving ? '保存中…' : '土日・祝日を保存'}</button>
         {note && <span style={{ fontSize: '.64rem', color: note.includes('しました') ? 'var(--green)' : 'var(--amber)' }}>{note}</span>}
       </div>
     </div>

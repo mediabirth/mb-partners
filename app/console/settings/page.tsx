@@ -5,6 +5,7 @@ import LogoutButton from '@/components/LogoutButton'
 import ConsoleCalendarCard from '@/components/ConsoleCalendarCard'
 import MembersSection from './MembersSection'
 import ProfileSection from './ProfileSection'
+import EditBlock from '@/components/ui/EditBlock'
 import { SECTION_KEYS } from './messaging-sections'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -63,7 +64,8 @@ export default function SettingsPage() {
   const [evtNewDeal, setEvtNewDeal]           = useState(true)
   const [evtStatus, setEvtStatus]             = useState(true)
   const [evtPayout, setEvtPayout]             = useState(true)
-  const [monthlyTarget, setMonthlyTarget]     = useState('')   // QR: 月間目標（運営取り分）
+  const [monthlyTarget, setMonthlyTarget]     = useState('')   // QR: 月間目標（運営取り分・確定値）
+  const [mtDraft, setMtDraft]                 = useState('')   // 月間目標 編集中ドラフト
   const [notifSaving, setNotifSaving]         = useState(false)
   const [toast, setToast]                     = useState('')
   const [auditLogs, setAuditLogs]             = useState<AuditLog[]>([])
@@ -90,7 +92,8 @@ export default function SettingsPage() {
   }, [])
 
   // 段階C：自分の通知宛先（member_notification_prefs）。
-  const [myMailTo, setMyMailTo] = useState('')
+  const [myMailTo, setMyMailTo] = useState('')      // 確定値
+  const [myMailDraft, setMyMailDraft] = useState('') // 宛先編集中ドラフト
   const [myMailOn, setMyMailOn] = useState(true)
   const [myMailSaving, setMyMailSaving] = useState(false)
   useEffect(() => {
@@ -99,15 +102,38 @@ export default function SettingsPage() {
       .then(d => { if (d) { setMyMailTo(d.email_to ?? ''); setMyMailOn(d.email_enabled ?? true) } })
       .catch(() => {})
   }, [])
-  async function saveMyMail() {
+  // 通知宛先 PATCH（確定値ベース＋override）。trueで保存成功。
+  async function patchMyMail(over: Record<string, unknown> = {}): Promise<boolean> {
     setMyMailSaving(true)
     try {
-      await fetch('/api/console/settings/notify-prefs', {
+      const res = await fetch('/api/console/settings/notify-prefs', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_to: myMailTo, email_enabled: myMailOn }),
+        body: JSON.stringify({ email_to: myMailTo, email_enabled: myMailOn, ...over }),
       })
-      showToast('通知メールの宛先を保存しました')
-    } catch { /* best-effort */ } finally { setMyMailSaving(false) }
+      return res.ok
+    } catch { return false } finally { setMyMailSaving(false) }
+  }
+  // 「受信する」トグルは即保存（現状どおり切り替えが本質）。
+  async function toggleMyMail(v: boolean) {
+    setMyMailOn(v)
+    const ok = await patchMyMail({ email_enabled: v })
+    showToast(ok ? '通知メール設定を保存しました' : '保存に失敗しました')
+  }
+  // 月間目標の保存（ドラフト値で PUT・他の通知設定は現値を維持）。
+  async function saveMonthlyTarget(): Promise<boolean> {
+    const val = mtDraft.trim() === '' ? null : Number(mtDraft.replace(/[,，\s]/g, ''))
+    try {
+      const res = await fetch('/api/console/settings/notifications', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email_enabled: notifEmail, slack_enabled: notifSlack,
+          notify_new_deal: evtNewDeal, notify_status_change: evtStatus, notify_payout: evtPayout,
+          monthly_target: val,
+        }),
+      })
+      if (res.ok) { setMonthlyTarget(mtDraft); showToast('月間目標を保存しました'); return true }
+      showToast('保存に失敗しました'); return false
+    } catch { showToast('保存に失敗しました'); return false }
   }
 
   useEffect(() => {
@@ -229,21 +255,31 @@ export default function SettingsPage() {
           {/* 3. カレンダー連携（②③ MB運営カレンダー） */}
           <ConsoleCalendarCard />
 
-          {/* QR: ダッシュボード月間目標 */}
+          {/* QR: ダッシュボード月間目標（表示/編集モード） */}
           <SectionCard title="ダッシュボード">
-            <RowItem label="月間目標（運営取り分）" desc="ダッシュボードに進捗バーを表示">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: 'var(--muted2)', fontSize: '.8rem' }}>¥</span>
-                <input
-                  inputMode="numeric"
-                  value={monthlyTarget}
-                  onChange={e => setMonthlyTarget(e.target.value)}
-                  placeholder="例: 500000"
-                  style={{ width: 140, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'Inter', fontSize: '.82rem', textAlign: 'right' }}
-                />
-              </div>
-            </RowItem>
-            <button onClick={saveNotif} disabled={notifSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
+            <EditBlock
+              onEdit={() => setMtDraft(monthlyTarget)}
+              onSave={saveMonthlyTarget}
+              view={
+                <RowItem label="月間目標（運営取り分）" desc="ダッシュボードに進捗バーを表示">
+                  <b style={{ fontSize: '.84rem', fontFamily: 'Inter' }}>{monthlyTarget.trim() === '' ? '未設定' : `¥${Number(monthlyTarget.replace(/[,，\s]/g, '')).toLocaleString()}`}</b>
+                </RowItem>
+              }
+              edit={
+                <RowItem label="月間目標（運営取り分）" desc="ダッシュボードに進捗バーを表示">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: 'var(--muted2)', fontSize: '.8rem' }}>¥</span>
+                    <input
+                      inputMode="numeric"
+                      value={mtDraft}
+                      onChange={e => setMtDraft(e.target.value)}
+                      placeholder="例: 500000"
+                      style={{ width: 140, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'Inter', fontSize: '.82rem', textAlign: 'right' }}
+                    />
+                  </div>
+                </RowItem>
+              }
+            />
           </SectionCard>
 
           {/* 4. 通知設定 */}
@@ -268,21 +304,35 @@ export default function SettingsPage() {
             <button onClick={saveNotif} disabled={notifSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{notifSaving ? '保存中…' : '保存する'}</button>
           </SectionCard>
 
-          {/* 段階C: あなたの通知メール（member_notification_prefs・各自の宛先） */}
+          {/* 段階C: あなたの通知メール（受信トグルは即保存／宛先は表示・編集モード） */}
           <SectionCard title="あなたの通知メール">
             <RowItem label="受信する" desc="運営通知をこのアドレスでも受け取る">
-              <Toggle on={myMailOn} onChange={setMyMailOn} />
+              <Toggle on={myMailOn} onChange={toggleMyMail} />
             </RowItem>
-            <RowItem label="宛先メール" desc="あなた個人の受信先（空欄で受信なし）">
-              <input
-                type="email"
-                value={myMailTo}
-                onChange={e => setMyMailTo(e.target.value)}
-                placeholder="you@example.com"
-                style={{ width: 220, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.82rem' }}
-              />
-            </RowItem>
-            <button onClick={saveMyMail} disabled={myMailSaving} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{myMailSaving ? '保存中…' : '保存する'}</button>
+            <EditBlock
+              onEdit={() => setMyMailDraft(myMailTo)}
+              onSave={async () => {
+                const ok = await patchMyMail({ email_to: myMailDraft.trim() })
+                if (ok) { setMyMailTo(myMailDraft.trim()); showToast('宛先メールを保存しました') } else showToast('保存に失敗しました')
+                return ok
+              }}
+              view={
+                <RowItem label="宛先メール" desc="あなた個人の受信先（空欄で受信なし）">
+                  <b style={{ fontSize: '.8rem', fontFamily: 'Inter' }}>{myMailTo.trim() === '' ? '未設定' : myMailTo}</b>
+                </RowItem>
+              }
+              edit={
+                <RowItem label="宛先メール" desc="あなた個人の受信先（空欄で受信なし）">
+                  <input
+                    type="email"
+                    value={myMailDraft}
+                    onChange={e => setMyMailDraft(e.target.value)}
+                    placeholder="you@example.com"
+                    style={{ width: 220, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.82rem' }}
+                  />
+                </RowItem>
+              }
+            />
           </SectionCard>
 
           {/* 5. 監査ログ */}

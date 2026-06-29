@@ -1,8 +1,9 @@
 'use client'
 // MBメンバー（内部・ディレクター）管理 — 設定>管理者管理 に統合。案件のMB担当(director)はここの母集合から選ばれる。
 import { useEffect, useState } from 'react'
+import Avatar from '@/components/ui/Avatar'
 
-type Member = { id: string; name: string | null; email: string | null; role: string; color: string | null }
+type Member = { id: string; name: string | null; email: string | null; role: string; color: string | null; avatar_url?: string | null }
 const ROLE_JP: Record<string, string> = { owner: 'オーナー', manager: 'マネージャー', admin: '管理者', viewer: '閲覧者' }
 
 export default function MembersSection() {
@@ -48,7 +49,7 @@ export default function MembersSection() {
         <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
           {list.map((m, i) => (
             <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 14px', borderBottom: i < list.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
-              <span style={{ width: 30, height: 30, borderRadius: '50%', background: m.color ?? '#0E0E14', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.72rem', fontWeight: 700, flexShrink: 0 }}>{(m.name ?? m.email ?? '?')[0]}</span>
+              <Avatar name={m.name ?? m.email ?? '?'} color={m.color} src={m.avatar_url ?? null} size={30} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.78rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name ?? '—'}</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
