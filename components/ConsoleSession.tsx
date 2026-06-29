@@ -1,8 +1,17 @@
 'use client'
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Identity = { id: string; name: string; email: string; color: string; role: string } | null
+type Identity = { id: string; name: string; email: string; color: string; role: string; avatar_url: string | null } | null
 type Badges = { pendingPartners: number; openInquiries: number }
+
+// 自分のプロフィール（表示名/色/アバター）編集後、ヘッダ等に即反映するための軽量パブサブ。
+// money/権限には無関係＝表示用 identity のみ更新。
+const identityListeners = new Set<() => void>()
+export function updateConsoleIdentity(patch: Partial<NonNullable<Identity>>) {
+  if (!cachedIdentity) return
+  cachedIdentity = { ...cachedIdentity, ...patch }
+  identityListeners.forEach(l => l())
+}
 
 // Module-level cache: survives ConsoleNav remounts on every page navigation so
 // the admin identity is resolved exactly once per console session — no flash of
@@ -44,7 +53,7 @@ export default function ConsoleSessionProvider({ children }: { children: React.R
         if (me?.id) {
           cachedIdentity = {
             id: me.id, name: me.name ?? '', email: me.email ?? '',
-            color: me.color ?? '#4733E6', role: me.role ?? '',
+            color: me.color ?? '#4733E6', role: me.role ?? '', avatar_url: me.avatar_url ?? null,
           }
         }
         cachedBadges = {
@@ -60,6 +69,13 @@ export default function ConsoleSessionProvider({ children }: { children: React.R
       setReady(true)
     })
     return () => { active = false }
+  }, [])
+
+  // 自分のプロフィール編集の即時反映：updateConsoleIdentity 呼び出しで再描画。
+  useEffect(() => {
+    const l = () => setIdentity(cachedIdentity ? { ...cachedIdentity } : null)
+    identityListeners.add(l)
+    return () => { identityListeners.delete(l) }
   }, [])
 
   // C: タブ復帰時に badge が60秒以上古ければだけ再取得（承認待ち/問い合わせ件数の鮮度確保・継続ポーリング無し）。

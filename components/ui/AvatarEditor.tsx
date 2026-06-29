@@ -12,6 +12,7 @@ export default function AvatarEditor({ name, color, src, size = 56, endpoint }: 
   src?: string | null
   size?: number
   endpoint: string
+  onChange?: (url: string | null) => void   // additive：保存後に呼ばれる（省略時は従来通り）
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [cur, setCur] = useState<string | null>(src ?? null)
@@ -26,7 +27,7 @@ export default function AvatarEditor({ name, color, src, size = 56, endpoint }: 
       const fd = new FormData(); fd.append('file', file)
       const res = await fetch(endpoint, { method: 'POST', body: fd })
       const data = await res.json().catch(() => ({}))
-      if (res.ok && data.avatar_url) setCur(data.avatar_url)
+      if (res.ok && data.avatar_url) { setCur(data.avatar_url); onChange?.(data.avatar_url) }
       else setMsg(data.needsBucket ? 'アバター用バケットのDB適用が必要です' : (data.error ?? 'アップロードに失敗しました'))
     } catch { setMsg('アップロードに失敗しました') } finally { setBusy(false); if (fileRef.current) fileRef.current.value = '' }
   }
@@ -34,7 +35,7 @@ export default function AvatarEditor({ name, color, src, size = 56, endpoint }: 
     setBusy(true); setMsg('')
     try {
       const res = await fetch(endpoint, { method: 'DELETE' })
-      if (res.ok) setCur(null); else setMsg('削除に失敗しました')
+      if (res.ok) { setCur(null); onChange?.(null) } else setMsg('削除に失敗しました')
     } catch { setMsg('削除に失敗しました') } finally { setBusy(false) }
   }
 

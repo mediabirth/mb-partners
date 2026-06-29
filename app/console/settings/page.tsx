@@ -4,6 +4,7 @@ import ConsoleNav from '@/components/ConsoleNav'
 import LogoutButton from '@/components/LogoutButton'
 import ConsoleCalendarCard from '@/components/ConsoleCalendarCard'
 import MembersSection from './MembersSection'
+import ProfileSection from './ProfileSection'
 import { SECTION_KEYS } from './messaging-sections'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -186,6 +187,11 @@ export default function SettingsPage() {
         </div>
 
         <div className="stagger" style={{ padding: '30px 28px', maxWidth: 720 }}>
+
+          {/* あなたのプロフィール（表示名・アイコン・色）— 各自いつでも変更可・本人のみ */}
+          <SectionCard title="プロフィール">
+            <ProfileSection />
+          </SectionCard>
 
           {/* MBメンバー（内部・案件のMB担当）— サイドバーから統合 */}
           <SectionCard title="MBメンバー（管理者）">

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useConsoleSession } from '@/components/ConsoleSession'
+import Avatar from '@/components/ui/Avatar'
 
 // G: レスポンシブ。<=900px ではサイドバーをドロワー化＋ハンバーガー。
 // コンテンツ余白(inline margin-left:230)は aside[data-cnav]~* を !important で上書き。
@@ -80,6 +81,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
   const { identity, badges, ready } = useConsoleSession()
   const acctName  = identity?.name  ?? ''
   const acctColor = identity?.color ?? '#4733E6'
+  const acctAvatar = identity?.avatar_url ?? null
   const ROLE_JP: Record<string, string> = { owner: 'オーナー', manager: 'マネージャー', admin: '管理者', viewer: '閲覧者' }
   const acctRole  = identity?.role ? (ROLE_JP[identity.role] ?? identity.role) : ''
 
@@ -162,9 +164,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
             </>
           ) : (
             <>
-              <span style={{ width: 30, height: 30, borderRadius: '50%', background: acctColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem', fontWeight: 700, flexShrink: 0 }}>
-                {acctName ? acctName[0] : '—'}
-              </span>
+              <Avatar name={acctName || '—'} color={acctColor} src={acctAvatar} size={30} />
               <span style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', lineHeight: 1.25 }}>
                 <span style={{ fontSize: '.74rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctName || '—'}</span>
                 <span style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctRole || 'メンバー'}</span>
