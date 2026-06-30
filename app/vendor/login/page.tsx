@@ -121,7 +121,7 @@ export default function VendorLoginPage() {
           </div>
 
           <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 16, textAlign: 'center' }}>
-            デリバリー（業務委託先）専用ログインです。パスワードは招待時に設定します。
+            本プログラムは招待制です。パスワードは招待時に設定します。
           </p>
         </div>
       </div>
