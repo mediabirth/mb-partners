@@ -18,6 +18,7 @@ export default function InviteForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [inviteUrl, setInviteUrl] = useState('')
+  const [emailed, setEmailed] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const shareUrl = inviteUrl ? (kind === 'frontier' ? `${inviteUrl}?role=frontier` : inviteUrl) : ''
@@ -34,12 +35,12 @@ export default function InviteForm() {
         const ir = await fetch(`/api/console/deliveries/${dd.delivery.id}/invite`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim() }) })
         const id = await ir.json().catch(() => ({}))
         if (!ir.ok || !id.invite_url) { setError(id.error || '招待リンクの発行に失敗しました'); setLoading(false); return }
-        setInviteUrl(id.invite_url); setName('')
+        setInviteUrl(id.invite_url); setEmailed(!!id.emailed); setName('')
       } else {
         const res = await fetch('/api/console/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, role: 'partner' }) })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) { setError(data.error || 'エラーが発生しました'); setLoading(false); return }
-        setInviteUrl(data.invite_url); setName('')
+        setInviteUrl(data.invite_url); setEmailed(!!data.emailed); setName('')
       }
       setEmail('')
     } catch { setError('エラーが発生しました') } finally { setLoading(false) }
@@ -91,7 +92,9 @@ export default function InviteForm() {
             <p style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', marginBottom: 8 }}>{cur.label}の招待リンクが作成されました（有効期限: 7日間）</p>
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 7, padding: '10px 12px', fontSize: '.68rem', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 10, color: 'var(--txt)' }}>{shareUrl}</div>
             <button className="btn btn-g" style={{ fontSize: '.72rem', padding: '8px 16px' }} onClick={handleCopy}>{copied ? 'コピーしました ✓' : 'リンクをコピー'}</button>
-            <p style={{ fontSize: '.65rem', color: 'var(--muted2)', marginTop: 10, lineHeight: 1.6 }}>このリンクを直接共有してください（メール送信は行いません）。</p>
+            <p style={{ fontSize: '.65rem', color: 'var(--muted2)', marginTop: 10, lineHeight: 1.6 }}>
+              {emailed ? '招待メールを送信しました。このリンクを直接共有することもできます。' : '招待メールを送信できませんでした。このリンクを直接共有してください。'}
+            </p>
           </div>
         )}
       </div>

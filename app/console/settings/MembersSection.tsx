@@ -25,8 +25,9 @@ export default function MembersSection() {
       const d = await r.json().catch(() => ({}))
       if (r.ok && d.invite_url) {
         try { await navigator.clipboard.writeText(d.invite_url) } catch { /* noop */ }
-        window.prompt('招待URLを発行しました（クリップボードにコピー済み）。本人へ共有してください：', d.invite_url)
-        setEmail(''); setName(''); show('招待URLを発行しました')
+        const head = d.emailed ? '招待メールを送信しました。URLも控えました（クリップボードにコピー済み）：' : '招待メールを送信できませんでした。このURLを本人へ共有してください（コピー済み）：'
+        window.prompt(head, d.invite_url)
+        setEmail(''); setName(''); show(d.emailed ? '招待メールを送信しました' : '招待URLを発行しました（メール未送信）')
       } else if (d.needsMigration) show('メンバー招待のDB適用が必要です（batch2 DDL）')
       else show(d.error ?? '招待に失敗しました')
     } catch { show('招待に失敗しました') } finally { setBusy(false) }

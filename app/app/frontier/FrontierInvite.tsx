@@ -6,6 +6,7 @@ export default function FrontierInvite() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
+  const [emailed, setEmailed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [err, setErr] = useState('')
@@ -16,7 +17,7 @@ export default function FrontierInvite() {
       const r = await fetch('/api/app/frontier/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined }) })
       const d = await r.json()
       if (!r.ok) { setErr(d.error || '発行に失敗しました'); return }
-      setUrl(d.invite_url); setEmail(''); setName('')
+      setUrl(d.invite_url); setEmailed(!!d.emailed); setEmail(''); setName('')
     } catch { setErr('発行に失敗しました') } finally { setLoading(false) }
   }
 
@@ -42,6 +43,9 @@ export default function FrontierInvite() {
           <button onClick={() => { navigator.clipboard?.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800) }} className="btn btn-g" style={{ fontSize: '.72rem', padding: '8px 16px' }}>
             {copied ? 'コピーしました ✓' : 'リンクをコピー'}
           </button>
+          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 2px 0', lineHeight: 1.6 }}>
+            {emailed ? '招待メールを送信しました。リンクの共有も可能です。' : 'メールを送信できませんでした。このリンクを共有してください。'}
+          </p>
         </div>
       )}
     </div>

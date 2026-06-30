@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { sendInviteEmail } from '@/lib/email'
 
 export const runtime = 'edge'
 
@@ -36,5 +37,13 @@ export async function POST(req: NextRequest) {
     : new URL(req.url).origin
   // 配下紐づけ: ?f=フロンティアのpartner_id
   const invite_url = `${origin}/invite/${invite.token}?f=${partner.id}`
-  return NextResponse.json({ invite_url, token: invite.token }, { status: 201 })
+
+  // 招待メール（best-effort：失敗しても招待発行・成功は不変）。
+  let emailed = false
+  try {
+    const r = await sendInviteEmail({ to: email, name: name || null, url: invite_url, expiresAt: invite.expires_at, kind: 'frontier' })
+    emailed = r.sent
+  } catch { /* best-effort */ }
+
+  return NextResponse.json({ invite_url, token: invite.token, emailed }, { status: 201 })
 }

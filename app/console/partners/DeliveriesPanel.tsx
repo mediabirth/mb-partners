@@ -42,8 +42,9 @@ export default function DeliveriesPanel() {
     const data = await r.json().catch(() => ({}))
     if (r.ok && data.invite_url) {
       try { await navigator.clipboard.writeText(data.invite_url) } catch { /* clipboard 不可でもURLは表示 */ }
-      window.prompt('招待URLを発行しました（クリップボードにコピー済み）。委託先へ共有してください：', data.invite_url)
-      show('招待URLを発行しました')
+      const head = data.emailed ? '招待メールを送信しました。URLも控えました（コピー済み）：' : '招待メールを送信できませんでした。このURLを委託先へ共有してください（コピー済み）：'
+      window.prompt(head, data.invite_url)
+      show(data.emailed ? '招待メールを送信しました' : '招待URLを発行しました（メール未送信）')
     } else if (data.needsMigration) show('vendor用DBの適用が必要です（batchC1 DDL）')
     else show(data.error ?? '招待に失敗しました')
   }

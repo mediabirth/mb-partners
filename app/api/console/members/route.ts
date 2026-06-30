@@ -45,5 +45,15 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get('x-forwarded-proto') && req.headers.get('host')
     ? `${req.headers.get('x-forwarded-proto')}://${req.headers.get('host')}`
     : new URL(req.url).origin
-  return NextResponse.json({ invite_url: `${origin}/member/accept/${invite.token}`, token: invite.token }, { status: 201 })
+  const invite_url = `${origin}/member/accept/${invite.token}`
+
+  // 招待メール（best-effort：失敗しても招待トークン発行・成功は不変＝URL手動共有でカバー可）。
+  let emailed = false
+  try {
+    const { sendInviteEmail } = await import('@/lib/email')
+    const r = await sendInviteEmail({ to: email, name, url: invite_url, expiresAt: invite.expires_at, kind: 'member' })
+    emailed = r.sent
+  } catch { /* best-effort */ }
+
+  return NextResponse.json({ invite_url, token: invite.token, emailed }, { status: 201 })
 }

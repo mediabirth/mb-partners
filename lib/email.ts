@@ -177,25 +177,36 @@ ${meetLineText}
   }
 }
 
+// 招待メール（kind別文面）。partner は従来文面のまま（既存呼び出しは kind 省略＝byte互換）。
+type InviteKind = 'partner' | 'member' | 'frontier' | 'vendor'
+const INVITE_COPY: Record<InviteKind, { subject: string; fallbackName: string; lead: string }> = {
+  partner:  { subject: '【MB Partners】アカウント登録のご案内', fallbackName: 'パートナー',  lead: 'MB Partners パートナーアカウントの登録のご案内です。' },
+  member:   { subject: '【MB Partners】運営メンバー招待のご案内', fallbackName: 'ご担当者', lead: 'MB Partners の運営メンバーとしてご招待します。下記のリンクから登録を完了してください。' },
+  frontier: { subject: '【MB Partners】パートナー招待のご案内',   fallbackName: 'パートナー',  lead: 'MB Partners のパートナーとしてご招待します。下記のリンクから登録を完了してください。' },
+  vendor:   { subject: '【MB Partners】お取引のご案内',           fallbackName: 'ご担当者', lead: 'MB Partners の業務委託先（デリバリー）としてご登録のご案内です。下記のリンクから登録を完了してください。' },
+}
+
 export async function sendInviteEmail(params: {
   to: string
   name?: string | null
   url: string
   expiresAt?: string | null
+  kind?: InviteKind
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
 
-  const name = params.name?.trim() || 'パートナー'
+  const copy = INVITE_COPY[params.kind ?? 'partner'] ?? INVITE_COPY.partner
+  const name = params.name?.trim() || copy.fallbackName
   const expires = params.expiresAt
     ? new Date(params.expiresAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '発行から7日間'
 
-  const subject = '【MB Partners】アカウント登録のご案内'
+  const subject = copy.subject
   const text =
 `${name} 様
 
-MB Partners パートナーアカウントの登録のご案内です。
+${copy.lead}
 下記のリンクからパスワードを設定し、登録を完了してください。
 
 ▼ パスワード設定リンク
@@ -216,7 +227,7 @@ ${params.url}
   </div>
   <div style="background:#F6F6F8;border-radius:14px;padding:28px 24px">
     <p style="margin:0 0 14px">${name} 様</p>
-    <p style="margin:0 0 18px">MB Partners パートナーアカウントの登録のご案内です。下記のボタンからパスワードを設定し、登録を完了してください。</p>
+    <p style="margin:0 0 18px">${copy.lead}下記のボタンからパスワードを設定し、登録を完了してください。</p>
     <p style="text-align:center;margin:24px 0">
       <a href="${params.url}" style="display:inline-block;background:#4733E6;color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:9px">パスワードを設定する</a>
     </p>
