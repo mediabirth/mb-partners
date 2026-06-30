@@ -92,6 +92,28 @@ async function legacyDefaultSource(admin: AdminClient): Promise<TokenSource | nu
   }
 }
 
+/**
+ * 段階3b：空き枠(FreeBusy)用のトークン解決。★書き込み(createCentralMeetEvent)と完全に同じ解決順
+ * （担当メンバー member_calendar_links → 既定owner → mb_calendar id=1）で access_token を返す。
+ * ＝「空きを見たカレンダー」と「予約が入るカレンダー」が必ず同一メンバーに解決される（ズレ防止）。
+ * calendarId は常に 'primary'（トークン所有者のカレンダー）。未連携/失効なら null（呼び元は fail-open）。
+ */
+export async function resolveBusyToken(
+  admin: AdminClient,
+  opts: { menuRef?: string | null; serviceId?: string | null }
+): Promise<{ accessToken: string; calendarId: string; label: string } | null> {
+  const memberId = await resolveCalendarMemberId(admin, opts)
+  let source: TokenSource | null = null
+  if (memberId) source = await memberTokenSource(admin, memberId)
+  if (!source) source = await ownerTokenSource(admin)
+  if (!source) source = await legacyDefaultSource(admin)
+  if (!source) return null
+  try {
+    const accessToken = await getValidAccessToken(source.tokens, source.writeback)
+    return { accessToken, calendarId: 'primary', label: source.label }
+  } catch { return null }
+}
+
 export async function createCentralMeetEvent(
   admin: AdminClient,
   params: {

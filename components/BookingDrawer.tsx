@@ -28,7 +28,8 @@ export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail
   const [error, setError]     = useState('')
 
   useEffect(() => {
-    fetch('/api/calendar/slots')
+    // 段階3b：dealId があれば渡して、その案件の担当メンバーの空き枠を出す（書き込み先と一致）。
+    fetch('/api/calendar/slots' + (dealId ? `?deal_id=${encodeURIComponent(dealId)}` : ''))
       .then(r => r.json())
       .then(d => {
         setDays(d.days ?? [])
@@ -37,7 +38,7 @@ export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail
       })
       .catch(() => setError('空き枠を取得できませんでした'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [dealId])
 
   async function confirm(slot: Slot) {
     setSaving(true); setError('')

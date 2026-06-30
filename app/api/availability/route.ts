@@ -1,16 +1,17 @@
 /**
- * GET /api/availability?partner_id=<uuid>&date=YYYY-MM-DD
- * パブリック（認証不要）。指定日の予約可能スロット。基準＝MB運営カレンダー（mb_calendar）。
- * availability = mb_calendar 設定（既定: 平日9:00-18:00 / 30分）。
- * 除外 = (1) MB運営Googleの busy（連携時） (2) 当該パートナーの既存 deals.meeting_at (3) 祝日(no_holiday時)。
- * mb_calendar 未作成/未連携でも必ず既定の空きを返す。
+ * GET /api/availability?partner_id=<uuid>&date=YYYY-MM-DD[&service_id=&menu_ref=]
+ * パブリック（認証不要）。指定日の予約可能スロット。
+ * 営業時間/枠/バッファ/祝日 = mb_calendar(id=1) の org ポリシー（組織共通）。
+ * busy判定 = 段階3b：予約対象（menu_ref→service_id→既定owner）の担当メンバーの member_calendar_links
+ *   トークンで FreeBusy。★書き込み(createCentralMeetEvent)と同一解決＝空きと予約先が一致。
+ *   未割当/未連携 → owner(kthk.kmbr) 基準（従来と一致・非破壊）。
+ * 除外 = (1) 担当メンバーGoogleの busy (2) 当該パートナーの既存 deals.meeting_at (3) 祝日(no_holiday時)。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { decryptTokens, encryptTokens } from '@/lib/google-token'
-import { getValidAccessToken, getFreeBusy, calcAvailableSlots, type BusyBlock } from '@/lib/google-calendar'
-import type { StoredTokens } from '@/lib/google-token'
+import { getFreeBusy, calcAvailableSlots, type BusyBlock } from '@/lib/google-calendar'
 import { getMbCalendar, toAvailability, isJapaneseHoliday, MB_DEFAULTS } from '@/lib/mb-calendar'
+import { resolveBusyToken } from '@/lib/mb-calendar-event'
 
 const RANGE_DISPLAY_DAYS = 21
 const RANGE_HORIZON_DAYS = 60
@@ -23,19 +24,17 @@ function jstDateStr(d: Date): string {
 
 /**
  * 範囲取得（additive・後方互換）：複数日の空き枠を枠数付き days[] で返す。
- * 予約可否計算（mb_calendar busy除外・当該パートナーの meeting_at除外・祝日）は単日パスと同一ロジック。
- * /api/calendar/slots と同じ days[] 整形（label/weekday/count/slots, nextDay）。
+ * busy基準＝担当メンバー解決（menu→service→owner）。単日パスと同一ロジック。
  */
-async function rangeAvailability(partnerId: string, displayDays: number) {
+async function rangeAvailability(partnerId: string, displayDays: number, menuRef: string | null, serviceId: string | null) {
   const admin = await createServiceRoleClient()
   const mb = (await getMbCalendar(admin)) ?? MB_DEFAULTS
   const avail = toAvailability(mb)
-  const connected = !!(mb.active && mb.oauth_tokens)
 
   const now = new Date()
   const horizon = new Date(now.getTime() + RANGE_HORIZON_DAYS * 24 * 60 * 60_000)
   const busy: BusyBlock[] = []
-  let busyChecked = false   // 連携時に getFreeBusy が実際に成功したか（false＝fail-open）。
+  let busyChecked = false   // 担当メンバーの getFreeBusy が成功したか（false＝fail-open）。
 
   // (2) 当該パートナーの予約済み案件（範囲内）
   const { data: booked } = await admin
@@ -46,17 +45,11 @@ async function rangeAvailability(partnerId: string, displayDays: number) {
     busy.push({ start: s.toISOString(), end: new Date(s.getTime() + 60 * 60_000).toISOString() })
   }
 
-  // (1) MB運営Googleの busy（連携時）
-  if (connected) {
-    try {
-      const tokens = decryptTokens(mb.oauth_tokens as StoredTokens)
-      const accessToken = await getValidAccessToken(tokens, async (refreshed) => {
-        const updated = encryptTokens({ access_token: refreshed.access_token, refresh_token: tokens.refresh_token, expires_at: refreshed.expires_at })
-        await admin.from('mb_calendar').update({ oauth_tokens: updated }).eq('id', 1)
-      })
-      busy.push(...await getFreeBusy(accessToken, 'primary', now, horizon))
-      busyChecked = true
-    } catch { /* fallback：busyChecked=false のまま＝可視化 */ }
+  // (1) 担当メンバー（menu→service→owner）のGoogle busy
+  const bt = await resolveBusyToken(admin, { menuRef, serviceId })
+  const connected = !!bt
+  if (bt) {
+    try { busy.push(...await getFreeBusy(bt.accessToken, bt.calendarId, now, horizon)); busyChecked = true } catch { /* fail-open */ }
   }
 
   const cap = Math.min(Math.max(displayDays, 1), RANGE_DISPLAY_DAYS)
@@ -84,16 +77,20 @@ export async function GET(req: NextRequest) {
   const partnerId = searchParams.get('partner_id')
   const date      = searchParams.get('date')
   const daysParam = searchParams.get('days')
+  const menuRef   = searchParams.get('menu_ref')
+  const serviceId = searchParams.get('service_id')
   // 範囲取得（additive）：days指定かつ date無指定のときだけ複数日 days[] を返す。
-  // date指定（既存呼び出し）時は以降の単日パスを完全維持（byte-unchanged）。
-  if (partnerId && daysParam && !date) return rangeAvailability(partnerId, parseInt(daysParam, 10) || RANGE_DISPLAY_DAYS)
+  if (partnerId && daysParam && !date) return rangeAvailability(partnerId, parseInt(daysParam, 10) || RANGE_DISPLAY_DAYS, menuRef, serviceId)
   if (!partnerId || !date) return NextResponse.json({ error: 'partner_id and date are required' }, { status: 400 })
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: 'date must be YYYY-MM-DD' }, { status: 400 })
 
   const admin = await createServiceRoleClient()
   const mb = (await getMbCalendar(admin)) ?? MB_DEFAULTS
   const avail = toAvailability(mb)
-  const connected = !!(mb.active && mb.oauth_tokens)
+
+  // busy基準＝担当メンバー解決（書き込みと同一）。未割当/未連携→owner。
+  const bt = await resolveBusyToken(admin, { menuRef, serviceId })
+  const connected = !!bt
 
   // 祝日は枠なし
   if (mb.no_holiday && isJapaneseHoliday(date)) return NextResponse.json({ slots: [], connected })
@@ -102,7 +99,7 @@ export async function GET(req: NextRequest) {
   const timeMin = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
   const timeMax = new Date(Date.UTC(year, month - 1, day, 23, 59, 59))
   const busy: BusyBlock[] = []
-  let busyChecked = false   // 連携時に getFreeBusy が実際に成功したか（false＝fail-open＝MB運営カレンダーの再連携が必要）。
+  let busyChecked = false
 
   // (2) 当該パートナーの予約済み案件（その日）
   const { data: booked } = await admin
@@ -113,17 +110,9 @@ export async function GET(req: NextRequest) {
     busy.push({ start: s.toISOString(), end: new Date(s.getTime() + 60 * 60_000).toISOString() })
   }
 
-  // (1) MB運営Googleの busy（連携時）
-  if (connected) {
-    try {
-      const tokens = decryptTokens(mb.oauth_tokens as StoredTokens)
-      const accessToken = await getValidAccessToken(tokens, async (refreshed) => {
-        const updated = encryptTokens({ access_token: refreshed.access_token, refresh_token: tokens.refresh_token, expires_at: refreshed.expires_at })
-        await admin.from('mb_calendar').update({ oauth_tokens: updated }).eq('id', 1)
-      })
-      busy.push(...await getFreeBusy(accessToken, 'primary', timeMin, timeMax))
-      busyChecked = true
-    } catch { /* fallback：トークン失効/復号失敗等。busyChecked=false のまま＝可視化 */ }
+  // (1) 担当メンバーGoogleの busy
+  if (bt) {
+    try { busy.push(...await getFreeBusy(bt.accessToken, bt.calendarId, timeMin, timeMax)); busyChecked = true } catch { /* fail-open */ }
   }
 
   let slots = calcAvailableSlots(date, avail, busy)
