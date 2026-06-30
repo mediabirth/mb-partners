@@ -12,36 +12,118 @@ export default function VendorLoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
+    if (!email.trim() || !password) return
     setLoading(true); setError('')
     const supabase = createClient()
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
-    if (signInError) { setError('メールアドレスまたはパスワードが正しくありません。'); setLoading(false); return }
+    setLoading(false)
+    if (signInError) { setError('メールアドレスまたはパスワードが正しくありません。'); return }
     router.push('/vendor'); router.refresh()
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'radial-gradient(120% 90% at 85% 0%, var(--blue-bg2) 0%, var(--bg2) 55%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div className="ui-card" style={{ width: 402, maxWidth: '100%', background: 'var(--s-0)', borderRadius: 18, padding: '36px 32px 30px', boxShadow: '0 28px 80px rgba(14,14,20,.12)' }}>
-        <svg width="44" height="44" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 14 }}>
-          <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="2.6" />
-          <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="2.6" />
-          <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="2.6" />
-          <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
-        </svg>
-        <h1 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 4 }}>MB <span style={{ color: 'var(--blue)' }}>Partners</span></h1>
-        <p style={{ fontSize: '.72rem', color: 'var(--muted2)', marginBottom: 22 }}>デリバリー（業務委託先）ログイン</p>
-        <form onSubmit={handleLogin}>
-          <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>メールアドレス</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-            className="ui-field" style={{ fontSize: '.86rem', marginBottom: 14 }} />
-          <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>パスワード</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-            className="ui-field" style={{ fontSize: '.86rem', marginBottom: 18 }} />
-          {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 14 }}>{error}</p>}
-          <button type="submit" disabled={loading} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>
-            {loading ? 'ログイン中…' : 'ログイン'}
-          </button>
-        </form>
+    <div style={{ background: '#E9E9ED', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 430,
+        background: '#fff',
+        minHeight: '100vh',
+        position: 'relative',
+        boxShadow: '0 0 48px rgba(14,14,20,.12)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: '40px 28px',
+        overflow: 'hidden',
+      }}>
+
+        {/* Orbit animation (top-right) */}
+        <div style={{ position: 'absolute', right: -110, top: -110, width: 340, height: 340, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: 0, border: '1.5px solid #EDEBFC', borderRadius: '50%', animation: 'spin 50s linear infinite' }} />
+          <div style={{ position: 'absolute', inset: 46, border: '1.5px solid #DCD8FA', borderRadius: '50%', animation: 'spin 34s linear infinite reverse' }} />
+          <div style={{ position: 'absolute', inset: 104, border: '1.5px solid #4733E6', borderRadius: '50%', opacity: .25, animation: 'spin 22s linear infinite' }} />
+        </div>
+
+        {/* Background gradient */}
+        <div style={{
+          position: 'absolute', inset: '-30%', pointerEvents: 'none',
+          background: 'radial-gradient(46% 36% at 72% 18%,#EDEBFC,transparent 70%)',
+          animation: 'drift 16s ease-in-out infinite alternate',
+        }} />
+
+        {/* Content */}
+        <div style={{ position: 'relative' }}>
+          {/* Logo mark */}
+          <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 24, animation: 'up .5s .1s both' }}>
+            <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="2.6"/>
+            <rect x="28" y="6"  width="14" height="14" rx="7"  stroke="#4733E6" strokeWidth="2.6"/>
+            <rect x="6"  y="28" width="14" height="14" rx="7"  stroke="#0E0E14" strokeWidth="2.6"/>
+            <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
+          </svg>
+
+          <div className="eyebrow" style={{ animation: 'up .5s .18s both' }}>
+            Media Birth Partner Program
+          </div>
+
+          <h1 style={{
+            fontSize: '1.55rem', fontWeight: 900, lineHeight: 1.45,
+            margin: '10px 0 26px', animation: 'up .5s .26s both',
+          }}>
+            あなたの成果を、<br />
+            <em style={{ fontStyle: 'normal', color: 'var(--blue)' }}>もっと見やすく</em>
+          </h1>
+
+          <div className="ui-card" style={{ animation: 'up .5s .42s both', padding: 18 }}>
+            <form onSubmit={handleLogin}>
+              <div className="fld">
+                <label htmlFor="email">メールアドレス</label>
+                <input
+                  id="email"
+                  className="ui-field"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  autoFocus
+                />
+              </div>
+              <div className="fld">
+                <label htmlFor="password">パスワード</label>
+                <input
+                  id="password"
+                  className="ui-field"
+                  type="password"
+                  placeholder="••••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+
+              {error && (
+                <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 10 }}>
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="ui-btn ui-btn--primary ui-btn--lg"
+                style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
+                disabled={loading}
+              >
+                {loading ? 'ログイン中…' : 'ログイン'}
+              </button>
+            </form>
+          </div>
+
+          <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 16, textAlign: 'center' }}>
+            デリバリー（業務委託先）専用ログインです。パスワードは招待時に設定します。
+          </p>
+        </div>
       </div>
     </div>
   )

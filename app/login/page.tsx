@@ -111,18 +111,11 @@ export default function LoginPage() {
 
           <h1 style={{
             fontSize: '1.55rem', fontWeight: 900, lineHeight: 1.45,
-            margin: '10px 0', animation: 'up .5s .26s both',
+            margin: '10px 0 26px', animation: 'up .5s .26s both',
           }}>
             あなたの紹介が、<br />
             <em style={{ fontStyle: 'normal', color: 'var(--blue)' }}>次の出会いをつくる。</em>
           </h1>
-
-          <p style={{
-            fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.8,
-            marginBottom: 26, animation: 'up .5s .34s both',
-          }}>
-            ご縁を、成果に。
-          </p>
 
           <div className="ui-card" style={{ animation: 'up .5s .42s both', padding: 18 }}>
             <form onSubmit={handleSubmit}>
@@ -169,21 +162,6 @@ export default function LoginPage() {
                 {loading ? 'ログイン中…' : 'ログイン'}
               </button>
             </form>
-
-            {/* パートナー専用：LINEで続ける（1タップ認証）。redirect は /app 配下のみ start で検証。 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0 14px' }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--line, #E5E7EB)' }} />
-              <span style={{ fontSize: '.6rem', color: 'var(--muted, #9A9CA8)' }}>または</span>
-              <div style={{ flex: 1, height: 1, background: 'var(--line, #E5E7EB)' }} />
-            </div>
-            <button
-              type="button"
-              onClick={() => { const r = safeRedirect(); window.location.href = '/api/auth/line/start' + (r !== '/' ? '?redirect=' + encodeURIComponent(r) : '') }}
-              style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#06C755', color: '#fff', fontWeight: 700, fontSize: '.86rem', border: 'none', borderRadius: 9, padding: '13px 18px', cursor: 'pointer' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2C6.48 2 2 5.69 2 10.23c0 4.06 3.55 7.46 8.35 8.1.32.07.77.21.88.49.1.25.07.64.03.9l-.14.85c-.04.25-.2.99.87.54s5.77-3.4 7.87-5.82C21.36 13.6 22 11.99 22 10.23 22 5.69 17.52 2 12 2z"/></svg>
-              LINEで続ける
-            </button>
           </div>
 
           <p style={{
