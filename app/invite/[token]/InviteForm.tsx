@@ -208,7 +208,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               </label>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
-                <span><a href={`/legal/terms?kind=${frontierFlag ? 'frontier' : 'partner'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>プライバシーポリシー</a>に同意します</span>
+                <span><a href={`/legal/privacy?kind=${frontierFlag ? 'frontier' : 'partner'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>プライバシーポリシー</a>に同意します</span>
               </label>
             </>
           )}
