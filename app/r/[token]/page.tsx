@@ -195,7 +195,7 @@ export default function ReferralLandingPage() {
             <p style={{ fontSize: '.6rem', color: 'var(--blue-dk)', fontWeight: 600, margin: '0 2px 6px' }}>※ メールか電話のいずれかは必須です</p>
             <div className="fld">
               <label>電話番号</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" style={{ minHeight: 44 }} />
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" style={{ minHeight: 44 }} />
             </div>
             <div className="fld">
               <label>メールアドレス</label>

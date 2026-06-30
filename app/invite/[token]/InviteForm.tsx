@@ -29,9 +29,9 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
   // STEP1
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  // STEP2
-  const [lastName, setLastName] = useState(defaultName?.split(' ')[0] ?? '')
-  const [firstName, setFirstName] = useState('')
+  // STEP2（招待時の氏名を「姓 名」で事前入力＝再入力させない）
+  const [lastName, setLastName] = useState(defaultName?.trim().split(/[\s　]+/)[0] ?? '')
+  const [firstName, setFirstName] = useState(defaultName?.trim().split(/[\s　]+/).slice(1).join(' ') ?? '')
   const [nickname, setNickname] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -151,7 +151,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
                 <div style={{ flex: 1 }}><Field label="名 *"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="太郎" style={input} /></Field></div>
               </div>
               <Field label="ニックネーム（表示名・後から変更可）"><input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="未入力ならお名前を表示" style={input} /></Field>
-              <Field label="電話番号 *"><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" inputMode="tel" style={input} /></Field>
+              <Field label="電話番号 *"><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" style={input} /></Field>
               <Field label="住所 *"><input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="大阪府〇〇市〇〇 1-2-3" style={input} /></Field>
             </>
           )}
@@ -208,7 +208,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               </label>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
-                <span><a href="/app/terms" target="_blank" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>プライバシーポリシー</a>に同意します</span>
+                <span><a href={`/legal/terms?kind=${frontierFlag ? 'frontier' : 'partner'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>プライバシーポリシー</a>に同意します</span>
               </label>
             </>
           )}

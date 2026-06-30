@@ -425,7 +425,7 @@ export default function ReferPage() {
             <div className="fld"><label>相談内容（何を迷っているか）</label>
               <textarea className="ui-field" value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} placeholder="例：集客と採用、どちらから着手すべきか迷っている 等" style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.85rem', resize: 'vertical' }} /></div>
             <div className="fld"><label>連絡先（任意）</label>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" /></div>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" /></div>
             <div className="fld"><label>顧客メールアドレス（任意）</label>
               <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, margin: '4px 0 12px' }}>
@@ -634,7 +634,7 @@ export default function ReferPage() {
               )}
               <div className="fld">
                 <label>連絡先（任意）</label>
-                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="090-XXXX-XXXX" />
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" />
               </div>
               <div className="fld">
                 <label>顧客メールアドレス（任意）</label>

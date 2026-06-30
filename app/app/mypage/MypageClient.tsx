@@ -151,7 +151,7 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
               <FldDisabled label="お名前 🔒" value={name} />
             </div>
             <FldDisabled label="メールアドレス 🔒" value={email} />
-            <FldEditable label="電話番号" value={phone} onChange={setPhone} placeholder="090-XXXX-XXXX" />
+            <FldEditable label="電話番号" value={phone} onChange={setPhone} placeholder="09012345678" />
             <FldEditable label="住所" value={address} onChange={setAddress} placeholder="大阪府〇〇市…" />
             <FldDisabled label="税区分 🔒" value={taxLabel} />
 
