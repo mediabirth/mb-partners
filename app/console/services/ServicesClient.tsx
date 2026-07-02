@@ -54,12 +54,13 @@ type MenuDraft = {
 // 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
 type ServiceForm = {
   name: string; subtitle: string; description: string; who: string; url: string
+  target_audience: string   // リファラルWave1：紹介対象（STEP1で太字表示）
   logo_path: string; active: boolean
   icon: string; color: string  // kept for backward compat, not shown in UI
 }
 
 const defaultServiceForm: ServiceForm = {
-  name: '', subtitle: '', description: '', who: '', url: '', logo_path: '',
+  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', logo_path: '',
   active: true, icon: 'arrows', color: '#4733e6',
 }
 
@@ -153,6 +154,7 @@ function svcFormToPayload(f: ServiceForm) {
     description:    f.description    || null,
     who:            f.who            || null,
     url:            f.url            || null,
+    target_audience: f.target_audience || null,
     logo_path:      f.logo_path      || null,
     active:         f.active,
     icon:           f.icon,
@@ -167,6 +169,7 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
     description:    svc.description ?? '',
     who:            svc.who         ?? '',
     url:            svc.url         ?? '',
+    target_audience: (svc as { target_audience?: string | null }).target_audience ?? '',
     logo_path:      svc.logo_path   ?? '',
     active:         svc.active,
     icon:           svc.icon        || 'arrows',
@@ -1066,6 +1069,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
             <Fld label="サブタイトル">
               <FInput value={svcForm.subtitle} onChange={v => setF({ subtitle: v })} placeholder="賃貸仲介プラットフォーム" />
+            </Fld>
+
+            <Fld label="紹介対象（パートナーのリファラル画面で太字表示）">
+              <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例: 引越し・お部屋探しをしたい人" />
             </Fld>
 
             <Fld label="サービスサイト URL">

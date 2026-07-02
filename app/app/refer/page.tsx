@@ -63,6 +63,32 @@ function CoopBadge() {
   return null
 }
 
+// ── リファラルWave1：menu_rewards から統一記法の表示を導出（★金額の計算・意味は不変・表示整形のみ）──
+function rewardLabelFromReward(r: MenuReward | null): string {
+  if (!r) return ''
+  if (r.reward_type === 'fixed') return `¥${Number(r.reward_value).toLocaleString()}`
+  if (r.reward_type === 'continuous') return `継続 粗利${r.reward_value}%/月`
+  return `粗利の${r.reward_value}%`
+}
+function rewardPill(r: MenuReward): string { return `報酬 ${rewardLabelFromReward(r)}` }
+// 成果地点(reward_trigger)→平易な確定条件文（データ由来・末尾の「後/時」を落として「〜で確定」）。
+function confirmWording(r: MenuReward): string {
+  const t = (r.reward_trigger ?? '').trim().replace(/(後に|後|時に|時)$/, '')
+  if (t) return `${t}で確定`
+  return r.reward_type === 'fixed' ? '契約成立で確定' : '契約完了で確定'
+}
+// STEP1 サービス別 報酬レンジ（menu_rewards から・表示専用）。
+function serviceRewardRange(svc: ServiceWithMenus): string {
+  const rewards = svc.service_menus.flatMap(sm => (sm.menus ?? []).flatMap(m => m.rewards ?? []))
+  if (rewards.length === 0) return ''
+  const fixedVals = rewards.filter(r => r.reward_type === 'fixed').map(r => Number(r.reward_value || 0)).filter(v => v > 0)
+  const parts: string[] = []
+  if (fixedVals.length) parts.push(`¥${Math.min(...fixedVals).toLocaleString()}〜`)
+  if (rewards.some(r => r.reward_type === 'rate')) parts.push('＋成約額連動')
+  if (rewards.some(r => r.reward_type === 'continuous')) parts.push('継続あり')
+  return parts.join(' ') || '報酬あり'
+}
+
 export default function ReferPage() {
   const router = useRouter()
   // 4: services は不変マスタ。SWRでキャッシュ（CDNキャッシュ済＋クライアントでも再取得抑制）。
@@ -87,6 +113,7 @@ export default function ReferPage() {
   const [covChecked, setCovChecked]       = useState<string[]>([])
   // 選択されたメニュー(menus.id)＝deals.menu_ref／報酬(menu_rewards)＝deals.reward_ref。
   const [selMenuRef, setSelMenuRef]       = useState<string | null>(null)
+  const [selMenuName, setSelMenuName]     = useState<string>('')   // パンくず用（メニュー名）
   const [selReward, setSelReward]         = useState<MenuReward | null>(null)
   // L3: 相談（サービス未定）起票用
   const [consultNote, setConsultNote]     = useState('')
@@ -135,6 +162,7 @@ export default function ReferPage() {
   function pickReward(serviceMenu: MenuRow, menu: Menu, reward: MenuReward) {
     setSelMenu(serviceMenu)            // deals.menu_id（旧 service_menu・後方互換）
     setSelMenuRef(menu.id)             // deals.menu_ref（メニュー）
+    setSelMenuName(menu.name)          // パンくず表示用
     setSelReward(reward)               // deals.reward_ref（報酬）＋ reward_snapshot 源
     setCoopMode(reward.reward_type === 'rate' || reward.reward_type === 'continuous')  // 継続も粗利ベース＝協力
     setCovChecked([])
@@ -282,7 +310,7 @@ export default function ReferPage() {
   const coverageAgreedPayload = () => JSON.stringify({ labels: covChecked, at: new Date().toISOString() })
 
   if (done) {
-    const hl = rewardHighlight(selMenu, coopMode)
+    const hl = rewardLabelFromReward(selReward)
     return (
       <div className="page-anim" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 380, padding: '40px 28px', textAlign: 'center' }}>
         {/* ⑥ 煽りでなく感謝。控えめなチェック */}
@@ -333,9 +361,9 @@ export default function ReferPage() {
         <div className="page-anim">
           <div style={{ padding: '22px 20px 10px' }}>
             <div className="eyebrow" style={{ marginBottom: 8 }}>Step 1 / 2</div>
-            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのサービスの案件ですか?</h2>
+            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どんな人を紹介しますか？</h2>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
-              まずはサービスを選んでください。次の画面で関わり方と報酬を選べます。
+              あてはまる人を選ぶだけ。あとはMBが対応します。
             </p>
           </div>
           <div className="stagger" style={{ padding: '0 20px' }}>
@@ -354,18 +382,20 @@ export default function ReferPage() {
                 )}
               </div>
             )}
-            {/* ② サービス選択: ロゴ＋名前＋一言コピーのみ（費用は出さない）。ブランドカラーのアクセント＋tap lift/shine */}
+            {/* ★顧客ニーズ起点：太字=紹介対象(target_audience)／従属=ブランド名・カテゴリ／accent=報酬レンジ */}
             {services.map(svc => {
-              const copy = svc.subtitle || svc.description || ''
+              const audience = (svc as { target_audience?: string | null }).target_audience || svc.subtitle || svc.description || ''
+              const range = serviceRewardRange(svc)
               return (
                 <button key={svc.id} onClick={() => pickService(svc)} className="card-hover lift ui-card"
                   style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '15px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                     <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={44} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '.95rem', fontWeight: 900, letterSpacing: '-.01em' }}>{svc.name}</div>
-                      {copy && (
-                        <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{copy}</div>
+                      <div style={{ fontSize: '.9rem', fontWeight: 900, letterSpacing: '-.01em', lineHeight: 1.35 }}>{audience || svc.name}</div>
+                      <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}{svc.subtitle ? ` · ${svc.subtitle}` : ''}</div>
+                      {range && (
+                        <div style={{ fontSize: '.66rem', fontWeight: 800, color: svc.color || 'var(--c-blue)', marginTop: 5, fontFamily: 'Inter' }}>{range}</div>
                       )}
                     </div>
                     <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--bg2)', color: 'var(--muted)', fontSize: '.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</span>
@@ -381,8 +411,8 @@ export default function ReferPage() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.86rem', fontWeight: 800 }}>サービスが決まっていない</div>
-                <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>まず「相談」として起票。面談でサービスを決めます。</div>
+                <div style={{ fontSize: '.86rem', fontWeight: 800 }}>どれか分からない・迷っている</div>
+                <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>まず相談として起票。面談でぴったりのサービスを決めます。</div>
               </div>
               <span style={{ color: 'var(--muted)', fontSize: '.95rem', flexShrink: 0 }}>›</span>
             </button>
@@ -451,9 +481,9 @@ export default function ReferPage() {
               <ServiceAvatar logoPath={selSvc.logo_path} icon={selSvc.icon} color={selSvc.color} name={selSvc.name} size={20} />
               {selSvc.name}
             </div>
-            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>メニューを選ぶ</h2>
+            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, letterSpacing: '-.01em' }}>どのメニューで紹介しますか？</h2>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
-              メニューの報酬を選んでください。
+              紹介したいメニューを選んでください。報酬と、あなたにお願いすることが確認できます。
             </p>
           </div>
           {/* メニュー＞報酬カード（複数）。各報酬＝金額・成果地点・協力タスク。 */}
@@ -476,9 +506,14 @@ export default function ReferPage() {
               <div className="stagger" style={{ padding: '0 20px 24px' }}>
                 {groups.map(({ sm, menu }) => (
                   <div key={menu.id} style={{ marginBottom: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 2px 10px' }}>
-                      <span style={{ width: 4, height: 16, borderRadius: 2, background: selSvc.color }} />
-                      <b style={{ fontSize: '.86rem', fontWeight: 900, letterSpacing: '-.01em' }}>{menu.name}</b>
+                    <div style={{ margin: '0 2px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        <span style={{ width: 4, height: 16, borderRadius: 2, background: selSvc.color }} />
+                        <b style={{ fontSize: '.9rem', fontWeight: 900, letterSpacing: '-.01em' }}>{menu.name}</b>
+                      </div>
+                      {(menu as { short_description?: string | null }).short_description && (
+                        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '5px 0 0 13px', lineHeight: 1.55 }}>{(menu as { short_description?: string | null }).short_description}</p>
+                      )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {(menu.rewards ?? []).map(reward => (
@@ -505,17 +540,17 @@ export default function ReferPage() {
             ← 戻る
           </button>
           <div style={{ padding: '10px 20px 6px' }}>
-            <div className="eyebrow">{selSvc.name}{selMenu ? ` — ${selMenu.name}` : ''}</div>
+            <div className="eyebrow">{selSvc.name}{selMenuName ? ` ─ ${selMenuName}` : ''}</div>
             <h2 style={{ fontSize: '.96rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>
-              この内容で申し込む
+              {coopMode ? 'この案件に協力する' : 'お客さまを紹介する'}
             </h2>
           </div>
 
-          {/* ⑥ 報酬は控えめに添える */}
-          {rewardHighlight(selMenu, coopMode) && (
+          {/* ★報酬¥0バグ修正：選択した実際の menu_reward(selReward) から表示（selMenu の旧refは0のため誤表示だった） */}
+          {rewardLabelFromReward(selReward) && (
             <div style={{ margin: '6px 20px 14px', display: 'flex', alignItems: 'baseline', gap: 8, color: 'var(--muted)' }}>
               <span style={{ fontSize: '.66rem' }}>報酬の目安</span>
-              <span style={{ fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, color: 'var(--txt)' }}>{rewardHighlight(selMenu, coopMode)}</span>
+              <span style={{ fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, color: 'var(--txt)' }}>{rewardLabelFromReward(selReward)}</span>
               <span style={{ fontSize: '.6rem' }}>（成約時）</span>
             </div>
           )}
@@ -535,16 +570,16 @@ export default function ReferPage() {
             ))}
           </div>
 
-          {/* ── 経路B（主役）: リンク/QR・予約リンクを送って本人に進めてもらう ── */}
-          <div style={{ margin: '0 20px 12px', background: 'var(--blue-bg2)', border: '1.5px solid var(--blue-bg)', borderRadius: 14, padding: '15px 16px' }}>
+          {/* ── 経路B（主役）: リンク/予約リンクを送って本人に進めてもらう（枠線2px・いちばん簡単） ── */}
+          <div style={{ margin: '0 20px 12px', background: 'var(--blue-bg2)', border: '2px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '.56rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 6, padding: '2px 7px', letterSpacing: '.04em' }}>おすすめ</span>
-              <b style={{ fontSize: '.82rem', color: 'var(--blue-dk)' }}>{coopMode ? '予約リンクを共有する' : 'リンク／QRを送る'}</b>
+              <span style={{ fontSize: '.56rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 6, padding: '2px 7px', letterSpacing: '.04em' }}>いちばん簡単</span>
+              <b style={{ fontSize: '.86rem', color: 'var(--blue-dk)' }}>{coopMode ? '予約リンクを送るだけ' : 'リンクを送るだけ'}</b>
             </div>
             <p style={{ fontSize: '.64rem', color: '#52529E', margin: '0 0 12px', lineHeight: 1.6 }}>
               {coopMode
-                ? 'あなたの予約ページを送れば、お客さまが希望日時を直接選べます。'
-                : 'リンクやQRを送れば、お客さまご自身が登録できます（同意取得もスムーズ）。'}
+                ? 'お客さまがカレンダーから日時を直接選べます。あなたの作業はこれで完了。'
+                : 'お客さまがご自身で登録。あなたの作業はこれで完了。'}
             </p>
             {!coopMode && (token ? (
               <>
@@ -567,6 +602,10 @@ export default function ReferPage() {
                 </button>
                 <button onClick={() => { if (!showQR) trackFunnel('share', { channel: 'qr', token }); setShowQR(v => !v) }} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
                 {showQR && <QRModal linkUrl={linkUrl} onClose={() => setShowQR(false)} />}
+                {/* AIで送る文面を作る（主役カード内に昇格・機能不変） */}
+                <div style={{ marginTop: 10 }}>
+                  <AiIntroPanel defaultContact={customerType === 'corporate' ? companyName : customerName} defaultService={selSvc.name} defaultNeed={memo} />
+                </div>
               </>
             ) : !coopMode ? (
               <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>リンクを生成中…</p>
@@ -592,10 +631,12 @@ export default function ReferPage() {
             )}
           </div>
 
-          {/* ── 経路A: その場でフォーム登録 ── */}
-          <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '16px 18px 20px' }}>
-            <div style={{ fontSize: '.7rem', fontWeight: 800, color: 'var(--txt)', marginBottom: 4 }}>その場で登録する</div>
-            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>連絡先・メモは任意です。</p>
+          {/* ── 経路A（従属）: 折りたたみ＝代わりにここで登録（機能不変・開閉のみ） ── */}
+          <details className="ui-card" style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '4px 18px 16px' }}>
+            <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '12px 0 4px', fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)' }}>
+              {coopMode ? '代わりにここで登録する（自分で協力する）' : '代わりにここで登録する（お名前だけでOK・連絡先は任意）'}
+            </summary>
+            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '2px 0 12px', lineHeight: 1.6 }}>お客さまに代わって、ここで登録することもできます。連絡先・メモは任意です。</p>
             <form onSubmit={handleSubmit}>
               {/* ⑦ お客様の属性 */}
               <div className="fld">
@@ -683,16 +724,9 @@ export default function ReferPage() {
                 {pending ? '送信中…' : (coopMode ? 'この案件に協力する' : 'この内容で紹介する')}
               </button>
             </form>
-          </div>
+          </details>
 
-          {/* ── AI紹介文ドラフト（補助・併設）。既存の共有導線/SHARE_TEMPLATEは無改修。 ── */}
-          <div style={{ margin: '12px 20px 0' }}>
-            <AiIntroPanel
-              defaultContact={customerType === 'corporate' ? companyName : customerName}
-              defaultService={selSvc.name}
-              defaultNeed={memo}
-            />
-          </div>
+          {/* AI紹介文は主役カード内に昇格済（協力モードでは主役=予約リンクのため据置なし） */}
 
           <div style={{ height: 24 }} />
 
@@ -711,30 +745,35 @@ export default function ReferPage() {
   )
 }
 
-// 報酬カード（確定モック app_partner_reward_with_trigger_tasks_view）：金額・成果地点・協力タスクpill。区分語なし。
+// 報酬カード：統一記法の報酬ピル＋平易な確定条件＋「報酬のしくみ」＋あなたにお願いすること（データ由来）＋フル幅CTA。
+// ★金額の計算・意味は不変。表記の統一のみ。「お願いすること」は cooperation_task_templates 由来の reward.tasks を動的表示。
 function RewardOption({ reward, onPick }: { reward: MenuReward; onPick: () => void }) {
-  const amount = reward.reward_type === 'fixed'
-    ? `¥${Number(reward.reward_value).toLocaleString()}`
-    : reward.reward_type === 'continuous'
-      ? `継続 粗利${reward.reward_value}%/月`
-      : `粗利${reward.reward_value}%`
+  const [showHow, setShowHow] = useState(false)
   const tasks = reward.tasks ?? []
   return (
-    <button onClick={onPick} className="card-hover lift ui-card"
-      style={{ width: '100%', background: '#fff', textAlign: 'left', fontFamily: 'inherit', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 15px', cursor: 'pointer' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontFamily: 'Inter', fontSize: '.95rem', fontWeight: 800, color: 'var(--c-blue)', whiteSpace: 'nowrap' }}>{amount}</span>
-        <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: '.85rem', flexShrink: 0 }}>このメニューで紹介する ›</span>
+    <div className="ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 15px' }}>
+      <span style={{ display: 'inline-block', fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '4px 12px' }}>{rewardPill(reward)}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '.64rem', color: 'var(--muted2)' }}>{confirmWording(reward)}</span>
+        <button type="button" onClick={() => setShowHow(v => !v)} style={{ fontSize: '.62rem', color: 'var(--c-blue)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, textDecoration: 'underline', padding: 0 }}>報酬のしくみ</button>
       </div>
-      {reward.reward_trigger && <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '8px 0 0', lineHeight: 1.5 }}>成果地点：{reward.reward_trigger}</p>}
+      {showHow && (
+        <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 0 0', lineHeight: 1.65, background: 'var(--bg2)', borderRadius: 8, padding: '9px 11px' }}>
+          報酬は成約時に発生します。固定額はそのまま、率のものは「粗利（受注額から原価を引いた利益）」に対する割合、継続は毎月の粗利に対して一定期間お支払いします。金額は成果が確定した月末で締め、翌月末にお振込みします。
+        </p>
+      )}
       {tasks.length > 0 && (
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 9 }}>
-          {tasks.map(t => (
-            <span key={t} style={{ fontSize: '.57rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'var(--bg2)', color: 'var(--muted)', border: '1px solid var(--line)' }}>{t}</span>
-          ))}
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: '.58rem', fontWeight: 800, color: 'var(--muted2)', marginBottom: 5 }}>あなたにお願いすること</div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {tasks.map(t => (
+              <span key={t} style={{ fontSize: '.57rem', fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: 'var(--bg2)', color: 'var(--muted)', border: '1px solid var(--line)' }}>{t}</span>
+            ))}
+          </div>
         </div>
       )}
-    </button>
+      <button onClick={onPick} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 12, justifyContent: 'center' }}>このメニューで紹介する</button>
+    </div>
   )
 }
 
