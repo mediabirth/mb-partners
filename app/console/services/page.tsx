@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAdminServicesWithMenus } from '@/lib/supabase/queries'
 import ConsoleNav from '@/components/ConsoleNav'
 import ServicesClientLazy from './ServicesClientLazy'
+import TaskDescriptionEditor from './TaskDescriptionEditor'
 
 export const runtime = 'edge'
 
@@ -25,6 +26,7 @@ export default async function ServicesPage() {
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
       <div style={{ flex: 1, marginLeft: 230 }}>
         <ServicesClientLazy initialServices={services} />
+        <TaskDescriptionEditor />
       </div>
     </div>
   )

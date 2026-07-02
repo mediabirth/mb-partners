@@ -49,3 +49,17 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message, needsMigration: true }, { status: 200 })
   return NextResponse.json({ template: data })
 }
+
+// v3.1：ラベル単位で説明(description)を一括更新（登録ページのⓘに反映）。★money/タスク判定には触れない。
+export async function PATCH(req: NextRequest) {
+  const supabase = await createClient()
+  if (!(await requireConsole(supabase, true))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const b = await req.json()
+  const label = String(b.label ?? '').trim()
+  if (!label) return NextResponse.json({ error: 'label は必須です' }, { status: 400 })
+  const description = b.description ? String(b.description).trim().slice(0, 500) : null
+  const admin = await createServiceRoleClient()
+  const { error } = await admin.from('cooperation_task_templates').update({ description }).eq('label', label)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
