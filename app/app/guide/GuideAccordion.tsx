@@ -57,7 +57,7 @@ function FeeRow({ m }: { m: MenuRow }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '8px 10px', alignItems: 'start' }}>
         <CatChip cat="referral" />
         <div style={{ minWidth: 0 }}>
-          <b style={{ fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</b>
+          <span style={{ fontWeight: 500, fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</span>
           {m.ref_trigger && (
             <span style={{ fontSize: '.6rem', color: 'var(--muted2)', display: 'block', marginTop: 2 }}>{m.ref_trigger}</span>
           )}
@@ -83,7 +83,7 @@ function CoopFeeRow({ m }: { m: MenuRow }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '8px 10px', alignItems: 'start' }}>
         <CatChip cat="cooperation" />
         <div style={{ minWidth: 0 }}>
-          <b style={{ fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</b>
+          <span style={{ fontWeight: 500, fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</span>
           {steps.length > 0 && (
             <>
               <span style={{ fontSize: '.54rem', fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>あなたが担うこと</span>

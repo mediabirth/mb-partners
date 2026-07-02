@@ -139,9 +139,9 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
         <div style={{ margin: '0 20px' }}>
           <div style={{ background: 'var(--amber-bg)', borderRadius: 8, padding: '10px 12px', fontSize: '.64rem', color: '#7A5A14', lineHeight: 1.7, marginBottom: 12 }}>
             🔒の項目の変更は{' '}
-            <b style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => showToast('変更申請を受け付けました — 本人確認のご案内をお送りします')}>
+            <span style={{ fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => showToast('変更申請を受け付けました — 本人確認のご案内をお送りします')}>
               変更を申請
-            </b>
+            </span>
             {' '}から。
           </div>
 
@@ -205,7 +205,7 @@ function KV({ label, value, muted, last }: { label: React.ReactNode; value: stri
       fontSize: '.77rem', gap: 10,
     }}>
       <div style={{ color: 'var(--muted2)', flexShrink: 0 }}>{label}</div>
-      <b style={{ fontSize: '.74rem', color: muted ? 'var(--muted)' : undefined }}>{value}</b>
+      <span style={{ fontWeight: 500, fontSize: '.74rem', color: muted ? 'var(--muted)' : undefined }}>{value}</span>
     </div>
   )
 }
