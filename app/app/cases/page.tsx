@@ -69,7 +69,7 @@ function StatusStepper({ step }: { step: number }) {
               background: done ? color : '#fff', border: `2px solid ${done ? color : 'var(--line)'}`,
               boxShadow: isCurrent ? `0 0 0 4px ${i === 3 ? 'var(--green-bg)' : 'var(--blue-bg)'}` : 'none',
             }} />
-            <span style={{ fontSize: '.56rem', fontWeight: isCurrent ? 800 : 600, color: done ? 'var(--txt)' : 'var(--muted2)', marginTop: 6 }}>{label}</span>
+            <span style={{ fontSize: '.56rem', fontWeight: isCurrent ? 500 : 500, color: done ? 'var(--txt)' : 'var(--muted2)', marginTop: 6 }}>{label}</span>
           </div>
         )
       })}
@@ -129,11 +129,11 @@ export default async function CasesPage({
 
       {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計）＋(a)支払済/未払い分割 */}
       <div style={{ margin: '6px 20px 14px', background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>
-        <div style={{ fontSize: '.58rem', opacity: .9, letterSpacing: '.04em', fontWeight: 700 }}>確定報酬の累計</div>
-        <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}>¥{confirmedRewardTotal.toLocaleString()}</div>
+        <div style={{ fontSize: '.58rem', opacity: .9, letterSpacing: '.04em', fontWeight: 500 }}>確定報酬の累計</div>
+        <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}>¥{confirmedRewardTotal.toLocaleString()}</div>
         <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.25)' }}>
-          <div style={{ fontSize: '.56rem', opacity: .85 }}>支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{paidRewardTotal.toLocaleString()}</b></div>
-          <div style={{ fontSize: '.56rem', opacity: .85 }}>未払い（翌月末払い見込み）<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{unpaidRewardTotal.toLocaleString()}</b></div>
+          <div style={{ fontSize: '.56rem', opacity: .85 }}>支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{paidRewardTotal.toLocaleString()}</b></div>
+          <div style={{ fontSize: '.56rem', opacity: .85 }}>未払い（翌月末払い見込み）<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{unpaidRewardTotal.toLocaleString()}</b></div>
         </div>
       </div>
 
@@ -142,7 +142,7 @@ export default async function CasesPage({
         {[['active', '進行中'], ['done', '完了'], ['lost', '不成立']].map(([val, lbl]) => (
           <Link key={val} href={`/app/cases?f=${val}`} style={{
             flex: 1, textAlign: 'center', textDecoration: 'none',
-            padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
+            padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 500,
             color: f === val ? 'var(--txt)' : 'var(--muted2)',
             background: f === val ? '#fff' : 'transparent',
             boxShadow: f === val ? '0 2px 8px rgba(14,14,20,.08)' : 'none',
@@ -160,7 +160,7 @@ export default async function CasesPage({
             hint="「紹介する」ボタンから案件を登録しましょう。"
             icon={
               <span style={{ display: 'inline-flex', width: 52, height: 52, borderRadius: 15, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
               </span>
             }
           />
@@ -191,10 +191,10 @@ export default async function CasesPage({
                         : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: corp ? 'var(--c-blue)' : 'var(--muted2)', background: corp ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{corp ? '法人' : '個人'}</span>
-                          <b style={{ fontSize: '.82rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{mainName}</b>
+                          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: corp ? 'var(--c-blue)' : 'var(--muted2)', background: corp ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{corp ? '法人' : '個人'}</span>
+                          <b style={{ fontSize: '.82rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{mainName}</b>
                           {!d.services && (
-                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
+                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
                           )}
                           {(itemCounts[d.id] ?? 0) > 1 && (
                             <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
@@ -204,7 +204,7 @@ export default async function CasesPage({
                       </div>
                     </div>
                     {d.status === 'lost' ? (
-                      <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
+                      <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
                     ) : ['confirmed', 'paid'].includes(d.status) && d.amount > 0 ? (
                       /* ②B 確定報酬：成約/支払済(確定)のみ表示・あなたの報酬(既存計算済み値を読むだけ)。案件金額(MB受注総額)は出さない */
                       <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.78rem', fontWeight: 500, color: 'var(--txt)', letterSpacing: '-.012em' }}>
@@ -224,8 +224,8 @@ export default async function CasesPage({
                   {['confirmed', 'paid'].includes(d.status) && d.amount > 0 && (
                     <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: '.58rem' }}>
                       {d.status === 'paid'
-                        ? <span style={{ fontWeight: 800, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 999, padding: '2px 9px' }}>支払済</span>
-                        : <span style={{ fontWeight: 800, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 999, padding: '2px 9px' }}>未払い · {payoutLabel((d as { fixed_month?: string | null }).fixed_month)}払い見込み</span>}
+                        ? <span style={{ fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 999, padding: '2px 9px' }}>支払済</span>
+                        : <span style={{ fontWeight: 500, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 999, padding: '2px 9px' }}>未払い · {payoutLabel((d as { fixed_month?: string | null }).fixed_month)}払い見込み</span>}
                       {rewardBasis((d as { reward_snapshot?: unknown }).reward_snapshot) && (
                         <span style={{ color: 'var(--muted2)' }}>報酬の根拠：{rewardBasis((d as { reward_snapshot?: unknown }).reward_snapshot)}</span>
                       )}
@@ -234,7 +234,7 @@ export default async function CasesPage({
 
                   {/* ②A 現在の段階（パートナー視点ラベル）＋紹介日／最終更新（read-only・金額なし） */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 11, paddingTop: 10, borderTop: '1px solid #F4F4F7', fontSize: '.58rem', color: 'var(--muted2)' }}>
-                    <span style={{ fontWeight: 800, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--c-blue)' }}>現在：{partnerStageLabel(d.status, (d as { review_stage?: string | null }).review_stage)}</span>
+                    <span style={{ fontWeight: 500, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--c-blue)' }}>現在：{partnerStageLabel(d.status, (d as { review_stage?: string | null }).review_stage)}</span>
                     <span style={{ color: 'var(--line)' }}>|</span>
                     <span>紹介 {fmtDate(d.created_at)}</span>
                     <span style={{ color: 'var(--line)' }}>|</span>

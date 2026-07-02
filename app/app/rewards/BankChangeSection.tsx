@@ -89,11 +89,11 @@ export default function BankChangeSection({ currentBank }: { currentBank: BankIn
       {/* 現在の口座情報 */}
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <h3 style={{ fontSize: '.82rem', fontWeight: 700, margin: 0 }}>振込口座</h3>
+          <h3 style={{ fontSize: '.82rem', fontWeight: 500, margin: 0 }}>振込口座</h3>
           {!pending && (
             <button
               onClick={() => { setOpen(o => !o); setDone(false); setError('') }}
-              style={{ fontSize: '.68rem', color: 'var(--blue)', background: 'none', border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}
+              style={{ fontSize: '.68rem', color: 'var(--blue)', background: 'none', border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 500 }}
             >
               {open ? 'キャンセル' : '口座を変更する'}
             </button>
@@ -104,7 +104,7 @@ export default function BankChangeSection({ currentBank }: { currentBank: BankIn
           <div style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8 }}>
             <div>{currentBank.bank_name}　{currentBank.branch_name}</div>
             <div>{currentBank.account_type}　{currentBank.account_number}</div>
-            <div style={{ fontWeight: 600, color: 'var(--text)' }}>{currentBank.account_holder}</div>
+            <div style={{ fontWeight: 500, color: 'var(--text)' }}>{currentBank.account_holder}</div>
           </div>
         ) : (
           <p style={{ fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>未登録</p>
@@ -146,7 +146,7 @@ export default function BankChangeSection({ currentBank }: { currentBank: BankIn
             <button
               type="submit"
               disabled={loading}
-              style={{ width: '100%', padding: '10px', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.78rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer', opacity: loading ? .7 : 1 }}
+              style={{ width: '100%', padding: '10px', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.78rem', fontWeight: 500, cursor: loading ? 'default' : 'pointer', opacity: loading ? .7 : 1 }}
             >
               {loading ? '送信中...' : '変更を申請する'}
             </button>

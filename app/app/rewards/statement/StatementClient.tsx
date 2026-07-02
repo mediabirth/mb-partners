@@ -39,7 +39,7 @@ export default function StatementClient({
       {/* Mode switcher */}
       <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 4, margin: '12px 20px 0' }}>
         <button onClick={() => setMode('monthly')} style={{
-          flex: 1, border: 'none', padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
+          flex: 1, border: 'none', padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 500,
           cursor: 'pointer', fontFamily: 'inherit',
           color: mode === 'monthly' ? 'var(--txt)' : 'var(--muted2)',
           background: mode === 'monthly' ? '#fff' : 'transparent',
@@ -49,7 +49,7 @@ export default function StatementClient({
           支払明細 {md ? `(${md.month}月)` : ''}
         </button>
         <button onClick={() => setMode('annual')} style={{
-          flex: 1, border: 'none', padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
+          flex: 1, border: 'none', padding: '9px 2px', borderRadius: 8, fontSize: '.7rem', fontWeight: 500,
           cursor: 'pointer', fontFamily: 'inherit',
           color: mode === 'annual' ? 'var(--txt)' : 'var(--muted2)',
           background: mode === 'annual' ? '#fff' : 'transparent',
@@ -90,7 +90,7 @@ export default function StatementClient({
                 <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6"/>
               </svg>
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 900, letterSpacing: '.3em', textAlign: 'center', margin: '6px 0 20px' }}>支払明細書</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 500, letterSpacing: '.3em', textAlign: 'center', margin: '6px 0 20px' }}>支払明細書</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 16, lineHeight: 1.8 }}>
               <span>{partnerName} 様<br/>パートナーコード {partnerCode}</span>
               <span style={{ textAlign: 'right' }}>
@@ -101,10 +101,10 @@ export default function StatementClient({
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.7rem', marginBottom: 14 }}>
               <thead>
                 <tr>
-                  <th style={{ fontWeight: 700, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>日付</th>
-                  <th style={{ fontWeight: 700, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>摘要</th>
-                  <th style={{ fontWeight: 700, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>区分</th>
-                  <th style={{ fontWeight: 700, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>金額</th>
+                  <th style={{ fontWeight: 500, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>日付</th>
+                  <th style={{ fontWeight: 500, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>摘要</th>
+                  <th style={{ fontWeight: 500, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>区分</th>
+                  <th style={{ fontWeight: 500, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>金額</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,8 +125,8 @@ export default function StatementClient({
                   </tr>
                 )}
                 <tr>
-                  <td colSpan={3} style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px', fontSize: '.72rem' }}>差引お支払額</td>
-                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>¥{md.net.toLocaleString()}</td>
+                  <td colSpan={3} style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px', fontSize: '.72rem' }}>差引お支払額</td>
+                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>¥{md.net.toLocaleString()}</td>
                 </tr>
               </tbody>
             </table>
@@ -150,7 +150,7 @@ export default function StatementClient({
                 <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6"/>
               </svg>
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 900, letterSpacing: '.3em', textAlign: 'center', margin: '6px 0 20px' }}>年間支払集計 {yearLabel}</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 500, letterSpacing: '.3em', textAlign: 'center', margin: '6px 0 20px' }}>年間支払集計 {yearLabel}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 16, lineHeight: 1.8 }}>
               <span>{partnerName} 様<br/>パートナーコード {partnerCode}</span>
               <span style={{ textAlign: 'right' }}>
@@ -161,11 +161,11 @@ export default function StatementClient({
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.7rem', marginBottom: 14 }}>
               <thead>
                 <tr>
-                  <th style={{ fontWeight: 700, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>月</th>
-                  <th style={{ fontWeight: 700, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>件数</th>
-                  <th style={{ fontWeight: 700, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>報酬</th>
-                  <th style={{ fontWeight: 700, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>源泉</th>
-                  <th style={{ fontWeight: 700, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>支払額</th>
+                  <th style={{ fontWeight: 500, textAlign: 'left', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem' }}>月</th>
+                  <th style={{ fontWeight: 500, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>件数</th>
+                  <th style={{ fontWeight: 500, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>報酬</th>
+                  <th style={{ fontWeight: 500, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>源泉</th>
+                  <th style={{ fontWeight: 500, textAlign: 'right', borderBottom: '1.5px solid var(--txt)', padding: '7px 4px', fontSize: '.62rem', fontVariantNumeric: 'tabular-nums' }}>支払額</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,15 +183,15 @@ export default function StatementClient({
                   </tr>
                 ))}
                 <tr>
-                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px' }}>累計</td>
-                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px', textAlign: 'right' }}>
+                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px' }}>累計</td>
+                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px', textAlign: 'right' }}>
                     {monthlyData.filter(m => m.ym.startsWith(String(yearLabel))).reduce((s, m) => s + m.deals.length, 0)}
                   </td>
-                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>¥{annualGross.toLocaleString()}</td>
-                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', color: annualWh > 0 ? 'var(--red)' : undefined }}>
+                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>¥{annualGross.toLocaleString()}</td>
+                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', color: annualWh > 0 ? 'var(--red)' : undefined }}>
                     {annualWh > 0 ? `−¥${annualWh.toLocaleString()}` : '—'}
                   </td>
-                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 800, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>¥{annualNet.toLocaleString()}</td>
+                  <td style={{ borderTop: '1.5px solid var(--txt)', fontWeight: 500, padding: '10px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>¥{annualNet.toLocaleString()}</td>
                 </tr>
               </tbody>
             </table>

@@ -106,31 +106,31 @@ export default async function AppPage() {
         {/* SYNAPSE 導線：共有紋章（light）＋「SYNAPSE」のみ。件数の主表示は一覧へ集約。タップで /app/synapse へ。 */}
         <Link href="/app/synapse" aria-label="SYNAPSE つながり" style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', padding: '4px 9px 4px 4px', borderRadius: 999, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.18)' }}>
           <SynapseCrest size={30} tone="light" />
-          <span style={{ fontSize: '.56rem', fontWeight: 800, letterSpacing: '.06em', color: 'rgba(255,255,255,.95)', whiteSpace: 'nowrap' }}>SYNAPSE</span>
+          <span style={{ fontSize: '.56rem', fontWeight: 500, letterSpacing: '.06em', color: 'rgba(255,255,255,.95)', whiteSpace: 'nowrap' }}>SYNAPSE</span>
         </Link>
         <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>
           確定残高
         </div>
-        <div style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 600, fontSize: '40px', fontFeatureSettings: '"tnum" 1', letterSpacing: '-.03em', lineHeight: 1.05 }}>
-          <span style={{ fontSize: '1.04rem', fontWeight: 600, opacity: .78, marginRight: 4 }}>¥</span>
+        <div style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 500, fontSize: '40px', fontFeatureSettings: '"tnum" 1', letterSpacing: '-.03em', lineHeight: 1.05 }}>
+          <span style={{ fontSize: '1.04rem', fontWeight: 500, opacity: .78, marginRight: 4 }}>¥</span>
           <CountUp value={confirmedBalance} />
         </div>
         <div style={{ display: 'flex', gap: 18, marginTop: 15, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '.6rem', opacity: .85, whiteSpace: 'nowrap' }}>
             次回振込
-            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap', letterSpacing: '-.01em' }}>
+            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap', letterSpacing: '-.01em' }}>
               {nextPayLabel ?? '予定なし'}
             </b>
           </div>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>
             今月の確定
-            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>
+            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}>
               ¥{monthAmount.toLocaleString()}
             </b>
           </div>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>
             累計
-            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2, fontFeatureSettings: '"tnum"' }}>
+            <b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}>
               ¥{deals.filter(d => d.status === 'paid' || d.status === 'confirmed').reduce((s, d) => s + d.amount, 0).toLocaleString()}
             </b>
           </div>
@@ -152,7 +152,7 @@ export default async function AppPage() {
             </svg>
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '.82rem', fontWeight: 800 }}>フロンティア ダッシュボード</div>
+            <div style={{ fontSize: '.82rem', fontWeight: 500 }}>フロンティア ダッシュボード</div>
             <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1 }}>あなたのチームのオーバーライドと招待を管理</div>
           </div>
           <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
@@ -163,8 +163,8 @@ export default async function AppPage() {
       {!isEmpty && (
         <div className="card-hover" style={{ margin: '12px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: '.72rem', fontWeight: 800 }}>次回振込まで <span style={{ color: 'var(--blue)' }}>あと{daysToPay}日</span></span>
-            <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 600 }}>{nextPayLabel ?? '予定なし'}</span>
+            <span style={{ fontSize: '.72rem', fontWeight: 500 }}>次回振込まで <span style={{ color: 'var(--blue)' }}>あと{daysToPay}日</span></span>
+            <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>{nextPayLabel ?? '予定なし'}</span>
           </div>
           <div className="bar-grow" style={{ height: 7, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}>
             <div style={{ width: `${Math.round(cycleProgress * 100)}%`, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,var(--blue) 0%,var(--blue-dk) 100%)' }} />
@@ -199,7 +199,7 @@ export default async function AppPage() {
       {/* やること：今後の商談スケジュールのみ（受付済みは「最近の動き」に集約） */}
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t-tertiary)', letterSpacing: '.08em', margin: 0 }}>やること</h2>
+          <h2 style={{ fontSize: '11px', fontWeight: 500, color: 'var(--t-tertiary)', letterSpacing: '.08em', margin: 0 }}>やること</h2>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
           {/* C2③ 商談予定（日時順） */}
@@ -211,10 +211,10 @@ export default async function AppPage() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontWeight: 500, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {customerHonorific(d)}{(d.service_menus?.name || d.services?.name) ? `（${d.service_menus?.name || d.services?.name}について）` : ''}
                 </div>
-                <div style={{ fontSize: '.6rem', color: 'var(--blue)', marginTop: 1, fontWeight: 700 }}>
+                <div style={{ fontSize: '.6rem', color: 'var(--blue)', marginTop: 1, fontWeight: 500 }}>
                   {new Date(d.meeting_at!).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default async function AppPage() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontWeight: 500, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {t.label}
                   </div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
@@ -241,7 +241,7 @@ export default async function AppPage() {
                   </div>
                 </div>
                 {t.remaining > 0 && (
-                  <span style={{ flexShrink: 0, fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 8px' }}>他{t.remaining}件</span>
+                  <span style={{ flexShrink: 0, fontSize: '.54rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 8px' }}>他{t.remaining}件</span>
                 )}
                 <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
               </Link>
@@ -259,7 +259,7 @@ export default async function AppPage() {
       {/* Recent activity */}
       <div style={{ padding: '22px 20px 6px', paddingTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t-tertiary)', letterSpacing: '.08em', margin: 0 }}>最近の動き</h2>
+          <h2 style={{ fontSize: '11px', fontWeight: 500, color: 'var(--t-tertiary)', letterSpacing: '.08em', margin: 0 }}>最近の動き</h2>
           <Link href="/app/cases" style={{ fontSize: '.66rem', color: 'var(--blue)', fontWeight: 500, textDecoration: 'none' }}>案件へ →</Link>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
@@ -279,7 +279,7 @@ export default async function AppPage() {
                 {deal?.services
                   ? <ServiceAvatar logoPath={deal.services.logo_path} icon={deal.services.icon} color={deal.services.color} name={deal.services.name} size={30} />
                   : deal && <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
-                <div style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {deal ? customerHonorific(deal) : ''}
                 </div>
                 {deal && <StatusPill size="sm" {...dealStatus(deal.status)} />}
@@ -301,8 +301,8 @@ function StatCard({ label, countUp, format, unit, href }: { label: string; count
       flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
       padding: '12px 13px', cursor: 'pointer', textDecoration: 'none',
     }}>
-      <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700 }}>{label}</div>
-      <div style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 800, marginTop: 3, fontFeatureSettings: '"tnum"', letterSpacing: '-.012em', color: 'var(--txt)' }}>
+      <div style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500, marginTop: 3, fontFeatureSettings: '"tnum"', letterSpacing: '-.012em', color: 'var(--txt)' }}>
         <CountUp value={countUp} format={format} />{unit && <small style={{ fontSize: '.6rem', color: 'var(--muted)', fontWeight: 500 }}> {unit}</small>}
       </div>
     </Link>

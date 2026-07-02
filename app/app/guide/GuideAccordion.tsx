@@ -33,7 +33,7 @@ function CoverageTags({ labels, accent = false }: {
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
       {labels.map(l => (
         <span key={l} style={{
-          fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10,
+          fontSize: '.54rem', fontWeight: 500, padding: '2px 7px', borderRadius: 10,
           background: accent ? 'var(--blue-bg)' : '#EBEBF0',
           color: accent ? 'var(--blue)' : 'var(--txt)',
         }}>{l}</span>
@@ -68,7 +68,7 @@ function FeeRow({ m }: { m: MenuRow }) {
             </small>
           )}
         </div>
-        <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.9rem', whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"', color: 'var(--blue)', paddingTop: 1 }}>
+        <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '.9rem', whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"', color: 'var(--blue)', paddingTop: 1 }}>
           {fmtFee(m)}
         </span>
       </div>
@@ -86,10 +86,10 @@ function CoopFeeRow({ m }: { m: MenuRow }) {
           <b style={{ fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</b>
           {steps.length > 0 && (
             <>
-              <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>あなたが担うこと</span>
+              <span style={{ fontSize: '.54rem', fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>あなたが担うこと</span>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                 {steps.map(l => (
-                  <span key={l} style={{ fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>
+                  <span key={l} style={{ fontSize: '.54rem', fontWeight: 500, padding: '2px 7px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>
                     {l}
                   </span>
                 ))}
@@ -102,7 +102,7 @@ function CoopFeeRow({ m }: { m: MenuRow }) {
             </small>
           )}
         </div>
-        <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.9rem', whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"', color: 'var(--blue-dk)', paddingTop: 1 }}>
+        <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '.9rem', whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"', color: 'var(--blue-dk)', paddingTop: 1 }}>
           {fmtCoopFee(m)}
         </span>
       </div>
@@ -127,10 +127,10 @@ export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
         style={{ padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
         <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={38} icon={svc.icon} color={svc.color} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '.5rem', fontFamily: 'Inter', fontWeight: 600, color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '.5rem', fontFamily: 'Inter', fontWeight: 500, color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>
             {svc.url ?? svc.subtitle}
           </div>
-          <h3 style={{ fontSize: '.86rem', fontWeight: 700 }}>{svc.name}</h3>
+          <h3 style={{ fontSize: '.86rem', fontWeight: 500 }}>{svc.name}</h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {refMenus.length > 0   && <CatChip cat="referral" />}
@@ -146,7 +146,7 @@ export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
           {svc.description && <p style={{ marginTop: 12, marginBottom: 8 }}>{svc.description}</p>}
           {svc.who && (
             <div style={{ display: 'flex', gap: 8, background: 'var(--bg2)', borderRadius: 8, padding: '10px 12px', margin: '4px 0' }}>
-              <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.5rem', fontWeight: 600, color: 'var(--blue)', letterSpacing: '.16em', paddingTop: 3, textTransform: 'uppercase' }}>Who</span>
+              <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', letterSpacing: '.16em', paddingTop: 3, textTransform: 'uppercase' }}>Who</span>
               <span style={{ fontSize: '.68rem' }}>{svc.who}</span>
             </div>
           )}
@@ -154,9 +154,9 @@ export default function GuideAccordion({ svc }: { svc: ServiceWithMenus }) {
           {hasRows && (
             <div style={{ marginTop: 4 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '0 10px', padding: '6px 0 2px' }}>
-                <span style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em' }}>種別</span>
-                <span style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em' }}>メニュー / 条件</span>
-                <span style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em', textAlign: 'right' }}>報酬</span>
+                <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em' }}>種別</span>
+                <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em' }}>メニュー / 条件</span>
+                <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.12em', textAlign: 'right' }}>報酬</span>
               </div>
               {refMenus.map(m => <FeeRow key={m.id} m={m} />)}
               {coopMenus.map(m => <CoopFeeRow key={`coop-${m.id}`} m={m} />)}

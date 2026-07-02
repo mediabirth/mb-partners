@@ -17,7 +17,7 @@ type Props = {
 }
 
 const LOCK = (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.54rem', color: 'var(--muted)', fontWeight: 700, marginLeft: 6 }}>
+  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.54rem', color: 'var(--muted)', fontWeight: 500, marginLeft: 6 }}>
     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
       <rect x="4" y="11" width="16" height="10" rx="2"/>
       <path d="M8 11V7a4 4 0 018 0v4"/>
@@ -86,7 +86,7 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
     <div>
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>マイページ</h2>
+          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>マイページ</h2>
         </div>
       </div>
 
@@ -110,9 +110,9 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
           </div>
 
           <div style={{ padding: '0 20px 8px' }}>
-            <h2 style={{ fontSize: '.78rem', fontWeight: 700, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <h2 style={{ fontSize: '.78rem', fontWeight: 500, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
               振込先口座
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.54rem', color: 'var(--muted)', fontWeight: 700 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.54rem', color: 'var(--muted)', fontWeight: 500 }}>
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <rect x="4" y="11" width="16" height="10" rx="2"/>
                   <path d="M8 11V7a4 4 0 018 0v4"/>
@@ -156,7 +156,7 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
             <FldDisabled label="税区分 🔒" value={taxLabel} />
 
             <div style={{ margin: '14px 0 10px', paddingTop: 12, borderTop: '1px dashed var(--line)' }}>
-              <label style={{ fontSize: '.63rem', fontWeight: 700, color: 'var(--muted2)' }}>振込先口座 🔒（変更は申請制）</label>
+              <label style={{ fontSize: '.63rem', fontWeight: 500, color: 'var(--muted2)' }}>振込先口座 🔒（変更は申請制）</label>
             </div>
             <div style={{ display: 'flex', gap: 9 }}>
               <FldDisabled label="銀行" value={bank?.bank_name ?? ''} />
@@ -185,7 +185,7 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
         position: 'fixed', bottom: 98, left: '50%',
         transform: `translateX(-50%) translateY(${toast ? 0 : 16}px)`,
         background: 'var(--txt)', color: '#fff', padding: '12px 22px',
-        borderRadius: 9, fontSize: '.74rem', fontWeight: 600,
+        borderRadius: 9, fontSize: '.74rem', fontWeight: 500,
         opacity: toast ? 1 : 0, pointerEvents: 'none',
         transition: 'all .28s', zIndex: 130, whiteSpace: 'nowrap',
         boxShadow: '0 8px 28px rgba(14,14,20,.18)',
@@ -213,7 +213,7 @@ function KV({ label, value, muted, last }: { label: React.ReactNode; value: stri
 function FldDisabled({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ flex: 1, marginBottom: 12 }}>
-      <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }}>{label}</label>
       <input value={value} disabled style={{
         width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '12px 13px',
         fontFamily: 'inherit', fontSize: '.82rem', background: 'var(--bg2)', color: 'var(--muted2)', cursor: 'not-allowed',
@@ -227,7 +227,7 @@ function FldEditable({ label, value, onChange, placeholder }: {
 }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }}>{label}</label>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{
         width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '12px 13px',
         fontFamily: 'inherit', fontSize: '.82rem', background: '#fff',

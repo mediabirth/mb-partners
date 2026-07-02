@@ -74,7 +74,7 @@ export default function SupportPage() {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.8">
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
         </svg>
-        <h1 style={{ fontSize: '1.1rem', fontWeight: 700 }}>お問い合わせ</h1>
+        <h1 style={{ fontSize: '1.1rem', fontWeight: 500 }}>お問い合わせ</h1>
       </div>
 
       <div style={{
@@ -97,7 +97,7 @@ export default function SupportPage() {
 
       <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '18px 16px', marginBottom: 24 }}>
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 700, marginBottom: 6, color: 'var(--muted2)' }}>
+          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 500, marginBottom: 6, color: 'var(--muted2)' }}>
             カテゴリ
           </label>
           <select
@@ -116,7 +116,7 @@ export default function SupportPage() {
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 700, marginBottom: 6, color: 'var(--muted2)' }}>
+          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 500, marginBottom: 6, color: 'var(--muted2)' }}>
             件名
           </label>
           <input
@@ -133,7 +133,7 @@ export default function SupportPage() {
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 700, marginBottom: 6, color: 'var(--muted2)' }}>
+          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 500, marginBottom: 6, color: 'var(--muted2)' }}>
             本文
           </label>
           <textarea
@@ -160,7 +160,7 @@ export default function SupportPage() {
           style={{
             width: '100%', padding: '12px', borderRadius: 9, border: 'none',
             background: sending ? 'var(--muted)' : 'var(--c-blue)',
-            color: '#fff', fontSize: '.82rem', fontWeight: 700,
+            color: '#fff', fontSize: '.82rem', fontWeight: 500,
             cursor: sending ? 'not-allowed' : 'pointer',
           }}
         >
@@ -169,7 +169,7 @@ export default function SupportPage() {
       </form>
 
       {/* Past inquiries */}
-      <h2 style={{ fontSize: '.9rem', fontWeight: 700, marginBottom: 12 }}>過去のお問い合わせ</h2>
+      <h2 style={{ fontSize: '.9rem', fontWeight: 500, marginBottom: 12 }}>過去のお問い合わせ</h2>
       {loading ? (
         <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>読み込み中...</p>
       ) : inquiries.length === 0 ? (
@@ -183,7 +183,7 @@ export default function SupportPage() {
               textDecoration: 'none', alignItems: 'center',
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '.78rem', color: 'var(--txt)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontWeight: 500, fontSize: '.78rem', color: 'var(--txt)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {inq.subject}
                 </div>
                 <div style={{ fontSize: '.64rem', color: 'var(--muted2)' }}>
@@ -191,7 +191,7 @@ export default function SupportPage() {
                 </div>
               </div>
               <span style={{
-                fontSize: '.6rem', fontWeight: 700, padding: '3px 8px', borderRadius: 20,
+                fontSize: '.6rem', fontWeight: 500, padding: '3px 8px', borderRadius: 20,
                 color: STATUS_COLOR[inq.status]?.color ?? 'var(--muted2)',
                 background: STATUS_COLOR[inq.status]?.bg ?? 'var(--bg2)',
                 flexShrink: 0,

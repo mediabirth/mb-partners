@@ -65,7 +65,7 @@ export default async function RewardsPage() {
 
       {/* Monthly accordion */}
       <div style={{ padding: '22px 20px 6px' }}>
-        <h2 style={{ fontSize: '.98rem', fontWeight: 700, marginBottom: 14 }}>月次明細</h2>
+        <h2 style={{ fontSize: '.98rem', fontWeight: 500, marginBottom: 14 }}>月次明細</h2>
       </div>
 
       {months.length === 0 ? (
@@ -100,7 +100,7 @@ export default async function RewardsPage() {
                     </div>
                   </div>
                 </div>
-                <span style={{ fontFamily: 'Inter', fontFeatureSettings: '"tnum"', fontWeight: 700, letterSpacing: '-.01em' }}>
+                <span style={{ fontFamily: 'Inter', fontFeatureSettings: '"tnum"', fontWeight: 500, letterSpacing: '-.01em' }}>
                   ¥{d.amount.toLocaleString()}
                 </span>
               </div>
@@ -108,7 +108,7 @@ export default async function RewardsPage() {
             {wh > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 6px', fontSize: '.73rem' }}>
                 <span style={{ color: 'var(--muted2)' }}>源泉所得税(10.21%)</span>
-                <span style={{ fontFamily: 'Inter', fontWeight: 700, color: 'var(--red)' }}>−¥{wh.toLocaleString()}</span>
+                <span style={{ fontFamily: 'Inter', fontWeight: 500, color: 'var(--red)' }}>−¥{wh.toLocaleString()}</span>
               </div>
             )}
           </MonthAccordion>
@@ -139,7 +139,7 @@ function MonthAccordion({ title, subtitle, net, children }: {
           <small style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{subtitle}・タップで内訳</small>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.016em' }}>
+          <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.016em' }}>
             ¥{net.toLocaleString()}
           </span>
           <span className="acc-chev" style={{ color: 'var(--muted)', fontSize: '.85rem', transition: 'transform .2s ease', display: 'inline-block' }}>›</span>

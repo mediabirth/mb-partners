@@ -75,13 +75,13 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '16px', marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
           <div>
-            <h2 style={{ fontSize: '.96rem', fontWeight: 700, marginBottom: 4 }}>{inquiry.subject}</h2>
+            <h2 style={{ fontSize: '.96rem', fontWeight: 500, marginBottom: 4 }}>{inquiry.subject}</h2>
             <p style={{ fontSize: '.65rem', color: 'var(--muted2)' }}>
               {CATEGORY_OPTIONS[inquiry.category] ?? inquiry.category} · {new Date(inquiry.created_at).toLocaleDateString('ja')}
             </p>
           </div>
           <span style={{
-            fontSize: '.62rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+            fontSize: '.62rem', fontWeight: 500, padding: '3px 10px', borderRadius: 20,
             color: inquiry.status === 'replied' ? 'var(--c-blue)' : inquiry.status === 'open' ? 'var(--amber)' : 'var(--muted2)',
             background: inquiry.status === 'replied' ? 'var(--blue-bg2)' : inquiry.status === 'open' ? 'var(--amber-bg)' : 'var(--bg2)',
             flexShrink: 0,
@@ -126,7 +126,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
       {/* Reply form */}
       {inquiry.status !== 'closed' && (
         <form onSubmit={handleReply} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '14px 16px' }}>
-          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 700, marginBottom: 8, color: 'var(--muted2)' }}>
+          <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 500, marginBottom: 8, color: 'var(--muted2)' }}>
             追記する
           </label>
           <textarea
@@ -148,7 +148,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
             style={{
               padding: '10px 20px', borderRadius: 8, border: 'none',
               background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--c-blue)',
-              color: '#fff', fontSize: '.78rem', fontWeight: 700,
+              color: '#fff', fontSize: '.78rem', fontWeight: 500,
               cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
             }}
           >

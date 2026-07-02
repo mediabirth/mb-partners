@@ -60,15 +60,15 @@ export default function TermsPage() {
       </Link>
 
       <div style={{ padding: '10px 20px 6px' }}>
-        <h2 style={{ fontSize: '.98rem', fontWeight: 700, marginBottom: 12 }}>パートナー規約・ヘルプ</h2>
+        <h2 style={{ fontSize: '.98rem', fontWeight: 500, marginBottom: 12 }}>パートナー規約・ヘルプ</h2>
       </div>
 
       {FAQS.map((faq, i) => (
         <div key={i} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, margin: '0 20px 10px', overflow: 'hidden' }}>
           <div onClick={() => toggle(i)} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
             <div style={{ flex: 1 }}>
-              <h3 style={{ fontSize: '.86rem', fontWeight: 700 }}>
-                <small style={{ display: 'block', fontFamily: 'Inter', fontWeight: 600, fontSize: '.5rem', color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>{faq.tag}</small>
+              <h3 style={{ fontSize: '.86rem', fontWeight: 500 }}>
+                <small style={{ display: 'block', fontFamily: 'Inter', fontWeight: 500, fontSize: '.5rem', color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>{faq.tag}</small>
                 {faq.title}
               </h3>
             </div>
@@ -92,8 +92,8 @@ export default function TermsPage() {
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, margin: '0 20px 10px', overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '.86rem', fontWeight: 700 }}>
-              <small style={{ display: 'block', fontFamily: 'Inter', fontWeight: 600, fontSize: '.5rem', color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>Contact</small>
+            <h3 style={{ fontSize: '.86rem', fontWeight: 500 }}>
+              <small style={{ display: 'block', fontFamily: 'Inter', fontWeight: 500, fontSize: '.5rem', color: 'var(--muted)', letterSpacing: '.22em', marginBottom: 2, textTransform: 'uppercase' }}>Contact</small>
               お問い合わせ
             </h3>
           </div>
@@ -108,7 +108,7 @@ export default function TermsPage() {
           )}
 
           <div style={{ marginBottom: 10 }}>
-            <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>件名</label>
+            <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }}>件名</label>
             <select value={subject} onChange={e => setSubject(e.target.value)} style={{
               width: '100%', border: '1px solid var(--line)', borderRadius: 9, padding: '12px 13px',
               fontFamily: 'inherit', fontSize: '.82rem', background: '#fff',
@@ -120,7 +120,7 @@ export default function TermsPage() {
             </select>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>内容</label>
+            <label style={{ display: 'block', fontSize: '.63rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }}>内容</label>
             <textarea
               value={body} onChange={e => setBody(e.target.value)}
               rows={4} placeholder="お困りの内容をご記入ください"

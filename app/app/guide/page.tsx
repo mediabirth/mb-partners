@@ -24,7 +24,7 @@ export default async function GuidePage() {
 
       <div style={{ padding: '10px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>サービスガイド</h2>
+          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>サービスガイド</h2>
         </div>
       </div>
 

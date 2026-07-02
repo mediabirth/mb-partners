@@ -135,10 +135,10 @@ export default function InboxPage() {
           ← 通知一覧
         </button>
         <div style={{ padding: '8px 22px 24px' }}>
-          <div style={{ fontSize: '.5rem', fontFamily: 'Inter', fontWeight: 600, letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: 6, color: detail.kind === 'tips' ? 'var(--amber)' : 'var(--muted2)' }}>
+          <div style={{ fontSize: '.5rem', fontFamily: 'Inter', fontWeight: 500, letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: 6, color: detail.kind === 'tips' ? 'var(--amber)' : 'var(--muted2)' }}>
             {detail.kind === 'news' ? 'お知らせ' : 'お役立ち'}
           </div>
-          <h1 style={{ fontSize: '1.18rem', fontWeight: 900, marginBottom: 4, lineHeight: 1.5 }}>{detail.title}</h1>
+          <h1 style={{ fontSize: '1.18rem', fontWeight: 500, marginBottom: 4, lineHeight: 1.5 }}>{detail.title}</h1>
           <span style={{ fontSize: '.62rem', color: 'var(--muted)', marginBottom: 14, display: 'block' }}>
             {detail.sent_at ? fmtFull(detail.sent_at) : ''}
           </span>
@@ -171,7 +171,7 @@ export default function InboxPage() {
     <div>
       <div style={{ padding: '22px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 700 }}>通知</h2>
+          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>通知</h2>
           {(tab === 'all' || tab === 'personal') && unreadCount > 0 && (
             <button onClick={markAllRead} style={{ fontSize: '.6rem', color: 'var(--c-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               すべて既読にする
@@ -189,7 +189,7 @@ export default function InboxPage() {
           ] as const).map(([val, lbl]) => (
             <button key={val} onClick={() => setTab(val)} style={{
               flex: 1, border: 'none', padding: '9px 2px', borderRadius: 8,
-              fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: '.7rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
               color: tab === val ? 'var(--txt)' : 'var(--muted2)',
               background: tab === val ? '#fff' : 'transparent',
               boxShadow: tab === val ? '0 2px 8px rgba(14,14,20,.08)' : 'none',
@@ -198,7 +198,7 @@ export default function InboxPage() {
             }}>
               {lbl}
               {val === 'personal' && unreadCount > 0 && (
-                <span style={{ background: 'var(--c-blue)', color: '#fff', borderRadius: 99, fontSize: '.52rem', padding: '1px 5px', fontFamily: 'Inter', fontWeight: 700 }}>
+                <span style={{ background: 'var(--c-blue)', color: '#fff', borderRadius: 99, fontSize: '.52rem', padding: '1px 5px', fontFamily: 'Inter', fontWeight: 500 }}>
                   {unreadCount}
                 </span>
               )}
@@ -267,7 +267,7 @@ function NotifRow({ n, onRead }: { n: Notification; onRead: () => void }) {
     }}>
       <NotifIcon type={n.ref?.type} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2, fontWeight: n.read_at ? 400 : 700 }}>
+        <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2, fontWeight: n.read_at ? 400 : 500 }}>
           {n.title}
           {!n.read_at && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--c-blue)', marginLeft: 7, verticalAlign: 1, animation: 'pulseDot 2.6s ease-in-out infinite' }}/>}
         </b>
