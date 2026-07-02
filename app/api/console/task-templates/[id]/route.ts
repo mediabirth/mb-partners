@@ -25,6 +25,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('trigger_key' in b) patch.trigger_key = b.trigger_key ? String(b.trigger_key).trim() : null
   if (b.sort != null) patch.sort = Number(b.sort) || 0
   if (typeof b.active === 'boolean') patch.active = b.active
+  // v3.1：タスク説明（ⓘポップオーバー用・登録ページで表示）。
+  if ('description' in b) patch.description = b.description ? String(b.description).trim().slice(0, 500) : null
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   const admin = await createServiceRoleClient()
   const { data, error } = await admin.from('cooperation_task_templates').update(patch).eq('id', id).select('*').single()

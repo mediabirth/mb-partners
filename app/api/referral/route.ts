@@ -121,14 +121,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    await notifySlackEvent('new_deal', `🆕 新規案件（紹介）: ${customerName} — ${service?.name ?? link.service_id}（${partner?.code ?? ''}）`)
+    await notifySlackEvent('new_deal', `新規案件: ${customerName} — ${service?.name ?? link.service_id}（${partner?.code ?? ''}）`)
 
-    // Batch B ①: 運営メール（Slackは既存のnew_dealゲート送信を流用・二重送信しない）。best-effort。
+    // 運営メール（Slackは既存のnew_dealゲート送信を流用・二重送信しない）。best-effort。
     try {
       const { sendOpsEmail } = await import('@/lib/notify')
       await sendOpsEmail(
-        `【MB Partners】新規案件（紹介）: ${customerName}`,
-        `新規案件が登録されました。\n・関わり方：紹介\n・お客さま：${customerName}\n・サービス：${service?.name ?? link.service_id}\n・パートナー：${partner?.code ?? '—'}`,
+        `【MB Partners】新規案件: ${customerName}`,
+        `新規案件が登録されました。\n・お客さま：${customerName}\n・メニュー：${service?.name ?? link.service_id}\n・パートナー：${partner?.code ?? '—'}`,
       )
     } catch { /* best-effort */ }
 

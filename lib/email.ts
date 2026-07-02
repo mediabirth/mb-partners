@@ -95,41 +95,41 @@ export async function sendReceiptEmail(params: {
   menuName?: string | null
   meetingAt?: string | null
   meetingUrl?: string | null
+  caseUrl?: string | null   // v3.1：案件ページURL（本文で「進捗はこちら」）
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
   if (!params.to) return { sent: false, skipped: 'no recipient' }
 
-  const kindLabel = params.kind === 'meeting' ? '商談予約' : params.kind === 'cooperation' ? '協力のお申し込み' : 'ご紹介の登録'
-  const engage = params.kind === 'cooperation' ? '協力' : '紹介'
+  // v3.1：パートナー向けから「協力/関わり方」の区分を排除。受付＝「ご紹介」で統一（商談予約のみ別ラベル）。
+  const kindLabel = params.kind === 'meeting' ? '商談予約' : 'ご紹介'
   const name = params.partnerName?.trim() || 'パートナー'
   const meeting = params.meetingAt
     ? new Date(params.meetingAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
     : null
+  const serviceLine = params.serviceName ? (params.menuName ? `${params.serviceName} ─ ${params.menuName}` : params.serviceName) : ''
+  const caseUrl = params.caseUrl?.trim() || ''
 
   const rows: [string, string][] = [
     ['お客さま', params.customerName],
-    ...(params.serviceName ? [['サービス', params.menuName ? `${params.serviceName} / ${params.menuName}` : params.serviceName] as [string, string]] : []),
-    ['関わり方', engage],
+    ...(serviceLine ? [['メニュー', serviceLine] as [string, string]] : []),
     ...(meeting ? [['商談日時', meeting] as [string, string]] : []),
   ]
 
   const meetLineText = params.meetingUrl ? `\n▼ オンライン会議（Google Meet）\n${params.meetingUrl}\n` : ''
+  const caseLineText = caseUrl ? `\n▼ 案件ページ（進捗はこちら）\n${caseUrl}\n` : ''
 
   const subject = `【MB Partners】${kindLabel}を受け付けました`
   const text =
 `${name} 様
 
-${kindLabel}を受け付けました。内容は以下のとおりです。
+${kindLabel}を受け付けました。
 
 ${rows.map(([k, v]) => `・${k}：${v}`).join('\n')}
 ${meetLineText}
-▼ この後の流れ
-1. MBが内容を確認します
-2. お客さまへ商談・ご提案
-3. 成約で報酬が発生（月末締め・翌月末払い）
-
-※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。紹介の有効期間は90日です。
+このあとはMBがお客さまへご連絡します。進捗は案件ページでご確認いただけます。
+${caseLineText}
+※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。
 
 ご不明な点は ${SUPPORT} までお問い合わせください。
 — MB Partners 運営事務局`
@@ -139,26 +139,26 @@ ${meetLineText}
   ${LOGO_BAR}
   <div style="background:#F6F6F8;border-radius:14px;padding:24px 22px">
     <p style="margin:0 0 14px">${name} 様</p>
-    <p style="margin:0 0 16px"><b>${kindLabel}</b>を受け付けました。</p>
+    <p style="margin:0 0 16px">${kindLabel}を受け付けました。</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:18px">
-      ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:90px">${k}</td><td style="padding:6px 0;font-weight:600">${v}</td></tr>`).join('')}
+      ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:90px">${k}</td><td style="padding:6px 0">${v}</td></tr>`).join('')}
     </table>
     ${params.meetingUrl ? `<div style="background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px">
       <div style="font-size:12px;color:#6E707D;margin-bottom:6px">オンライン会議（Google Meet）</div>
-      <a href="${params.meetingUrl}" style="color:#2563EB;font-weight:700;word-break:break-all">${params.meetingUrl}</a>
+      <a href="${params.meetingUrl}" style="color:#2563EB;word-break:break-all">${params.meetingUrl}</a>
     </div>` : ''}
     <div style="background:#fff;border-radius:10px;padding:14px 16px">
-      <div style="font-size:12px;font-weight:700;color:#4733E6;margin-bottom:8px">この後の流れ</div>
-      <div style="font-size:13px;color:#41414E">1. MBが内容を確認 → 2. 商談・ご提案 → 3. 成約で報酬（月末締め・翌月末払い）</div>
-      <div style="font-size:12px;color:#6E707D;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。紹介の有効期間は90日です。</div>
+      <div style="font-size:13px;color:#41414E">このあとはMBがお客さまへご連絡します。進捗は案件ページでご確認いただけます。</div>
+      ${caseUrl ? `<div style="margin-top:10px"><a href="${caseUrl}" style="color:#4733E6;word-break:break-all">案件ページを開く</a></div>` : ''}
+      <div style="font-size:12px;color:#6E707D;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。</div>
     </div>
   </div>
   <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
 
-  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名/関わり方は不変。
-  const custom = await resolveTemplateMedia('receipt', { name, kind: kindLabel, customer: params.customerName, service: params.serviceName ?? '', meeting: meeting ?? '' })
+  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名は不変。
+  const custom = await resolveTemplateMedia('receipt', { name, kind: kindLabel, customer: params.customerName, service: serviceLine, meeting: meeting ?? '', link: caseUrl })
   const finalText = custom?.body ?? text
   const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body, buttons: custom.buttons }) : html
   const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined

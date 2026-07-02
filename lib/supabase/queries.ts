@@ -116,21 +116,21 @@ async function attachCoverageTasks(services: ServiceWithMenus[]) {
     const admin = await createServiceRoleClient()
     const { data: tpls } = await admin
       .from('cooperation_task_templates')
-      .select('service_id, menu_id, label, sort')
+      .select('service_id, menu_id, label, sort, description')
       .eq('active', true).eq('required', true).order('sort')
-    const byService = new Map<string, { menu_id: string | null; label: string; sort: number }[]>()
-    for (const t of (tpls ?? []) as { service_id: string; menu_id: string | null; label: string; sort: number }[]) {
+    const byService = new Map<string, { menu_id: string | null; label: string; sort: number; description: string | null }[]>()
+    for (const t of (tpls ?? []) as { service_id: string; menu_id: string | null; label: string; sort: number; description: string | null }[]) {
       const arr = byService.get(t.service_id) ?? []
-      arr.push({ menu_id: t.menu_id, label: t.label, sort: t.sort })
+      arr.push({ menu_id: t.menu_id, label: t.label, sort: t.sort, description: t.description })
       byService.set(t.service_id, arr)
     }
     for (const svc of services) {
       const list = byService.get(svc.id) ?? []
       for (const m of svc.service_menus) {
-        m.coverage_tasks = list
-          .filter(t => t.menu_id == null || t.menu_id === m.id)
-          .sort((a, b) => a.sort - b.sort)
-          .map(t => t.label)
+        const matched = list.filter(t => t.menu_id == null || t.menu_id === m.id).sort((a, b) => a.sort - b.sort)
+        m.coverage_tasks = matched.map(t => t.label)
+        // v3.1：説明つきタスク（ⓘポップオーバー用・重複はメニュー側で除去）。
+        m.coverage_task_details = matched.map(t => ({ label: t.label, description: t.description }))
       }
     }
   } catch { /* fail-open: coverage_tasks 未設定 */ }
@@ -290,6 +290,8 @@ export type MenuRow = {
   // ③ 対応範囲の単一ソース：当該メニューに該当する required 協力タスク(cooperation_task_templates)のラベル。
   // 表示/同意UI用の read-only 派生値（getServicesWithMenus が付与）。④報酬ゲートとは無関係。
   coverage_tasks?: string[]
+  // v3.1：説明つき協力タスク（ⓘポップオーバー用・cooperation_task_templates.description 由来）。
+  coverage_task_details?: { label: string; description: string | null }[]
   // 段階3：新「メニュー（1報酬）」を表示用に additive 同梱（read-only・getServicesWithMenus が付与）。
   menus?: Menu[]
 }

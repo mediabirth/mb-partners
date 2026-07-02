@@ -2,16 +2,15 @@
 import { useEffect, useRef, useState } from 'react'
 import BookingDrawer from '@/components/BookingDrawer'
 
-// v2 案件ページ＝実行の場：「次にやること」（リンク送付 or 予約）＋ヒヤリング（保存で協力タスク自動チェック）。
-// ★リンクは現行生成のまま（/r/token・/book/partnerCode）を受け取って表示するだけ。deal本体・money非接触。
+// v3.1 案件ページ＝実行の場：「次にやること」（アポ型のみ：リンク送付 or 予約）＋ヒヤリング（保存で自動✓）。
+// 連絡型はアクションなし＝静かな状態カード。★リンクは /book/partnerCode を受け取って表示するだけ。money非接触。
 export default function DealNextActions({
-  dealId, method, hasAppointment, registerUrl, bookingUrl, customerEmail,
+  dealId, method, hasAppointment, bookingUrl, customerEmail,
   serviceName, defaultContact, defaultNeed, hearingEnabled, hearingInitial, hearingDone,
 }: {
   dealId: string
   method: 'send' | 'self'
   hasAppointment: boolean
-  registerUrl: string | null
   bookingUrl: string | null
   customerEmail: string | null
   serviceName: string | null
@@ -21,35 +20,36 @@ export default function DealNextActions({
   hearingInitial: string
   hearingDone: boolean
 }) {
-  const shareUrl = hasAppointment ? bookingUrl : registerUrl
   const [showBooking, setShowBooking] = useState(false)
   const [booked, setBooked] = useState<string | null>(null)
 
   return (
-    <div style={{ padding: '16px 20px 0' }}>
-      {/* ── 次にやること（最上部・2px accent枠・1つだけ） ── */}
-      {method === 'send' && shareUrl && (
-        <NextBox title={hasAppointment ? 'お客さまに面談日時調整リンクを送る' : 'お客さまに登録リンクを送る'}
-          desc={hasAppointment ? 'お客さまがカレンダーから日時を選べます。' : 'お客さまがご自身で入力します。その後はMBが対応します。'}>
-          <ShareLink url={shareUrl} serviceName={serviceName} defaultContact={defaultContact} defaultNeed={defaultNeed} />
+    <div style={{ padding: '4px 20px 0' }}>
+      {/* 次にやること（アポ型のみ・2px accent枠・最大1つ） */}
+      {hasAppointment && method === 'send' && bookingUrl && (
+        <NextBox title="お客さまに面談日時調整リンクを送る" desc="お客さまがカレンダーから日時を選べます。">
+          <ShareLink url={bookingUrl} serviceName={serviceName} defaultContact={defaultContact} defaultNeed={defaultNeed} />
         </NextBox>
       )}
-      {method === 'self' && hasAppointment && (
+      {hasAppointment && method === 'self' && (
         <NextBox title="面談日時を予約する" desc="空き枠から日時を選んで、この案件の商談を設定します。">
           {booked ? (
-            <p style={{ fontSize: '.72rem', color: 'var(--green)', fontWeight: 700, margin: 0 }}>
-              ✓ 商談 {new Date(booked).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
+            <p style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500, margin: 0 }}>
+              商談 {new Date(booked).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
             </p>
           ) : (
-            <button onClick={() => setShowBooking(true)} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>面談日時を予約する</button>
+            <button onClick={() => setShowBooking(true)} style={{ width: '100%', minHeight: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>面談日時を予約する</button>
           )}
         </NextBox>
       )}
-      {method === 'self' && !hasAppointment && (
-        <NextBox title="MBが対応します" desc="ご紹介ありがとうございます。この後はMBがお客さまへご連絡します。次にやることはありません。" />
+      {/* 連絡型：アクションなし＝静かな状態カード（枠なし） */}
+      {!hasAppointment && (
+        <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 15px', marginBottom: 14 }}>
+          <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>MBが対応中です。お客さまへご連絡し、状況はここに表示されます。</p>
+        </div>
       )}
 
-      {/* ── あなたのタスク：ヒヤリング（保存で協力タスク「ヒヤリング」を自動チェック） ── */}
+      {/* あなたのタスク：ヒヤリング（保存で対応タスク「ヒヤリング」を自動✓） */}
       {hearingEnabled && <HearingBox dealId={dealId} initial={hearingInitial} initiallyDone={hearingDone} />}
 
       {showBooking && (
@@ -63,11 +63,11 @@ export default function DealNextActions({
 function NextBox({ title, desc, children }: { title: string; desc: string; children?: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--blue-bg2)', border: '2px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px', marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-        <span style={{ fontSize: '.54rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 5, padding: '2px 7px', letterSpacing: '.04em' }}>次にやること</span>
-        <b style={{ fontSize: '.84rem', color: 'var(--blue-dk)' }}>{title}</b>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 5, padding: '2px 7px' }}>次にやること</span>
+        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--blue-dk)' }}>{title}</span>
       </div>
-      <p style={{ fontSize: '.63rem', color: '#52529E', margin: '0 0 12px', lineHeight: 1.6 }}>{desc}</p>
+      <p style={{ fontSize: 12, color: '#52529E', margin: '0 0 12px', lineHeight: 1.6 }}>{desc}</p>
       {children}
     </div>
   )
@@ -124,21 +124,21 @@ function HearingBox({ dealId, initial, initiallyDone }: { dealId: string; initia
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '15px 16px', marginBottom: 14 }}>
+    <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <b style={{ fontSize: '.8rem', fontWeight: 800 }}>あなたのタスク：ヒヤリング</b>
-        {done && <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 5, padding: '2px 7px' }}>✓ 完了</span>}
+        <span style={{ fontSize: 14, fontWeight: 500 }}>あなたのタスク：ヒヤリング</span>
+        {done && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 5, padding: '2px 7px' }}>完了</span>}
       </div>
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
+      <p style={{ fontSize: 12, color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
         お客さまの状況・ご要望をヒヤリングして入力してください。保存するとMBに共有され、このタスクは自動で完了になります。
       </p>
       <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
         placeholder="例：予算感・希望時期・現状の課題・キーマン など"
-        style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.82rem', lineHeight: 1.6, resize: 'vertical' }} />
-      <button onClick={save} disabled={saving} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 8 }}>
+        style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />
+      <button onClick={save} disabled={saving} style={{ width: '100%', marginTop: 8, minHeight: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
         {saving ? '保存中…' : '保存する'}
       </button>
-      {savedMsg && <p style={{ fontSize: '.64rem', color: savedMsg.includes('失敗') ? 'var(--red)' : 'var(--green)', margin: '8px 0 0', fontWeight: 700 }}>{savedMsg}</p>}
+      {savedMsg && <p style={{ fontSize: 12, color: savedMsg.includes('失敗') || savedMsg.includes('通信') ? 'var(--red)' : 'var(--muted2)', margin: '8px 0 0', fontWeight: 400 }}>{savedMsg}</p>}
     </div>
   )
 }

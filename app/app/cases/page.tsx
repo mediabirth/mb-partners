@@ -5,7 +5,6 @@ import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
 import { nextPayoutDate } from '@/lib/payout'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import ChannelMark from '@/components/ChannelMark'
 import EmptyState from '@/components/ui/EmptyState'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -198,9 +197,8 @@ export default async function CasesPage({
                             <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
                           )}
                           {(itemCounts[d.id] ?? 0) > 1 && (
-                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
+                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
                           )}
-                          <span style={{ flexShrink: 0 }}><ChannelMark channel={d.channel} /></span>
                         </div>
                         {subName && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subName}</div>}
                       </div>
@@ -209,7 +207,7 @@ export default async function CasesPage({
                       <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
                     ) : ['confirmed', 'paid'].includes(d.status) && d.amount > 0 ? (
                       /* ②B 確定報酬：成約/支払済(確定)のみ表示・あなたの報酬(既存計算済み値を読むだけ)。案件金額(MB受注総額)は出さない */
-                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.78rem', fontWeight: 700, color: 'var(--green)', letterSpacing: '-.012em' }}>
+                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.78rem', fontWeight: 500, color: 'var(--txt)', letterSpacing: '-.012em' }}>
                         報酬 ¥{d.amount.toLocaleString()}
                       </span>
                     ) : null}

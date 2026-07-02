@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import ChannelMark from '@/components/ChannelMark'
 import CountUp from '@/components/CountUp'
 import RewardHero from '@/components/ui/RewardHero'
 import BankChangeSection from './BankChangeSection'
@@ -94,8 +93,7 @@ export default async function RewardsPage() {
                   {d.services && <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={26} />}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 600 }}>{customerHonorific(d)}</span>
-                      <ChannelMark channel={d.channel} />
+                      <span style={{ fontWeight: 500 }}>{customerHonorific(d)}</span>
                     </div>
                     <div style={{ fontSize: '.59rem', color: 'var(--muted)', marginTop: 1 }}>
                       {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約・確定' : d.status === 'lost' ? '不成立' : d.status === 'in_progress' ? '対応中' : '受付'}

@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     trigger_key: b.kind === 'auto' && b.trigger_key ? String(b.trigger_key).trim() : null,
     sort: Number(b.sort) || 0,
     active: b.active !== false,
+    description: b.description ? String(b.description).trim().slice(0, 500) : null,
   }
   const admin = await createServiceRoleClient()
   const { data, error } = await admin.from('cooperation_task_templates').insert(row).select('*').single()

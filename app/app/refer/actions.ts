@@ -72,6 +72,8 @@ export async function submitPartnerReferral(formData: FormData) {
   const isConsultation = formData.get('isConsultation') === '1'
 
   if (!customerName) throw new Error('お客様情報は必須です')
+  // v3.1：電話番号かメールアドレスのどちらか一方は必須（相談起票を除く）。client と二重で担保。
+  if (!isConsultation && !(phone ?? '').trim() && !customerEmail) throw new Error('電話番号かメールアドレスのいずれかをご入力ください')
 
   const { data: partner } = await supabase
     .from('partners')
@@ -220,15 +222,23 @@ export async function submitPartnerReferral(formData: FormData) {
     created_by: user.id,
   })
 
-  await notifySlackEvent('new_deal', `🆕 新規案件（${isConsultation ? '相談・サービス未定／' : ''}${channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
+  // v3.1：パートナー向け通知から「協力/関わり方」の区分を排除（内部データ channel は不変）。
+  const caseUrl = `https://mb-partners.app/app/cases/${deal!.id}`
+  const menuName = (menu as { name?: string } | null)?.name ?? ''
+  const { data: svcRow } = isConsultation ? { data: null } : await supabase.from('services').select('name').eq('id', serviceId).single()
+  const svcName = svcRow?.name ?? ''
+  const menuLine = [svcName, menuName].filter(Boolean).join(' ─ ') || '—'
 
-  // Batch B ①: 運営メール（Slackは既存のnew_dealゲート送信を流用・二重送信しない）。best-effort。
+  await notifySlackEvent('new_deal', `新規案件${isConsultation ? '（相談・サービス未定）' : ''}: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
+
+  // 運営メール（配信>自動メッセージ 'ops-new-deal' テンプレ優先・無ければ既定文面）。best-effort。
   try {
     const { sendOpsEmail } = await import('@/lib/notify')
-    await sendOpsEmail(
-      `【MB Partners】新規案件（${isConsultation ? '相談・サービス未定' : channel === 'cooperation' ? '協力' : '紹介'}）: ${customerName}`,
-      `新規案件が登録されました。${isConsultation ? '\n・種別：相談（サービス未定）' : ''}\n・関わり方：${channel === 'cooperation' ? '協力' : '紹介'}\n・お客さま：${customerName}\n・登録：${profile?.name ?? 'パートナー'}`,
-    )
+    const { resolveTemplate } = await import('@/lib/notify/template-resolve')
+    const vars = { customer: customerName, menu: menuLine, partner: profile?.name ?? 'パートナー', link: caseUrl }
+    const opsFallback = `新規案件が登録されました。${isConsultation ? '\n・種別：相談（サービス未定）' : ''}\n・お客さま：${customerName}\n・メニュー：${menuLine}\n・登録：${profile?.name ?? 'パートナー'}\n・案件ページ：${caseUrl}`
+    const opsBody = (await resolveTemplate('ops-new-deal', vars)) ?? opsFallback
+    await sendOpsEmail(`【MB Partners】新規案件: ${customerName}`, opsBody)
   } catch { /* best-effort */ }
 
   // Audit log
@@ -241,19 +251,19 @@ export async function submitPartnerReferral(formData: FormData) {
     meta: { service_id: serviceId, partner_id: partner.id, menu_id: menuId },
   })
 
-  // C2④ パートナー本人へ受付確認メール（ベストエフォート）
+  // C2④ パートナー本人へ受付確認メール（ベストエフォート・v3.1：紹介で統一・案件ページURL付き）
   try {
     if (profile?.email) {
-      const { data: svc } = await supabase.from('services').select('name').eq('id', serviceId).single()
       const { sendReceiptEmail } = await import('@/lib/email')
       const { customerHonorific } = await import('@/lib/customer')
       await sendReceiptEmail({
         to: profile.email,
         partnerName: profile.name,
-        kind: channel === 'cooperation' ? 'cooperation' : 'referral',
+        kind: 'referral',
         customerName: customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }),
-        serviceName: svc?.name ?? null,
-        menuName: (menu as { name?: string } | null)?.name ?? null,
+        serviceName: svcName || null,
+        menuName: menuName || null,
+        caseUrl,
       })
     }
   } catch { /* best-effort */ }
