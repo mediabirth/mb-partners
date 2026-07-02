@@ -29,7 +29,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // SYNAPSE：ヘッダーのアイコンは撤去（導線は HOME ヒーローのノードへ移設）。既存ナビは不変。
   return (
     <SurfaceShell homeHref="/app" mypageHref="/app/mypage" settingsHref="/app/settings" name={profile?.name ?? null} color={profile?.color ?? null} nav={<AppNav />}>
-      <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
+      {/* v3.1 デザイン規律：/app 本文のみ、共有部品由来の太字(b/見出し/ボタン/チップ/タグ)を500へ静音化。
+          ★この <style> は /app レイアウト内のみ読み込まれ、セレクタも .app-quiet 配下に限定＝ベンダー/コンソールは不変。
+          ★ロゴ「MB Partners」・アバター頭文字・ナビは SurfaceShell(この配下外)＝従来700のまま（ブランド表現）。 */}
+      <style>{`.app-quiet :is(b,strong,.btn,.ui-btn,.ty-h1,.ty-h2,.eyebrow,.chip,.ui-tag){font-weight:500}`}</style>
+      <div className="app-quiet" style={{ display: 'contents' }}>
+        <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
+      </div>
     </SurfaceShell>
   )
 }
