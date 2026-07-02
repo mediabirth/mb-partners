@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
   // Full 4-step registration requires reward-receipt info + consent.
   const fullRegistration = lastName !== undefined || taxType !== undefined
   if (fullRegistration) {
-    if (!phone?.trim() || !address?.trim()) return NextResponse.json({ error: '電話番号と住所を入力してください' }, { status: 400 })
-    if (!['individual', 'corporate'].includes(taxType)) return NextResponse.json({ error: '税区分を選択してください' }, { status: 400 })
+    if (!phone?.trim()) return NextResponse.json({ error: '電話番号を入力してください' }, { status: 400 })
+    if (!['individual', 'corporate'].includes(taxType)) return NextResponse.json({ error: '区分を選択してください' }, { status: 400 })
     if (!bankName?.trim() || !branchName?.trim() || !accountType?.trim() || !accountNumber?.trim() || !accountHolder?.trim()) {
       return NextResponse.json({ error: '振込先口座をすべて入力してください' }, { status: 400 })
     }

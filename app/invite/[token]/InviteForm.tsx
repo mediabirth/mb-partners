@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 
 type Step = 1 | 2 | 3 | 4
 const STEP_LABELS = ['アカウント', '基本情報', '報酬受取', '確認と同意']
+// ⑤メジャーバンク（プルダウン）。無い場合は「その他」で自由入力。支店は自由入力（次段で銀行連動候補）。
+const MAJOR_BANKS = ['三菱UFJ銀行', '三井住友銀行', 'みずほ銀行', 'りそな銀行', 'ゆうちょ銀行', '楽天銀行', '住信SBIネット銀行', 'PayPay銀行', 'イオン銀行', 'GMOあおぞらネット銀行']
 
 const card: React.CSSProperties = { width: '100%', maxWidth: 430, background: '#fff', minHeight: '100vh', boxShadow: '0 0 48px rgba(14,14,20,.10)', display: 'flex', flexDirection: 'column' }
 const input: React.CSSProperties = { width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', color: 'var(--txt)', background: '#fff' }
@@ -29,15 +31,17 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
   // STEP1
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  // STEP2（招待時の氏名を「姓 名」で事前入力＝再入力させない）
-  const [lastName, setLastName] = useState(defaultName?.trim().split(/[\s　]+/)[0] ?? '')
-  const [firstName, setFirstName] = useState(defaultName?.trim().split(/[\s　]+/).slice(1).join(' ') ?? '')
-  const [nickname, setNickname] = useState('')
+  // STEP2（①招待時の氏名は「姓 名」でスペース区切りがある時だけ分割。無ければ空欄で本人入力＝フルネームが姓に入らない）
+  const nameParts = (defaultName ?? '').trim().split(/[\s　]+/).filter(Boolean)
+  const [lastName, setLastName] = useState(nameParts.length >= 2 ? nameParts[0] : '')
+  const [firstName, setFirstName] = useState(nameParts.length >= 2 ? nameParts.slice(1).join(' ') : '')
   const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
   // STEP3
   const [taxType, setTaxType] = useState<'individual' | 'corporate'>('individual')
-  const [bankName, setBankName] = useState('')
+  // ⑤銀行：メジャーバンクをプルダウン、「その他」で自由入力。
+  const [bankChoice, setBankChoice] = useState('')
+  const [bankOther, setBankOther] = useState('')
+  const bankName = bankChoice === '__other__' ? bankOther : bankChoice
   const [branchName, setBranchName] = useState('')
   const [accountType, setAccountType] = useState('普通')
   const [accountNumber, setAccountNumber] = useState('')
@@ -48,7 +52,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
   const [agreePrivacy, setAgreePrivacy] = useState(false)
 
   const step1ok = password.length >= 8 && password === passwordConfirm
-  const step2ok = !!lastName.trim() && !!firstName.trim() && !!phone.trim() && !!address.trim()
+  const step2ok = !!lastName.trim() && !!firstName.trim() && !!phone.trim()
   const step3ok = !!bankName.trim() && !!branchName.trim() && !!accountNumber.trim() && !!accountHolder.trim()
   const step4ok = agreeTerms && agreePrivacy
 
@@ -68,8 +72,8 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token, email, password,
-        lastName: lastName.trim(), firstName: firstName.trim(), nickname: nickname.trim(),
-        phone: phone.trim(), address: address.trim(),
+        lastName: lastName.trim(), firstName: firstName.trim(),
+        phone: phone.trim(),
         taxType, bankName: bankName.trim(), branchName: branchName.trim(), accountType,
         accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim(), invoiceNumber: invoiceNumber.trim(),
         agreeTerms, agreePrivacy,
@@ -101,7 +105,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '.08em', color: 'var(--blue)' }}>{code}</div>
             </div>
           )}
-          <button onClick={() => { router.push('/app'); router.refresh() }} className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }}>ダッシュボードへ</button>
+          <button onClick={() => { window.location.href = '/app' }} className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }}>ダッシュボードへ</button>
         </div>
       </div>
     )
@@ -150,25 +154,30 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
                 <div style={{ flex: 1 }}><Field label="姓 *"><input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="山田" style={input} /></Field></div>
                 <div style={{ flex: 1 }}><Field label="名 *"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="太郎" style={input} /></Field></div>
               </div>
-              <Field label="ニックネーム（表示名・後から変更可）"><input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="未入力ならお名前を表示" style={input} /></Field>
               <Field label="電話番号 *"><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" style={input} /></Field>
-              <Field label="住所 *"><input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="大阪府〇〇市〇〇 1-2-3" style={input} /></Field>
             </>
           )}
 
           {step === 3 && (
             <>
-              <Field label="税区分 *">
+              <Field label="区分 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
                     <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 700, fontSize: '.8rem', cursor: 'pointer' }}>{l}</button>
                   ))}
                 </div>
               </Field>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }}><Field label="銀行 *"><input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="〇〇銀行" style={input} /></Field></div>
-                <div style={{ flex: 1 }}><Field label="支店 *"><input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="〇〇支店" style={input} /></Field></div>
-              </div>
+              <Field label="銀行 *">
+                <select value={bankChoice} onChange={(e) => setBankChoice(e.target.value)} style={input}>
+                  <option value="">選択してください</option>
+                  {MAJOR_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                  <option value="__other__">その他（自由入力）</option>
+                </select>
+                {bankChoice === '__other__' && (
+                  <input value={bankOther} onChange={(e) => setBankOther(e.target.value)} placeholder="例：〇〇信用金庫" style={{ ...input, marginTop: 8 }} />
+                )}
+              </Field>
+              <Field label="支店 *"><input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="例：渋谷支店" style={input} /></Field>
               <Field label="種別 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {['普通', '当座'].map((v) => (
@@ -187,11 +196,9 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
                 {[
                   ['お名前', `${lastName} ${firstName}`],
-                  ['ニックネーム', nickname || '（お名前を表示）'],
                   ['メール', email],
                   ['電話番号', phone],
-                  ['住所', address],
-                  ['税区分', taxType === 'individual' ? '個人' : '法人'],
+                  ['区分', taxType === 'individual' ? '個人' : '法人'],
                   ['振込先', `${bankName} ${branchName} ${accountType} ${accountNumber}`],
                   ['口座名義', accountHolder],
                   ['インボイス', invoiceNumber || '未登録'],
