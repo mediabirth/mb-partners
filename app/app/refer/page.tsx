@@ -9,9 +9,13 @@ import { trackFunnel } from '@/lib/funnel-client'
 import CountUp from '@/components/CountUp'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
 import { coverageDesc } from '@/lib/coverage-descriptions'
+import { rewardValueText, rewardPillText } from '@/lib/reward-format'
 import { getOrCreateReferralToken, submitPartnerReferral, getPartnerInfo } from './actions'
 
 type Step = 'service' | 'menu' | 'form' | 'consult'
+
+// v2: 名前空欄で「送る」時の表示用プレースホルダ（案件ページで「お客さま入力待ち」を表現）。
+const CUSTOMER_PENDING = '（お客さま入力待ち）'
 
 // ── 紹介リンクのB2B共有 文面テンプレ（1箇所に集約・後で編集可能）──────────────
 // 事業者向けの丁寧な日本語ビジネス紹介文。{url} に表示中の partner 固有リンク(/r/…)が入る。
@@ -64,29 +68,30 @@ function CoopBadge() {
 }
 
 // ── リファラルWave1：menu_rewards から統一記法の表示を導出（★金額の計算・意味は不変・表示整形のみ）──
-function rewardLabelFromReward(r: MenuReward | null): string {
-  if (!r) return ''
-  if (r.reward_type === 'fixed') return `¥${Number(r.reward_value).toLocaleString()}`
-  if (r.reward_type === 'continuous') return `継続 粗利${r.reward_value}%/月`
-  return `粗利の${r.reward_value}%`
-}
-function rewardPill(r: MenuReward): string { return `報酬 ${rewardLabelFromReward(r)}` }
+//    Wave2でコンソールと共通化：導出ロジックは lib/reward-format に一本化。
+function rewardLabelFromReward(r: MenuReward | null): string { return r ? rewardValueText(r) : '' }
+function rewardPill(r: MenuReward): string { return rewardPillText(r) }
 // 成果地点(reward_trigger)→平易な確定条件文（データ由来・末尾の「後/時」を落として「〜で確定」）。
 function confirmWording(r: MenuReward): string {
   const t = (r.reward_trigger ?? '').trim().replace(/(後に|後|時に|時)$/, '')
   if (t) return `${t}で確定`
   return r.reward_type === 'fixed' ? '契約成立で確定' : '契約完了で確定'
 }
-// STEP1 サービス別 報酬レンジ（menu_rewards から・表示専用）。
+// STEP1 サービス別 報酬レンジ（menu_rewards から・表示専用・v2最小表記／1色）。
+// 「報酬 ¥30,000〜」「報酬 ¥30,000〜¥100,000」「報酬 成約額に応じて」。複合表記・色分けはしない。
 function serviceRewardRange(svc: ServiceWithMenus): string {
   const rewards = svc.service_menus.flatMap(sm => (sm.menus ?? []).flatMap(m => m.rewards ?? []))
   if (rewards.length === 0) return ''
   const fixedVals = rewards.filter(r => r.reward_type === 'fixed').map(r => Number(r.reward_value || 0)).filter(v => v > 0)
-  const parts: string[] = []
-  if (fixedVals.length) parts.push(`¥${Math.min(...fixedVals).toLocaleString()}〜`)
-  if (rewards.some(r => r.reward_type === 'rate')) parts.push('＋成約額連動')
-  if (rewards.some(r => r.reward_type === 'continuous')) parts.push('継続あり')
-  return parts.join(' ') || '報酬あり'
+  const hasVariable = rewards.some(r => r.reward_type === 'rate' || r.reward_type === 'continuous')
+  if (fixedVals.length) {
+    const min = Math.min(...fixedVals), max = Math.max(...fixedVals)
+    if (hasVariable) return `報酬 ¥${min.toLocaleString()}〜`
+    if (max > min)   return `報酬 ¥${min.toLocaleString()}〜¥${max.toLocaleString()}`
+    return `報酬 ¥${min.toLocaleString()}`
+  }
+  if (hasVariable) return '報酬 成約額に応じて'
+  return '報酬あり'
 }
 
 export default function ReferPage() {
@@ -99,7 +104,8 @@ export default function ReferPage() {
   const [step, setStep]                   = useState<Step>('service')
   const [selSvc, setSelSvc]               = useState<ServiceWithMenus | null>(null)
   const [selMenu, setSelMenu]             = useState<MenuRow | null>(null)
-  const [coopMode, setCoopMode]           = useState(false)
+  const [coopMode, setCoopMode]           = useState(false)   // ★内部のみ：reward_type由来のchannel判定（fixed→referral / rate・continuous→cooperation）。UI表示には出さない。
+  const [introMethod, setIntroMethod]     = useState<'send' | 'self'>('send')  // ② どのように紹介するか（送る／自分で）
   const [customerType, setCustomerType]   = useState<'individual' | 'corporate'>('individual')
   const [customerName, setCustomerName]   = useState('')
   const [companyName, setCompanyName]     = useState('')
@@ -164,8 +170,8 @@ export default function ReferPage() {
     setSelMenuRef(menu.id)             // deals.menu_ref（メニュー）
     setSelMenuName(menu.name)          // パンくず表示用
     setSelReward(reward)               // deals.reward_ref（報酬）＋ reward_snapshot 源
-    setCoopMode(reward.reward_type === 'rate' || reward.reward_type === 'continuous')  // 継続も粗利ベース＝協力
-    setCovChecked([])
+    setCoopMode(reward.reward_type === 'rate' || reward.reward_type === 'continuous')  // ★channel判定のみ（表示語彙には出さない）
+    setCovChecked([]); setConsent(false); setIntroMethod('send')
     loadToken(selSvc!.id); setStep('form')
   }
 
@@ -224,27 +230,40 @@ export default function ReferPage() {
     fd.set('customerEmail', customerEmail.trim()) // 任意：確認/リマインドの顧客送付に使用
   }
 
+  // v2: ④「紹介する」→ deal作成成功→案件ページ直行（完了画面は廃止）。
+  // ★channel は reward_type 由来（fixed→referral / rate・continuous→cooperation）で不変。
+  // ★「送る」選択時は名前空欄OK（お客さまが後で入力）。「自分で」選択時は名前必須（現行の成立条件）。
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    const ce = customerError(); if (ce) { setError(ce); return }
-    if (!consent) { setError('顧客の同意確認が必要です'); return }
-    if (coopMode && !allCoverageChecked) { setError('協力タスクの各項目をご確認ください'); return }
+    const nameEmpty = customerType === 'corporate' ? !companyName : !customerName
+    if (introMethod === 'self') {
+      const ce = customerError(); if (ce) { setError(ce); return }
+    }
+    if (!consent) { setError('内容の確認が必要です'); return }
     const fd = new FormData()
     fd.set('serviceId', selSvc!.id)
     fd.set('menuId', selMenu?.id ?? '')
-    applyCustomerFields(fd)
+    if (introMethod === 'send' && nameEmpty) {
+      // 名前空欄で送る＝「お客さま入力待ち」。action の必須(customerName)を満たす表示用プレースホルダ。
+      fd.set('customerType', customerType)
+      fd.set('customerName', CUSTOMER_PENDING)
+      fd.set('customerEmail', customerEmail.trim())
+    } else {
+      applyCustomerFields(fd)
+    }
     fd.set('phone', phone)
     fd.set('memo', memo)
     fd.set('channel', coopMode ? 'cooperation' : 'referral')
     if (selMenuRef) fd.set('menuRef', selMenuRef)   // メニュー参照
     if (selReward) fd.set('rewardRef', selReward.id) // 報酬参照（reward_snapshot 源）
-    if (coopMode) fd.set('coverageAgreed', coverageAgreedPayload())
+    // ③1チェック＝全タスク一括確認（協力チャネルのみ・従来の coverage_agreed 列に一括で記録）。
+    if (coopMode) fd.set('coverageAgreed', JSON.stringify({ labels: coverageTasks, at: new Date().toISOString() }))
     startTransition(async () => {
       try {
         const res = await submitPartnerReferral(fd)
-        if (res?.dealId) setDealId(res.dealId)
-        setDone(true)
+        if (res?.dealId) router.push(`/app/cases/${res.dealId}?next=${introMethod}`)
+        else setError('登録に失敗しました')
       } catch (err: any) { setError(err.message ?? '登録に失敗しました') }
     })
   }
@@ -266,27 +285,10 @@ export default function ReferPage() {
     startTransition(async () => {
       try {
         const res = await submitPartnerReferral(fd)
-        if (res?.dealId) setDealId(res.dealId)
-        setDone(true)
+        if (res?.dealId) router.push(`/app/cases/${res.dealId}`)
+        else setError('起票に失敗しました')
       } catch (err: any) { setError(err.message ?? '起票に失敗しました') }
     })
-  }
-
-  // 協力「自分で予約」: 予約確定の瞬間に協力deal を作成して dealId を返す（同意内包）
-  async function coopCreateDeal(): Promise<string | null> {
-    const ce = customerError(); if (ce) { setError(ce); return null }
-    if (!allCoverageChecked) { setError('協力タスクの各項目をご確認ください'); return null }
-    const fd = new FormData()
-    fd.set('serviceId', selSvc!.id)
-    fd.set('menuId', selMenu?.id ?? '')
-    applyCustomerFields(fd)
-    fd.set('phone', phone)
-    fd.set('memo', memo)
-    fd.set('channel', 'cooperation')
-    if (selMenuRef) fd.set('menuRef', selMenuRef)
-    if (selReward) fd.set('rewardRef', selReward.id)
-    fd.set('coverageAgreed', coverageAgreedPayload())
-    try { const res = await submitPartnerReferral(fd); return res?.dealId ?? null } catch { return null }
   }
 
   function resetForNext() {
@@ -301,58 +303,13 @@ export default function ReferPage() {
   const linkUrl    = token       ? `${location.origin}/r/${token}` : ''
   const bookingUrl = partnerCode ? `${location.origin}/book/${partnerCode}` : ''
 
-  // ③ 協力タスク同意（選んだ報酬の協力タスク）。各項目に静的説明＋項目別チェックを出す。
-  const coopCoverage = coopMode ? (selReward?.tasks ?? []).map(label => ({ label })) : []
-  const allCoverageChecked = coopCoverage.every(s => covChecked.includes(s.label))
-  const coverageGateOk = !coopMode || allCoverageChecked   // 紹介は従来通り（ゲート無し）。協力は全included項目チェック必須。
-  const toggleCov = (label: string) =>
-    setCovChecked(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label])
-  const coverageAgreedPayload = () => JSON.stringify({ labels: covChecked, at: new Date().toISOString() })
+  // v2 ③「あなたが担うこと」：メニューの協力タスク（cooperation_task_templates 由来・重複除去）。表示＋一括確認1チェック。
+  const coverageTasks = [...new Set((selMenu as { coverage_tasks?: string[] } | null)?.coverage_tasks ?? [])]
+  // v2 ②の担い出し分け：報酬の担い＝rate/continuous（=coopMode）はアポイント担当→面談日時調整(/book/)、
+  //   fixed は登録リンク(/r/)。★reward_type 由来のメニュー/報酬単位データで判定（ハードコードなし）。
+  //   協力タスクテンプレはサービス単位のためメニュー識別に使えず、coopMode を担い判定に用いる。
+  const hasAppointment = coopMode
 
-  if (done) {
-    const hl = rewardLabelFromReward(selReward)
-    return (
-      <div className="page-anim" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 380, padding: '40px 28px', textAlign: 'center' }}>
-        {/* ⑥ 煽りでなく感謝。控えめなチェック */}
-        <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="2.2"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </div>
-        <h2 style={{ fontSize: '1.12rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-.01em' }}>
-          {coopMode ? 'お預かりしました' : 'お申し込みありがとうございます'}
-        </h2>
-        <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 18 }}>
-          MBが内容を確認し、次のステップへご案内します。
-          {hl && <><br/><span style={{ color: 'var(--muted)' }}>報酬の目安：{hl}（成約時）</span></>}
-        </p>
-
-        {bookedAt && (
-          <p style={{ fontSize: '.7rem', color: 'var(--green)', fontWeight: 700, marginBottom: 12 }}>
-            ✓ 商談 {new Date(bookedAt).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
-          </p>
-        )}
-
-        {/* ④a: 初回紹介の完了直後にソフト前置きで通知許可を取得（受け取る時のみネイティブ許可） */}
-        <div style={{ width: '100%', maxWidth: 320, marginBottom: 4, display: 'flex', justifyContent: 'center' }}>
-          <PushOptIn />
-        </div>
-
-        {/* 次の一歩 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
-          <button onClick={resetForNext} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>続けて登録する</button>
-          {dealId && !bookedAt && (
-            <button onClick={() => setShowBooking(true)} className="ui-btn ui-btn--secondary ui-btn--lg lift" style={{ width: '100%' }}>商談を設定する（任意）</button>
-          )}
-          <button onClick={() => router.push('/app/cases')} style={{ width: '100%', background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 600, padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit' }}>
-            案件一覧を見る →
-          </button>
-        </div>
-
-        {showBooking && dealId && (
-          <BookingDrawer dealId={dealId} defaultCustomerEmail={customerEmail} onClose={() => setShowBooking(false)} onConfirmed={(at) => setBookedAt(at)} />
-        )}
-      </div>
-    )
-  }
 
   return (
     <div>
@@ -382,20 +339,19 @@ export default function ReferPage() {
                 )}
               </div>
             )}
-            {/* ★顧客ニーズ起点：太字=紹介対象(target_audience)／従属=ブランド名・カテゴリ／accent=報酬レンジ */}
+            {/* ★v2最小：カード＝2行のみ（太字=紹介対象／1色=報酬レンジ最小表記）。ブランド名・カテゴリ羅列・複合表記・色分けは廃止。 */}
             {services.map(svc => {
-              const audience = (svc as { target_audience?: string | null }).target_audience || svc.subtitle || svc.description || ''
+              const audience = (svc as { target_audience?: string | null }).target_audience || svc.name
               const range = serviceRewardRange(svc)
               return (
                 <button key={svc.id} onClick={() => pickService(svc)} className="card-hover lift ui-card"
-                  style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '15px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
+                  style={{ width: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '16px 16px', marginBottom: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', overflow: 'hidden', position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                     <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={44} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '.9rem', fontWeight: 900, letterSpacing: '-.01em', lineHeight: 1.35 }}>{audience || svc.name}</div>
-                      <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}{svc.subtitle ? ` · ${svc.subtitle}` : ''}</div>
+                      <div style={{ fontSize: '.9rem', fontWeight: 900, letterSpacing: '-.01em', lineHeight: 1.35 }}>{audience}</div>
                       {range && (
-                        <div style={{ fontSize: '.66rem', fontWeight: 800, color: svc.color || 'var(--c-blue)', marginTop: 5, fontFamily: 'Inter' }}>{range}</div>
+                        <div style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--muted2)', marginTop: 4, fontFamily: 'Inter' }}>{range}</div>
                       )}
                     </div>
                     <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--bg2)', color: 'var(--muted)', fontSize: '.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>›</span>
@@ -411,8 +367,8 @@ export default function ReferPage() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.86rem', fontWeight: 800 }}>どれか分からない・迷っている</div>
-                <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>まず相談として起票。面談でぴったりのサービスを決めます。</div>
+                <div style={{ fontSize: '.86rem', fontWeight: 800 }}>迷ったらまず相談</div>
+                <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>MBが一緒にサービスを決めます。</div>
               </div>
               <span style={{ color: 'var(--muted)', fontSize: '.95rem', flexShrink: 0 }}>›</span>
             </button>
@@ -528,220 +484,145 @@ export default function ReferPage() {
         </div>
       )}
 
-      {/* ── Step 3: Form ─────────────────────────────────────── */}
+      {/* ── Step 3: 登録（①どなたを ②どのように ③あなたが担うこと ④紹介する）縦一本 ── */}
       {step === 'form' && selSvc && (
-        <div>
-          <button onClick={() => {
-            const optionCount = selSvc.service_menus.filter(m => m.ref_enabled !== false).length
-              + selSvc.service_menus.filter(m => m.coop_enabled === true).length
-            setStep(optionCount > 1 ? 'menu' : 'service')
-          }}
+        <div className="page-anim">
+          <button onClick={() => setStep('menu')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.7rem', color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             ← 戻る
           </button>
-          <div style={{ padding: '10px 20px 6px' }}>
+          {/* ヘッダ：パンくず＋見出し＋報酬ピル（成約時・翌月末払い） */}
+          <div style={{ padding: '10px 20px 8px' }}>
             <div className="eyebrow">{selSvc.name}{selMenuName ? ` ─ ${selMenuName}` : ''}</div>
-            <h2 style={{ fontSize: '.96rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>
-              {coopMode ? 'この案件に協力する' : 'お客さまを紹介する'}
-            </h2>
-          </div>
-
-          {/* ★報酬¥0バグ修正：選択した実際の menu_reward(selReward) から表示（selMenu の旧refは0のため誤表示だった） */}
-          {rewardLabelFromReward(selReward) && (
-            <div style={{ margin: '6px 20px 14px', display: 'flex', alignItems: 'baseline', gap: 8, color: 'var(--muted)' }}>
-              <span style={{ fontSize: '.66rem' }}>報酬の目安</span>
-              <span style={{ fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 700, color: 'var(--txt)' }}>{rewardLabelFromReward(selReward)}</span>
-              <span style={{ fontSize: '.6rem' }}>（成約時）</span>
-            </div>
-          )}
-
-          {/* この後の流れ 1-2-3 */}
-          <div style={{ margin: '0 20px 14px', display: 'flex', gap: 8 }}>
-            {[
-              { n: '1', t: 'MBが対応', d: '内容を確認' },
-              { n: '2', t: '商談・提案', d: 'お客さまへ' },
-              { n: '3', t: '成約で報酬', d: '翌月末払い' },
-            ].map(s => (
-              <div key={s.n} style={{ flex: 1, background: '#fff', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 8px', textAlign: 'center' }}>
-                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--c-blue)', fontSize: '.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontFamily: 'Inter' }}>{s.n}</div>
-                <div style={{ fontSize: '.64rem', fontWeight: 800 }}>{s.t}</div>
-                <div style={{ fontSize: '.55rem', color: 'var(--muted2)', marginTop: 1 }}>{s.d}</div>
+            <h2 style={{ fontSize: '1.02rem', fontWeight: 900, marginTop: 6, letterSpacing: '-.01em' }}>お客さまを紹介する</h2>
+            {selReward && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <span style={{ display: 'inline-block', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '4px 12px' }}>{rewardPill(selReward)}</span>
+                <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>成約時・翌月末払い</span>
               </div>
-            ))}
-          </div>
-
-          {/* ── 経路B（主役）: リンク/予約リンクを送って本人に進めてもらう（枠線2px・いちばん簡単） ── */}
-          <div style={{ margin: '0 20px 12px', background: 'var(--blue-bg2)', border: '2px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '.56rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 6, padding: '2px 7px', letterSpacing: '.04em' }}>いちばん簡単</span>
-              <b style={{ fontSize: '.86rem', color: 'var(--blue-dk)' }}>{coopMode ? '予約リンクを送るだけ' : 'リンクを送るだけ'}</b>
-            </div>
-            <p style={{ fontSize: '.64rem', color: '#52529E', margin: '0 0 12px', lineHeight: 1.6 }}>
-              {coopMode
-                ? 'お客さまがカレンダーから日時を直接選べます。あなたの作業はこれで完了。'
-                : 'お客さまがご自身で登録。あなたの作業はこれで完了。'}
-            </p>
-            {!coopMode && (token ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 8, padding: '11px 12px', marginBottom: 8 }}>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: '.7rem', fontFamily: 'Inter', fontWeight: 600 }}>
-                    {linkUrl.replace(/^https?:\/\//, '')}
-                  </span>
-                  <button onClick={copyLink} style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: copied ? 'var(--green)' : 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
-                    {copied ? 'COPIED' : 'COPY'}
-                  </button>
-                </div>
-                {/* B2B共有導線：メール(主導線・先頭/目立つ)＋LINE。共有対象は表示中の紹介リンク linkUrl(/r/…)。QRは現状維持。 */}
-                <button onClick={shareEmail} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-                  メールで送る
-                </button>
-                <button onClick={shareLine} className="lift" style={{ width: '100%', minHeight: 44, background: '#06C755', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.07.7.2.8.5.07.27.05.7.02.97l-.13.8c-.04.24-.2.94.82.51 1.02-.43 5.5-3.24 7.5-5.55C20.6 14.9 22 13.1 22 11c0-4.4-4.5-8-10-8z"/></svg>
-                  LINEで送る
-                </button>
-                <button onClick={() => { if (!showQR) trackFunnel('share', { channel: 'qr', token }); setShowQR(v => !v) }} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', marginTop: 0 }}>QRコードを表示</button>
-                {showQR && <QRModal linkUrl={linkUrl} onClose={() => setShowQR(false)} />}
-                {/* AIで送る文面を作る（主役カード内に昇格・機能不変） */}
-                <div style={{ marginTop: 10 }}>
-                  <AiIntroPanel defaultContact={customerType === 'corporate' ? companyName : customerName} defaultService={selSvc.name} defaultNeed={memo} />
-                </div>
-              </>
-            ) : !coopMode ? (
-              <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>リンクを生成中…</p>
-            ) : null)}
-            {coopMode && bookingUrl && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 8, padding: '11px 12px', marginBottom: 8 }}>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: '.7rem', fontFamily: 'Inter', fontWeight: 600 }}>
-                    {bookingUrl.replace(/^https?:\/\//, '')}
-                  </span>
-                  <button onClick={copyBooking} style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: bookingCopied ? 'var(--green)' : 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
-                    {bookingCopied ? 'COPIED' : 'COPY'}
-                  </button>
-                </div>
-                {/* 同一画面2択: 自分で予約する → その場でカレンダー展開→枠選択→予約で協力deal＋商談予約を同時実行 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
-                  <span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} /><span style={{ fontSize: '.56rem', color: '#7676B0', fontWeight: 700 }}>または</span><span style={{ flex: 1, height: 1, background: 'var(--blue-bg)' }} />
-                </div>
-                <button type="button" onClick={() => { const ce = customerError(); if (ce) { setError('自分で予約する前に、下の「お客様情報」を入力してください'); return } if (!allCoverageChecked) { setError('自分で予約する前に、下の「協力タスクの確認」で各項目をご確認ください'); return } setError(''); setShowSelfBook(true) }}
-                  className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>自分で予約する</button>
-                {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
-              </>
             )}
           </div>
 
-          {/* ── 経路A（従属）: 折りたたみ＝代わりにここで登録（機能不変・開閉のみ） ── */}
-          <details className="ui-card" style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '4px 18px 16px' }}>
-            <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '12px 0 4px', fontSize: '.78rem', fontWeight: 800, color: 'var(--txt)' }}>
-              {coopMode ? '代わりにここで登録する（自分で協力する）' : '代わりにここで登録する（お名前だけでOK・連絡先は任意）'}
-            </summary>
-            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '2px 0 12px', lineHeight: 1.6 }}>お客さまに代わって、ここで登録することもできます。連絡先・メモは任意です。</p>
-            <form onSubmit={handleSubmit}>
-              {/* ⑦ お客様の属性 */}
-              <div className="fld">
-                <label>お客様の種別</label>
+          <form onSubmit={handleSubmit} style={{ padding: '6px 20px 30px' }}>
+            {/* ① どなたを紹介しますか？ */}
+            <StepCard n="1" title="どなたを紹介しますか？">
+              <div className="fld" style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
                     <button type="button" key={v} onClick={() => setCustomerType(v)}
                       style={{ flex: 1, padding: '9px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer',
                         border: `1.5px solid ${customerType === v ? 'var(--c-blue)' : 'var(--line)'}`,
-                        background: customerType === v ? 'var(--c-blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>
-                      {l}
-                    </button>
+                        background: customerType === v ? 'var(--c-blue)' : '#fff', color: customerType === v ? '#fff' : 'var(--txt)' }}>{l}</button>
                   ))}
                 </div>
               </div>
               {customerType === 'individual' ? (
                 <div className="fld">
-                  <label>{coopMode ? 'お客様のお名前' : 'ご紹介先のお名前'} <span style={{ color: 'var(--red)' }}>*</span></label>
+                  <label>お客さまのお名前{introMethod === 'self' && <span style={{ color: 'var(--red)' }}> *</span>}</label>
                   <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" />
                 </div>
               ) : (
                 <>
-                  <div className="fld">
-                    <label>会社名 <span style={{ color: 'var(--red)' }}>*</span></label>
-                    <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" />
-                  </div>
-                  <div className="fld">
-                    <label>ご担当者名（任意）</label>
-                    <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" />
-                  </div>
-                  <div className="fld">
-                    <label>部署・役職（任意）</label>
-                    <input value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" />
-                  </div>
+                  <div className="fld"><label>会社名{introMethod === 'self' && <span style={{ color: 'var(--red)' }}> *</span>}</label>
+                    <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" /></div>
+                  <div className="fld"><label>ご担当者名（任意）</label>
+                    <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" /></div>
+                  <div className="fld"><label>部署・役職（任意）</label>
+                    <input value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" /></div>
                 </>
               )}
-              <div className="fld">
-                <label>連絡先（任意）</label>
-                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" />
+              <div className="fld"><label>連絡先（任意）</label>
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" /></div>
+              <div className="fld" style={{ marginBottom: 6 }}><label>メモ（任意）</label>
+                <input value={memo} onChange={e => setMemo(e.target.value)} placeholder="7月に引越し希望 など" /></div>
+              <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '2px 2px 0', lineHeight: 1.6 }}>リンクを送る場合、お名前は空欄でも大丈夫です（お客さまが入力します）。</p>
+            </StepCard>
+
+            {/* ② どのように紹介しますか？（メニューの担いで言葉を出し分け） */}
+            <StepCard n="2" title="どのように紹介しますか？">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <MethodRadio active={introMethod === 'send'} onSelect={() => setIntroMethod('send')} badge="いちばん簡単"
+                  title={hasAppointment ? 'お客さまに面談日時調整リンクを送る' : 'お客さまに登録リンクを送る'}
+                  desc={hasAppointment ? 'お客さまがご自身で入力・日時を選びます。' : 'お客さまがご自身で入力します。その後はMBが対応します。'} />
+                <MethodRadio active={introMethod === 'self'} onSelect={() => setIntroMethod('self')}
+                  title={hasAppointment ? 'あなたが面談日時を予約する' : 'あなたが入力して紹介する'}
+                  desc={hasAppointment ? '次の案件ページで、空き枠から日時を予約できます。' : '上に入力した内容で紹介します。お客さまへの連絡はMBが行います。'} />
               </div>
-              <div className="fld">
-                <label>顧客メールアドレス（任意）</label>
-                <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" />
-                <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '4px 2px 0', lineHeight: 1.5 }}>ご入力いただくと、商談予約の確認・リマインドをお客様にもお送りします。</p>
-              </div>
-              <div className="fld">
-                <label>メモ（任意）</label>
-                <input value={memo} onChange={e => setMemo(e.target.value)} placeholder={coopMode ? '担当可能なエリア・スケジュール等' : '7月に引越し希望 など'} />
-              </div>
-              {/* ③ 対応範囲の確認（協力時のみ）。included項目を個別に説明＋項目ごとに同意チェック。後で揉めない最も厳密な同意。 */}
-              {coopMode && coopCoverage.length > 0 && (
-                <div style={{ border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '13px 14px', marginBottom: 12, background: '#fff' }}>
-                  <div style={{ fontSize: '.72rem', fontWeight: 800, color: 'var(--blue-dk)', marginBottom: 3 }}>協力タスクの確認</div>
-                  <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '0 0 11px', lineHeight: 1.6 }}>
-                    あなたが担う各項目をご確認のうえ、すべてにチェックしてください。
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {coopCoverage.map(s => {
-                      const on = covChecked.includes(s.label)
-                      const desc = coverageDesc(s.label)
+            </StepCard>
+
+            {/* ③ あなたが担うこと（規約風・確認は1チェック） */}
+            <div className="ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: '.74rem', fontWeight: 800, marginBottom: 8 }}>あなたが担うこと</div>
+              <div style={{ background: 'var(--bg2)', borderRadius: 10, padding: '12px 13px', marginBottom: 12 }}>
+                <p style={{ fontSize: '.64rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>この紹介では、次の役割をあなたが担当します。</p>
+                {coverageTasks.length > 0 ? (
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {coverageTasks.map(label => {
+                      const d = coverageDesc(label)
                       return (
-                        <label key={s.label} htmlFor={`cov-${s.label}`}
-                          style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 11px', borderRadius: 10, cursor: 'pointer',
-                            border: `1.5px solid ${on ? 'var(--blue)' : 'var(--line)'}`, background: on ? 'var(--blue-bg2)' : '#fff' }}>
-                          <input type="checkbox" id={`cov-${s.label}`} checked={on} onChange={() => toggleCov(s.label)}
-                            style={{ marginTop: 1, accentColor: 'var(--c-blue)', width: 15, height: 15, flexShrink: 0 }} />
-                          <span>
-                            <span style={{ display: 'block', fontSize: '.7rem', fontWeight: 800, color: 'var(--txt)' }}>{s.label}</span>
-                            {desc && <span style={{ display: 'block', fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.55 }}>{desc}</span>}
+                        <li key={label} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <span style={{ color: 'var(--c-blue)', marginTop: 2, flexShrink: 0, display: 'flex' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </span>
-                        </label>
+                          <span style={{ fontSize: '.7rem', lineHeight: 1.55 }}><b style={{ fontWeight: 700 }}>{label}</b>{d && <span style={{ color: 'var(--muted2)' }}>（{d}）</span>}</span>
+                        </li>
                       )
                     })}
-                  </div>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }}/>
-                <label htmlFor="consent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}>
-                  <b>{coopMode ? '自分でこの案件に協力します' : 'お客さまの同意を確認しました'}（必須）</b>
-                </label>
+                  </ul>
+                ) : (
+                  <p style={{ fontSize: '.68rem', color: 'var(--txt)', margin: 0, lineHeight: 1.65 }}>お客さまをMB Partnersにおつなぎします。商談・提案はMBが対応します。</p>
+                )}
               </div>
-              {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
-              <button type="submit" disabled={pending || !consent || !coverageGateOk} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>
-                {pending ? '送信中…' : (coopMode ? 'この案件に協力する' : 'この内容で紹介する')}
-              </button>
-            </form>
-          </details>
+              <label htmlFor="consent" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: `1px solid ${consent ? 'var(--blue)' : 'var(--blue-bg)'}`, borderRadius: 8, padding: 12, cursor: 'pointer' }}>
+                <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15, flexShrink: 0 }} />
+                <b style={{ fontSize: '.68rem', lineHeight: 1.6, color: '#41419E' }}>上記の内容を確認しました</b>
+              </label>
+            </div>
 
-          {/* AI紹介文は主役カード内に昇格済（協力モードでは主役=予約リンクのため据置なし） */}
-
-          <div style={{ height: 24 }} />
-
-          {/* 協力「自分で予約」: 予約確定で協力deal作成＋商談予約を同時実行 */}
-          {showSelfBook && (
-            <BookingDrawer
-              createDeal={coopCreateDeal}
-              defaultCustomerEmail={customerEmail}
-              onClose={() => setShowSelfBook(false)}
-              onConfirmed={(at) => { setShowSelfBook(false); setBookedAt(at); setDone(true) }}
-            />
-          )}
+            {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
+            {/* ④ 紹介する → 案件ページ直行 */}
+            <button type="submit" disabled={pending || !consent} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>
+              {pending ? '送信中…' : '紹介する'}
+            </button>
+            <p style={{ fontSize: '.6rem', color: 'var(--muted2)', textAlign: 'center', margin: '10px 0 0', lineHeight: 1.6 }}>押すと案件ページに移動します。リンクの発行・送付はそこで行えます。</p>
+          </form>
         </div>
       )}
     </div>
+  )
+}
+
+// v2: 登録ページのセクションカード（番号バッジ＋タイトル）。
+function StepCard({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
+  return (
+    <div className="ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '15px 16px 12px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--c-blue)', color: '#fff', fontSize: '.62rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter', flexShrink: 0 }}>{n}</span>
+        <b style={{ fontSize: '.84rem', fontWeight: 900, letterSpacing: '-.01em' }}>{title}</b>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+// v2 ②: 紹介方法のラジオ選択（送る／自分で）。担いに応じた文言を親から受け取る。
+function MethodRadio({ active, onSelect, badge, title, desc }: { active: boolean; onSelect: () => void; badge?: string; title: string; desc: string }) {
+  return (
+    <button type="button" onClick={onSelect} className="lift"
+      style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', borderRadius: 11, padding: '13px 14px', display: 'flex', gap: 11, alignItems: 'flex-start',
+        border: `1.5px solid ${active ? 'var(--c-blue)' : 'var(--line)'}`, background: active ? 'var(--blue-bg2)' : '#fff' }}>
+      <span style={{ width: 18, height: 18, borderRadius: '50%', marginTop: 1, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        border: `2px solid ${active ? 'var(--c-blue)' : 'var(--line)'}`, background: active ? 'var(--c-blue)' : '#fff' }}>
+        {active && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+          <b style={{ fontSize: '.76rem', fontWeight: 800, color: active ? 'var(--blue-dk)' : 'var(--txt)' }}>{title}</b>
+          {badge && <span style={{ fontSize: '.52rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 5, padding: '2px 6px', letterSpacing: '.04em' }}>{badge}</span>}
+        </span>
+        <span style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.55 }}>{desc}</span>
+      </span>
+    </button>
   )
 }
 

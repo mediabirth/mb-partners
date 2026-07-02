@@ -86,7 +86,7 @@ function CoopFeeRow({ m }: { m: MenuRow }) {
           <b style={{ fontSize: '.72rem', display: 'block', lineHeight: 1.4 }}>{m.name}</b>
           {steps.length > 0 && (
             <>
-              <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>協力タスク</span>
+              <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em', display: 'block', marginTop: 5 }}>あなたが担うこと</span>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                 {steps.map(l => (
                   <span key={l} style={{ fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: '#ECE9F8', color: 'var(--blue-dk)' }}>

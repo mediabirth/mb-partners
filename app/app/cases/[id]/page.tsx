@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId, getDealWithEvents } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import ChannelMark from '@/components/ChannelMark'
+import DealNextActions from '@/components/DealNextActions'
 import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import { customerHonorific } from '@/lib/customer'
 
@@ -17,10 +17,14 @@ const RAIL_STEPS = ['受付', '対応中', '成約・確定', '支払済']
 
 export const runtime = 'edge'
 
+const CUSTOMER_PENDING = '（お客さま入力待ち）'
+
 export default async function CaseDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ next?: string }>
 }) {
   const user = await getCachedUser()
   if (!user) redirect('/login')
@@ -57,6 +61,30 @@ export default async function CaseDetailPage({
     items = (data ?? []) as typeof items
   } catch { /* best-effort */ }
 
+  // ── v2 案件ページ＝実行の場：次にやること／ヒヤリング用の派生データ ──
+  const { next } = await searchParams
+  const method: 'send' | 'self' = next === 'self' ? 'self' : 'send'
+  // 担い＝報酬の担い（channel＝reward_type由来）。cooperation(rate/continuous)=アポイント→予約(/book/)、
+  //   referral(fixed)=登録リンク(/r/)。refer側の coopMode 判定と構成上一致する。
+  const hasAppointment = deal.channel === 'cooperation'
+  // ヒヤリングタスク（あれば入力枠を出す／保存で自動チェック）。
+  const hearingTask = tasks.find(t => (t.kind ?? '').includes('ヒヤリング') || (t.label ?? '').includes('ヒヤリング'))
+  // 現行リンク（生成ロジック不変）：登録=/r/token（partner×service）／予約=/book/partnerCode。
+  let registerToken: string | null = null
+  try {
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const admin = await createServiceRoleClient()
+    if (deal.service_id) {
+      const { data: link } = await admin.from('referral_links').select('token').eq('partner_id', partner.id).eq('service_id', deal.service_id).maybeSingle()
+      registerToken = (link as { token?: string } | null)?.token ?? null
+    }
+  } catch { /* best-effort */ }
+  const registerUrl = registerToken ? `/r/${registerToken}` : null
+  const bookingUrl = partner.code ? `/book/${partner.code}` : null
+  // ヘッダ表示：リンク送付で名前空欄なら「お客さま入力待ち」。
+  const custDisplay = deal.customer_name === CUSTOMER_PENDING ? 'お客さま入力待ち' : (customerHonorific(deal) || 'お客さま')
+  const rewardPillText = deal.amount > 0 ? `報酬 ¥${deal.amount.toLocaleString()}` : '報酬 成約時に確定'
+
   return (
     <div>
       <Link href="/app/cases" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.7rem', color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 500, textDecoration: 'none' }}>
@@ -68,16 +96,35 @@ export default async function CaseDetailPage({
         {svc
           ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={46} />
           : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={46} />}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: '-.01em' }}>{customerHonorific(deal)}</h1>
-            <ChannelMark channel={deal.channel} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-.01em' }}>{custDisplay} の案件</h1>
+            <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'var(--bg2)', color: 'var(--muted2)' }}>{STATUS_LABEL[deal.status] ?? deal.status}</span>
           </div>
-          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>
-            {svc?.name ?? '相談（サービス未定）'} · {new Date(deal.created_at).toLocaleDateString('ja')}
+          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 3 }}>
+            {svc?.name ?? '相談（サービス未定）'}{menu?.name ? ` ─ ${menu.name}` : ''}
           </div>
+          <span style={{ display: 'inline-block', fontFamily: 'Inter', fontSize: '.64rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '3px 11px', marginTop: 7 }}>{rewardPillText}</span>
         </div>
       </div>
+
+      {/* v2 次にやること／ヒヤリング（実行の場・最上部）。不成立時は出さない。 */}
+      {deal.status !== 'lost' && (
+        <DealNextActions
+          dealId={deal.id}
+          method={method}
+          hasAppointment={hasAppointment}
+          registerUrl={registerUrl}
+          bookingUrl={bookingUrl}
+          customerEmail={(deal as { customer_email?: string | null }).customer_email ?? null}
+          serviceName={svc?.name ?? null}
+          defaultContact={deal.customer_name === CUSTOMER_PENDING ? '' : (customerHonorific(deal) || '')}
+          defaultNeed={''}
+          hearingEnabled={!!hearingTask}
+          hearingInitial={hearingTask?.note ?? ''}
+          hearingDone={!!hearingTask?.done}
+        />
+      )}
 
       {/* Status rail（不成立は見送りバナー） */}
       {deal.status === 'lost' ? (
@@ -129,7 +176,7 @@ export default async function CaseDetailPage({
           ['報酬予定額', deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '確認中'],
           ['サービス', svc?.name ?? '相談（サービス未定）'],
           ['メニュー', menu?.name ?? '—'],
-          ['チャネル', deal.channel === 'referral' ? '紹介' : deal.channel === 'cooperation' ? '協力' : '直販'],
+          ['種別', deal.channel === 'direct' ? '直販' : '紹介'],
           ['登録日', new Date(deal.created_at).toLocaleDateString('ja')],
           ...(deal.meeting_at ? [['商談予定', new Date(deal.meeting_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })]] : []),
           ...(deal.fixed_month ? [['計上月', deal.fixed_month.substring(0, 7)]] : []),

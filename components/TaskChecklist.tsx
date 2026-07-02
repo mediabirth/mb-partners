@@ -25,7 +25,7 @@ export default function TaskChecklist({ tasks: initial }: { tasks: DealTask[] })
         </span>
       </div>
       <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
-        協力は「対応業務」の達成が報酬の条件です。<b>対応状況は運営が確認して更新します。</b>
+        「対応業務」の達成が報酬の条件です。<b>対応状況は運営が確認して更新します。</b>
       </p>
 
       {/* progress bar */}
@@ -35,7 +35,7 @@ export default function TaskChecklist({ tasks: initial }: { tasks: DealTask[] })
 
       {!allDone && (
         <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 14px', lineHeight: 1.6 }}>
-          対応業務が進むと、協力の報酬が確定します。
+          対応業務が進むと、報酬が確定します。
         </p>
       )}
 

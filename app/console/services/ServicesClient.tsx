@@ -5,6 +5,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import { SectionHeader } from '@/components/ui/Header'
 import type { ServiceWithMenus, MenuRow, Menu } from '@/lib/supabase/queries'
 import { parseAmount } from '@/lib/num'
+import { rewardPillForMenu } from '@/lib/reward-format'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -498,6 +499,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [submitting, startTrans] = useTransition()
   const [toast, setToast]        = useState('')
   const [svcError, setSvcError]  = useState('')
+  // Wave2：一覧のインライン編集（紹介対象・一言説明・担当変更）。★表示/編集UIのみ・money非接触。
+  const [editAudSvc, setEditAudSvc]     = useState<string | null>(null) // 紹介対象を編集中のブランドid
+  const [audDraft, setAudDraft]         = useState('')
+  const [editDescMenu, setEditDescMenu] = useState<string | null>(null) // 一言説明を編集中のメニューid
+  const [descDraft, setDescDraft]       = useState('')
+  const [editMemberFor, setEditMemberFor] = useState<string | null>(null) // 担当プルダウンを開いている対象キー（brand:<id> / menu:<id>）
 
   const [menuEditId, setMenuEditId] = useState<string | null>(null)
   const [menuForm, setMenuForm]     = useState<MenuForm>(defaultMenuForm)
@@ -848,6 +855,28 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     fetch(`/api/console/services/${svcId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendar_member_id: val }) })
       .then(() => showToast('ブランドの担当メンバーを保存しました')).catch(() => {})
   }
+  // 段階3a：担当メンバーidから表示名を解決（既定=null は呼び出し側で文言化）。
+  const memberName = (id: string | null | undefined) => id ? (calMembers.find(m => m.user_id === id)?.name || 'メンバー') : null
+
+  // Wave2：紹介対象(target_audience)のインライン保存。楽観更新＋services PATCH。APP STEP1と同一データ・money非接触。
+  function saveBrandAudience(svcId: string, val: string) {
+    const v = val.trim()
+    setServices(prev => prev.map(s => s.id !== svcId ? s : ({ ...s, target_audience: v || null } as ServiceWithMenus)))
+    setEditAudSvc(null)
+    fetch(`/api/console/services/${svcId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_audience: v || null }) })
+      .then(() => showToast('紹介対象を保存しました')).catch(() => {})
+  }
+  // Wave2：一言説明(short_description)のインライン保存。楽観更新＋menus PATCH。APP STEP2と同一データ・money非接触。
+  function saveMenuDesc(svcId: string, menuId: string, val: string) {
+    const v = val.trim()
+    setServices(prev => prev.map(s => s.id !== svcId ? s : ({
+      ...s,
+      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id === menuId ? { ...m, short_description: v || null } : m) })),
+    })))
+    setEditDescMenu(null)
+    fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_description: v || null }) })
+      .then(() => showToast('一言説明を保存しました')).catch(() => {})
+  }
 
   // ── Menu CRUD ─────────────────────────────────────────────────────────────
   function startAddMenu() {
@@ -942,6 +971,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           // 段階3a：連携済みメンバーが1人以上いる時だけ割当UIを出す（いなければ全て既定owner＝従来表示）。
           const hasMembers = calMembers.length > 0
           const brandMember = (svc as { calendar_member_id?: string | null }).calendar_member_id ?? ''
+          const audience = (svc as { target_audience?: string | null }).target_audience ?? ''
           return (
             <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
@@ -959,7 +989,40 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       {svc.active ? '公開中' : '停止中'}
                     </span>
                   </div>
-                  {svc.subtitle && <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.subtitle}</div>}
+                  {/* 紹介対象＝商売の顔（ブランド名直下・常時表示＋インライン編集・APP STEP1と同一データ） */}
+                  {editAudSvc === svc.id ? (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 5, alignItems: 'center' }}>
+                      <input autoFocus value={audDraft} onChange={e => setAudDraft(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveBrandAudience(svc.id, audDraft); if (e.key === 'Escape') setEditAudSvc(null) }}
+                        placeholder="例）引越し・お部屋探しをしたい人"
+                        style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 7, padding: '4px 9px', fontFamily: 'inherit', fontSize: '.74rem' }} />
+                      <button onClick={() => saveBrandAudience(svc.id, audDraft)} style={{ fontSize: '.62rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                      <button onClick={() => setEditAudSvc(null)} style={{ fontSize: '.66rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <span style={{ fontSize: '.75rem', fontWeight: 600, color: audience ? 'var(--txt)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audience || '紹介対象を設定'}</span>
+                      <button onClick={() => { setAudDraft(audience); setEditAudSvc(svc.id) }} title="紹介対象を編集"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.66rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
+                    </div>
+                  )}
+                  {/* カテゴリ（従属・muted）＋ブランド担当（同じ行・テキスト＋変更） */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
+                    {svc.subtitle && <span style={{ fontSize: '.6rem', color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 320 }}>{svc.subtitle}</span>}
+                    {hasMembers && (editMemberFor === `brand:${svc.id}` ? (
+                      <select autoFocus value={brandMember} onChange={e => { setBrandMember(svc.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
+                        title="このブランドの商談を入れる担当メンバー（メニュー個別指定が優先）"
+                        style={{ border: '1px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
+                        <option value="">既定（MB運営・神原勝彦）</option>
+                        {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                      </select>
+                    ) : (
+                      <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
+                        担当：{brandMember ? memberName(brandMember) : '既定（神原勝彦）'}
+                        <button onClick={() => setEditMemberFor(`brand:${svc.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 700 }}>変更</button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 {/* 並び替え（上下・モバイル確実）。sortのみ更新。 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
@@ -972,59 +1035,65 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 </button>
               </div>
 
-              {/* 段階3a：ブランド既定の担当メンバー（連携済みメンバーがいる時のみ。メニュー個別指定が優先） */}
-              {hasMembers && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)' }}>ブランド担当メンバー</span>
-                  <select
-                    value={brandMember}
-                    onChange={e => setBrandMember(svc.id, e.target.value)}
-                    title="このブランドの商談を入れる担当メンバー（メニュー個別指定が優先）"
-                    style={{ border: '1px solid var(--line)', borderRadius: 7, padding: '5px 9px', fontFamily: 'inherit', fontSize: '.66rem', color: 'var(--muted2)', background: '#fff' }}
-                  >
-                    <option value="">👤 既定（MB運営・神原勝彦）</option>
-                    {calMembers.map(m => <option key={m.user_id} value={m.user_id}>👤 {m.name}</option>)}
-                  </select>
-                </div>
-              )}
-
               {/* ★メニュー＝価格表。新 menus/menu_rewards のみが唯一のソース（APP refer と同一）。
-                 空なら旧残骸を出さず「メニュー未登録」。各行＝menus.name ＋ menu_rewards（固定¥/粗利%）。 */}
+                 一言説明＋担当をメニュー名の下に、報酬は統一ピルで右端に。空はCTA。 */}
               {newMenus.length === 0 ? (
-                <div style={{ marginTop: 12, border: '1px dashed var(--line)', borderRadius: 10, padding: '14px', textAlign: 'center', background: 'var(--bg2)' }}>
-                  <span style={{ fontSize: '.68rem', color: 'var(--muted2)', fontWeight: 600 }}>メニュー未登録（「編集」からメニュー＞報酬を作成）</span>
+                <div style={{ marginTop: 12, border: '1px dashed var(--line)', borderRadius: 10, padding: '18px 14px', textAlign: 'center', background: 'var(--bg2)' }}>
+                  <div style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 600, marginBottom: 9 }}>メニューがまだありません</div>
+                  <button onClick={() => openEdit(svc)} style={{ fontSize: '.7rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontFamily: 'inherit' }}>＋ メニューを追加</button>
                 </div>
               ) : (
-                <div style={{ marginTop: 12, border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '7px 14px', background: 'var(--bg2)', alignItems: 'center' }}>
-                    <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>メニュー</span>
-                    <span style={{ textAlign: 'right', fontSize: '.54rem', fontWeight: 700, color: 'var(--muted2)' }}>報酬</span>
-                  </div>
-                  {newMenus.map((mn, idx) => (
-                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '10px 14px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
+                <div style={{ marginTop: 12 }}>
+                  {newMenus.map((mn, idx) => {
+                    const menuMember = mn.calendar_member_id ?? ''
+                    const hasReward = (mn.rewards?.length ?? 0) > 0
+                    return (
+                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '11px 2px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <ReorderBtn label="▲" small onClick={() => moveListMenu(svc.id, newMenus, idx, -1)} disabled={idx === 0} />
                         <ReorderBtn label="▼" small onClick={() => moveListMenu(svc.id, newMenus, idx, 1)} disabled={idx === newMenus.length - 1} />
                       </div>
-                      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: '.74rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
-                        {hasMembers && (
-                          <select
-                            value={mn.calendar_member_id ?? ''}
-                            onChange={e => setMenuMember(svc.id, mn.id, e.target.value)}
-                            title="このメニューの商談を入れる担当メンバー"
-                            style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 7, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', color: 'var(--muted2)', background: '#fff' }}
-                          >
-                            <option value="">👤 既定（{brandMember ? 'ブランド担当' : 'MB運営・神原勝彦'}）</option>
-                            {calMembers.map(m => <option key={m.user_id} value={m.user_id}>👤 {m.name}</option>)}
-                          </select>
+                      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
+                        {/* 一言説明（名前の下・muted・1行省略＋インライン編集・APP STEP2と同一データ） */}
+                        {editDescMenu === mn.id ? (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <input autoFocus value={descDraft} onChange={e => setDescDraft(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') saveMenuDesc(svc.id, mn.id, descDraft); if (e.key === 'Escape') setEditDescMenu(null) }}
+                              placeholder="例）お部屋を探している人を紹介するだけ。物件紹介はMBが対応。"
+                              style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '3px 8px', fontFamily: 'inherit', fontSize: '.64rem' }} />
+                            <button onClick={() => saveMenuDesc(svc.id, mn.id, descDraft)} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                            <button onClick={() => setEditDescMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                            <span style={{ fontSize: '.64rem', color: mn.short_description ? 'var(--muted2)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.short_description || '一言説明を設定'}</span>
+                            <button onClick={() => { setDescDraft(mn.short_description ?? ''); setEditDescMenu(mn.id) }} title="一言説明を編集"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
+                          </div>
                         )}
+                        {/* 担当（テキスト＋変更→プルダウン。連携済メンバーがいる時のみ＝段階3aゲート維持） */}
+                        {hasMembers && (editMemberFor === `menu:${mn.id}` ? (
+                          <select autoFocus value={menuMember} onChange={e => { setMenuMember(svc.id, mn.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
+                            title="このメニューの商談を入れる担当メンバー"
+                            style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
+                            <option value="">既定（{brandMember ? 'ブランド担当' : 'MB運営・神原勝彦'}）</option>
+                            {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
+                            担当：{menuMember ? memberName(menuMember) : '既定'}
+                            <button onClick={() => setEditMemberFor(`menu:${mn.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 700 }}>変更</button>
+                          </span>
+                        ))}
                       </div>
-                      <span className="tnum" style={{ textAlign: 'right', fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: (mn.rewards?.length ?? 0) > 0 ? 'var(--txt)' : 'var(--muted)' }}>
-                        {(mn.rewards ?? []).map(r => r.reward_type === 'fixed' ? `¥${Number(r.reward_value).toLocaleString()}` : r.reward_type === 'continuous' ? `継続 ${r.reward_value}%/月${r.default_months ? `・${r.default_months}ヶ月` : ''}` : `${r.reward_value}%${r.reward_base ? `・${r.reward_base}` : ''}`).join(' / ') || '報酬未設定'}
+                      {/* 統一報酬ピル（bg-accent・999px・APPと同一記法・menu_rewards から表示整形のみ） */}
+                      <span style={{ justifySelf: 'end', display: 'inline-block', fontFamily: 'Inter', fontSize: '.68rem', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: 999, padding: '4px 12px', background: hasReward ? 'var(--blue-bg2)' : 'var(--bg2)', color: hasReward ? 'var(--blue)' : 'var(--muted)' }}>
+                        {rewardPillForMenu(mn.rewards ?? [])}
                       </span>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
