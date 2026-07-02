@@ -42,7 +42,9 @@ export default async function RewardsPage() {
 
   return (
     <div>
-      {/* F-4：報酬ヒーロー（vendor と同一の見え方）。計算は紹介報酬のまま・表示のみ統一。 */}
+      {/* F-4：報酬ヒーロー（vendor と同一の見え方）。計算は紹介報酬のまま・表示のみ統一。
+          v3.1：APP側のみ .rh-q ラッパで太字を500へ静音化（.app-quiet 配下・共有RewardHero本体は非改変＝vendor不変）。 */}
+      <div className="rh-q">
       <RewardHero
         label={`報酬 ${new Date().getFullYear()} 合計`}
         amount={totalGross}
@@ -52,6 +54,7 @@ export default async function RewardsPage() {
           { key: 'count', label: '成約数', value: totalDeals, suffix: '件' },
         ]}
       />
+      </div>
 
       {/* Statement buttons */}
       <div style={{ display: 'flex', gap: 8, margin: '14px 20px 0' }}>
