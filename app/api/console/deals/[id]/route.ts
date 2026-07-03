@@ -209,6 +209,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // N: 運営Slackは lost には送らない（ひっそり中立）。他のステータス変更は従来通り。
     if (!isLost) {
       await notifySlackEvent('status_change', `📋 案件ステータス変更: ${deal?.customer_name ?? id} → ${STATUS_LABEL[status as string]}`)
+      // D: 運営メールも併送（Slack障害時に運営が気づけない欠落への回答・best-effort）。
+      try {
+        const { sendOpsEmail } = await import('@/lib/notify')
+        await sendOpsEmail(
+          `【MB Partners】案件ステータス変更: ${deal?.customer_name ?? id}`,
+          `案件のステータスが「${STATUS_LABEL[status as string]}」になりました。\n・お客さま：${deal?.customer_name ?? '-'}\n・案件ID：${id}`,
+        )
+      } catch { /* best-effort */ }
+    }
+
+    // D: 受付→対応中の遷移でパートナーへ状況更新メール（従来は両端＝受付/不成立/成約しか届かず中間経過が皆無だった）。
+    // 遷移時のみ（ctx.status が既に in_progress なら送らない）＝多重送信防止。best-effort。
+    if (status === 'in_progress' && ctx?.status !== 'in_progress' && ctx?.partner_id) {
+      try {
+        const { sendEmail } = await import('@/lib/notify')
+        const { customerHonorific } = await import('@/lib/customer')
+        const { dealStatusUpdateEmail } = await import('@/lib/mail-templates')
+        const { data: pt } = await admin.from('partners').select('profile_id').eq('id', ctx.partner_id).single()
+        const { data: pr } = pt?.profile_id
+          ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
+          : { data: null }
+        if (pr?.email) {
+          const { data: dd } = await admin.from('deals')
+            .select('customer_name, customer_type, company_name, contact_name').eq('id', id).single()
+          const customerLabel = dd ? (customerHonorific(dd as never) || 'お客さま') : 'お客さま'
+          const m = dealStatusUpdateEmail({ partnerName: pr.name ?? 'パートナー', customerLabel, dealId: id })
+          await sendEmail({ to: pr.email, ...m })
+        }
+      } catch { /* best-effort */ }
     }
 
     // N: 不成立化時に担当パートナーへ中立・感謝メール1通（best-effort・運営Slackには送らない）。

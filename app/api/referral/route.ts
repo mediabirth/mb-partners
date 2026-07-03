@@ -132,6 +132,18 @@ export async function POST(req: NextRequest) {
       )
     } catch { /* best-effort */ }
 
+    // D: お客さま本人へ受付確認メール（連絡先がある場合のみ・best-effort）。
+    try {
+      if (customerEmail) {
+        const { sendEmail } = await import('@/lib/notify')
+        const { customerHonorific } = await import('@/lib/customer')
+        const { customerReceiptEmail } = await import('@/lib/mail-templates')
+        const label = customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }) || 'お客さま'
+        const m = customerReceiptEmail({ customerName: label, partnerName: null, serviceLine: service?.name ?? null })
+        await sendEmail({ to: customerEmail, ...m })
+      }
+    } catch { /* best-effort */ }
+
     // Audit log
     await supabase.from('audit_logs').insert({
       actor_profile_id: null,

@@ -61,6 +61,19 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         if (custom?.attachments?.length || custom?.buttons?.length) await pushTemplateImagesToPartner(admin, app.referrer_partner_id, custom.attachments ?? [], custom.buttons ?? [])
         recognized = true
       } catch { /* 通知失敗でも活性化は成立（例外安全） */ }
+      // D: メールでも届ける（従来は inbox＋実質無効のLINE/Pushのみ＝実際には気づけなかった）。best-effort。
+      try {
+        const { data: pt } = await admin.from('partners').select('profile_id').eq('id', app.referrer_partner_id).single()
+        const { data: pr } = pt?.profile_id
+          ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
+          : { data: null }
+        if (pr?.email) {
+          const { sendEmail } = await import('@/lib/notify')
+          const { recognitionEmail } = await import('@/lib/mail-templates')
+          const m = recognitionEmail({ partnerName: pr.name ?? 'パートナー', newPartnerName: app.name })
+          await sendEmail({ to: pr.email, ...m })
+        }
+      } catch { /* best-effort */ }
     }
 
     return NextResponse.json({ ok: true, recognized })

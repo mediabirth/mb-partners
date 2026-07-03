@@ -260,6 +260,22 @@ export async function POST(req: NextRequest) {
     .update({ used_at: new Date().toISOString(), name })
     .eq('token', token)
 
+  // D: 配下パートナーの参加をフロンティアへメール通知（?f= 紐づけ時のみ・best-effort）。
+  try {
+    if (role === 'partner' && typeof frontierId === 'string' && frontierId) {
+      const { data: fp } = await service.from('partners').select('profile_id').eq('id', frontierId).single()
+      const { data: fpr } = fp?.profile_id
+        ? await service.from('profiles').select('name, email').eq('id', fp.profile_id).single()
+        : { data: null }
+      if (fpr?.email) {
+        const { sendEmail } = await import('@/lib/notify')
+        const { frontierJoinedEmail } = await import('@/lib/mail-templates')
+        const m = frontierJoinedEmail({ frontierName: fpr.name ?? 'フロンティア', newPartnerName: name })
+        await sendEmail({ to: fpr.email, ...m })
+      }
+    }
+  } catch { /* best-effort */ }
+
   // Batch B ③: パートナー参加（招待リンク経由の登録完了）を運営へ通知。best-effort（登録完了は阻害しない）。
   try {
     const { sendSlack, sendOpsEmail } = await import('@/lib/notify')

@@ -21,7 +21,10 @@ export async function POST(req: NextRequest) {
   const admin = await createServiceRoleClient()
 
   // 帰属 partner と顧客名を読み取るだけ（status/お金は読まない・書かない）。
-  const { data: deal } = await admin.from('deals').select('id, partner_id, customer_name').eq('id', dealId).single()
+  // D: メール送出のため顧客属性・顧客メール・サービス名も読む（読み取りのみ・金額は読まない）。
+  const { data: deal } = await admin.from('deals')
+    .select('id, partner_id, customer_name, customer_type, company_name, contact_name, customer_email, services(name)')
+    .eq('id', dealId).single()
   if (!deal?.partner_id) return NextResponse.json({ ok: true, skipped: 'no partner' })
 
   const customer = deal.customer_name ?? 'お客さま'
@@ -40,5 +43,41 @@ export async function POST(req: NextRequest) {
   const results = await notify(admin, deal.partner_id, payload, { event: 'deal_won' })
   // 画像/ボタン付きテンプレ時のみ、追加でLINE画像/カードを送付（best-effort・notify/金額/発火は不変）。
   if (custom?.attachments?.length || custom?.buttons?.length) await pushTemplateImagesToPartner(admin, deal.partner_id, custom.attachments ?? [], custom.buttons ?? [])
-  return NextResponse.json({ ok: true, partnerId: deal.partner_id, channels: results })
+
+  // D: 成約メール（従来は inbox/Push のみで「お金に直結する最重要イベント」のメールが皆無だった）。
+  // 発火制御は呼び出し側（confirmed 遷移時のみ）＝多重送信なし。全て best-effort・成約処理は不変。
+  const emailed: Record<string, boolean> = {}
+  try {
+    const { sendEmail, sendOpsEmail } = await import('@/lib/notify')
+    const { customerHonorific } = await import('@/lib/customer')
+    const { dealWonPartnerEmail, dealWonCustomerEmail } = await import('@/lib/mail-templates')
+    const svcName = (deal as { services?: { name?: string } | { name?: string }[] | null }).services
+    const serviceLine = Array.isArray(svcName) ? svcName[0]?.name ?? null : svcName?.name ?? null
+    const customerLabel = customerHonorific(deal as never) || 'お客さま'
+
+    // パートナー宛
+    const { data: pt } = await admin.from('partners').select('profile_id').eq('id', deal.partner_id).single()
+    const { data: pr } = pt?.profile_id
+      ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
+      : { data: null }
+    if (pr?.email) {
+      const m = dealWonPartnerEmail({ partnerName: pr.name ?? 'パートナー', customerLabel })
+      emailed.partner = (await sendEmail({ to: pr.email, ...m })).sent
+    }
+
+    // お客さま宛（連絡先がある場合のみ・御礼）
+    const custEmail = (deal as { customer_email?: string | null }).customer_email
+    if (custEmail) {
+      const m = dealWonCustomerEmail({ customerName: customerLabel, serviceLine })
+      emailed.customer = (await sendEmail({ to: custEmail, ...m })).sent
+    }
+
+    // 運営宛（従来 Slack も無かったイベント）
+    emailed.ops = (await sendOpsEmail(
+      `【MB Partners】成約: ${customer}`,
+      `${customerLabel} の案件が成約になりました。${serviceLine ? `\n・サービス：${serviceLine}` : ''}\n・案件ID：${dealId}\n（金額はコンソールでご確認ください）`,
+    )).sent
+  } catch { /* best-effort */ }
+
+  return NextResponse.json({ ok: true, partnerId: deal.partner_id, channels: results, emailed })
 }
