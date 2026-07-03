@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
 import { rewardValueText, rewardPillText } from '@/lib/reward-format'
+import RewardPill from '@/components/ui/RewardPill'
 import { submitPartnerReferral, getPartnerInfo } from './actions'
 
 // リファラル v3.1：世界観は「紹介」1つ。協力タスクで報酬が変わるだけ。「協力/関わり方」はUIに出さない。
@@ -234,7 +235,12 @@ export default function ReferPage() {
           <div style={{ padding: '8px 20px 4px' }}>
             <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{selSvc.name}{selMenuName ? ` ─ ${selMenuName}` : ''}</div>
             <h2 style={{ fontSize: 18, fontWeight: 500, marginTop: 5, letterSpacing: '-.01em' }}>お客さまを紹介する</h2>
-            {selReward && <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>{confirmTrailing(selReward)}</div>}
+            {selReward && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                <RewardPill>{rewardLabelFromReward(selReward)}</RewardPill>
+                <span style={{ fontSize: 11, color: 'var(--muted2)' }}>成約時、翌月末払い</span>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} style={{ padding: '18px 20px 32px' }}>
@@ -459,8 +465,8 @@ function MenuPanel({ svc, onPick }: { svc: ServiceWithMenus; onPick: (sm: MenuRo
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14, fontWeight: 500 }}>{menu.name}</span>
               {short && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>{short}</span>}
-              {/* 静かなピル（bg-accent薄＋text-accent 12px・「報酬」接頭辞は省略） */}
-              {reward && <span style={{ display: 'inline-block', fontSize: 12, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '2px 10px', marginTop: 7 }}>{rewardLabelFromReward(reward)}</span>}
+              {/* 報酬ピル（共通コンポーネント・「報酬」接頭辞は省略） */}
+              {reward && <span style={{ display: 'inline-block', marginTop: 7 }}><RewardPill>{rewardLabelFromReward(reward)}</RewardPill></span>}
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 15, flexShrink: 0 }}>›</span>
           </button>

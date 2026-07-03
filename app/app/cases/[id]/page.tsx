@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId, getDealWithEvents } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
+import RewardPill from '@/components/ui/RewardPill'
+import { rewardValueText } from '@/lib/reward-format'
 import DealNextActions from '@/components/DealNextActions'
 import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import { customerHonorific } from '@/lib/customer'
@@ -72,7 +74,11 @@ export default async function CaseDetailPage({
   // ① 正式なフルURL（相対だとコピー/送付先が壊れるため）。
   const bookingUrl = partner.code ? `https://mb-partners.app/book/${partner.code}` : null
   const custDisplay = customerHonorific(deal) || 'お客さま'
-  const rewardText = deal.amount > 0 ? `報酬 ¥${deal.amount.toLocaleString()}` : '報酬 成約時に確定'
+  // 報酬ピル文言：reward_snapshot（凍結報酬）から値/率のみ。無ければ確定金額 or「成約時に確定」。★money表示値は既存を読むだけ。
+  const snapReward = (deal as { reward_snapshot?: { reward_type?: string; reward_value?: number | string } | null }).reward_snapshot
+  const rewardText = snapReward?.reward_type
+    ? rewardValueText({ reward_type: snapReward.reward_type as 'fixed' | 'rate' | 'continuous', reward_value: snapReward.reward_value ?? 0 })
+    : (deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '成約時に確定')
 
   return (
     <div>
@@ -95,10 +101,9 @@ export default async function CaseDetailPage({
               <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{STATUS_LABEL[deal.status] ?? deal.status}</span>
             </span>
           </div>
-          {/* 報酬＝テキスト（塗りピル廃止・ラベルmuted＋値500） */}
-          <div style={{ fontSize: 12, marginTop: 7 }}>
-            <span style={{ color: 'var(--muted2)' }}>報酬 </span>
-            <span style={{ fontWeight: 500 }}>{deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '成約時に確定'}</span>
+          {/* 報酬＝accentピル（報酬は唯一ピルで語ってよい情報・共通コンポーネント） */}
+          <div style={{ marginTop: 8 }}>
+            <RewardPill>{rewardText}</RewardPill>
           </div>
         </div>
       </div>

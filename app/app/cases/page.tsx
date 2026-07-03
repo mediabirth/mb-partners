@@ -6,6 +6,8 @@ import { customerHonorific } from '@/lib/customer'
 import { nextPayoutDate } from '@/lib/payout'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import EmptyState from '@/components/ui/EmptyState'
+import RewardPill from '@/components/ui/RewardPill'
+import { rewardValueText } from '@/lib/reward-format'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
@@ -171,30 +173,51 @@ export default async function CasesPage({
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column' }}>
             {filtered.map(d => {
-              // ⑤⑥ deal_list_card_v2：様付き名前＋ステータス／メニュー名（ブランド名なし）／報酬値＋登録日。
+              // deal_list_card_v3：上段＝ブランドアイコン32px＋名前様＋メニュー名＋右端 報酬ピル／下段＝ミニ進捗レール（4点）。
               const name = customerHonorific(d) || (d as { company_name?: string; customer_name?: string }).company_name || (d as { customer_name?: string }).customer_name || 'お客さま'
-              // お客さま向け新名称を優先（reward_snapshot に記録された新menu id → menus.name）。無ければ従来の service_menu 名。
               const snapMenuId = ((d as { reward_snapshot?: { menu_id?: string } | null }).reward_snapshot)?.menu_id
               const menuName = (snapMenuId && menuNameById[snapMenuId]) || (d as { service_menus?: { name?: string } | null }).service_menus?.name || (d.services ? d.services.name : '相談（サービス未定）')
-              const showReward = ['confirmed', 'paid'].includes(d.status) && d.amount > 0
+              // 報酬ピル文言：reward_snapshot（凍結報酬）から値/率のみ。無ければ確定金額。★money表示値は既存計算を読むだけ。
+              const snap = (d as { reward_snapshot?: { reward_type?: string; reward_value?: number | string } | null }).reward_snapshot
+              const rewardText = snap?.reward_type
+                ? rewardValueText({ reward_type: snap.reward_type as 'fixed' | 'rate' | 'continuous', reward_value: snap.reward_value ?? 0 })
+                : (d.amount > 0 ? `¥${d.amount.toLocaleString()}` : '')
+              const step = STATUS_STEP[d.status] ?? 0
+              const lost = d.status === 'lost'
               return (
                 <Link key={d.id} href={`/app/cases/${d.id}`} className="card-hover lift ui-card"
                   style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
-                  {/* 1行目：お客さま名 様 ＋ ステータス（6pxドット＋テキスト） */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)' }} />
-                      <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{STATUS_LABEL[d.status] ?? d.status}</span>
-                    </span>
+                  {/* 上段：ブランドアイコン32px＋名前様/メニュー名＋報酬ピル */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    {d.services
+                      ? <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={32} />
+                      : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={32} />}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuName}</div>
+                    </div>
+                    {rewardText && <RewardPill style={{ flexShrink: 0 }}>{rewardText}</RewardPill>}
                   </div>
-                  {/* 2行目：提供内容（メニュー名・ブランド名は出さない） */}
-                  <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuName}</div>
-                  {/* 3行目：報酬（値のみ500）＋登録日 */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 8 }}>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>{showReward ? `¥${d.amount.toLocaleString()}` : ''}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted2)' }}>登録 {fmtDate(d.created_at)}</span>
-                  </div>
+                  {/* 下段：ミニ進捗レール（4点ドット＋区間線・通過=accent／ラベル4語・現在地のみaccent500） */}
+                  {lost ? (
+                    <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 11 }}>不成立（見送り）</p>
+                  ) : (
+                    <div style={{ marginTop: 13 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', margin: '0 3px 5px' }}>
+                        {RAIL_STEPS.map((s, i) => (
+                          <span key={i} style={{ display: 'contents' }}>
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: i <= step ? 'var(--c-blue)' : '#fff', border: i <= step ? 'none' : '1px solid var(--line)', display: 'inline-block' }} />
+                            {i < 3 && <span style={{ height: 1.5, flex: 1, background: i < step ? 'var(--c-blue)' : 'var(--line)' }} />}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        {RAIL_STEPS.map((s, i) => (
+                          <span key={i} style={{ fontSize: 10, color: i === step ? 'var(--c-blue)' : 'var(--muted2)', fontWeight: i === step ? 500 : 400 }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </Link>
               )
             })}
