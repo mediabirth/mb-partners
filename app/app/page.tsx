@@ -51,6 +51,17 @@ export default async function AppPage() {
     .filter(d => d.meeting_at && new Date(d.meeting_at).getTime() >= now.getTime())
     .sort((a, b) => new Date(a.meeting_at!).getTime() - new Date(b.meeting_at!).getTime())
 
+  // お客さま向け新名称の解決マップ（reward_snapshot->>menu_id → menus.name）。改名せず表示のみ。best-effort。
+  const menuNameById: Record<string, string> = {}
+  try {
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const admin = await createServiceRoleClient()
+    const { data: menus } = await admin.from('menus').select('id, name')
+    for (const m of (menus ?? []) as { id: string; name: string }[]) menuNameById[m.id] = m.name
+  } catch { /* best-effort */ }
+  const dealMenuName = (d: { reward_snapshot?: { menu_id?: string } | null; service_menus?: { name?: string } | null; services?: { name?: string } | null }) =>
+    (d.reward_snapshot?.menu_id && menuNameById[d.reward_snapshot.menu_id]) || d.service_menus?.name || d.services?.name || ''
+
   // P2: 進行中の協力案件で未完了の「手動」タスク（やることに控えめ表示・自動タスクは出さない）。best-effort。
   const coopActiveIds = active.filter(d => d.channel === 'cooperation').map(d => d.id)
   // 対象（案件）ごとに「次にやるべき1件」へ集約。複数タスクは残数バッジで表現（データ/ゲートは無改修＝表示集約のみ）。
@@ -212,7 +223,7 @@ export default async function AppPage() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 500, fontSize: '.74rem', color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {customerHonorific(d)}{(d.service_menus?.name || d.services?.name) ? `（${d.service_menus?.name || d.services?.name}について）` : ''}
+                  {customerHonorific(d)}{dealMenuName(d) ? `（${dealMenuName(d)}について）` : ''}
                 </div>
                 <div style={{ fontSize: '.6rem', color: 'var(--blue)', marginTop: 1, fontWeight: 500 }}>
                   {new Date(d.meeting_at!).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}

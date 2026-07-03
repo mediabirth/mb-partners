@@ -228,7 +228,11 @@ export async function submitPartnerReferral(formData: FormData) {
 
   // v3.1：パートナー向け通知から「協力/関わり方」の区分を排除（内部データ channel は不変）。
   const caseUrl = `https://mb-partners.app/app/cases/${deal!.id}`
-  const menuName = (menu as { name?: string } | null)?.name ?? ''
+  // お客さま向け新名称（menu_ref=新menus）を優先。無ければ従来の service_menu 名。★表示のみ・紐付き/money不変。
+  let menuName = (menu as { name?: string } | null)?.name ?? ''
+  if (menuRefRaw) {
+    try { const { data: mm } = await supabase.from('menus').select('name').eq('id', menuRefRaw).single(); if ((mm as { name?: string } | null)?.name) menuName = (mm as { name?: string }).name } catch { /* fallback to old name */ }
+  }
   const { data: svcRow } = isConsultation ? { data: null } : await supabase.from('services').select('name').eq('id', serviceId).single()
   const svcName = svcRow?.name ?? ''
   const menuLine = [svcName, menuName].filter(Boolean).join(' ─ ') || '—'

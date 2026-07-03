@@ -41,6 +41,9 @@ export default async function CaseDetailPage({
   let tasks: DealTask[] = []
   let taskDesc: Record<string, string> = {}
   let items: { id: string; kind: string; amount: number; base_amount: number | null; services?: { name: string } | null }[] = []
+  // お客さま向け新名称（reward_snapshot に記録された新menu id → menus.name）。改名せず表示のみ。
+  let newMenuName: string | null = null
+  const snapMenuId = ((deal as { reward_snapshot?: { menu_id?: string } | null }).reward_snapshot)?.menu_id ?? null
   try {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const admin = await createServiceRoleClient()
@@ -54,7 +57,12 @@ export default async function CaseDetailPage({
     }
     const { data: it } = await admin.from('deal_items').select('id, kind, amount, base_amount, sort, services(name)').eq('deal_id', id).order('sort')
     items = (it ?? []) as typeof items
+    if (snapMenuId) {
+      const { data: mm } = await admin.from('menus').select('name').eq('id', snapMenuId).maybeSingle()
+      newMenuName = (mm as { name?: string } | null)?.name ?? null
+    }
   } catch { /* best-effort */ }
+  const menuLabel: string | null = newMenuName || ((deal as any).service_menus?.name ?? null)
 
   const { next } = await searchParams
   const method: 'send' | 'self' = next === 'self' ? 'self' : 'send'
@@ -80,7 +88,7 @@ export default async function CaseDetailPage({
         <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>{custDisplay} の案件</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc?.name ?? '相談（サービス未定）'}{menu?.name ? ` ─ ${menu.name}` : ''}</span>
+            <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc?.name ?? '相談（サービス未定）'}{menuLabel ? ` ─ ${menuLabel}` : ''}</span>
             {/* ステータス＝6pxドット＋テキスト（塗りピル廃止） */}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: deal.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)', display: 'inline-block' }} />
@@ -151,7 +159,7 @@ export default async function CaseDetailPage({
           {[
             ['ステータス', STATUS_LABEL[deal.status]],
             ['報酬予定額', deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '確認中'],
-            ['メニュー', menu?.name ? `${svc?.name ?? ''} ─ ${menu.name}` : (svc?.name ?? '相談（サービス未定）')],
+            ['メニュー', menuLabel ? `${svc?.name ?? ''} ─ ${menuLabel}` : (svc?.name ?? '相談（サービス未定）')],
             ['登録日', new Date(deal.created_at).toLocaleDateString('ja')],
             ...(deal.meeting_at ? [['商談予定', new Date(deal.meeting_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })]] : []),
             ...(deal.fixed_month ? [['計上月', deal.fixed_month.substring(0, 7)]] : []),

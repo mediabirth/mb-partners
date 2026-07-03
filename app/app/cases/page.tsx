@@ -111,11 +111,15 @@ export default async function CasesPage({
 
   // L2: 明細件数（"+N"用）。service role で安全に集計（best-effort・テーブル未作成なら空）。
   const itemCounts: Record<string, number> = {}
+  // お客さま向けメニュー名の解決マップ（新 menus）。deal.reward_snapshot->>menu_id → menus.name で新名称表示（改名せず表示のみ）。
+  const menuNameById: Record<string, string> = {}
   try {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const admin = await createServiceRoleClient()
     const { data } = await admin.from('deal_items').select('deal_id').in('deal_id', filtered.map(d => d.id))
     for (const r of (data ?? []) as { deal_id: string }[]) itemCounts[r.deal_id] = (itemCounts[r.deal_id] ?? 0) + 1
+    const { data: menus } = await admin.from('menus').select('id, name')
+    for (const m of (menus ?? []) as { id: string; name: string }[]) menuNameById[m.id] = m.name
   } catch { /* best-effort */ }
 
   return (
@@ -169,7 +173,9 @@ export default async function CasesPage({
             {filtered.map(d => {
               // ⑤⑥ deal_list_card_v2：様付き名前＋ステータス／メニュー名（ブランド名なし）／報酬値＋登録日。
               const name = customerHonorific(d) || (d as { company_name?: string; customer_name?: string }).company_name || (d as { customer_name?: string }).customer_name || 'お客さま'
-              const menuName = (d as { service_menus?: { name?: string } | null }).service_menus?.name || (d.services ? d.services.name : '相談（サービス未定）')
+              // お客さま向け新名称を優先（reward_snapshot に記録された新menu id → menus.name）。無ければ従来の service_menu 名。
+              const snapMenuId = ((d as { reward_snapshot?: { menu_id?: string } | null }).reward_snapshot)?.menu_id
+              const menuName = (snapMenuId && menuNameById[snapMenuId]) || (d as { service_menus?: { name?: string } | null }).service_menus?.name || (d.services ? d.services.name : '相談（サービス未定）')
               const showReward = ['confirmed', 'paid'].includes(d.status) && d.amount > 0
               return (
                 <Link key={d.id} href={`/app/cases/${d.id}`} className="card-hover lift ui-card"
