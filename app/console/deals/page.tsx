@@ -6,10 +6,10 @@ import ConsoleNav from '@/components/ConsoleNav'
 import { customerHonorific } from '@/lib/customer'
 import { computeProjectPnl } from '@/lib/pnl'
 import { phaseOf, PHASE_LABEL, PHASE_STYLE, INTAKE_LABEL, PROJECT_STATUSES, PROJECT_STATUS_STYLE } from '@/lib/phase'
-import StatusPill from '@/components/ui/StatusPill'
+import RewardPill from '@/components/ui/RewardPill'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
-import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill, DEAL_STATUS } from '@/lib/status'
+import { DEAL_STATUS } from '@/lib/status'
 import { engagementLabel } from '@/lib/engagement-labels'
 import dynamic from 'next/dynamic'
 // A: ドロワー内でのみ使う重い子を遅延読込（初回バンドルから除外・押下/展開時に取得）。
@@ -23,7 +23,9 @@ type Deal = {
   lost_at?: string | null; lost_reason?: string | null; lost_note?: string | null
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; effective_kind?: string; gate_reason?: string; reward_type?: string; reward_value?: number; months?: number } | null
   continuous_months?: number | null
-  service_menus: { coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
+  service_menus: { name?: string | null; coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
+  // メニュー名（API側で reward_snapshot.menu_id → menus.name を一括解決・無ければ service_menus 名）
+  _menu_name?: string | null
   services: { name: string; icon: string; color: string; logo_path?: string | null } | null
   partners: { code: string; profiles: { name: string; color: string } | null } | null
   deal_items?: DealItem[]
@@ -89,13 +91,18 @@ function rateInfo(d: Deal): { isRate: boolean; rate: number | null; baseLabel: s
 function needsBase(d: Deal): boolean {
   return rateInfo(d).isRate && (d.base_amount == null)
 }
+// メニュー名（APP正典 app/app/cases/[id] と同じ解決順：新名称 menus.name 優先 → service_menus.name）。
+function menuLabelOf(d: Deal): string | null {
+  return d._menu_name ?? d.service_menus?.name ?? null
+}
 
+// v2.2：列ヘッダの塗り分け（accentBg）は撤去。ヘッダは 6pxドット（--st-* 意味色）＋テキストで示す。
 const COLS = [
-  { key: 'received',    label: '受付',       accent: 'var(--amber)', accentBg: 'var(--amber-bg)' },
-  { key: 'in_progress', label: '対応中',     accent: 'var(--c-blue)',  accentBg: 'var(--blue-bg)' },
-  { key: 'confirmed',   label: '成約・確定', accent: 'var(--green)', accentBg: 'var(--green-bg)' },
-  { key: 'paid',        label: '支払済',     accent: 'var(--muted2)', accentBg: 'var(--bg2)' },
-  { key: 'lost',        label: '不成立',     accent: 'var(--red)',   accentBg: 'var(--red-bg)' },
+  { key: 'received',    label: '受付' },
+  { key: 'in_progress', label: '対応中' },
+  { key: 'confirmed',   label: '成約・確定' },
+  { key: 'paid',        label: '支払済' },
+  { key: 'lost',        label: '不成立' },
 ] as const
 
 type Status = typeof COLS[number]['key']
@@ -116,14 +123,19 @@ function DealStepper({ status }: { status: string }) {
             <div key={k} style={{ display: 'flex', alignItems: 'flex-start', flex: i < DEAL_FLOW.length - 1 ? 1 : '0 0 auto' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0, width: 56 }}>
                 <span style={{ width: isCur ? 13 : 10, height: isCur ? 13 : 10, borderRadius: '50%', background: done ? 'var(--c-blue)' : '#fff', border: `2px solid ${done ? 'var(--c-blue)' : 'var(--line)'}`, boxShadow: isCur ? '0 0 0 3px var(--blue-bg)' : 'none', marginTop: isCur ? 0 : 1.5, transition: 'all .15s' }} />
-                <span style={{ fontSize: '.54rem', fontWeight: isCur ? 800 : 600, color: isCur ? 'var(--c-blue)' : 'var(--muted2)', whiteSpace: 'nowrap' }}>{DEAL_STATUS[k].label}</span>
+                <span style={{ fontSize: '.54rem', fontWeight: 500, color: isCur ? 'var(--c-blue)' : 'var(--muted2)', whiteSpace: 'nowrap' }}>{DEAL_STATUS[k].label}</span>
               </div>
               {i < DEAL_FLOW.length - 1 && <span aria-hidden style={{ flex: 1, height: 2, borderRadius: 2, background: (!isLost && curIdx > i) ? 'var(--c-blue)' : 'var(--line)', marginTop: 5 }} />}
             </div>
           )
         })}
       </div>
-      {isLost && <span style={{ display: 'inline-block', marginTop: 10, fontSize: '.6rem', fontWeight: 800, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '3px 11px' }}>不成立</span>}
+      {isLost && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10 }}>
+          <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--st-danger)', flexShrink: 0 }} />
+          <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)' }}>不成立</span>
+        </span>
+      )}
     </div>
   )
 }
@@ -185,33 +197,33 @@ function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDelete, o
   return (
     <div style={{ marginTop: 6, marginLeft: 10, paddingLeft: 8, borderLeft: '2px solid var(--blue-bg)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 700 }}>経費（承認済 ¥{approved.toLocaleString()}）</span>
+        <span style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 500 }}>経費（承認済 ¥{approved.toLocaleString()}）</span>
       </div>
       {exps.map(e => {
         const b = badge(e.status)
         return (
           <div key={e.id} className="ui-row" style={{ gap: 5, padding: '3px 0', fontSize: '.62rem' }}>
             <span style={{ color: 'var(--muted2)', width: 36, flexShrink: 0 }}>{e.kind}</span>
-            <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 700, minWidth: 56, textAlign: 'right' }}>¥{(e.amount ?? 0).toLocaleString()}</span>
-            <span style={{ fontSize: '.5rem', fontWeight: 700, color: b.c, background: b.bg, borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{b.t}</span>
-            {e.has_evidence && <button onClick={() => onView(e.id)} title="領収書" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.62rem', color: 'var(--c-blue)', padding: 0 }}>📎</button>}
+            <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500, minWidth: 56, textAlign: 'right' }}>¥{(e.amount ?? 0).toLocaleString()}</span>
+            <span style={{ fontSize: '.5rem', fontWeight: 500, color: b.c, background: b.bg, borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{b.t}</span>
+            {e.has_evidence && <button onClick={() => onView(e.id)} title="領収書を開く" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}>領収書</button>}
             <span style={{ flex: 1 }} />
-            {e.status !== 'approved' && <button onClick={() => onStatus(e.id, 'approved')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--green)', background: 'none', border: '1px solid var(--green)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>承認</button>}
-            {e.status !== 'rejected' && <button onClick={() => onStatus(e.id, 'rejected')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 700, color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>却下</button>}
+            {e.status !== 'approved' && <button onClick={() => onStatus(e.id, 'approved')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--green)', background: 'none', border: '1px solid var(--green)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>承認</button>}
+            {e.status !== 'rejected' && <button onClick={() => onStatus(e.id, 'rejected')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>却下</button>}
             <button onClick={() => onDelete(e.id)} disabled={busy} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.62rem' }}>✕</button>
           </div>
         )
       })}
       {editable && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-          <select value={kind} onChange={e => setKind(e.target.value)} disabled={busy} style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '3px 5px', fontFamily: 'inherit', fontSize: '.6rem', background: '#fff' }}>
+          <select value={kind} onChange={e => setKind(e.target.value)} disabled={busy} style={{ border: '0.5px solid var(--line)', borderRadius: 6, padding: '3px 5px', fontFamily: 'inherit', fontSize: '.6rem', background: '#fff' }}>
             {EXP_KINDS.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
           <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" placeholder="金額" disabled={busy}
-            style={{ width: 64, border: '1px solid var(--line)', borderRadius: 6, padding: '3px 6px', fontFamily: 'Inter', fontSize: '.62rem', textAlign: 'right' }} />
+            style={{ width: 64, border: '0.5px solid var(--line)', borderRadius: 6, padding: '3px 6px', fontFamily: 'Inter', fontSize: '.62rem', textAlign: 'right' }} />
           <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} disabled={busy}
             style={{ fontSize: '.52rem', width: 116 }} />
-          <button onClick={submit} disabled={busy || !amount.trim()} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', opacity: (busy || !amount.trim()) ? .5 : 1 }}>経費を追加</button>
+          <button onClick={submit} disabled={busy || !amount.trim()} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--c-blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', opacity: (busy || !amount.trim()) ? .5 : 1 }}>経費を追加</button>
         </div>
       )}
     </div>
@@ -418,7 +430,7 @@ export default function DealsPage() {
       const res = await fetch(`/api/console/deals/${selected.id}/review-stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ review_stage: rs }) })
       const data = await res.json().catch(() => ({}))
       if (res.ok && !data.needsMigration) { await refreshDeals(selected.id); showToast('稟議ステージを更新しました') }
-      else if (data.needsMigration) showToast('review_stage列のDB適用が必要です')
+      else if (data.needsMigration) showToast('保存できませんでした。時間をおいて再度お試しください')
       else showToast(data.error ?? '保存に失敗しました')
     } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
   }
@@ -692,17 +704,17 @@ export default function DealsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
+        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ flex: 1 }}>
             <p className="eyebrow" style={{ marginBottom: 2 }}>案件管理</p>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>{view === 'board' ? '案件ボード' : 'アーカイブ'}</h1>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>{view === 'board' ? '案件ボード' : 'アーカイブ'}</h1>
           </div>
 
           {/* QR: ボード / アーカイブ 切替 */}
           <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
             {([['board', 'ボード'], ['archive', 'アーカイブ']] as const).map(([v, lbl]) => (
               <button key={v} onClick={() => setView(v)} style={{
-                border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
+                border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500,
                 padding: '7px 14px', borderRadius: 7,
                 color: view === v ? 'var(--txt)' : 'var(--muted2)',
                 background: view === v ? '#fff' : 'transparent',
@@ -773,27 +785,27 @@ export default function DealsPage() {
                 .filter(d => !archiveSearch.trim() || customerHonorific(d).toLowerCase().includes(archiveSearch.trim().toLowerCase()))
               if (arch.length === 0) return <EmptyState title="該当する案件がありません" compact />
               return (
-                <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
                   {arch.map((d, i) => (
                     <div key={d.id} onClick={() => setSelected(d)} className="lift" style={{
                       display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer',
-                      borderBottom: i < arch.length - 1 ? '1px solid #F2F2F6' : 'none',
+                      borderBottom: i < arch.length - 1 ? '0.5px solid var(--line)' : 'none',
                     }}>
                       {d.services && <ServiceAvatar logoPath={(d.services as any).logo_path ?? null} icon={d.services.icon} color={d.services.color} name={d.services.name} size={28} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '.78rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</div>
+                        <div style={{ fontSize: '.78rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</div>
                         <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>
-                          {d.services?.name}{d.status === 'lost' && d.lost_reason ? ` · 理由: ${d.lost_reason}` : ''}
+                          {d.services?.name}{menuLabelOf(d) ? ` ─ ${menuLabelOf(d)}` : ''}{d.status === 'lost' && d.lost_reason ? ` · 理由: ${d.lost_reason}` : ''}
                         </div>
                       </div>
                       <ChannelMark channel={d.channel} showLabel={false} />
-                      <span style={{ flexShrink: 0, fontSize: '.6rem', fontWeight: 700, borderRadius: 20, padding: '2px 10px',
-                        color: d.status === 'paid' ? 'var(--green)' : 'var(--muted2)',
-                        background: d.status === 'paid' ? 'var(--green-bg)' : 'var(--bg2)' }}>
-                        {d.status === 'paid' ? '支払済' : '不成立'}
+                      {/* v2.2：ステータスは6pxドット＋テキスト（塗りピル廃止・色は --st-* 意味色） */}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                        <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${DEAL_STATUS[d.status]?.tone ?? 'neutral'})`, flexShrink: 0 }} />
+                        <span style={{ fontSize: '.6rem', fontWeight: 400, color: 'var(--muted2)' }}>{d.status === 'paid' ? '支払済' : '不成立'}</span>
                       </span>
                       {d.status === 'paid' && d.amount > 0 && (
-                        <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 700, color: 'var(--muted2)' }}>¥{d.amount.toLocaleString()}</span>
+                        <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 500, color: 'var(--muted2)' }}>¥{d.amount.toLocaleString()}</span>
                       )}
                     </div>
                   ))}
@@ -822,29 +834,29 @@ export default function DealsPage() {
                     onClick={collapsed ? () => toggleCol(lane.key) : undefined}
                     className={collapsed ? 'card-hover' : undefined}
                     title={collapsed ? 'クリックで展開' : undefined}
-                    style={{ width: collapsed ? 50 : 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: collapsed ? '12px 4px' : 14, minHeight: 220, cursor: collapsed ? 'pointer' : 'default', border: `1px solid ${dragOverCol === lane.key ? 'var(--c-blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out), width .18s var(--ease-out)' }}
+                    style={{ width: collapsed ? 50 : 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: collapsed ? '12px 4px' : 14, minHeight: 220, cursor: collapsed ? 'pointer' : 'default', border: `0.5px solid ${dragOverCol === lane.key ? 'var(--c-blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out), width .18s var(--ease-out)' }}
                   >
                     {collapsed ? (
                       /* B2: 細い折りたたみ列＝ステージ名(縦書き)＋件数0のみ。大きな空ボックスは出さない。 */
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, height: '100%', minHeight: 196, paddingTop: 2 }}>
                         <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${lane.tone})`, flexShrink: 0 }} />
-                        <span className="tnum" style={{ fontSize: '.6rem', fontWeight: 800, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, padding: '1px 6px', minWidth: 20, textAlign: 'center' }}>0</span>
-                        <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '.72rem', fontWeight: 800, color: 'var(--muted2)', whiteSpace: 'nowrap', letterSpacing: '.04em' }}>{lane.label}</span>
+                        <span className="tnum" style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 999, padding: '1px 6px', minWidth: 20, textAlign: 'center' }}>0</span>
+                        <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', whiteSpace: 'nowrap', letterSpacing: '.04em' }}>{lane.label}</span>
                       </div>
                     ) : (<>
                     {/* レーン見出し：グループ(商談/プロジェクト)＋ステージ名＋件数 */}
                     <div style={{ marginBottom: 12, padding: '2px 2px 0' }}>
-                      <p style={{ fontSize: '.5rem', letterSpacing: '.14em', color: 'var(--muted)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 5 }}>{lane.group === 'shodan' ? '商談' : 'プロジェクト'}</p>
+                      <p style={{ fontSize: '.5rem', letterSpacing: '.14em', color: 'var(--muted)', fontWeight: 500, textTransform: 'uppercase', marginBottom: 5 }}>{lane.group === 'shodan' ? '商談' : 'プロジェクト'}</p>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                           <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${lane.tone})`, flexShrink: 0 }} />
-                          <span style={{ fontSize: '.76rem', fontWeight: 800, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{lane.label}</span>
+                          <span style={{ fontSize: '.76rem', fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{lane.label}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                           {isEmpty && (
-                            <button onClick={() => toggleCol(lane.key)} title="畳む" style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 7, cursor: 'pointer', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 800, lineHeight: 1, padding: '3px 6px' }}>‹ 畳む</button>
+                            <button onClick={() => toggleCol(lane.key)} title="畳む" style={{ background: 'none', border: '0.5px solid var(--line)', borderRadius: 7, cursor: 'pointer', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 500, lineHeight: 1, padding: '3px 6px' }}>‹ 畳む</button>
                           )}
-                          <span className="tnum" style={{ fontSize: '.64rem', fontWeight: 800, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 999, padding: '2px 8px', minWidth: 22, textAlign: 'center' }}>{laneDeals.length}</span>
+                          <span className="tnum" style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 8px', minWidth: 22, textAlign: 'center' }}>{laneDeals.length}</span>
                         </div>
                       </div>
                     </div>
@@ -872,14 +884,14 @@ export default function DealsPage() {
                           onDragStart={() => onDragStart(d)}
                           onClick={() => setSelected(d)}
                           className="card-hover ui-card"
-                          style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 13, padding: '10px 12px', marginBottom: 8, cursor: 'grab', boxShadow: selected?.id === d.id ? '0 0 0 2px var(--c-blue)' : undefined, userSelect: 'none', height: 66, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}
+                          style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 13, padding: '10px 12px', marginBottom: 8, cursor: 'grab', boxShadow: selected?.id === d.id ? '0 0 0 2px var(--c-blue)' : undefined, userSelect: 'none', height: 66, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                            {attention && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--red)', borderRadius: 20, padding: '2px 7px', letterSpacing: '.02em' }}>要対応</span>}
+                            {attention && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: '#fff', background: 'var(--red)', borderRadius: 20, padding: '2px 7px', letterSpacing: '.02em' }}>要対応</span>}
                             {d.services
                               ? <ServiceAvatar logoPath={(d.services as any).logo_path ?? null} icon={d.services.icon} color={d.services.color} name={d.services.name} size={24} />
                               : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={24} />}
-                            <b style={{ flex: 1, fontSize: '.76rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{customerHonorific(d)}</b>
+                            <b style={{ flex: 1, fontSize: '.76rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{customerHonorific(d)}</b>
                           </div>
                           <div style={{ fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta || '—'}</div>
                         </div>
@@ -899,8 +911,8 @@ export default function DealsPage() {
       {selected && (
         <>
           <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.25)', zIndex: 70 }} />
-          <div style={{ position: 'fixed', top: 0, right: 0, width: 460, maxWidth: '96vw', height: '100%', background: '#fff', borderLeft: '1px solid var(--line)', zIndex: 80, display: 'flex', flexDirection: 'column', boxShadow: '-18px 0 48px rgba(14,14,20,.1)' }}>
-            <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ position: 'fixed', top: 0, right: 0, width: 460, maxWidth: '96vw', height: '100%', background: '#fff', borderLeft: '0.5px solid var(--line)', zIndex: 80, display: 'flex', flexDirection: 'column', boxShadow: '-18px 0 48px rgba(14,14,20,.1)' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <b style={{ fontSize: '.9rem' }}>{customerHonorific(selected)}</b>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
@@ -926,15 +938,15 @@ export default function DealsPage() {
                 if (!act && !baseNeeded) return null
                 return (
                   <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12 }}>
-                    <p style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--blue-dk)', letterSpacing: '.06em', marginBottom: 8 }}>次にすること</p>
+                    <p style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--blue-dk)', letterSpacing: '.06em', marginBottom: 8 }}>次にすること</p>
                     {act && (
-                      <button onClick={act.onClick} disabled={pending} className="btn btn-p" style={{ width: '100%', fontSize: '.76rem', padding: '10px 14px' }}>
+                      <button onClick={act.onClick} disabled={pending} className="ui-btn ui-btn--primary" style={{ width: '100%', fontSize: '.76rem', padding: '10px 14px' }}>
                         {act.label}
                       </button>
                     )}
                     {act?.hint && <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.5 }}>{act.hint}</p>}
                     {baseNeeded && (
-                      <button onClick={() => setDetailTab('progress')} className="btn btn-g" style={{ width: '100%', fontSize: '.72rem', padding: '8px 14px', marginTop: act ? 8 : 0 }}>
+                      <button onClick={() => setDetailTab('progress')} className="ui-btn ui-btn--secondary" style={{ width: '100%', fontSize: '.72rem', padding: '8px 14px', marginTop: act ? 8 : 0 }}>
                         実績金額を入力する
                       </button>
                     )}
@@ -946,7 +958,7 @@ export default function DealsPage() {
               <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg2)', borderRadius: 10, padding: 3 }}>
                 {([['overview', '概要'], ['progress', '進行'], ['money', '金額・原価']] as const).map(([k, l]) => (
                   <button key={k} type="button" onClick={() => setDetailTab(k)}
-                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 800,
+                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500,
                       background: detailTab === k ? '#fff' : 'transparent', color: detailTab === k ? 'var(--c-blue)' : 'var(--muted2)',
                       boxShadow: detailTab === k ? '0 1px 3px rgba(14,14,20,.08)' : 'none' }}>
                     {l}
@@ -954,26 +966,26 @@ export default function DealsPage() {
                 ))}
               </div>
 
-              {/* 概要：基本情報（表示専用） */}
-              {detailTab === 'overview' && [
-                ['サービス', selected.services?.name ?? '相談（サービス未定）'],
+              {/* 概要：基本情報（表示専用）。サービスは「サービス名 ─ メニュー名」・報酬は RewardPill（唯一のaccent） */}
+              {detailTab === 'overview' && ([
+                ['サービス', selected.services?.name ? `${selected.services.name}${menuLabelOf(selected) ? ` ─ ${menuLabelOf(selected)}` : ''}` : '相談（サービス未定）'],
                 ['ソース', selected.source],
                 ['ステータス', COLS.find(c => c.key === selected.status)?.label ?? selected.status],
-                ['報酬予定', selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '未確定'],
+                ['報酬予定', selected.amount > 0 ? <RewardPill key="reward">¥{selected.amount.toLocaleString()}</RewardPill> : '未確定'],
                 ['パートナー', selected.partners ? `${selected.partners.profiles?.name ?? ''} (${selected.partners.code})` : '—'],
                 ['登録日', new Date(selected.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
+              ] as [string, React.ReactNode][]).map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted2)' }}>{k}</span>
-                  <span style={{ fontWeight: 700, textAlign: 'right' }}>{v}</span>
+                  <span style={{ fontWeight: 500, textAlign: 'right' }}>{v}</span>
                 </div>
               ))}
 
               {/* ②c B2B: 法人の部署・役職を additive 表示（無い場合は非表示＝従来通り） */}
               {detailTab === 'overview' && selected.contact_title && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted2)' }}>部署・役職</span>
-                  <span style={{ fontWeight: 700, textAlign: 'right' }}>{selected.contact_title}</span>
+                  <span style={{ fontWeight: 500, textAlign: 'right' }}>{selected.contact_title}</span>
                 </div>
               )}
 
@@ -985,16 +997,16 @@ export default function DealsPage() {
                 return (
                   <div style={{ marginTop: 16 }}>
                     <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ fontSize: '.6rem', fontWeight: 800, color: ph.c, background: ph.bg, borderRadius: 20, padding: '3px 11px' }}>{PHASE_LABEL[phase]}</span>
-                      <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '3px 11px' }}>{INTAKE_LABEL[intake] ?? intake}</span>
+                      <span style={{ fontSize: '.6rem', fontWeight: 500, color: ph.c, background: ph.bg, borderRadius: 20, padding: '3px 11px' }}>{PHASE_LABEL[phase]}</span>
+                      <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '3px 11px' }}>{INTAKE_LABEL[intake] ?? intake}</span>
                     </div>
                     {/* プロジェクト段階のみ実行ステータスを表示・変更可（商談段階は商談語彙のまま） */}
                     {phase === 'project' && (
                       <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700 }}>プロジェクト状態</span>
+                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>プロジェクト状態</span>
                         <select value={selected.project_status ?? ''} disabled={itemBusy}
                           onChange={e => saveProjectStatus(e.target.value === '' ? null : e.target.value)}
-                          style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 700, background: '#fff', color: PROJECT_STATUS_STYLE[selected.project_status ?? '']?.c ?? 'var(--txt)' }}>
+                          style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: PROJECT_STATUS_STYLE[selected.project_status ?? '']?.c ?? 'var(--txt)' }}>
                           <option value="">未設定</option>
                           {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -1003,10 +1015,10 @@ export default function DealsPage() {
                     {/* ②A-2: 稟議ステージ（in_progress時のみ・表示専用メタ・お金/confirmed非接触の隔離更新でpartnerに細分化表示） */}
                     {selected.status === 'in_progress' && (
                       <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700 }}>稟議ステージ</span>
+                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>稟議ステージ</span>
                         <select value={selected.review_stage ?? ''} disabled={itemBusy}
                           onChange={e => saveReviewStage(e.target.value === '' ? null : e.target.value)}
-                          style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 700, background: '#fff', color: 'var(--txt)' }}>
+                          style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: 'var(--txt)' }}>
                           <option value="">未設定（MB対応中）</option>
                           <option value="negotiating">商談中</option>
                           <option value="review">稟議中</option>
@@ -1025,16 +1037,16 @@ export default function DealsPage() {
                 return (
                   <div style={{ marginTop: 18 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>明細（内訳）</p>
-                      {!editable && <span style={{ fontSize: '.56rem', color: 'var(--muted)', fontWeight: 700 }}>成約後はロック</span>}
+                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>明細（内訳）</p>
+                      {!editable && <span style={{ fontSize: '.56rem', color: 'var(--muted)', fontWeight: 500 }}>成約後はロック</span>}
                     </div>
                     <div style={{ background: 'var(--bg2)', borderRadius: 12, overflow: 'hidden' }}>
                       {items.length === 0 && <p style={{ padding: '12px 14px', fontSize: '.66rem', color: 'var(--muted2)' }}>明細なし</p>}
                       {[...items].sort((a, b) => a.sort - b.sort).map(it => (
-                        <div key={it.id} style={{ padding: '10px 12px', borderBottom: '1px solid #ECECF1' }}>
+                        <div key={it.id} style={{ padding: '10px 12px', borderBottom: '0.5px solid var(--line)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.services?.name ?? it.service_id}</div>
+                              <div style={{ fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.services?.name ?? it.service_id}</div>
                               <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 1 }}>
                                 {it.kind === 'rate' ? `率・実績 ${it.base_amount != null ? `¥${it.base_amount.toLocaleString()}` : '未入力'}` : '固定'} · 報酬
                               </div>
@@ -1042,14 +1054,14 @@ export default function DealsPage() {
                             {editable && it.kind === 'rate' && (
                               <input defaultValue={it.base_amount ?? ''} inputMode="numeric" placeholder="実績" disabled={itemBusy}
                                 onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.base_amount ?? '')) patchItem(it.id, { base_amount: v === '' ? null : Number(v) }) }}
-                                style={{ width: 78, border: '1px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
+                                style={{ width: 78, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
                             )}
                             {editable && it.kind === 'fixed' && !it.menu_id && (
                               <input defaultValue={it.amount ?? ''} inputMode="numeric" placeholder="報酬" disabled={itemBusy}
                                 onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.amount ?? '')) patchItem(it.id, { amount: v === '' ? 0 : Number(v) }) }}
-                                style={{ width: 78, border: '1px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
+                                style={{ width: 78, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
                             )}
-                            <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, minWidth: 58, textAlign: 'right', color: it.amount > 0 ? 'var(--txt)' : 'var(--muted)' }}>
+                            <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 500, minWidth: 58, textAlign: 'right', color: it.amount > 0 ? 'var(--txt)' : 'var(--muted)' }}>
                               {it.amount > 0 ? `¥${it.amount.toLocaleString()}` : '—'}
                             </span>
                             {editable && (
@@ -1064,7 +1076,7 @@ export default function DealsPage() {
                                 onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.revenue ?? '')) patchItem(it.id, { revenue: v === '' ? null : Number(v) }) }}
                                 style={{ width: 110, border: '1.5px solid var(--blue-bg)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right', background: 'var(--blue-bg2)' }} />
                             ) : (
-                              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 700, color: it.revenue != null ? 'var(--txt)' : 'var(--muted)' }}>{it.revenue != null ? `¥${it.revenue.toLocaleString()}` : '未入力'}</span>
+                              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 500, color: it.revenue != null ? 'var(--txt)' : 'var(--muted)' }}>{it.revenue != null ? `¥${it.revenue.toLocaleString()}` : '未入力'}</span>
                             )}
                           </div>
                           {/* A2a: デリバリー割当（明細単位） */}
@@ -1078,14 +1090,14 @@ export default function DealsPage() {
                                   <span style={{ fontSize: '.58rem', color: 'var(--muted2)', flex: 1 }}>デリバリー</span>
                                   <select value={curDelivery} disabled={!editable || itemBusy}
                                     onChange={e => setItemDelivery(it.id, e.target.value || null, e.target.value ? curFee : 0)}
-                                    style={{ border: '1px solid var(--line)', borderRadius: 7, padding: '4px 7px', fontFamily: 'inherit', fontSize: '.66rem', background: '#fff', maxWidth: 130 }}>
+                                    style={{ border: '0.5px solid var(--line)', borderRadius: 7, padding: '4px 7px', fontFamily: 'inherit', fontSize: '.66rem', background: '#fff', maxWidth: 130 }}>
                                     <option value="">MB自身（委託費0）</option>
                                     {deliveriesOpt.map(dv => <option key={dv.id} value={dv.id}>{dv.name}</option>)}
                                   </select>
                                   {curDelivery && (
                                     <input defaultValue={curFee || ''} inputMode="numeric" placeholder="委託費" disabled={!editable || itemBusy}
                                       onBlur={e => { const v = Math.max(0, Number(e.target.value.trim() || 0)); if (v !== curFee) setItemDelivery(it.id, curDelivery, v) }}
-                                      style={{ width: 78, border: '1px solid var(--line)', borderRadius: 7, padding: '4px 7px', fontFamily: 'Inter', fontSize: '.68rem', textAlign: 'right' }} />
+                                      style={{ width: 78, border: '0.5px solid var(--line)', borderRadius: 7, padding: '4px 7px', fontFamily: 'Inter', fontSize: '.68rem', textAlign: 'right' }} />
                                   )}
                                 </div>
                                 {/* A2b: 割当が確定している明細のみ経費を申請/承認できる */}
@@ -1098,16 +1110,16 @@ export default function DealsPage() {
                           })()}
                         </div>
                       ))}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 14px' }}>
-                        <span style={{ fontSize: '.68rem', fontWeight: 800 }}>報酬合計（パートナー）</span>
-                        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.82rem', fontWeight: 800, color: 'var(--c-blue)' }}>¥{selected.amount.toLocaleString()}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px' }}>
+                        <span style={{ fontSize: '.68rem', fontWeight: 500 }}>報酬合計（パートナー）</span>
+                        <RewardPill><span className="tnum" style={{ fontFamily: 'Inter' }}>¥{selected.amount.toLocaleString()}</span></RewardPill>
                       </div>
                     </div>
 
                     {/* A1: MB担当・その他原価（いつでも編集可・P&L表示専用） */}
                     <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700 }}>MB担当</span>
+                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>MB担当</span>
                         <select value={selected.director_id ?? ''} onChange={e => savePnl({ director_id: e.target.value || null })} disabled={itemBusy}
                           style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 9px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff' }}>
                           <option value="">未割当</option>
@@ -1115,7 +1127,7 @@ export default function DealsPage() {
                         </select>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700 }}>その他原価</span>
+                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>その他原価</span>
                         <input defaultValue={selected.other_cost ?? ''} inputMode="numeric" placeholder="0" disabled={itemBusy}
                           onBlur={e => { const v = e.target.value.trim(); if (v !== String(selected.other_cost ?? '')) savePnl({ other_cost: v }) }}
                           style={{ width: 96, border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 9px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right' }} />
@@ -1133,14 +1145,14 @@ export default function DealsPage() {
                         deliveryExpense: selected._delivery_expense ?? 0,
                       })
                       const Row = ({ label, val, minus, strong }: { label: string; val: number; minus?: boolean; strong?: boolean }) => (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: strong ? '10px 0 0' : '4px 0', fontSize: strong ? '.78rem' : '.68rem', fontWeight: strong ? 800 : 500, borderTop: strong ? '1px solid var(--line)' : undefined, marginTop: strong ? 6 : 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: strong ? '10px 0 0' : '4px 0', fontSize: strong ? '.78rem' : '.68rem', fontWeight: 500, borderTop: strong ? '0.5px solid var(--line)' : undefined, marginTop: strong ? 6 : 0 }}>
                           <span style={{ color: strong ? 'var(--txt)' : 'var(--muted2)' }}>{minus ? '− ' : ''}{label}</span>
                           <span className="tnum" style={{ fontFamily: 'Inter', color: strong ? (pnl.mbMargin >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--txt)' }}>{minus && val > 0 ? '−' : ''}¥{Math.abs(val).toLocaleString()}</span>
                         </div>
                       )
                       return (
                         <div style={{ marginTop: 14, padding: '12px 15px', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12 }}>
-                          <p style={{ fontSize: '.62rem', fontWeight: 800, color: 'var(--blue-dk)', marginBottom: 8 }}>プロジェクトP&L（表示専用）</p>
+                          <p style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--blue-dk)', marginBottom: 8 }}>プロジェクトP&L（表示専用）</p>
                           <Row label="受注額（売上合計）" val={pnl.revenue} />
                           <Row label="パートナー報酬" val={pnl.partnerReward} minus />
                           <Row label="フロンティアoverride" val={pnl.frontierOverride} minus />
@@ -1172,7 +1184,7 @@ export default function DealsPage() {
                           if (!m) return <input value={itemForm.amount} onChange={e => setItemForm(f => ({ ...f, amount: e.target.value }))} placeholder="固定額" inputMode="numeric" style={{ width: 86, border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'Inter', fontSize: '.72rem' }} />
                           return null
                         })()}
-                        <button onClick={addItem} disabled={itemBusy || !itemForm.service_id} className="btn btn-g" style={{ fontSize: '.72rem', padding: '7px 12px' }}>明細を追加</button>
+                        <button onClick={addItem} disabled={itemBusy || !itemForm.service_id} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '7px 12px' }}>明細を追加</button>
                       </div>
                     )}
                   </div>
@@ -1186,27 +1198,27 @@ export default function DealsPage() {
               {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）。【概要タブ・表示専用】 */}
               {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
                 <div style={{ marginTop: 14, padding: '11px 14px', background: 'var(--amber-bg)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--amber)' }}>対応範囲が未達のため、固定報酬で確定</p>
+                  <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--amber)' }}>対応範囲が未達のため、固定報酬で確定</p>
                   <p style={{ fontSize: '.64rem', color: 'var(--txt)', marginTop: 4, lineHeight: 1.6 }}>{selected.reward_snapshot.gate_reason}</p>
                 </div>
               )}
               {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
                 <div style={{ marginTop: 14, padding: '9px 14px', background: 'var(--green-bg)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--green)' }}>対応範囲をすべて満たし、成果報酬（粗利%）で確定</p>
+                  <p style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--green)' }}>対応範囲をすべて満たし、成果報酬（粗利%）で確定</p>
                 </div>
               )}
 
               {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。【進行タブ】 */}
               {detailTab === 'progress' && selected.channel === 'cooperation' && dealTasks.length > 0 && (
-                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 2 }}>対応範囲</p>
+                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 10 }}>
+                  <p style={{ fontSize: '.66rem', fontWeight: 500, marginBottom: 2 }}>対応範囲</p>
                   <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて満たすと成果報酬＝粗利%が確定）。</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {[...dealTasks].sort((a, b) => a.sort - b.sort).map(t => {
                       const auto = t.kind !== 'manual'
                       return (
                         <button key={t.id} type="button" onClick={() => !auto && toggleDealTask(t.id, !t.done)} disabled={auto || taskBusy === t.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', background: 'none', border: 'none', borderBottom: '1px solid #F4F4F8', textAlign: 'left', width: '100%', cursor: auto ? 'default' : 'pointer', opacity: taskBusy === t.id ? .6 : 1, fontFamily: 'inherit' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', background: 'none', border: 'none', borderBottom: '0.5px solid var(--line)', textAlign: 'left', width: '100%', cursor: auto ? 'default' : 'pointer', opacity: taskBusy === t.id ? .6 : 1, fontFamily: 'inherit' }}>
                           <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.done ? 'var(--green)' : '#fff', border: `2px solid ${t.done ? 'var(--green)' : 'var(--line)'}`, color: '#fff' }}>
                             {t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>}
                           </span>
@@ -1231,8 +1243,8 @@ export default function DealsPage() {
                 <div style={{ marginTop: 18, padding: '14px 16px', background: 'var(--bg2)', borderRadius: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>実績金額（{rateInfo(selected).baseLabel}）</p>
-                      <p style={{ fontSize: '.88rem', fontWeight: 800, fontFamily: 'Inter', marginTop: 3 }}>
+                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>実績金額（{rateInfo(selected).baseLabel}）</p>
+                      <p style={{ fontSize: '.88rem', fontWeight: 500, fontFamily: 'Inter', marginTop: 3 }}>
                         {selected.base_amount != null
                           ? `¥${selected.base_amount.toLocaleString()}`
                           : <span style={{ color: 'var(--amber)', fontSize: '.74rem' }}>未入力</span>}
@@ -1242,7 +1254,7 @@ export default function DealsPage() {
                       </p>
                     </div>
                     {!editingBase && selected.status !== 'lost' && (
-                      <button onClick={() => { setEditingBase(true); setBaseEdit(selected.base_amount?.toString() ?? '') }} className="btn btn-g" style={{ fontSize: '.7rem', padding: '7px 12px', flexShrink: 0 }}>
+                      <button onClick={() => { setEditingBase(true); setBaseEdit(selected.base_amount?.toString() ?? '') }} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px', flexShrink: 0 }}>
                         {selected.base_amount != null ? '金額を編集' : '金額を入力'}
                       </button>
                     )}
@@ -1267,8 +1279,8 @@ export default function DealsPage() {
                         </b>
                       </div>
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setEditingBase(false)} className="btn btn-g" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
-                        <button onClick={saveBase} disabled={pending} className="btn btn-p" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存</button>
+                        <button onClick={() => setEditingBase(false)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
+                        <button onClick={saveBase} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存</button>
                       </div>
                     </div>
                   )}
@@ -1285,7 +1297,7 @@ export default function DealsPage() {
                 /* N: 不成立の詳細＋再開 */
                 <div style={{ marginTop: 18 }}>
                   <div style={{ padding: '13px 15px', background: 'var(--red-bg)', borderRadius: 12 }}>
-                    <p style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--red)' }}>不成立（見送り）</p>
+                    <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--red)' }}>不成立（見送り）</p>
                     <p style={{ fontSize: '.7rem', color: 'var(--txt)', marginTop: 6 }}>理由：{selected.lost_reason ?? '—'}</p>
                     {selected.lost_note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>メモ：{selected.lost_note}</p>}
                     {selected.lost_at && <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 6 }}>{new Date(selected.lost_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}</p>}
@@ -1295,7 +1307,7 @@ export default function DealsPage() {
                     const days = selected.lost_at ? Math.floor((Date.now() - new Date(selected.lost_at).getTime()) / 86_400_000) : null
                     const canReopen = days != null && days <= 90
                     return canReopen ? (
-                      <button onClick={() => reopenDeal(selected)} disabled={pending} className="btn btn-g" style={{ fontSize: '.72rem', padding: '9px 14px', marginTop: 12 }}>
+                      <button onClick={() => reopenDeal(selected)} disabled={pending} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px', marginTop: 12 }}>
                         対応中に戻す（復活）{days != null && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>· 残り{90 - days}日</span>}
                       </button>
                     ) : (
@@ -1308,23 +1320,23 @@ export default function DealsPage() {
               ) : (
                 <>
                   <div style={{ marginTop: 18 }}>
-                    <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 8 }}>ステータス変更</p>
+                    <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 8 }}>ステータス変更</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {NEXT[selected.status] && (() => {
                         const blockConfirm = NEXT[selected.status] === 'confirmed' && (selected.deal_items?.length ?? 0) === 0
                         return (
-                          <button onClick={() => updateStatus(selected, NEXT[selected.status]!)} disabled={pending || blockConfirm} className="btn btn-p" style={{ fontSize: '.72rem', padding: '9px 14px', opacity: blockConfirm ? .5 : 1 }}>
+                          <button onClick={() => updateStatus(selected, NEXT[selected.status]!)} disabled={pending || blockConfirm} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '9px 14px', opacity: blockConfirm ? .5 : 1 }}>
                             → {COLS.find(c => c.key === NEXT[selected.status])?.label}
                           </button>
                         )
                       })()}
                       {PREV[selected.status] && (
-                        <button onClick={() => updateStatus(selected, PREV[selected.status]!)} disabled={pending} className="btn btn-g" style={{ fontSize: '.72rem', padding: '9px 14px' }}>
+                        <button onClick={() => updateStatus(selected, PREV[selected.status]!)} disabled={pending} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px' }}>
                           ← {COLS.find(c => c.key === PREV[selected.status])?.label}
                         </button>
                       )}
                       {selected.status !== 'paid' && (
-                        <button onClick={() => updateStatus(selected, 'lost')} disabled={pending} style={{ fontSize: '.72rem', padding: '9px 14px', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
+                        <button onClick={() => updateStatus(selected, 'lost')} disabled={pending} style={{ fontSize: '.72rem', padding: '9px 14px', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
                           不成立にする
                         </button>
                       )}
@@ -1332,9 +1344,9 @@ export default function DealsPage() {
                   </div>
 
                   {selected.status !== 'paid' && (
-                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 8 }}>管理操作</p>
-                      <button onClick={() => cancelDeal(selected)} disabled={pending} style={{ fontSize: '.7rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
+                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--line)' }}>
+                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 8 }}>管理操作</p>
+                      <button onClick={() => cancelDeal(selected)} disabled={pending} style={{ fontSize: '.7rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
                         案件を取り消し
                       </button>
                     </div>
@@ -1358,7 +1370,7 @@ export default function DealsPage() {
               <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
                 {baseModal.deal.customer_name}（報酬 {baseModal.rate}% × {baseModal.baseLabel}）。{baseModal.baseLabel}の実額を入力してください。
               </p>
-              <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', margin: '16px 0 6px' }}>{baseModal.baseLabel}（円）</label>
+              <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', margin: '16px 0 6px' }}>{baseModal.baseLabel}（円）</label>
               <input
                 autoFocus
                 inputMode="numeric"
@@ -1373,8 +1385,8 @@ export default function DealsPage() {
                 <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)', fontSize: '.95rem' }}>{preview != null ? `¥${preview.toLocaleString()}` : '—'}</b>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
-                <button onClick={() => setBaseModal(null)} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
-                <button onClick={confirmWithBase} disabled={pending || preview == null} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px' }}>成約確定する</button>
+                <button onClick={() => setBaseModal(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+                <button onClick={confirmWithBase} disabled={pending || preview == null} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>成約確定する</button>
               </div>
             </div>
           </>
@@ -1390,23 +1402,23 @@ export default function DealsPage() {
             <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
               {lostModal.customer_name} を不成立にします。
             </p>
-            <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', margin: '16px 0 8px' }}>失注理由</label>
+            <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', margin: '16px 0 8px' }}>失注理由</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               {LOST_REASONS.map(r => (
                 <button key={r} onClick={() => setLostReason(r)}
-                  style={{ fontSize: '.7rem', padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
+                  style={{ fontSize: '.7rem', padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
                     border: `1.5px solid ${lostReason === r ? 'var(--red)' : 'var(--line)'}`,
                     background: lostReason === r ? 'var(--red-bg)' : '#fff', color: lostReason === r ? 'var(--red)' : 'var(--txt)' }}>
                   {r}
                 </button>
               ))}
             </div>
-            <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', margin: '16px 0 6px' }}>メモ（任意）</label>
+            <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', margin: '16px 0 6px' }}>メモ（任意）</label>
             <textarea value={lostNote} onChange={e => setLostNote(e.target.value)} rows={2} placeholder="補足があれば"
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.8rem', resize: 'vertical' }} />
             <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
-              <button onClick={() => setLostModal(null)} className="btn btn-g" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
-              <button onClick={confirmLost} disabled={pending || !lostReason} style={{ fontSize: '.74rem', padding: '9px 18px', borderRadius: 8, border: 'none', cursor: lostReason ? 'pointer' : 'default', fontFamily: 'inherit', fontWeight: 700, background: 'var(--red)', color: '#fff', opacity: (pending || !lostReason) ? .5 : 1 }}>
+              <button onClick={() => setLostModal(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+              <button onClick={confirmLost} disabled={pending || !lostReason} style={{ fontSize: '.74rem', padding: '9px 18px', borderRadius: 8, border: 'none', cursor: lostReason ? 'pointer' : 'default', fontFamily: 'inherit', fontWeight: 500, background: 'var(--red)', color: '#fff', opacity: (pending || !lostReason) ? .5 : 1 }}>
                 不成立にする
               </button>
             </div>
@@ -1418,7 +1430,7 @@ export default function DealsPage() {
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--txt)', color: '#fff', padding: '12px 22px',
-          borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99, whiteSpace: 'nowrap',
+          borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99, whiteSpace: 'nowrap',
         }}>
           {toast}
         </div>
@@ -1430,21 +1442,21 @@ export default function DealsPage() {
         <div onClick={() => !directBusy && setDirectModal(false)} className="modal-fade" style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 430, maxWidth: '92vw', background: '#fff', borderRadius: 16, padding: '22px 24px', boxShadow: '0 24px 64px rgba(14,14,20,.24)' }}>
             <b style={{ fontSize: '.92rem' }}>直営業プロジェクトを起票</b>
-            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>お客様名</label>
+            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>お客様名</label>
             <input value={directForm.customer_name} disabled={directBusy} autoFocus onChange={e => setDirectForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="お客様名 / 企業名"
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.8rem', margin: '5px 0 14px' }} />
-            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>サービス</label>
+            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>サービス</label>
             <select value={directForm.service_id} disabled={directBusy} onChange={e => setDirectForm(f => ({ ...f, service_id: e.target.value }))}
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.8rem', margin: '5px 0 14px', background: '#fff' }}>
               <option value="">選択してください</option>
               {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 700 }}>受注額（任意・MB粗利の売上）</label>
+            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>受注額（任意・MB粗利の売上）</label>
             <input value={directForm.revenue} disabled={directBusy} inputMode="numeric" onChange={e => setDirectForm(f => ({ ...f, revenue: e.target.value }))} placeholder="例) 300000"
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'Inter', fontSize: '.8rem', margin: '5px 0 18px', textAlign: 'right' }} />
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setDirectModal(false)} disabled={directBusy} style={{ border: '1.5px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, padding: '8px 16px', borderRadius: 8, color: 'var(--muted2)' }}>キャンセル</button>
-              <button onClick={createDirectProject} disabled={directBusy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 800, padding: '8px 18px', borderRadius: 8, color: '#fff', background: 'var(--c-blue)', opacity: directBusy ? .6 : 1 }}>{directBusy ? '作成中…' : '起票する'}</button>
+              <button onClick={() => setDirectModal(false)} disabled={directBusy} style={{ border: '1.5px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '8px 16px', borderRadius: 8, color: 'var(--muted2)' }}>キャンセル</button>
+              <button onClick={createDirectProject} disabled={directBusy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '8px 18px', borderRadius: 8, color: '#fff', background: 'var(--c-blue)', opacity: directBusy ? .6 : 1 }}>{directBusy ? '作成中…' : '起票する'}</button>
             </div>
           </div>
         </div>

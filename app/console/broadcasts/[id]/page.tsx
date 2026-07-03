@@ -64,7 +64,7 @@ export default function BroadcastDetailPage() {
         {/* Top bar */}
         <div style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid var(--line)', padding: '13px 28px',
+          borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, zIndex: 30,
         }}>
@@ -74,13 +74,13 @@ export default function BroadcastDetailPage() {
             </Link>
             <div>
               <div className="eyebrow">配信</div>
-              <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信詳細</h1>
+              <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信詳細</h1>
             </div>
           </div>
           {broadcast && !broadcast.sent_at && (
             <div style={{ display: 'flex', gap: 8 }}>
               <Link href={`/console/broadcasts/${id}/preview`} style={{
-                padding: '7px 14px', borderRadius: 8, fontSize: '.75rem', fontWeight: 700,
+                padding: '7px 14px', borderRadius: 8, fontSize: '.75rem', fontWeight: 500,
                 background: 'var(--c-blue)', color: '#fff', textDecoration: 'none',
               }}>
                 プレビュー・配信
@@ -88,7 +88,7 @@ export default function BroadcastDetailPage() {
               <button
                 onClick={handleDelete}
                 style={{
-                  padding: '7px 14px', borderRadius: 8, fontSize: '.75rem', fontWeight: 700,
+                  padding: '7px 14px', borderRadius: 8, fontSize: '.75rem', fontWeight: 500,
                   background: 'var(--red-bg)', color: 'var(--red)', border: 'none', cursor: 'pointer',
                 }}
               >
@@ -104,35 +104,35 @@ export default function BroadcastDetailPage() {
           <div className="page-anim" style={{ padding: '28px', maxWidth: 720 }}>
             {/* Stats card */}
             {broadcast.sent_at && (
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 18, display: 'flex', gap: 32 }}>
+              <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 18, display: 'flex', gap: 32 }}>
                 <div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>配信日時</div>
-                  <div style={{ fontSize: '.82rem', fontWeight: 700 }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 4 }}>配信日時</div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 500 }}>
                     {new Date(broadcast.sent_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}
                   </div>
                 </div>
-                <div style={{ borderLeft: '1px solid var(--line)', paddingLeft: 32 }}>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>開封数</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, fontFamily: 'Inter', lineHeight: 1 }}>
+                <div style={{ borderLeft: '0.5px solid var(--line)', paddingLeft: 32 }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 4 }}>開封数</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 500, fontFamily: 'Inter', lineHeight: 1 }}>
                     <CountUp value={broadcast.read_count} /> <span style={{ color: 'var(--muted2)', fontWeight: 400, fontSize: '.72rem' }}>/ {broadcast.total_partners}名</span>
                   </div>
                 </div>
-                <div style={{ borderLeft: '1px solid var(--line)', paddingLeft: 32 }}>
-                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>配信対象</div>
-                  <div style={{ fontSize: '.82rem', fontWeight: 700 }}>{segmentLabel(broadcast.segment)}</div>
+                <div style={{ borderLeft: '0.5px solid var(--line)', paddingLeft: 32 }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 4 }}>配信対象</div>
+                  <div style={{ fontSize: '.82rem', fontWeight: 500 }}>{segmentLabel(broadcast.segment)}</div>
                 </div>
               </div>
             )}
 
             {/* Article */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.04)' }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.04)' }}>
               {heroUrl && (
                 <img src={heroUrl} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover' }} />
               )}
               <div style={{ padding: '32px 36px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <span style={{
-                    fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                    fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20,
                     background: broadcast.kind === 'news' ? 'var(--blue-bg)' : 'var(--amber-bg)',
                     color: broadcast.kind === 'news' ? 'var(--c-blue)' : 'var(--amber)',
                   }}>
@@ -142,7 +142,7 @@ export default function BroadcastDetailPage() {
                     {new Date(broadcast.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })}
                   </span>
                 </div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.4, marginBottom: 16 }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 500, lineHeight: 1.4, marginBottom: 16 }}>
                   {broadcast.title}
                 </h2>
                 {broadcast.body && (
@@ -157,7 +157,7 @@ export default function BroadcastDetailPage() {
       </div>
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '10px 20px', borderRadius: 10, fontSize: '.78rem', fontWeight: 600, zIndex: 9999 }}>
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '10px 20px', borderRadius: 10, fontSize: '.78rem', fontWeight: 500, zIndex: 9999 }}>
           {toast}
         </div>
       )}

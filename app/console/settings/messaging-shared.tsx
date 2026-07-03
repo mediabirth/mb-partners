@@ -53,7 +53,7 @@ export function ChannelBadge({ channel }: { channel: Template['channel'] }) {
   const label = isLine ? 'LINE用' : isMail ? 'メール用' : channel === 'both' ? 'LINE/メール' : '汎用'
   const color = isLine ? 'var(--c-success)' : isMail ? 'var(--c-info)' : 'var(--t-tertiary)'
   const bg = isLine ? 'rgba(30,158,106,0.1)' : isMail ? 'rgba(55,138,221,0.12)' : 'var(--s-2)'
-  return <span style={{ fontSize: '.5rem', fontWeight: 800, color, background: bg, borderRadius: 5, padding: '2px 7px' }}>{label}</span>
+  return <span style={{ fontSize: '.5rem', fontWeight: 500, color, background: bg, borderRadius: 5, padding: '2px 7px' }}>{label}</span>
 }
 
 // イベント別アイコン（LINE=緑系地/メール=青系地）。Tabler相当を inline SVG で。
@@ -87,14 +87,14 @@ export function ButtonsField({ buttons, setButtons }: { buttons: EditButton[]; s
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)' }}>ボタン（最大3個・タップでURLを開く）</div>
-        {buttons.length < 3 && <button type="button" onClick={add} style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}>＋ 追加</button>}
+        <div style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--t-tertiary)' }}>ボタン（最大3個・タップでURLを開く）</div>
+        {buttons.length < 3 && <button type="button" onClick={add} style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}>＋ 追加</button>}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {buttons.map((b, i) => (
-          <div key={i} style={{ border: '1px solid var(--c-hairline)', borderRadius: 10, padding: '11px 12px', background: 'var(--s-1)' }}>
+          <div key={i} style={{ border: '0.5px solid var(--c-hairline)', borderRadius: 10, padding: '11px 12px', background: 'var(--s-1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-              <span style={{ fontSize: '.58rem', fontWeight: 800, color: 'var(--t-secondary)' }}>ボタン {i + 1}</span>
+              <span style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--t-secondary)' }}>ボタン {i + 1}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {buttons.length > 1 && (
                   <span style={{ display: 'flex', gap: 2 }}>
@@ -102,15 +102,15 @@ export function ButtonsField({ buttons, setButtons }: { buttons: EditButton[]; s
                     <button type="button" onClick={() => move(i, 1)} disabled={i === buttons.length - 1} title="下へ" style={{ border: 'none', background: 'transparent', cursor: i === buttons.length - 1 ? 'default' : 'pointer', color: i === buttons.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, lineHeight: 1, padding: 0 }}>▼</button>
                   </span>
                 )}
-                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.58rem', fontWeight: 700 }}>削除</button>
+                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.58rem', fontWeight: 500 }}>削除</button>
               </div>
             </div>
             <label style={{ display: 'block', marginBottom: 7 }}>
-              <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>ボタンの文字</span>
+              <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 500, color: 'var(--t-tertiary)', marginBottom: 3 }}>ボタンの文字</span>
               <input className="ui-field" value={b.label} onChange={e => set(i, { label: e.target.value })} placeholder="例：詳しく見る" />
             </label>
             <label style={{ display: 'block' }}>
-              <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>リンク先（URL）</span>
+              <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 500, color: 'var(--t-tertiary)', marginBottom: 3 }}>リンク先（URL）</span>
               <input className="ui-field" value={b.url} onChange={e => set(i, { url: e.target.value })} placeholder="例：https://mb-partners.app/app" />
             </label>
           </div>
@@ -127,7 +127,7 @@ export function PreviewButtons({ buttons }: { buttons: EditButton[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
       {valid.map((b, i) => (
-        <div key={i} style={{ textAlign: 'center', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.68rem', borderRadius: 8, padding: '8px 10px' }}>{b.label}</div>
+        <div key={i} style={{ textAlign: 'center', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.68rem', borderRadius: 8, padding: '8px 10px' }}>{b.label}</div>
       ))}
     </div>
   )
@@ -137,8 +137,8 @@ export function PreviewButtons({ buttons }: { buttons: EditButton[] }) {
 export function SectionHead({ n, title, hint }: { n: number; title: string; hint?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-      <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 9, background: 'var(--c-blue)', color: '#fff', fontSize: '.6rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(1px)' }}>{n}</span>
-      <span style={{ fontSize: '.78rem', fontWeight: 800 }}>{title}</span>
+      <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 9, background: 'var(--c-blue)', color: '#fff', fontSize: '.6rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(1px)' }}>{n}</span>
+      <span style={{ fontSize: '.78rem', fontWeight: 500 }}>{title}</span>
       {hint && <span style={{ fontSize: '.58rem', color: 'var(--t-tertiary)' }}>{hint}</span>}
     </div>
   )
@@ -149,7 +149,7 @@ export function ImageField({ imgUrl, onPick, onRemove }: { imgUrl: string; onPic
   return imgUrl ? (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imgUrl} alt="添付画像" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 9, border: '1px solid var(--line)' }} />
+      <img src={imgUrl} alt="添付画像" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 9, border: '0.5px solid var(--line)' }} />
       <div style={{ display: 'flex', gap: 8 }}>
         <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>差し替え<input type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} /></label>
         <button type="button" onClick={onRemove} className="ui-btn ui-btn--ghost" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, color: 'var(--c-danger)', cursor: 'pointer' }}>削除</button>
@@ -169,12 +169,12 @@ export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accou
   const text = body || ''
   if (channel === 'email') {
     return (
-      <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
+      <div style={{ background: 'var(--s-1)', border: '0.5px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '8px 13px', borderBottom: '0.5px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
         <div style={{ padding: '13px', fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           {text || <span style={{ color: 'var(--t-tertiary)' }}>{placeholder}</span>}
           {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 180, borderRadius: 8, marginTop: 8 }} />}
-          {valid.length > 0 && <div style={{ marginTop: 10 }}>{valid.map((b, i) => <div key={i} style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px', margin: '0 6px 6px 0' }}>{b.label}</div>)}</div>}
+          {valid.length > 0 && <div style={{ marginTop: 10 }}>{valid.map((b, i) => <div key={i} style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px', margin: '0 6px 6px 0' }}>{b.label}</div>)}</div>}
         </div>
       </div>
     )
@@ -184,7 +184,7 @@ export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accou
     <div style={{ background: '#9CB7D6', borderRadius: 14, padding: '16px 12px 14px' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
         <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 16, background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-blue)' }}>M</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-blue)' }}>M</span>
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '.54rem', marginBottom: 3, color: 'rgba(255,255,255,.9)' }}>{accountName}</div>
@@ -195,9 +195,9 @@ export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accou
                 {text || <span style={{ color: '#94A3B8' }}>{placeholder}</span>}
               </div>
               {valid.length > 0 && (
-                <div style={{ borderTop: '1px solid #EEF0F4' }}>
+                <div style={{ borderTop: '0.5px solid var(--line)' }}>
                   {valid.map((b, i) => (
-                    <div key={i} style={{ textAlign: 'center', padding: '10px 8px', fontSize: '.68rem', fontWeight: 700, color: 'var(--c-blue)', borderTop: i === 0 ? 'none' : '1px solid #EEF0F4' }}>{b.label}</div>
+                    <div key={i} style={{ textAlign: 'center', padding: '10px 8px', fontSize: '.68rem', fontWeight: 500, color: 'var(--c-blue)', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)' }}>{b.label}</div>
                   ))}
                 </div>
               )}
@@ -233,19 +233,19 @@ function CarouselEditor({ cards, setCards, urls, setUrls }: { cards: Card[]; set
     <div>
       <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
         {cards.map((c, i) => (
-          <div key={i} style={{ flexShrink: 0, width: 210, border: '1px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-0)', padding: '10px' }}>
+          <div key={i} style={{ flexShrink: 0, width: 210, border: '0.5px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-0)', padding: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: '.56rem', fontWeight: 800, color: 'var(--t-secondary)' }}>カード {i + 1}</span>
+              <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--t-secondary)' }}>カード {i + 1}</span>
               <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="左へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, padding: 0 }}>◀</button>
                 <button type="button" onClick={() => move(i, 1)} disabled={i === cards.length - 1} title="右へ" style={{ border: 'none', background: 'transparent', cursor: i === cards.length - 1 ? 'default' : 'pointer', color: i === cards.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 11, padding: 0 }}>▶</button>
-                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.54rem', fontWeight: 700 }}>削除</button>
+                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.54rem', fontWeight: 500 }}>削除</button>
               </span>
             </div>
             {c.image && urls[c.image] ? (
               <div style={{ position: 'relative', marginBottom: 6 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%', height: 100, objectFit: 'cover', borderRadius: 7, border: '1px solid var(--line)' }} />
+                <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%', height: 100, objectFit: 'cover', borderRadius: 7, border: '0.5px solid var(--line)' }} />
                 <button type="button" onClick={() => upd(i, { image: undefined })} style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: 9, border: 'none', background: 'var(--c-danger)', color: '#fff', fontSize: 11, cursor: 'pointer' }}>×</button>
               </div>
             ) : (
@@ -265,7 +265,7 @@ function CarouselEditor({ cards, setCards, urls, setUrls }: { cards: Card[]; set
           </div>
         ))}
         {cards.length < 10 && (
-          <button type="button" onClick={addCard} style={{ flexShrink: 0, width: 80, border: '1px dashed var(--line-2)', borderRadius: 10, background: 'var(--s-1)', color: 'var(--c-blue)', fontSize: '.6rem', fontWeight: 700, cursor: 'pointer' }}>＋ カード</button>
+          <button type="button" onClick={addCard} style={{ flexShrink: 0, width: 80, border: '1px dashed var(--line-2)', borderRadius: 10, background: 'var(--s-1)', color: 'var(--c-blue)', fontSize: '.6rem', fontWeight: 500, cursor: 'pointer' }}>＋ カード</button>
         )}
       </div>
     </div>
@@ -319,13 +319,13 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [], hide
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {blocks.map((b, i) => (
-          <div key={i} style={{ border: '1px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-1)', padding: '10px 12px' }}>
+          <div key={i} style={{ border: '0.5px solid var(--c-hairline)', borderRadius: 10, background: 'var(--s-1)', padding: '10px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: '.62rem', fontWeight: 800, color: 'var(--t-secondary)' }}>{blockIcon(b.type)} {blockName(b.type)}</span>
+              <span style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--t-secondary)' }}>{blockIcon(b.type)} {blockName(b.type)}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="上へ" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 12, padding: 0 }}>▲</button>
                 <button type="button" onClick={() => move(i, 1)} disabled={i === blocks.length - 1} title="下へ" style={{ border: 'none', background: 'transparent', cursor: i === blocks.length - 1 ? 'default' : 'pointer', color: i === blocks.length - 1 ? 'var(--line)' : 'var(--t-tertiary)', fontSize: 12, padding: 0 }}>▼</button>
-                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.58rem', fontWeight: 700 }}>削除</button>
+                <button type="button" onClick={() => del(i)} title="削除" style={{ border: 'none', background: 'transparent', color: 'var(--c-danger)', cursor: 'pointer', fontSize: '.58rem', fontWeight: 500 }}>削除</button>
               </div>
             </div>
             {b.type === 'text' && <textarea className="ui-field" value={b.text} onChange={e => upd(i, { text: e.target.value } as Partial<EditBlock>)} onFocus={() => setFocusText(i)} rows={3} style={{ resize: 'vertical' }} placeholder="テキストを入力…" />}
@@ -333,7 +333,7 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [], hide
               <div>
                 <div style={{ marginBottom: 8 }}><ImageField imgUrl={b.path ? (urls[b.path] || '') : ''} onPick={e => pickImage(i, e)} onRemove={() => upd(i, { path: '' } as Partial<EditBlock>)} /></div>
                 <label style={{ display: 'block' }}>
-                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>タップで開くURL（任意）</span>
+                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 500, color: 'var(--t-tertiary)', marginBottom: 3 }}>タップで開くURL（任意）</span>
                   <input className="ui-field" value={b.url ?? ''} onChange={e => upd(i, { url: e.target.value } as Partial<EditBlock>)} placeholder="例：https://mb-partners.app/app" />
                 </label>
               </div>
@@ -341,11 +341,11 @@ export function BlockBuilder({ blocks, setBlocks, urls, setUrls, vars = [], hide
             {b.type === 'button' && (
               <div>
                 <label style={{ display: 'block', marginBottom: 7 }}>
-                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>ボタンの文字</span>
+                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 500, color: 'var(--t-tertiary)', marginBottom: 3 }}>ボタンの文字</span>
                   <input className="ui-field" value={b.label} onChange={e => upd(i, { label: e.target.value } as Partial<EditBlock>)} placeholder="例：詳しく見る" />
                 </label>
                 <label style={{ display: 'block' }}>
-                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 3 }}>リンク先（URL）</span>
+                  <span style={{ display: 'block', fontSize: '.54rem', fontWeight: 500, color: 'var(--t-tertiary)', marginBottom: 3 }}>リンク先（URL）</span>
                   <input className="ui-field" value={b.url} onChange={e => upd(i, { url: e.target.value } as Partial<EditBlock>)} placeholder="例：https://mb-partners.app/app" />
                 </label>
               </div>
@@ -370,20 +370,20 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
   const card = blocks.filter(b => (b.type === 'text' && b.text.trim()) || (b.type === 'image' && b.path) || (b.type === 'button' && b.label && /^https?:\/\//i.test(b.url)) || (b.type === 'carousel' && b.cards.length > 0))
   if (channel === 'email') {
     return (
-      <div style={{ background: 'var(--s-1)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
+      <div style={{ background: 'var(--s-1)', border: '0.5px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ padding: '8px 13px', borderBottom: '0.5px solid var(--c-hairline)', fontSize: '.6rem', color: 'var(--t-tertiary)' }}>差出人：MB Partners 運営事務局</div>
         <div style={{ padding: '13px' }}>
           {card.length === 0 && <span style={{ fontSize: '.7rem', color: 'var(--t-tertiary)' }}>ブロックを追加すると、ここに表示されます</span>}
           {card.map((b, i) => b.type === 'text' ? <div key={i} style={{ fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 10 }}>{b.text}</div>
             : b.type === 'image' ? (urls[b.path] ? /* eslint-disable-next-line @next/next/no-img-element */ <img key={i} src={urls[b.path]} alt="" style={{ display: 'block', maxWidth: 200, borderRadius: 8, marginBottom: 10 }} /> : null)
-            : b.type === 'button' ? <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>
+            : b.type === 'button' ? <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>
             : <div key={i} style={{ marginBottom: 10 }}>{b.cards.map((c, ci) => (
-                <div key={ci} style={{ border: '1px solid #E5E7EB', borderRadius: 9, overflow: 'hidden', maxWidth: 240, marginBottom: 8 }}>
+                <div key={ci} style={{ border: '0.5px solid var(--line)', borderRadius: 9, overflow: 'hidden', maxWidth: 240, marginBottom: 8 }}>
                   {c.image && urls[c.image] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%' }} />}
                   {(c.title || c.text || c.buttons?.length) && <div style={{ padding: '8px 10px' }}>
-                    {c.title && <div style={{ fontWeight: 700, fontSize: '.66rem' }}>{c.title}</div>}
+                    {c.title && <div style={{ fontWeight: 500, fontSize: '.66rem' }}>{c.title}</div>}
                     {c.text && <div style={{ fontSize: '.6rem', color: '#555', marginTop: 2 }}>{c.text}</div>}
-                    {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ marginTop: 5 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 700, fontSize: '.6rem', borderRadius: 6, padding: '5px 12px' }}>{bt.label}</span></div>)}
+                    {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ marginTop: 5 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.6rem', borderRadius: 6, padding: '5px 12px' }}>{bt.label}</span></div>)}
                   </div>}
                 </div>
               ))}</div>)}
@@ -395,7 +395,7 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
   return (
     <div style={{ background: '#9CB7D6', borderRadius: 14, padding: '16px 12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 16, background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}><span style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-blue)' }}>M</span></div>
+        <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 16, background: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}><span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-blue)' }}>M</span></div>
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
           {card.length === 0 && <div style={{ fontSize: '.62rem', color: 'rgba(255,255,255,.92)' }}>ブロックを追加すると、ここに表示されます</div>}
           {card.map((b, i) => b.type === 'text' ? (
@@ -408,7 +408,7 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
             </div>
           ) : null) : b.type === 'button' ? (
             <div key={i} style={{ width: 214, background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,.1)' }}>
-              <div style={{ textAlign: 'center', padding: '11px 8px', fontSize: '.68rem', fontWeight: 700, color: 'var(--c-blue)' }}>{b.label}</div>
+              <div style={{ textAlign: 'center', padding: '11px 8px', fontSize: '.68rem', fontWeight: 500, color: 'var(--c-blue)' }}>{b.label}</div>
             </div>
           ) : (
             <div key={i} style={{ display: 'flex', gap: 8, overflowX: 'auto', maxWidth: 230, paddingBottom: 4 }}>
@@ -416,10 +416,10 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
                 <div key={ci} style={{ flexShrink: 0, width: 158, background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }}>
                   {c.image && urls[c.image] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%', height: 103, objectFit: 'cover' }} />}
                   {(c.title || c.text) && <div style={{ padding: '7px 9px' }}>
-                    {c.title && <div style={{ fontWeight: 700, fontSize: '.62rem', color: '#0A0A0A' }}>{c.title}</div>}
+                    {c.title && <div style={{ fontWeight: 500, fontSize: '.62rem', color: '#0A0A0A' }}>{c.title}</div>}
                     {c.text && <div style={{ fontSize: '.54rem', color: '#666', marginTop: 2, lineHeight: 1.5 }}>{c.text}</div>}
                   </div>}
-                  {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ borderTop: '1px solid #EEF0F4', textAlign: 'center', padding: '7px 4px', fontSize: '.56rem', fontWeight: 700, color: 'var(--c-blue)' }}>{bt.label}</div>)}
+                  {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ borderTop: '0.5px solid var(--line)', textAlign: 'center', padding: '7px 4px', fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)' }}>{bt.label}</div>)}
                 </div>
               ))}
             </div>

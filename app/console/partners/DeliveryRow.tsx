@@ -5,7 +5,7 @@
  */
 import { useState } from 'react'
 import Avatar from '@/components/ui/Avatar'
-import StatusPill from '@/components/ui/StatusPill'
+import StatusDot from '../StatusDot'
 import { partnerKind } from '@/lib/status'
 
 const COLS = '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr'
@@ -45,26 +45,26 @@ export default function DeliveryRow({ id, name, email, kind, active: initialActi
   }
 
   if (removed) return null
-  const btn: React.CSSProperties = { border: '1px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 700, padding: '6px 12px', borderRadius: 8, color: 'var(--txt)' }
+  const btn: React.CSSProperties = { border: '0.5px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, padding: '6px 12px', borderRadius: 8, color: 'var(--txt)' }
   return (
     <>
-      <div onClick={() => setOpen(o => !o)} className="row-hover lift" style={{ display: 'grid', gridTemplateColumns: COLS, padding: '14px 20px', borderTop: first ? undefined : '1px solid #F2F2F6', alignItems: 'center', cursor: 'pointer' }}>
+      <div onClick={() => setOpen(o => !o)} className="row-hover lift" style={{ display: 'grid', gridTemplateColumns: COLS, padding: '14px 20px', borderTop: first ? undefined : '0.5px solid var(--line)', alignItems: 'center', cursor: 'pointer' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           <Avatar name={name} color={null} size={34} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{email || '—'}{authed && <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 600 }}>✓ 連携済</span>}</div>
+            <div style={{ fontWeight: 500, fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{email || '—'}{authed && <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 500 }}>✓ 連携済</span>}</div>
           </div>
         </div>
-        <span><StatusPill size="sm" {...partnerKind('delivery')} /></span>
+        <span><StatusDot {...partnerKind('delivery')} /></span>
         <span style={{ fontFamily: 'Inter', fontSize: '.7rem', color: 'var(--muted)' }}>—</span>
         <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{kind || '—'}</span>
         <span style={{ color: 'var(--muted)' }}>—</span>
         <span style={{ color: 'var(--muted)' }}>—</span>
-        <StatusPill tone={active ? 'success' : 'neutral'}>{active ? '有効' : '無効'}</StatusPill>
+        <StatusDot tone={active ? 'success' : 'neutral'}>{active ? '有効' : '無効'}</StatusDot>
       </div>
       {open && (
-        <div style={{ padding: '12px 20px', borderTop: '1px solid #F2F2F6', background: 'var(--bg2)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ padding: '12px 20px', borderTop: '0.5px solid var(--line)', background: 'var(--bg2)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {!authed && <button onClick={invite} disabled={busy} style={{ ...btn, color: 'var(--blue)', borderColor: 'var(--blue)' }}>招待リンクをコピー</button>}
           <button onClick={toggle} disabled={busy} style={btn}>{active ? '無効にする' : '有効にする'}</button>
           <button onClick={del} disabled={busy} style={{ ...btn, color: 'var(--red)', borderColor: 'var(--red)' }}>削除</button>

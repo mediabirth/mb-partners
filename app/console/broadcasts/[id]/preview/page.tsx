@@ -67,7 +67,7 @@ export default function BroadcastPreviewPage() {
         {/* Top bar */}
         <div style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid var(--line)', padding: '13px 28px',
+          borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, zIndex: 30,
         }}>
@@ -77,7 +77,7 @@ export default function BroadcastPreviewPage() {
             </button>
             <div>
               <div className="eyebrow">配信</div>
-              <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>プレビュー</h1>
+              <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>プレビュー</h1>
             </div>
           </div>
 
@@ -85,9 +85,9 @@ export default function BroadcastPreviewPage() {
             <button
               onClick={handleSend}
               disabled={pending}
-              className={pending ? '' : 'btn btn-p'}
+              className={pending ? '' : 'ui-btn ui-btn--primary'}
               style={{
-                padding: '8px 20px', borderRadius: 9, fontSize: '.78rem', fontWeight: 700,
+                padding: '8px 20px', borderRadius: 9, fontSize: '.78rem', fontWeight: 500,
                 background: pending ? 'var(--muted)' : 'var(--c-blue)',
                 color: '#fff', border: 'none', cursor: pending ? 'not-allowed' : 'pointer',
               }}
@@ -96,7 +96,7 @@ export default function BroadcastPreviewPage() {
             </button>
           )}
           {broadcast?.sent_at && (
-            <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '5px 12px', borderRadius: 20 }}>
+            <span style={{ fontSize: '.7rem', fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', padding: '5px 12px', borderRadius: 20 }}>
               配信済み
             </span>
           )}
@@ -107,20 +107,20 @@ export default function BroadcastPreviewPage() {
         {broadcast && (
           <div className="page-anim" style={{ padding: '28px', maxWidth: 720 }}>
             {/* Meta info */}
-            <div style={{ background: 'var(--amber-bg)', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 16px', marginBottom: 20, fontSize: '.7rem', fontWeight: 600, color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ background: 'var(--amber-bg)', border: '0.5px solid var(--line)', borderRadius: 10, padding: '11px 16px', marginBottom: 20, fontSize: '.7rem', fontWeight: 500, color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />
               プレビュー表示 — 配信対象: {segmentLabel(broadcast.segment)}
             </div>
 
             {/* Article card (partner view) */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.04)' }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.04)' }}>
               {heroUrl && (
                 <img src={heroUrl} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover' }} />
               )}
               <div style={{ padding: '32px 36px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <span style={{
-                    fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                    fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20,
                     background: broadcast.kind === 'news' ? 'var(--blue-bg)' : 'var(--amber-bg)',
                     color: broadcast.kind === 'news' ? 'var(--c-blue)' : 'var(--amber)',
                   }}>
@@ -130,7 +130,7 @@ export default function BroadcastPreviewPage() {
                     {new Date(broadcast.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })}
                   </span>
                 </div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.4, marginBottom: 16 }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 500, lineHeight: 1.4, marginBottom: 16 }}>
                   {broadcast.title}
                 </h2>
                 {broadcast.body && (
@@ -145,7 +145,7 @@ export default function BroadcastPreviewPage() {
       </div>
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '10px 20px', borderRadius: 10, fontSize: '.78rem', fontWeight: 600, zIndex: 9999 }}>
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#1A1A2E', color: '#fff', padding: '10px 20px', borderRadius: 10, fontSize: '.78rem', fontWeight: 500, zIndex: 9999 }}>
           {toast}
         </div>
       )}

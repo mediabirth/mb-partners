@@ -35,8 +35,8 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
-      <div style={{ padding: '15px 22px', borderBottom: '1px solid var(--line)' }}>
+    <div className="card-hover ui-card" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '15px 22px', borderBottom: '0.5px solid var(--line)' }}>
         <b style={{ fontSize: '.84rem' }}>{title}</b>
       </div>
       <div style={{ padding: '18px 22px' }}>{children}</div>
@@ -46,9 +46,9 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function RowItem({ label, desc, children }: { label: string; desc?: string; children?: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid #F2F2F6' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, marginBottom: 14, borderBottom: '0.5px solid var(--line)' }}>
       <div>
-        <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: '.8rem', fontWeight: 500 }}>{label}</div>
         {desc && <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2 }}>{desc}</div>}
       </div>
       {children}
@@ -208,8 +208,8 @@ export default function SettingsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>設定</h1>
+        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>設定</h1>
         </div>
 
         <div className="stagger" style={{ padding: '30px 28px', maxWidth: 720 }}>
@@ -227,23 +227,23 @@ export default function SettingsPage() {
           {/* メッセージ（テンプレート／自動メッセージ）— Phase3-D②b 入口カード（件数動的） */}
           <div style={{ marginBottom: 20 }}>
             <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 10 }}>メッセージ</b>
-            <a href="/console/settings/templates" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 10, textDecoration: 'none', color: 'inherit' }}>
+            <a href="/console/settings/templates" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 10, textDecoration: 'none', color: 'inherit' }}>
               <span style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--c-ghost-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3v4a1 1 0 001 1h4" /><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" /><path d="M9 9h1M9 13h6M9 17h6" /></svg>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.84rem', fontWeight: 800 }}>自由送信テンプレート</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 700, marginTop: 4 }}>{msgFreeCount == null ? '　' : `${msgFreeCount}件登録済み`}</div>
+                <div style={{ fontSize: '.84rem', fontWeight: 500 }}>自由送信テンプレート</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 500, marginTop: 4 }}>{msgFreeCount == null ? '　' : `${msgFreeCount}件登録済み`}</div>
               </div>
               <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
             </a>
-            <a href="/console/settings/auto-messages" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px', textDecoration: 'none', color: 'inherit' }}>
+            <a href="/console/settings/auto-messages" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', textDecoration: 'none', color: 'inherit' }}>
               <span style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-background-info, #E6F1FB)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-info)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="8" width="16" height="12" rx="2" /><path d="M12 8V4M9 4h6M9 14h.01M15 14h.01M9 17h6" /></svg>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.84rem', fontWeight: 800 }}>自動メッセージ</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 700, marginTop: 4 }}>{msgAutoCount == null ? '　' : `7イベント · ${msgAutoCount}件カスタム`}</div>
+                <div style={{ fontSize: '.84rem', fontWeight: 500 }}>自動メッセージ</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 500, marginTop: 4 }}>{msgAutoCount == null ? '　' : `7イベント · ${msgAutoCount}件カスタム`}</div>
               </div>
               <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
             </a>
@@ -292,11 +292,11 @@ export default function SettingsPage() {
             </RowItem>
             {notifSlack && (
               <div style={{ margin: '0 0 14px', padding: '12px 14px', background: 'var(--bg2)', borderRadius: 10 }}>
-                <div style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 8 }}>通知するイベント</div>
+                <div style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>通知するイベント</div>
                 <RowItem label="新規案件"><Toggle on={evtNewDeal} onChange={setEvtNewDeal} /></RowItem>
                 <RowItem label="ステータス変更"><Toggle on={evtStatus} onChange={setEvtStatus} /></RowItem>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '.8rem', fontWeight: 600 }}>支払完了</div>
+                  <div style={{ fontSize: '.8rem', fontWeight: 500 }}>支払完了</div>
                   <Toggle on={evtPayout} onChange={setEvtPayout} />
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function SettingsPage() {
               <button
                 onClick={exportCsv}
                 disabled={auditLogs.length === 0}
-                style={{ fontSize: '.7rem', color: 'var(--c-blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}
+                style={{ fontSize: '.7rem', color: 'var(--c-blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}
               >
                 CSV出力
               </button>
@@ -366,16 +366,16 @@ export default function SettingsPage() {
             ) : (
               <div>
                 {auditLogs.map((log, i) => (
-                  <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < auditLogs.length - 1 ? '1px solid #F2F2F6' : undefined, alignItems: 'flex-start' }}>
+                  <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < auditLogs.length - 1 ? '0.5px solid var(--line)' : undefined, alignItems: 'flex-start' }}>
                     <span style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: 'Inter', flexShrink: 0, paddingTop: 2, minWidth: 54 }}>
                       {new Date(log.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
-                        <span style={{ fontSize: '.57rem', fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: 'var(--bg2)', color: 'var(--muted2)' }}>
+                        <span style={{ fontSize: '.57rem', fontWeight: 500, padding: '1px 6px', borderRadius: 10, background: 'var(--bg2)', color: 'var(--muted2)' }}>
                           {log.category}
                         </span>
-                        <span style={{ fontSize: '.76rem', fontWeight: 700 }}>{log.action}</span>
+                        <span style={{ fontSize: '.76rem', fontWeight: 500 }}>{log.action}</span>
                       </div>
                       <div style={{ fontSize: '.63rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.target}</div>
                     </div>
@@ -398,7 +398,7 @@ export default function SettingsPage() {
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--txt)', color: '#fff', padding: '12px 22px',
-          borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99, whiteSpace: 'nowrap',
+          borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99, whiteSpace: 'nowrap',
         }}>
           {toast}
         </div>

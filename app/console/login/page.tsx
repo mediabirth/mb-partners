@@ -61,7 +61,7 @@ export default function ConsoleLoginPage() {
           <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
         </svg>
 
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 900, margin: '14px 0 4px', letterSpacing: '-.012em' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '14px 0 4px', letterSpacing: '-.012em' }}>
           MB Partners <span style={{ color: 'var(--blue)' }}>Console</span>
         </h2>
 
@@ -91,7 +91,7 @@ export default function ConsoleLoginPage() {
           </button>
         </form>
 
-        <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 18, textAlign: 'center', borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+        <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 18, textAlign: 'center', borderTop: '0.5px solid var(--line)', paddingTop: 14 }}>
           管理者の追加は招待制（オーナーのみ）。パートナーの方は<br />
           パートナーポータルからログインしてください。
         </p>

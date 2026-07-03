@@ -46,9 +46,9 @@ export default async function ConsoleFunnelPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <ConsoleMain>
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>紹介ファネル</h1>
-          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
+        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>紹介ファネル</h1>
+          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 500, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
 
         <div style={{ padding: '30px 32px 44px', maxWidth: 1000, margin: '0 auto' }}>
@@ -59,12 +59,12 @@ export default async function ConsoleFunnelPage() {
           {/* 4段 KPI */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
             {stages.map((s, i) => (
-              <div key={s.label} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px' }}>
-                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>{i + 1}. {s.label}</div>
-                <div style={{ fontFamily: 'Inter', fontSize: '1.7rem', fontWeight: 800, marginTop: 8, letterSpacing: '-.02em', color: s.color }}>{s.n}</div>
+              <div key={s.label} className="card-hover ui-card" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px' }}>
+                <div style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>{i + 1}. {s.label}</div>
+                <div style={{ fontFamily: 'Inter', fontSize: '1.7rem', fontWeight: 500, marginTop: 8, letterSpacing: '-.02em', color: s.color }}>{s.n}</div>
                 <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.4 }}>{s.sub}</div>
                 {s.rate != null && (
-                  <div style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', marginTop: 8, paddingTop: 8, borderTop: '1px solid #F2F2F6' }}>
+                  <div style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', marginTop: 8, paddingTop: 8, borderTop: '0.5px solid var(--line)' }}>
                     {s.rateLabel} <b style={{ color: 'var(--txt)', fontFamily: 'Inter' }}>{s.rate}%</b>
                   </div>
                 )}
@@ -73,14 +73,14 @@ export default async function ConsoleFunnelPage() {
           </div>
 
           {/* チャネル別 共有 */}
-          <div className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+          <div className="card-hover ui-card" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
             <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 2 }}>共有チャネルの内訳</b>
             <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 14 }}>直近{WINDOW_DAYS}日の共有タップ数</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
               {Object.keys(CH_LABEL).map(k => (
                 <div key={k} style={{ background: 'var(--bg2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Inter', fontSize: '1.3rem', fontWeight: 800, letterSpacing: '-.02em' }}>{byCh[k]}</div>
-                  <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 4, fontWeight: 600 }}>{CH_LABEL[k]}</div>
+                  <div style={{ fontFamily: 'Inter', fontSize: '1.3rem', fontWeight: 500, letterSpacing: '-.02em' }}>{byCh[k]}</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 4, fontWeight: 500 }}>{CH_LABEL[k]}</div>
                 </div>
               ))}
             </div>

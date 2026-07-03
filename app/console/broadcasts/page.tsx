@@ -17,7 +17,7 @@ function kindBadge(kind: string) {
   const isNews = kind === 'news'
   return (
     <span style={{
-      fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+      fontSize: '.58rem', fontWeight: 500, padding: '2px 7px', borderRadius: 20,
       background: isNews ? 'var(--blue-bg)' : 'var(--amber-bg)',
       color: isNews ? 'var(--c-blue)' : 'var(--amber)',
     }}>
@@ -56,16 +56,16 @@ export default function BroadcastsPage() {
         {/* Top bar */}
         <div style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid var(--line)', padding: '13px 28px',
+          borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, zIndex: 30,
         }}>
           <div>
             <div className="eyebrow">CONSOLE</div>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>配信</h1>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信</h1>
           </div>
           <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
-            fontSize: '.75rem', fontWeight: 700, padding: '8px 16px', borderRadius: 9,
+            fontSize: '.75rem', fontWeight: 500, padding: '8px 16px', borderRadius: 9,
             background: 'var(--c-blue)', color: '#fff', textDecoration: 'none',
           }}>
             + 新規作成
@@ -82,7 +82,7 @@ export default function BroadcastsPage() {
           )}
           {!loading && broadcasts.length === 0 && (
             <div style={{
-              background: '#fff', border: '1px solid var(--line)', borderRadius: 16,
+              background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16,
               padding: '48px 28px', textAlign: 'center',
             }}>
               <div style={{
@@ -96,7 +96,7 @@ export default function BroadcastsPage() {
                   <path d="M18.5 6a7 7 0 0 1 0 12" />
                 </svg>
               </div>
-              <div style={{ fontSize: '.95rem', fontWeight: 800, marginBottom: 6 }}>
+              <div style={{ fontSize: '.95rem', fontWeight: 500, marginBottom: 6 }}>
                 まだ配信がありません
               </div>
               <div style={{ fontSize: '.76rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 20 }}>
@@ -104,7 +104,7 @@ export default function BroadcastsPage() {
                 最初の配信を作成して、つながりを深めませんか？
               </div>
               <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
-                fontSize: '.78rem', fontWeight: 700, padding: '10px 22px', borderRadius: 10,
+                fontSize: '.78rem', fontWeight: 500, padding: '10px 22px', borderRadius: 10,
                 background: 'var(--c-blue)', color: '#fff', textDecoration: 'none', display: 'inline-block',
               }}>
                 + 新規作成
@@ -117,7 +117,7 @@ export default function BroadcastsPage() {
           {broadcasts.map(b => (
             <Link key={b.id} href={`/console/broadcasts/${b.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="card-hover lift ui-card" style={{
-                background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
+                background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14,
                 padding: '16px 20px', marginBottom: 12, display: 'flex',
                 alignItems: 'center', gap: 14, cursor: 'pointer',
               }}>
@@ -128,7 +128,7 @@ export default function BroadcastsPage() {
                       {segmentLabel(b.segment)}
                     </span>
                   </div>
-                  <div style={{ fontSize: '.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: '.85rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {b.title}
                   </div>
                   <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3 }}>
@@ -139,7 +139,7 @@ export default function BroadcastsPage() {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {b.sent_at ? (
                     <>
-                      <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 10px', borderRadius: 20, marginBottom: 5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 10px', borderRadius: 20, marginBottom: 5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)' }} />
                         配信済
                       </div>
@@ -151,7 +151,7 @@ export default function BroadcastsPage() {
                       </div>
                     </>
                   ) : (
-                    <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-bg)', padding: '3px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--amber)', background: 'var(--amber-bg)', padding: '3px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                       <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--amber)' }} />
                       下書き
                     </span>

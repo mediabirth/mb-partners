@@ -125,7 +125,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
           <>
             {/* Chat header */}
             <header style={{
-              flexShrink: 0, background: '#fff', borderBottom: '1px solid var(--line)',
+              flexShrink: 0, background: '#fff', borderBottom: '0.5px solid var(--line)',
               padding: '14px 28px',
             }}>
               <Link href="/console/inquiries" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '.72rem', color: 'var(--c-blue)', textDecoration: 'none', marginBottom: 10 }}>
@@ -137,19 +137,19 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     width: 34, height: 34, borderRadius: '50%',
                     background: inquiry.partners.profiles.color, color: '#fff',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '.78rem', fontWeight: 700, flexShrink: 0,
+                    fontSize: '.78rem', fontWeight: 500, flexShrink: 0,
                   }}>
                     {inquiry.partners.profiles.name[0]}
                   </span>
                 )}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '.92rem', fontWeight: 700, color: 'var(--txt)' }}>
+                    <span style={{ fontSize: '.92rem', fontWeight: 500, color: 'var(--txt)' }}>
                       {inquiry.partners?.profiles?.name ?? '-'}
                     </span>
                     <span style={{ fontSize: '.64rem', color: 'var(--muted2)', opacity: .8 }}>({inquiry.partners?.code})</span>
                     <span style={{
-                      fontSize: '.62rem', fontWeight: 700, padding: '2px 9px', borderRadius: 20,
+                      fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 20,
                       color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color,
                       background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg,
                     }}>
@@ -157,7 +157,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     </span>
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
-                      fontSize: '.62rem', fontWeight: 700, padding: '2px 9px', borderRadius: 20,
+                      fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 20,
                       color: statusColor, background: statusBg,
                     }}>
                       <span className="status-dot" style={{ background: statusColor }} />
@@ -177,19 +177,19 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                 {/* Opening message: the inquiry subject (partner side) — always shown so the thread is never empty */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '100%' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 4 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{inquiry.partners?.profiles?.name ?? 'パートナー'}</span>
+                    <span style={{ fontWeight: 500, color: 'var(--muted)' }}>{inquiry.partners?.profiles?.name ?? 'パートナー'}</span>
                     <span style={{ opacity: .8 }}>
                       {new Date(inquiry.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color, background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg }}>
+                    <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '1px 7px', borderRadius: 20, color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color, background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg }}>
                       {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
                     </span>
                   </div>
                   <div style={{
                     maxWidth: '78%', padding: '10px 14px', borderRadius: '16px 16px 16px 3px',
-                    background: '#fff', color: 'var(--txt)', border: '1px solid var(--line)',
+                    background: '#fff', color: 'var(--txt)', border: '0.5px solid var(--line)',
                     boxShadow: '0 1px 2px rgba(14,14,20,.04)',
-                    fontSize: '.8rem', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontWeight: 600,
+                    fontSize: '.8rem', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontWeight: 500,
                   }}>
                     {inquiry.subject}
                   </div>
@@ -204,7 +204,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                         fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 4,
                         flexDirection: isOwner ? 'row-reverse' : 'row',
                       }}>
-                        <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{senderName}</span>
+                        <span style={{ fontWeight: 500, color: 'var(--muted)' }}>{senderName}</span>
                         <span style={{ opacity: .8 }}>
                           {new Date(msg.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -214,7 +214,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                         borderRadius: isOwner ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
                         background: isOwner ? 'var(--c-blue)' : '#fff',
                         color: isOwner ? '#fff' : 'var(--txt)',
-                        border: isOwner ? 'none' : '1px solid var(--line)',
+                        border: isOwner ? 'none' : '0.5px solid var(--line)',
                         boxShadow: isOwner ? '0 1px 2px rgba(46,91,255,.18)' : '0 1px 2px rgba(14,14,20,.04)',
                         fontSize: '.8rem', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
                       }}>
@@ -228,7 +228,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
 
             {/* Sticky composer */}
             <div style={{
-              flexShrink: 0, background: '#fff', borderTop: '1px solid var(--line)',
+              flexShrink: 0, background: '#fff', borderTop: '0.5px solid var(--line)',
               padding: '12px 28px 16px',
             }}>
               <div style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -242,9 +242,9 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                         className="chip lift"
                         onClick={() => setReplyBody(t.body)}
                         style={{
-                          padding: '4px 11px', borderRadius: 20, border: '1px solid var(--line)',
+                          padding: '4px 11px', borderRadius: 20, border: '0.5px solid var(--line)',
                           background: 'var(--bg2)', fontSize: '.66rem', color: 'var(--muted)',
-                          cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                          cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
                         }}
                       >
                         {t.label}
@@ -263,7 +263,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     rows={2}
                     style={{
                       flex: 1, padding: '10px 14px', borderRadius: 22,
-                      border: '1px solid var(--line)', fontSize: '.8rem',
+                      border: '0.5px solid var(--line)', fontSize: '.8rem',
                       color: 'var(--txt)', outline: 'none', resize: 'none',
                       fontFamily: 'inherit', lineHeight: 1.5, maxHeight: 140,
                     }}
@@ -275,7 +275,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     style={{
                       padding: '10px 22px', borderRadius: 22, border: 'none',
                       background: (sending || !replyBody.trim()) ? 'var(--muted)' : 'var(--c-blue)',
-                      color: '#fff', fontSize: '.8rem', fontWeight: 700, flexShrink: 0,
+                      color: '#fff', fontSize: '.8rem', fontWeight: 500, flexShrink: 0,
                       cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
                     }}
                   >
@@ -292,7 +292,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
           <div style={{
             position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
             background: 'var(--txt)', color: '#fff', borderRadius: 10,
-            padding: '10px 22px', fontSize: '.78rem', fontWeight: 600, zIndex: 100,
+            padding: '10px 22px', fontSize: '.78rem', fontWeight: 500, zIndex: 100,
             boxShadow: '0 4px 24px rgba(14,14,20,.18)',
           }}>
             {toast}

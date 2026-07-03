@@ -37,9 +37,9 @@ export default function ProfileSection() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
       <Avatar name={name || '—'} color={color} src={avatar} size={56} />
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '.92rem', fontWeight: 800 }}>{name || '—'}</div>
+        <div style={{ fontSize: '.92rem', fontWeight: 500 }}>{name || '—'}</div>
         <div style={{ fontSize: '.68rem', color: 'var(--muted2)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
-        {roleJa && <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2)', borderRadius: 6, padding: '2px 8px', display: 'inline-block', marginTop: 6 }}>{roleJa}</div>}
+        {roleJa && <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg2)', borderRadius: 6, padding: '2px 8px', display: 'inline-block', marginTop: 6 }}>{roleJa}</div>}
       </div>
     </div>
   )
@@ -56,7 +56,7 @@ export default function ProfileSection() {
       />
       <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <label style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>表示名</label>
+          <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>表示名</label>
           <input
             value={draftName}
             onChange={e => setDraftName(e.target.value)}
@@ -66,7 +66,7 @@ export default function ProfileSection() {
           />
         </div>
         <div>
-          <label style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>メールアドレス（変更不可）</label>
+          <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>メールアドレス（変更不可）</label>
           <input
             value={email}
             readOnly
@@ -84,7 +84,7 @@ export default function ProfileSection() {
         コンソールに表示される<b>あなたの名前とアイコン</b>です。自分のプロフィールのみ編集できます。
       </p>
       <EditBlock view={view} edit={edit} onEdit={() => setDraftName(name)} onSave={save} />
-      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99 }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99 }}>{toast}</div>}
     </>
   )
 }

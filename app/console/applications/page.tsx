@@ -39,12 +39,12 @@ function fmtJst(iso: string): string {
 }
 
 const TH: React.CSSProperties = {
-  textAlign: 'left', fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)',
-  padding: '10px 12px', whiteSpace: 'nowrap', borderBottom: '1px solid var(--line)',
+  textAlign: 'left', fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)',
+  padding: '10px 12px', whiteSpace: 'nowrap', borderBottom: '0.5px solid var(--line)',
 }
 const TD: React.CSSProperties = {
   fontSize: '.68rem', color: 'var(--txt)', padding: '11px 12px',
-  borderBottom: '1px solid #F2F2F6', verticalAlign: 'top',
+  borderBottom: '0.5px solid var(--line)', verticalAlign: 'top',
 }
 
 export default async function ConsoleApplicationsPage() {
@@ -63,9 +63,9 @@ export default async function ConsoleApplicationsPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <ConsoleMain>
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>パートナー応募</h1>
-          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 700, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
+        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>パートナー応募</h1>
+          <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 500, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
 
         <div style={{ padding: '24px 28px 44px' }}>
@@ -74,11 +74,11 @@ export default async function ConsoleApplicationsPage() {
           </p>
 
           {rows.length === 0 ? (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '48px 24px', textAlign: 'center', color: 'var(--muted2)', fontSize: '.78rem' }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '48px 24px', textAlign: 'center', color: 'var(--muted2)', fontSize: '.78rem' }}>
               まだ応募はありません
             </div>
           ) : (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
                   <thead>
@@ -100,7 +100,7 @@ export default async function ConsoleApplicationsPage() {
                     {rows.map(r => (
                       <tr key={r.id}>
                         <td style={{ ...TD, whiteSpace: 'nowrap', fontFamily: 'Inter', color: 'var(--muted2)' }}>{fmtJst(r.created_at)}</td>
-                        <td style={{ ...TD, fontWeight: 700, whiteSpace: 'nowrap' }}>{r.name || '—'}</td>
+                        <td style={{ ...TD, fontWeight: 500, whiteSpace: 'nowrap' }}>{r.name || '—'}</td>
                         <td style={TD}>{r.org || '—'}</td>
                         <td style={TD}>{r.expertise || '—'}</td>
                         <td style={TD}>{r.email ? <a href={`mailto:${r.email}`} style={{ color: 'var(--c-blue)' }}>{r.email}</a> : '—'}</td>
@@ -108,14 +108,14 @@ export default async function ConsoleApplicationsPage() {
                         <td style={{ ...TD, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{r.message || '—'}</td>
                         <td style={TD}>
                           {r.consent
-                            ? <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)' }}>同意</span>
+                            ? <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--green)' }}>同意</span>
                             : <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>—</span>}
                         </td>
                         <td style={{ ...TD, color: 'var(--muted2)', fontSize: '.62rem', whiteSpace: 'nowrap' }}>{r.source || '—'}</td>
                         {/* Feature E：紹介元（招待リンク /join?ref= 経由）。非金銭・表示のみ。 */}
                         <td style={{ ...TD, whiteSpace: 'nowrap' }}>
                           {r.referrer?.profiles?.name
-                            ? <span style={{ fontSize: '.64rem', fontWeight: 600 }}>{r.referrer.profiles.name}{r.referrer.code ? <span style={{ color: 'var(--muted2)', fontWeight: 400 }}> ({r.referrer.code})</span> : ''}</span>
+                            ? <span style={{ fontSize: '.64rem', fontWeight: 500 }}>{r.referrer.profiles.name}{r.referrer.code ? <span style={{ color: 'var(--muted2)', fontWeight: 400 }}> ({r.referrer.code})</span> : ''}</span>
                             : <span style={{ color: 'var(--muted)' }}>—</span>}
                         </td>
                         {/* Feature E（E-3）：承認＝仲間化。紹介元があれば賞賛通知を1件（冪等）。お金/status/frontier 非接触。 */}

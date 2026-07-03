@@ -92,7 +92,7 @@ export async function GET() {
   const SEL_BASE = `
       id, customer_name, customer_type, company_name, contact_name, contact_title, channel, source, status, amount, base_amount,
       fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot, reward_ref, continuous_months,
-      service_menus(coop_enabled, coop_type, coop_value, coop_base),
+      service_menus(name, coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, logo_path),
       partners(code, frontier_id, frontier_linked_at, profiles(name, color))`
   // N失注メタ + L2明細 + A1 P&L(revenue/director_id/other_cost)。列/テーブル未作成なら段階 fallback。
@@ -156,6 +156,20 @@ export async function GET() {
   for (const u of ((upsR.data ?? []) as Array<{ delivery_assignment_id: string }>)) (updatesByAssign[u.delivery_assignment_id] ??= []).push(u)
   for (const x of ((dvbR.data ?? []) as Array<{ delivery_assignment_id: string }>)) (deliverablesByAssign[x.delivery_assignment_id] ??= []).push(x)
 
+  // メニュー名の一括解決（APP正典 app/app/cases/[id] と同じ流儀）：
+  //   reward_snapshot.menu_id → menus.name（お客さま向け新名称を優先）／無ければ service_menus.name。
+  //   読取クエリの追加のみ（in検索1回）。テーブル未作成でも安全に空でフォールバック。
+  const menuNameById: Record<string, string> = {}
+  try {
+    const snapMenuIds = [...new Set((deals ?? [])
+      .map((d: Record<string, unknown>) => ((d.reward_snapshot as { menu_id?: string } | null)?.menu_id))
+      .filter((v): v is string => !!v))]
+    if (snapMenuIds.length > 0) {
+      const { data: mm } = await admin.from('menus').select('id, name').in('id', snapMenuIds)
+      for (const m of ((mm ?? []) as Array<{ id: string; name: string }>)) menuNameById[m.id] = m.name
+    }
+  } catch { /* best-effort（menus 未作成時は service_menus 名にフォールバック） */ }
+
   // A1: 各案件のフロンティアoverride を読取で算出して付与（既存lib/frontierの式・保存値非接触）。
   const { dealFrontierOverride } = await import('@/lib/pnl')
   const withOverride = (deals ?? []).map((d: Record<string, unknown>) => {
@@ -175,6 +189,11 @@ export async function GET() {
       })),
       _delivery_cost: dv?.cost ?? 0,
       _delivery_expense: approvedExpenseByDeal[d.id as string] ?? 0,
+      // メニュー名（新名称優先→service_menus名）。表示専用メタ・money非接触。
+      _menu_name: (() => {
+        const snapId = (d.reward_snapshot as { menu_id?: string } | null)?.menu_id
+        return (snapId && menuNameById[snapId]) || (d.service_menus as { name?: string | null } | null)?.name || null
+      })(),
       _delivery_brief: (d.delivery_brief as string | null) ?? null,
       // F-1: フェーズ導出（純関数・お金非干渉）。intake_type/project_status は列が無ければ undefined（フォールバック済）。
       _phase: phaseOf(d as { intake_type?: string | null; status: string }),

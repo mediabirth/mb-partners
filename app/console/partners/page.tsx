@@ -7,7 +7,7 @@ import ConsoleNav from '@/components/ConsoleNav'
 import ApprovalPanel from './ApprovalPanel'
 import DeliveryRow from './DeliveryRow'
 import CountUp from '@/components/CountUp'
-import StatusPill from '@/components/ui/StatusPill'
+import StatusDot from '../StatusDot'
 import Avatar from '@/components/ui/Avatar'
 import { partnerStatus, partnerKind } from '@/lib/status'
 import type { Tone } from '@/components/ui/StatusPill'
@@ -91,8 +91,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const Table = ({ rows }: { rows: URow[] }) => rows.length === 0 ? (
     <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>該当するパートナーがいません。</p>
   ) : (
-    <div className="ctable-scroll" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr', padding: '9px 20px', borderBottom: '1px solid var(--line)', background: 'var(--bg2)' }}>
+    <div className="ctable-scroll" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr', padding: '9px 20px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg2)' }}>
         {['パートナー', '区分', 'コード', '税区分', '累計成約', '累計報酬（税抜）', '状態'].map(h => <span key={h} style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>)}
       </div>
       {rows.map((r, i) => {
@@ -106,28 +106,28 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               <Avatar name={r.name || r.code} color={r.color} src={r.avatar_url} size={34} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  <span style={{ fontWeight: 700, fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                  <span style={{ fontWeight: 500, fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                 </div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {r.email || '—'}{r.kyc && <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 600 }}>✓ KYC</span>}
+                  {r.email || '—'}{r.kyc && <span style={{ marginLeft: 6, color: 'var(--green)', fontWeight: 500 }}>✓ KYC</span>}
                 </div>
               </div>
             </div>
-            <span><StatusPill size="sm" {...partnerKind(r.kind)} /></span>
+            <span><StatusDot {...partnerKind(r.kind)} /></span>
             <span style={{ fontFamily: 'Inter', fontSize: '.7rem', color: 'var(--muted2)' }}>{r.code}</span>
             <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{r.tax}</span>
             <div>
               {r.deals == null ? <span style={{ color: 'var(--muted)' }}>—</span> : <>
-                <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem' }}>{r.deals}</span>
+                <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '.8rem' }}>{r.deals}</span>
                 <span style={{ fontSize: '.6rem', color: 'var(--muted2)', marginLeft: 3 }}>件</span>
-                {r.activeDeals > 0 && <span style={{ marginLeft: 5, fontSize: '.58rem', fontWeight: 700, color: 'var(--c-blue)' }}>/{r.activeDeals}進行</span>}
+                {r.activeDeals > 0 && <span style={{ marginLeft: 5, fontSize: '.58rem', fontWeight: 500, color: 'var(--c-blue)' }}>/{r.activeDeals}進行</span>}
               </>}
             </div>
-            <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '.86rem', fontFeatureSettings: '"tnum"', color: (r.reward ?? 0) > 0 ? 'var(--txt)' : 'var(--muted2)' }}>{r.reward == null ? '—' : `¥${r.reward.toLocaleString()}`}</span>
-            <StatusPill {...r.statusPill} />
+            <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '.86rem', fontFeatureSettings: '"tnum"', color: (r.reward ?? 0) > 0 ? 'var(--txt)' : 'var(--muted2)' }}>{r.reward == null ? '—' : `¥${r.reward.toLocaleString()}`}</span>
+            <StatusDot {...r.statusPill} />
           </>
         )
-        const css: React.CSSProperties = { display: 'grid', gridTemplateColumns: '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr', padding: '14px 20px', borderTop: i > 0 ? '1px solid #F2F2F6' : undefined, alignItems: 'center', textDecoration: 'none', color: 'inherit' }
+        const css: React.CSSProperties = { display: 'grid', gridTemplateColumns: '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr', padding: '14px 20px', borderTop: i > 0 ? '0.5px solid var(--line)' : undefined, alignItems: 'center', textDecoration: 'none', color: 'inherit' }
         return r.href
           ? <Link key={r.id} href={r.href} className="row-hover lift" style={css}>{inner}</Link>
           : <div key={r.id} style={css}>{inner}</div>
@@ -139,19 +139,19 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
+        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>パートナー</h1>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>パートナー</h1>
             <Link href={`/console/partners/invite?kind=${filter === 'frontier' ? 'frontier' : filter === 'delivery' ? 'delivery' : 'partner'}`} className="ui-btn ui-btn--primary ui-btn--lg" style={{ fontSize: '.72rem', padding: '7px 14px' }}>招待する</Link>
           </div>
           {/* BR-C2：種別タブ→統一リストのフィルタ（既定=すべて）。役職は行内 StatusPill で識別。 */}
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg2)', borderRadius: 9, padding: 3, width: 'fit-content' }}>
             {FILTERS.map(t => (
               <Link key={t.id} href={t.id === 'all' ? '/console/partners' : `/console/partners?tab=${t.id}`} style={{
-                textDecoration: 'none', fontSize: '.74rem', fontWeight: 700, padding: '7px 15px', borderRadius: 7,
+                textDecoration: 'none', fontSize: '.74rem', fontWeight: 500, padding: '7px 15px', borderRadius: 7,
                 color: filter === t.id ? 'var(--txt)' : 'var(--muted2)', background: filter === t.id ? '#fff' : 'transparent',
                 boxShadow: filter === t.id ? '0 1px 4px rgba(14,14,20,.1)' : 'none',
-              }}>{t.label}<span style={{ marginLeft: 5, color: 'var(--muted2)', fontWeight: 600 }}>{t.count}</span></Link>
+              }}>{t.label}<span style={{ marginLeft: 5, color: 'var(--muted2)', fontWeight: 500 }}>{t.count}</span></Link>
             ))}
           </div>
         </div>
@@ -166,9 +166,9 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               { label: '累計成約件数', value: summaryDeals, unit: '件', yen: false },
               { label: '累計報酬総額', value: summaryReward, unit: '', yen: true },
             ].map(s => (
-              <div key={s.label} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
-                <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</div>
-                <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.2rem' }}>
+              <div key={s.label} className="card-hover ui-card" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
+                <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginBottom: 6, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</div>
+                <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.2rem' }}>
                   <CountUp value={s.value} format={s.yen ? 'yen' : 'number'} /><span style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', marginLeft: 2 }}>{s.unit}</span>
                 </div>
               </div>

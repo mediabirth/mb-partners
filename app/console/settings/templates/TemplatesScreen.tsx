@@ -47,15 +47,15 @@ function Editor({ existing, signedUrls, onSaved, onDeleted, onBack }: { existing
   }
   const field = (label: string, node: React.ReactNode, hint?: string) => (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--t-tertiary)', marginBottom: 5 }}>{label}{hint && <span style={{ fontWeight: 600, marginLeft: 6 }}>{hint}</span>}</div>
+      <div style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--t-tertiary)', marginBottom: 5 }}>{label}{hint && <span style={{ fontWeight: 500, marginLeft: 6 }}>{hint}</span>}</div>
       {node}
     </div>
   )
 
   return (
     <div>
-      {onBack && <button type="button" onClick={onBack} style={{ border: 'none', background: 'transparent', color: 'var(--c-blue)', fontSize: '.66rem', fontWeight: 700, cursor: 'pointer', padding: 0, marginBottom: 10 }}>← 一覧へ</button>}
-      <h2 style={{ fontSize: '1.05rem', fontWeight: 900, marginBottom: 16 }}>{isNew ? 'テンプレートを作成' : 'テンプレートを編集'}</h2>
+      {onBack && <button type="button" onClick={onBack} style={{ border: 'none', background: 'transparent', color: 'var(--c-blue)', fontSize: '.66rem', fontWeight: 500, cursor: 'pointer', padding: 0, marginBottom: 10 }}>← 一覧へ</button>}
+      <h2 style={{ fontSize: '1.05rem', fontWeight: 500, marginBottom: 16 }}>{isNew ? 'テンプレートを作成' : 'テンプレートを編集'}</h2>
       {field('テンプレ名', <input className="ui-field" value={title} onChange={e => setTitle(e.target.value)} placeholder="例：お礼メッセージ" />)}
       {field('種類', isNew ? (
         <div style={{ display: 'flex', gap: 8 }}>
@@ -66,7 +66,7 @@ function Editor({ existing, signedUrls, onSaved, onDeleted, onBack }: { existing
 
       <div style={{ display: 'flex', flexDirection: previewNarrow ? 'column' : 'row', gap: previewNarrow ? 18 : 26, alignItems: 'flex-start', marginTop: 4 }}>
         <div style={{ flex: 1, minWidth: 0, width: previewNarrow ? '100%' : 'auto' }}>
-          <div style={{ fontSize: '.66rem', fontWeight: 800, marginBottom: 8 }}>メッセージのブロック</div>
+          <div style={{ fontSize: '.66rem', fontWeight: 500, marginBottom: 8 }}>メッセージのブロック</div>
           <BlockBuilder blocks={blocks} setBlocks={setBlocks} urls={urls} setUrls={setUrls} />
         </div>
         <div style={{ width: previewNarrow ? '100%' : 264, flexShrink: 0, ...(previewNarrow ? {} : { position: 'sticky' as const, top: 16 }) }}>
@@ -95,9 +95,9 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
   function onDeleted(id: string) { setList(prev => prev.filter(t => t.id !== id)); setSel(null) }
 
   const ListPane = (
-    <div style={{ width: narrow ? '100%' : 320, flexShrink: 0, borderRight: narrow ? 'none' : '1px solid var(--line)' }}>
+    <div style={{ width: narrow ? '100%' : 320, flexShrink: 0, borderRight: narrow ? 'none' : '0.5px solid var(--line)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 12px' }}>
-        <div style={{ fontSize: '.8rem', fontWeight: 800 }}>テンプレート</div>
+        <div style={{ fontSize: '.8rem', fontWeight: 500 }}>テンプレート</div>
         <Button variant="primary" size="sm" onClick={() => setSel('new')}>新規</Button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -106,8 +106,8 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
           const on = t.id === sel
           const hasImg = (t.attachments ?? []).some(a => a.type === 'image')
           return (
-            <button key={t.id} type="button" onClick={() => setSel(t.id)} className="ui-row" style={{ width: '100%', textAlign: 'left', border: '1px solid', borderColor: on ? 'var(--c-ring-soft)' : 'var(--c-hairline)', background: on ? 'var(--c-ghost-bg)' : 'var(--s-0)', borderRadius: 10, cursor: 'pointer', padding: '10px 12px', display: 'block' }}>
-              <div style={{ fontSize: '.76rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <button key={t.id} type="button" onClick={() => setSel(t.id)} className="ui-row" style={{ width: '100%', textAlign: 'left', border: '0.5px solid', borderColor: on ? 'var(--c-ring-soft)' : 'var(--c-hairline)', background: on ? 'var(--c-ghost-bg)' : 'var(--s-0)', borderRadius: 10, cursor: 'pointer', padding: '10px 12px', display: 'block' }}>
+              <div style={{ fontSize: '.76rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 7 }}>
                 <ChannelBadge channel={t.channel} />
                 <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
                 {hasImg && <span title="画像あり" style={{ flexShrink: 0, fontSize: '.66rem' }}>🖼</span>}
@@ -133,8 +133,8 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
   return (
     <div style={{ maxWidth: 980, margin: '0 auto', padding: '28px 28px 60px' }}>
       <div style={{ marginBottom: 18 }}>
-        <a href="/console/settings" style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none' }}>← 設定に戻る</a>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 900, marginTop: 6 }}>自由送信テンプレート</h1>
+        <a href="/console/settings" style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none' }}>← 設定に戻る</a>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 500, marginTop: 6 }}>自由送信テンプレート</h1>
       </div>
       {narrow ? (showEditor ? EditorPane : ListPane) : (
         <div style={{ display: 'flex', alignItems: 'flex-start' }}>{ListPane}{EditorPane}</div>

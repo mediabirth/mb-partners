@@ -44,8 +44,8 @@ export default function MonthSelector({
           onChange={e => go(e.target.value)}
           style={{
             appearance: 'none', WebkitAppearance: 'none',
-            fontFamily: 'inherit', fontSize: '.78rem', fontWeight: 700, color: 'var(--txt)',
-            background: '#fff', border: '1px solid var(--line)', borderRadius: 9,
+            fontFamily: 'inherit', fontSize: '.78rem', fontWeight: 500, color: 'var(--txt)',
+            background: '#fff', border: '0.5px solid var(--line)', borderRadius: 9,
             padding: '7px 30px 7px 13px', cursor: 'pointer', outline: 'none', minWidth: 124,
           }}
         >
@@ -70,9 +70,9 @@ export default function MonthSelector({
 
 function arrowStyle(disabled: boolean): React.CSSProperties {
   return {
-    width: 30, height: 32, borderRadius: 9, border: '1px solid var(--line)',
+    width: 30, height: 32, borderRadius: 9, border: '0.5px solid var(--line)',
     background: '#fff', color: disabled ? 'var(--line)' : 'var(--muted)',
-    fontSize: '1rem', fontWeight: 700, lineHeight: 1,
+    fontSize: '1rem', fontWeight: 500, lineHeight: 1,
     cursor: disabled ? 'default' : 'pointer', flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: 'inherit',

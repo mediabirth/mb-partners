@@ -77,7 +77,7 @@ export default function GlobalSearchClient() {
       {open && results.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', right: 0, marginTop: 6,
-          background: '#fff', border: '1px solid var(--line)', borderRadius: 11,
+          background: '#fff', border: '0.5px solid var(--line)', borderRadius: 11,
           boxShadow: '0 12px 32px rgba(14,14,20,.12)', width: 300, zIndex: 60,
           overflow: 'hidden',
         }}>
@@ -85,15 +85,15 @@ export default function GlobalSearchClient() {
             <div
               key={r.id}
               onMouseDown={() => pick(r)}
-              style={{ display: 'flex', gap: 10, padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #F2F2F6', alignItems: 'center' }}
+              style={{ display: 'flex', gap: 10, padding: '10px 14px', cursor: 'pointer', borderBottom: '0.5px solid var(--line)', alignItems: 'center' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontSize: '.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: TYPE_COLORS[r.type].bg, color: TYPE_COLORS[r.type].txt, flexShrink: 0 }}>
+              <span style={{ fontSize: '.58rem', fontWeight: 500, padding: '2px 7px', borderRadius: 20, background: TYPE_COLORS[r.type].bg, color: TYPE_COLORS[r.type].txt, flexShrink: 0 }}>
                 {TYPE_LABEL[r.type]}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.76rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</div>
+                <div style={{ fontSize: '.76rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</div>
                 <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.sub}</div>
               </div>
             </div>
@@ -102,7 +102,7 @@ export default function GlobalSearchClient() {
       )}
 
       {open && results.length === 0 && !loading && query.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: '#fff', border: '1px solid var(--line)', borderRadius: 11, boxShadow: '0 12px 32px rgba(14,14,20,.12)', width: 260, zIndex: 60, padding: '14px', fontSize: '.72rem', color: 'var(--muted2)', textAlign: 'center' }}>
+        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 11, boxShadow: '0 12px 32px rgba(14,14,20,.12)', width: 260, zIndex: 60, padding: '14px', fontSize: '.72rem', color: 'var(--muted2)', textAlign: 'center' }}>
           「{query}」の結果なし
         </div>
       )}

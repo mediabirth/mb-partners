@@ -2,7 +2,7 @@
 import { useEffect, useState, useTransition, type ReactNode } from 'react'
 import useSWR from 'swr'
 import ConsoleNav from '@/components/ConsoleNav'
-import StatusPill from '@/components/ui/StatusPill'
+import StatusDot from '../StatusDot'
 import Avatar from '@/components/ui/Avatar'
 import { partnerKind } from '@/lib/status'
 
@@ -39,22 +39,22 @@ function yen(n: number) { return `¥${n.toLocaleString()}` }
 function PayRow({ row, busy }: { row: Row; busy: boolean }) {
   const [open, setOpen] = useState(false)
   return (
-    <div style={{ borderTop: '1px solid #F2F2F6' }}>
+    <div style={{ borderTop: '0.5px solid var(--line)' }}>
       <div className="lift" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         <Avatar name={row.name} color={row.color} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
             <b style={{ fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</b>
-            <StatusPill size="sm" {...partnerKind(row.kind)} />
+            <StatusDot {...partnerKind(row.kind)} />
           </div>
           <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div className="eyebrow" style={{ fontSize: '.5rem', color: 'var(--muted2)', letterSpacing: '.06em' }}>お支払額</div>
-          <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 800 }}>{yen(row.amount)}</div>
+          <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 500 }}>{yen(row.amount)}</div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-          {row.primary && <button onClick={row.primary.onClick} disabled={busy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 800, padding: '7px 13px', borderRadius: 8, color: row.primary.tone === 'green' ? 'var(--green)' : '#fff', background: row.primary.tone === 'green' ? 'var(--green-bg)' : 'var(--c-blue)' }}>{row.primary.label}</button>}
+          {row.primary && <button onClick={row.primary.onClick} disabled={busy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, padding: '7px 13px', borderRadius: 8, color: row.primary.tone === 'green' ? 'var(--green)' : '#fff', background: row.primary.tone === 'green' ? 'var(--green-bg)' : 'var(--c-blue)' }}>{row.primary.label}</button>}
         </div>
         <span style={{ color: 'var(--muted)', fontSize: '.7rem', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>∨</span>
       </div>
@@ -62,14 +62,14 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
         <div style={{ padding: '12px 18px 14px 64px', background: 'var(--bg2)' }}>
           <div className="eyebrow" style={{ fontSize: '.52rem', color: 'var(--muted2)', marginBottom: 6 }}>内訳</div>
           {row.breakdown.map((b, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '.7rem', borderTop: b.op === '=' ? '1px solid var(--line)' : undefined, marginTop: b.op === '=' ? 4 : 0, paddingTop: b.op === '=' ? 8 : 4 }}>
-              <span style={{ color: b.op === '=' ? 'var(--txt)' : 'var(--muted2)', fontWeight: b.op === '=' ? 800 : 500 }}>{b.op === '−' ? '− ' : b.op === '＋' ? '＋ ' : ''}{b.label}</span>
-              <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: b.op === '=' ? 800 : 600 }}>{b.op === '−' ? '−' : ''}{yen(Math.abs(b.value))}</span>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '.7rem', borderTop: b.op === '=' ? '0.5px solid var(--line)' : undefined, marginTop: b.op === '=' ? 4 : 0, paddingTop: b.op === '=' ? 8 : 4 }}>
+              <span style={{ color: b.op === '=' ? 'var(--txt)' : 'var(--muted2)', fontWeight: 500 }}>{b.op === '−' ? '− ' : b.op === '＋' ? '＋ ' : ''}{b.label}</span>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500 }}>{b.op === '−' ? '−' : ''}{yen(Math.abs(b.value))}</span>
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            {row.csvYm && <a href={`/api/console/payouts/${row.csvYm}/csv`} download={`payout_${row.csvYm}.csv`} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', border: '1px solid var(--blue-bg)', background: 'var(--blue-bg2)', borderRadius: 8, padding: '5px 11px' }}>CSV出力</a>}
-            {row.secondary && <button onClick={row.secondary.onClick} disabled={busy} style={{ fontSize: '.64rem', fontWeight: 700, color: 'var(--muted2)', background: '#fff', border: '1px solid var(--line)', borderRadius: 8, padding: '5px 11px', cursor: 'pointer' }}>{row.secondary.label}</button>}
+            {row.csvYm && <a href={`/api/console/payouts/${row.csvYm}/csv`} download={`payout_${row.csvYm}.csv`} style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none', border: '1px solid var(--blue-bg)', background: 'var(--blue-bg2)', borderRadius: 8, padding: '5px 11px' }}>CSV出力</a>}
+            {row.secondary && <button onClick={row.secondary.onClick} disabled={busy} style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 8, padding: '5px 11px', cursor: 'pointer' }}>{row.secondary.label}</button>}
           </div>
         </div>
       )}
@@ -80,16 +80,16 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
 function Section({ title, total, count, defaultOpen, accent, children }: { title: string; total?: number; count: number; defaultOpen: boolean; accent: string; children: ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
+    <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, overflow: 'hidden', marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: accent, flexShrink: 0 }} />
-        <b style={{ fontSize: '.92rem', flex: 1 }}>{title}<span style={{ fontSize: '.66rem', color: 'var(--muted2)', fontWeight: 600, marginLeft: 8 }}>{count}件</span></b>
-        {total != null && <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1rem', fontWeight: 800 }}>{yen(total)}</span>}
+        <b style={{ fontSize: '.92rem', flex: 1 }}>{title}<span style={{ fontSize: '.66rem', color: 'var(--muted2)', fontWeight: 500, marginLeft: 8 }}>{count}件</span></b>
+        {total != null && <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1rem', fontWeight: 500 }}>{yen(total)}</span>}
         <span style={{ color: 'var(--muted)', fontSize: '.75rem', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>∨</span>
       </div>
       {open && (count === 0
         ? <p style={{ padding: '0 20px 18px', fontSize: '.72rem', color: 'var(--muted2)' }}>対象はありません。</p>
-        : <div style={{ borderTop: '1px solid var(--line)' }}>{children}</div>)}
+        : <div style={{ borderTop: '0.5px solid var(--line)' }}>{children}</div>)}
     </div>
   )
 }
@@ -227,8 +227,8 @@ export default function PayoutsPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>支払管理</h1>
+        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>支払管理</h1>
         </div>
 
         <div className="page-anim" style={{ padding: '26px 28px', maxWidth: 880 }}>
@@ -247,39 +247,39 @@ export default function PayoutsPage() {
           {/* ④ ダッシュボード（読み取り集計・表示のみ） */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
             {/* 今月の支払見込み */}
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--muted2)' }}>{monthLabel(`${jstYm}-01`)}の支払{thisMonthConfirmed ? '' : '見込み'}</span>
-                <span style={{ fontSize: '.52rem', fontWeight: 800, color: thisMonthConfirmed ? 'var(--green)' : 'var(--amber)', background: thisMonthConfirmed ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>
+                <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)' }}>{monthLabel(`${jstYm}-01`)}の支払{thisMonthConfirmed ? '' : '見込み'}</span>
+                <span style={{ fontSize: '.52rem', fontWeight: 500, color: thisMonthConfirmed ? 'var(--green)' : 'var(--amber)', background: thisMonthConfirmed ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>
                   {thisMonthConfirmed ? '確定済み' : '締め後に確定'}
                 </span>
               </div>
-              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 900, color: 'var(--c-blue)', lineHeight: 1.1 }}>{yen(thisMonthNet)}</div>
+              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 500, color: 'var(--c-blue)', lineHeight: 1.1 }}>{yen(thisMonthNet)}</div>
               <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>対象 {thisMonthPartners} 名{!thisMonthConfirmed && ' · 確定済み案件の見込み（締めで確定）'}</div>
             </div>
             {/* 要支払い（即振込）＋延滞 */}
-            <div style={{ background: '#fff', border: `1px solid ${overdue ? 'var(--red)' : 'var(--line)'}`, borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ background: '#fff', border: `0.5px solid ${overdue ? 'var(--red)' : 'var(--line)'}`, borderRadius: 16, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--muted2)' }}>要支払い（即振込）</span>
-                {overdue && <span style={{ fontSize: '.52rem', fontWeight: 800, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '2px 8px' }}>延滞 {overdueDays}日</span>}
+                <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)' }}>要支払い（即振込）</span>
+                {overdue && <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '2px 8px' }}>延滞 {overdueDays}日</span>}
               </div>
-              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 900, color: dueTotal > 0 ? 'var(--green)' : 'var(--muted2)', lineHeight: 1.1 }}>{yen(dueTotal)}</div>
+              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 500, color: dueTotal > 0 ? 'var(--green)' : 'var(--muted2)', lineHeight: 1.1 }}>{yen(dueTotal)}</div>
               <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>{due.length} 件</div>
             </div>
           </div>
 
           {/* 月別の支払い（過去遡り・読み取り集計） */}
           {byMonth.length > 0 && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '16px 20px', marginBottom: 18 }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, padding: '16px 20px', marginBottom: 18 }}>
               <b style={{ fontSize: '.78rem' }}>月別の支払い</b>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 12 }}>
                 {byMonth.map(m => (
                   <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ width: 64, flexShrink: 0, fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>{monthLabel(m.month)}</span>
+                    <span style={{ width: 64, flexShrink: 0, fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>{monthLabel(m.month)}</span>
                     <div style={{ flex: 1, height: 18, background: 'var(--bg2)', borderRadius: 5, overflow: 'hidden' }}>
                       <div style={{ width: `${Math.max(4, Math.round(m.net / monthMax * 100))}%`, height: '100%', borderRadius: 5, background: m.status === 'paid' ? 'var(--muted2)' : m.status === 'closed' ? 'var(--green)' : 'var(--amber)' }} />
                     </div>
-                    <span className="tnum" style={{ width: 92, textAlign: 'right', fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 800 }}>{yen(m.net)}</span>
+                    <span className="tnum" style={{ width: 92, textAlign: 'right', fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 500 }}>{yen(m.net)}</span>
                     <span style={{ width: 38, textAlign: 'right', fontSize: '.58rem', color: 'var(--muted2)' }}>{m.partners}名</span>
                   </div>
                 ))}
@@ -289,19 +289,19 @@ export default function PayoutsPage() {
 
           {/* パートナー別 累計支払（読み取り集計） */}
           {partnerTotals.length > 0 && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '16px 20px', marginBottom: 20 }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, padding: '16px 20px', marginBottom: 20 }}>
               <b style={{ fontSize: '.78rem' }}>パートナー別 累計支払</b>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
                 {partnerTotals.map((p, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar name={p.name} color={p.color} size={28} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '.72rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                      <div style={{ fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
                       <div style={{ height: 6, background: 'var(--bg2)', borderRadius: 4, marginTop: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${Math.max(4, Math.round(p.total / partnerMax * 100))}%`, height: '100%', borderRadius: 4, background: 'var(--c-blue)' }} />
                       </div>
                     </div>
-                    <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 800, flexShrink: 0 }}>{yen(p.total)}</span>
+                    <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 500, flexShrink: 0 }}>{yen(p.total)}</span>
                   </div>
                 ))}
               </div>
@@ -312,10 +312,10 @@ export default function PayoutsPage() {
           <div style={{ marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '0 4px 8px' }}>
               {/* B4: 要支払いが ¥0（対象0件）のときは「今すぐ振り込む」CTAヒントを出さない（押せても無意味なため）。空ステート文言は維持。 */}
-              <h2 style={{ fontSize: '.86rem', fontWeight: 800 }}>要支払い{due.length > 0 && dueTotal > 0 && <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 600, marginLeft: 6 }}>今すぐ振り込む</span>}</h2>
-              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.1rem', fontWeight: 800, color: 'var(--green)' }}>計 {yen(dueTotal)}</span>
+              <h2 style={{ fontSize: '.86rem', fontWeight: 500 }}>要支払い{due.length > 0 && dueTotal > 0 && <span style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500, marginLeft: 6 }}>今すぐ振り込む</span>}</h2>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.1rem', fontWeight: 500, color: 'var(--green)' }}>計 {yen(dueTotal)}</span>
             </div>
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
               {due.length === 0
                 ? <p style={{ padding: '20px', fontSize: '.74rem', color: 'var(--muted2)', textAlign: 'center' }}>支払うべきものはありません。すべて支払済みです。</p>
                 : due.map(r => <PayRow key={r.key} row={r} busy={busy} />)}
@@ -334,7 +334,7 @@ export default function PayoutsPage() {
           </>)}
         </div>
       </div>
-      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99 }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99 }}>{toast}</div>}
     </div>
   )
 }

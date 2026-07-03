@@ -99,11 +99,11 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       {/* 左：相手リスト */}
-      <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid var(--line)', background: 'var(--s-0)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ width: 300, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: 'var(--s-0)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '16px 18px 12px', borderBottom: '0.5px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>メッセージ</h1>
-            <a href="/console/settings/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ設定</a>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>メッセージ</h1>
+            <a href="/console/settings/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ設定</a>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -112,10 +112,10 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
           ) : threads.map(t => {
             const on = t.key === sel
             return (
-              <button key={t.key} onClick={() => { setSel(t.key); setErr('') }} className="ui-row" style={{ width: '100%', textAlign: 'left', border: 'none', borderBottom: '1px solid var(--line)', cursor: 'pointer', background: on ? 'var(--s-1)' : 'transparent', fontFamily: 'inherit', alignItems: 'flex-start', flexDirection: 'column', gap: 3, padding: '11px 16px' }}>
+              <button key={t.key} onClick={() => { setSel(t.key); setErr('') }} className="ui-row" style={{ width: '100%', textAlign: 'left', border: 'none', borderBottom: '0.5px solid var(--line)', cursor: 'pointer', background: on ? 'var(--s-1)' : 'transparent', fontFamily: 'inherit', alignItems: 'flex-start', flexDirection: 'column', gap: 3, padding: '11px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%' }}>
-                  <span style={{ flexShrink: 0, fontSize: '.48rem', fontWeight: 800, color: t.kind === 'partner' ? 'var(--c-blue)' : 'var(--green)', background: t.kind === 'partner' ? 'var(--blue-bg)' : 'var(--green-bg)', borderRadius: 5, padding: '2px 6px' }}>{t.kind === 'partner' ? 'LINE' : 'メール'}</span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: '.78rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
+                  <span style={{ flexShrink: 0, fontSize: '.48rem', fontWeight: 500, color: t.kind === 'partner' ? 'var(--c-blue)' : 'var(--green)', background: t.kind === 'partner' ? 'var(--blue-bg)' : 'var(--green-bg)', borderRadius: 5, padding: '2px 6px' }}>{t.kind === 'partner' ? 'LINE' : 'メール'}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: '.78rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
                   <span style={{ flexShrink: 0, fontSize: '.54rem', color: 'var(--t-tertiary)' }}>{fmt(t.lastAt).slice(0, 5)}</span>
                 </div>
                 {t.lastBody && <div style={{ fontSize: '.62rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>{t.lastBody}</div>}
@@ -130,8 +130,8 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
         {!thread ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><EmptyState title="相手を選んでください" compact /></div>
         ) : (<>
-          <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--line)', background: 'var(--s-0)' }}>
-            <div style={{ fontSize: '.86rem', fontWeight: 800 }}>{thread.label}</div>
+          <div style={{ padding: '14px 24px', borderBottom: '0.5px solid var(--line)', background: 'var(--s-0)' }}>
+            <div style={{ fontSize: '.86rem', fontWeight: 500 }}>{thread.label}</div>
             <div style={{ fontSize: '.6rem', color: 'var(--t-tertiary)', marginTop: 2 }}>{thread.kind === 'unknown' ? '未連携の送信者（受信のみ・連携後に返信可能）' : channel === 'line' ? 'LINE で送受信' : 'メールで送受信'}</div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -139,7 +139,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
               : threadMsgs.map(m => (
                 <div key={m.id} style={{ alignSelf: m.direction === 'out' ? 'flex-end' : 'flex-start', maxWidth: '72%' }}>
                   <div style={{ background: m.direction === 'out' ? 'var(--c-blue)' : 'var(--s-2)', color: m.direction === 'out' ? '#fff' : 'var(--txt)', borderRadius: 12, padding: '9px 13px', fontSize: '.76rem', lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {m.subject && <div style={{ fontWeight: 800, marginBottom: 3 }}>{m.subject}</div>}
+                    {m.subject && <div style={{ fontWeight: 500, marginBottom: 3 }}>{m.subject}</div>}
                     {(m.attachments ?? []).filter(a => a.type === 'image' && urls[a.path]).map(a => (
                       // eslint-disable-next-line @next/next/no-img-element
                       <a key={a.path} href={urls[a.path]} target="_blank" rel="noopener noreferrer"><img src={urls[a.path]} alt="画像" style={{ display: 'block', maxWidth: 220, maxHeight: 220, borderRadius: 8, marginBottom: m.body ? 4 : 0 }} /></a>
@@ -153,9 +153,9 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
               ))}
           </div>
           {!canSend ? (
-            <div style={{ borderTop: '1px solid var(--line)', padding: '14px 24px 18px', background: 'var(--s-0)', fontSize: '.66rem', color: 'var(--t-tertiary)' }}>この相手はまだ連携前のため返信できません。LINE連携が完了すると返信できます。</div>
+            <div style={{ borderTop: '0.5px solid var(--line)', padding: '14px 24px 18px', background: 'var(--s-0)', fontSize: '.66rem', color: 'var(--t-tertiary)' }}>この相手はまだ連携前のため返信できません。LINE連携が完了すると返信できます。</div>
           ) : (
-          <div style={{ borderTop: '1px solid var(--line)', padding: '12px 24px 16px', background: 'var(--s-0)' }}>
+          <div style={{ borderTop: '0.5px solid var(--line)', padding: '12px 24px 16px', background: 'var(--s-0)' }}>
             {/* テンプレ挿入バー */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, position: 'relative' }}>
               {usableTpls.length > 0 ? (
@@ -163,18 +163,18 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
                   テンプレート（{usableTpls.length}）{tplOpen ? ' ▾' : ' ▸'}
                 </button>
               ) : (
-                <span style={{ fontSize: '.6rem', color: 'var(--t-tertiary)' }}>テンプレート未登録 <a href="/console/settings/templates" style={{ color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>登録する</a></span>
+                <span style={{ fontSize: '.6rem', color: 'var(--t-tertiary)' }}>テンプレート未登録 <a href="/console/settings/templates" style={{ color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>登録する</a></span>
               )}
               <label className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>
                 画像を添付
                 <input type="file" accept="image/*" onChange={onPickImage} style={{ display: 'none' }} />
               </label>
               {tplOpen && usableTpls.length > 0 && (
-                <div style={{ position: 'absolute', bottom: '110%', left: 0, zIndex: 20, width: 280, maxHeight: 260, overflowY: 'auto', background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 8px 24px rgba(15,23,42,0.12)' }}>
+                <div style={{ position: 'absolute', bottom: '110%', left: 0, zIndex: 20, width: 280, maxHeight: 260, overflowY: 'auto', background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 10, boxShadow: '0 8px 24px rgba(15,23,42,0.12)' }}>
                   {usableTpls.map(t => (
-                    <button key={t.id} type="button" onClick={() => insertTemplate(t)} className="ui-row" style={{ width: '100%', textAlign: 'left', border: 'none', borderBottom: '1px solid var(--c-hairline)', cursor: 'pointer', background: 'transparent', display: 'block', padding: '9px 12px' }}>
-                      <div style={{ fontSize: '.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ flexShrink: 0, fontSize: '.46rem', fontWeight: 800, color: t.channel === 'line' ? 'var(--c-success)' : 'var(--c-info)', background: t.channel === 'line' ? 'rgba(30,158,106,0.1)' : 'rgba(55,138,221,0.12)', borderRadius: 4, padding: '1px 5px' }}>{t.channel === 'line' ? 'LINE' : 'メール'}</span>
+                    <button key={t.id} type="button" onClick={() => insertTemplate(t)} className="ui-row" style={{ width: '100%', textAlign: 'left', border: 'none', borderBottom: '0.5px solid var(--c-hairline)', cursor: 'pointer', background: 'transparent', display: 'block', padding: '9px 12px' }}>
+                      <div style={{ fontSize: '.72rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ flexShrink: 0, fontSize: '.46rem', fontWeight: 500, color: t.channel === 'line' ? 'var(--c-success)' : 'var(--c-info)', background: t.channel === 'line' ? 'rgba(30,158,106,0.1)' : 'rgba(55,138,221,0.12)', borderRadius: 4, padding: '1px 5px' }}>{t.channel === 'line' ? 'LINE' : 'メール'}</span>
                         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
                         {(t.attachments ?? []).some(a => a.type === 'image') && <span style={{ flexShrink: 0, fontSize: '.5rem', color: 'var(--t-tertiary)' }}>🖼</span>}
                       </div>
@@ -190,7 +190,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
                 {pending.map((p, i) => (
                   <div key={p.path} style={{ position: 'relative' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {p.previewUrl && <img src={p.previewUrl} alt={p.filename} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 7, border: '1px solid var(--line)' }} />}
+                    {p.previewUrl && <img src={p.previewUrl} alt={p.filename} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 7, border: '0.5px solid var(--line)' }} />}
                     <button type="button" onClick={() => setPending(prev => prev.filter((_, j) => j !== i))} style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: 9, border: 'none', background: 'var(--c-danger)', color: '#fff', fontSize: 11, lineHeight: 1, cursor: 'pointer' }}>×</button>
                   </div>
                 ))}
@@ -200,14 +200,14 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
             {pendingButtons.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {pendingButtons.map((b, i) => (
-                  <span key={i} style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 8px' }}>🔘 {b.label}</span>
+                  <span key={i} style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 6, padding: '3px 8px' }}>🔘 {b.label}</span>
                 ))}
                 <button type="button" onClick={() => setPendingButtons([])} style={{ fontSize: '.56rem', color: 'var(--t-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>ボタンを外す</button>
               </div>
             )}
             {pendingBlocks && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontSize: '.6rem', color: 'var(--c-blue)', background: 'var(--c-ghost-bg)', border: '1px solid var(--c-ring-soft)', borderRadius: 7, padding: '6px 10px' }}>
-                <span style={{ fontWeight: 700 }}>🧱 ブロックテンプレ（{pendingBlocks.length}要素・順序付き）で送信</span>
+                <span style={{ fontWeight: 500 }}>🧱 ブロックテンプレ（{pendingBlocks.length}要素・順序付き）で送信</span>
                 <button type="button" onClick={() => { setPendingBlocks(null); setBody('') }} style={{ marginLeft: 'auto', fontSize: '.56rem', color: 'var(--t-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>外す</button>
               </div>
             )}

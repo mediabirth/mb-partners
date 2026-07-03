@@ -17,12 +17,12 @@ export default async function AnalyticsPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <p className="eyebrow" style={{ marginBottom: 2 }}>分析</p>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1 }}>成約分析・深掘り</h1>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>成約分析・深掘り</h1>
           </div>
-          <Link href="/console" style={{ fontSize: '.7rem', color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>← ダッシュボード</Link>
+          <Link href="/console" style={{ fontSize: '.7rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
         <AnalyticsClient />
       </div>

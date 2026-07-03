@@ -25,11 +25,11 @@ export default function ActivateApplicationButton({ id, activated, hasReferrer }
   }
 
   if (done) {
-    return <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--green)', whiteSpace: 'nowrap' }}>✓ 仲間化済{hasReferrer ? '（賞賛通知）' : ''}</span>
+    return <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--green)', whiteSpace: 'nowrap' }}>✓ 仲間化済{hasReferrer ? '（賞賛通知）' : ''}</span>
   }
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
-      <button onClick={activate} disabled={busy} style={{ fontSize: '.62rem', fontWeight: 800, color: '#fff', background: busy ? 'var(--muted2)' : 'var(--blue)', border: 'none', borderRadius: 7, padding: '5px 11px', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+      <button onClick={activate} disabled={busy} style={{ fontSize: '.62rem', fontWeight: 500, color: '#fff', background: busy ? 'var(--muted2)' : 'var(--blue)', border: 'none', borderRadius: 7, padding: '5px 11px', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
         {busy ? '処理中…' : '承認して仲間化'}
       </button>
       {err && <span style={{ fontSize: '.54rem', color: 'var(--red)' }}>{err}</span>}

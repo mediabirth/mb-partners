@@ -193,7 +193,7 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
 function Fld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
-      <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)', letterSpacing: '.04em' }}>{label}</label>
+      <label style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.04em' }}>{label}</label>
       {children}
     </div>
   )
@@ -232,9 +232,9 @@ function FSelect({ value, onChange, options, placeholder }: {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: '.58rem', fontWeight: 700, color: 'var(--blue)', letterSpacing: '.12em',
+      fontSize: '.58rem', fontWeight: 500, color: 'var(--blue)', letterSpacing: '.12em',
       textTransform: 'uppercase', marginBottom: 12,
-      paddingTop: 16, borderTop: '1px solid var(--line)', marginTop: 4,
+      paddingTop: 16, borderTop: '0.5px solid var(--line)', marginTop: 4,
     }}>
       {children}
     </div>
@@ -248,7 +248,7 @@ function Toggle2({ val, onA, onB, labelA, labelB }: {
     <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
       {[{ active: !val, fn: onA, label: labelA }, { active: val, fn: onB, label: labelB }].map(({ active, fn, label }) => (
         <button key={label} type="button" onClick={fn} style={{
-          flex: 1, padding: '8px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
+          flex: 1, padding: '8px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500,
           border: `1.5px solid ${active ? 'var(--blue)' : 'var(--line)'}`,
           background: active ? 'var(--blue-bg2)' : '#fff',
           color: active ? 'var(--blue)' : 'var(--muted2)',
@@ -271,7 +271,7 @@ function ServiceLogo({ logoPath, name, size = 44, icon = 'arrows', color = '#473
 function ReorderBtn({ label, onClick, disabled, small }: { label: string; onClick: () => void; disabled?: boolean; small?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-label={label === '▲' ? '上へ移動' : '下へ移動'}
-      style={{ width: small ? 18 : 24, height: small ? 14 : 16, lineHeight: 1, fontSize: small ? '.5rem' : '.58rem', border: '1px solid var(--line)', borderRadius: 4, background: disabled ? 'var(--bg2)' : '#fff', color: disabled ? 'var(--line)' : 'var(--muted2)', cursor: disabled ? 'default' : 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      style={{ width: small ? 18 : 24, height: small ? 14 : 16, lineHeight: 1, fontSize: small ? '.5rem' : '.58rem', border: '0.5px solid var(--line)', borderRadius: 4, background: disabled ? 'var(--bg2)' : '#fff', color: disabled ? 'var(--line)' : 'var(--muted2)', cursor: disabled ? 'default' : 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {label}
     </button>
   )
@@ -309,7 +309,7 @@ function LogoUpload({ logoPath, name, onUpload }: { logoPath: string; name: stri
       <ServiceLogo logoPath={logoPath || null} name={name || '?'} size={52} />
       <div style={{ flex: 1 }}>
         <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-          style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: uploading ? .6 : 1 }}>
+          style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: uploading ? .6 : 1 }}>
           {uploading ? 'アップロード中…' : logoPath ? '画像を変更' : '画像を選択'}
         </button>
         {logoPath && (
@@ -357,7 +357,7 @@ function ImageUpload({ imageUrl, onUpload }: { imageUrl: string; onUpload: (url:
         <img src={imageUrl} alt="" style={{ width: '100%', maxWidth: 260, height: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 8, display: 'block', border: '0.5px solid var(--line)' }} />
       )}
       <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-        style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: uploading ? .6 : 1 }}>
+        style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: uploading ? .6 : 1 }}>
         {uploading ? 'アップロード中…' : imageUrl ? '画像を変更' : '画像を選択'}
       </button>
       {imageUrl && (
@@ -393,7 +393,7 @@ function CoverageEditor({ steps, onChange }: {
               onChange(steps.map((s, j) => j === i ? { ...s, included: e.target.checked } : s))
             }}
             style={{ accentColor: 'var(--txt)', width: 14, height: 14 }} />
-          <span style={{ fontSize: '.78rem', fontWeight: i === 0 ? 700 : 500, color: step.included ? 'var(--txt)' : 'var(--muted2)' }}>
+          <span style={{ fontSize: '.78rem', fontWeight: 500, color: step.included ? 'var(--txt)' : 'var(--muted2)' }}>
             {step.label}
             {i === 0 && <span style={{ fontSize: '.58rem', marginLeft: 5, opacity: .55 }}>必須</span>}
           </span>
@@ -416,7 +416,7 @@ export function CoverageTags({ steps, accent = false }: {
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
       {included.map(s => (
         <span key={s.label} style={{
-          fontSize: '.54rem', fontWeight: 600, padding: '2px 7px', borderRadius: 10,
+          fontSize: '.54rem', fontWeight: 500, padding: '2px 7px', borderRadius: 10,
           background: accent ? 'var(--blue-bg)' : '#EBEBF0',
           color: accent ? 'var(--blue)' : 'var(--txt)',
         }}>{s.label}</span>
@@ -434,7 +434,7 @@ function RewardBlockHead({ chip, title, val, onToggle }: {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {chip}
-      <span style={{ flex: 1, fontSize: '.74rem', fontWeight: 800, color: 'var(--txt)' }}>{title}</span>
+      <span style={{ flex: 1, fontSize: '.74rem', fontWeight: 500, color: 'var(--txt)' }}>{title}</span>
       <div style={{ width: 132, marginBottom: -12 }}>
         <Toggle2 val={val} onA={() => onToggle(false)} onB={() => onToggle(true)} labelA="なし" labelB="あり" />
       </div>
@@ -453,7 +453,7 @@ function TypeSeg({ value, onChange, accent }: {
       {(['fixed', 'rate'] as const).map(t => (
         <button key={t} type="button" onClick={() => onChange(t)}
           style={{
-            flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700,
+            flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500,
             border: `1.5px solid ${value === t ? on : 'var(--line)'}`,
             background: value === t ? bg : '#fff',
             color: value === t ? on : 'var(--muted2)',
@@ -491,11 +491,11 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <button type="button" onClick={onCancel}
-          style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
           キャンセル
         </button>
         <button type="button" onClick={onSave} disabled={saving || !f.name}
-          style={{ flex: 2, padding: '8px 0', borderRadius: 7, border: 'none', background: 'var(--blue)', color: '#fff', fontSize: '.74rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving || !f.name ? .5 : 1, fontFamily: 'inherit' }}>
+          style={{ flex: 2, padding: '8px 0', borderRadius: 7, border: 'none', background: 'var(--blue)', color: '#fff', fontSize: '.74rem', fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving || !f.name ? .5 : 1, fontFamily: 'inherit' }}>
           {saving ? '保存中…' : '保存'}
         </button>
       </div>
@@ -511,7 +511,7 @@ function RewardChip({ kind, text }: { kind: 'ref' | 'coop'; text: string }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
-      fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+      fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20,
       fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums',
       background: ref ? 'var(--blue-bg)' : '#EBEBF0',
       color: ref ? 'var(--blue)' : 'var(--txt)',
@@ -530,8 +530,8 @@ function fmtRef(menu: MenuRow) {
 function Btn2({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
   return (
     <button type="button" onClick={onClick} style={{
-      fontSize: '.6rem', fontWeight: 700, padding: '4px 8px', borderRadius: 5,
-      border: '1px solid var(--line)', background: danger ? '#FBE9E9' : '#fff',
+      fontSize: '.6rem', fontWeight: 500, padding: '4px 8px', borderRadius: 5,
+      border: '0.5px solid var(--line)', background: danger ? '#FBE9E9' : '#fff',
       color: danger ? 'var(--red)' : 'var(--muted2)', cursor: 'pointer', fontFamily: 'inherit',
     }}>{label}</button>
   )
@@ -1023,11 +1023,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   return (
     <>
       {/* ── Top bar ── */}
-      <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-        <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>サービスマスタ</h1>
+      <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+        <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>サービスマスタ</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="chip chip-direct" style={{ fontVariantNumeric: 'tabular-nums' }}>{services.length} サービス</span>
-          <button onClick={openAdd} className="btn btn-p" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ 追加</button>
+          <button onClick={openAdd} className="ui-btn ui-btn--primary" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ 追加</button>
         </div>
       </div>
 
@@ -1044,7 +1044,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           const brandMember = (svc as { calendar_member_id?: string | null }).calendar_member_id ?? ''
           const audience = (svc as { target_audience?: string | null }).target_audience ?? ''
           return (
-            <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
+            <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
 
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -1053,7 +1053,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <b style={{ fontSize: '.9rem' }}>{svc.name}</b>
                     <span onClick={() => toggleActive(svc)} style={{
-                      fontSize: '.6rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
+                      fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
                       background: svc.active ? 'var(--green-bg)' : 'var(--bg2)',
                       color: svc.active ? 'var(--green)' : 'var(--muted2)',
                     }}>
@@ -1067,12 +1067,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         onKeyDown={e => { if (e.key === 'Enter') saveBrandAudience(svc.id, audDraft); if (e.key === 'Escape') setEditAudSvc(null) }}
                         placeholder="例）引越し・お部屋探しをしたい人"
                         style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 7, padding: '4px 9px', fontFamily: 'inherit', fontSize: '.74rem' }} />
-                      <button onClick={() => saveBrandAudience(svc.id, audDraft)} style={{ fontSize: '.62rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                      <button onClick={() => saveBrandAudience(svc.id, audDraft)} style={{ fontSize: '.62rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
                       <button onClick={() => setEditAudSvc(null)} style={{ fontSize: '.66rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <span style={{ fontSize: '.75rem', fontWeight: 600, color: audience ? 'var(--txt)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audience || '紹介対象を設定'}</span>
+                      <span style={{ fontSize: '.75rem', fontWeight: 500, color: audience ? 'var(--txt)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audience || '紹介対象を設定'}</span>
                       <button onClick={() => { setAudDraft(audience); setEditAudSvc(svc.id) }} title="紹介対象を編集"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.66rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
                     </div>
@@ -1083,14 +1083,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     {hasMembers && (editMemberFor === `brand:${svc.id}` ? (
                       <select autoFocus value={brandMember} onChange={e => { setBrandMember(svc.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
                         title="このブランドの商談を入れる担当メンバー（メニュー個別指定が優先）"
-                        style={{ border: '1px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
+                        style={{ border: '0.5px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
                         <option value="">既定（MB運営・神原勝彦）</option>
                         {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
                       </select>
                     ) : (
                       <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
                         担当：{brandMember ? memberName(brandMember) : '既定（神原勝彦）'}
-                        <button onClick={() => setEditMemberFor(`brand:${svc.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 700 }}>変更</button>
+                        <button onClick={() => setEditMemberFor(`brand:${svc.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 500 }}>変更</button>
                       </span>
                     ))}
                   </div>
@@ -1101,7 +1101,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   <ReorderBtn label="▼" onClick={() => moveBrand(si, 1)} disabled={si === services.length - 1} />
                 </div>
                 <button onClick={() => openEdit(svc)}
-                  style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, flexShrink: 0 }}>
+                  style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, flexShrink: 0 }}>
                   編集
                 </button>
               </div>
@@ -1110,8 +1110,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                  一言説明＋担当をメニュー名の下に、報酬は統一ピルで右端に。空はCTA。 */}
               {newMenus.length === 0 ? (
                 <div style={{ marginTop: 12, border: '1px dashed var(--line)', borderRadius: 10, padding: '18px 14px', textAlign: 'center', background: 'var(--bg2)' }}>
-                  <div style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 600, marginBottom: 9 }}>メニューがまだありません</div>
-                  <button onClick={() => openEdit(svc)} style={{ fontSize: '.7rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontFamily: 'inherit' }}>＋ メニューを追加</button>
+                  <div style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 9 }}>メニューがまだありません</div>
+                  <button onClick={() => openEdit(svc)} style={{ fontSize: '.7rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontFamily: 'inherit' }}>＋ メニューを追加</button>
                 </div>
               ) : (
                 <div style={{ marginTop: 12 }}>
@@ -1119,13 +1119,13 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     const menuMember = mn.calendar_member_id ?? ''
                     const hasReward = (mn.rewards?.length ?? 0) > 0
                     return (
-                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '11px 2px', borderTop: idx === 0 ? 'none' : '1px solid #F2F2F6', alignItems: 'center' }}>
+                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '11px 2px', borderTop: idx === 0 ? 'none' : '0.5px solid var(--line)', alignItems: 'center' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <ReorderBtn label="▲" small onClick={() => moveListMenu(svc.id, newMenus, idx, -1)} disabled={idx === 0} />
                         <ReorderBtn label="▼" small onClick={() => moveListMenu(svc.id, newMenus, idx, 1)} disabled={idx === newMenus.length - 1} />
                       </div>
                       <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <span style={{ fontSize: '.76rem', fontWeight: 600, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
+                        <span style={{ fontSize: '.76rem', fontWeight: 500, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
                         {/* 一言説明（名前の下・muted・1行省略＋インライン編集・APP STEP2と同一データ） */}
                         {editDescMenu === mn.id ? (
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1133,7 +1133,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                               onKeyDown={e => { if (e.key === 'Enter') saveMenuDesc(svc.id, mn.id, descDraft); if (e.key === 'Escape') setEditDescMenu(null) }}
                               placeholder="例）お部屋を探している人を紹介するだけ。物件紹介はMBが対応。"
                               style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '3px 8px', fontFamily: 'inherit', fontSize: '.64rem' }} />
-                            <button onClick={() => saveMenuDesc(svc.id, mn.id, descDraft)} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                            <button onClick={() => saveMenuDesc(svc.id, mn.id, descDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
                             <button onClick={() => setEditDescMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                           </div>
                         ) : (
@@ -1152,7 +1152,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                               rows={3}
                               style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', resize: 'vertical' }} />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <button onClick={() => saveMenuLongDesc(svc.id, mn.id, longDraft)} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                              <button onClick={() => saveMenuLongDesc(svc.id, mn.id, longDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
                               <button onClick={() => setEditLongMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                             </div>
                           </div>
@@ -1167,19 +1167,19 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         {hasMembers && (editMemberFor === `menu:${mn.id}` ? (
                           <select autoFocus value={menuMember} onChange={e => { setMenuMember(svc.id, mn.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
                             title="このメニューの商談を入れる担当メンバー"
-                            style={{ maxWidth: 240, border: '1px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
+                            style={{ maxWidth: 240, border: '0.5px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
                             <option value="">既定（{brandMember ? 'ブランド担当' : 'MB運営・神原勝彦'}）</option>
                             {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
                           </select>
                         ) : (
                           <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
                             担当：{menuMember ? memberName(menuMember) : '既定'}
-                            <button onClick={() => setEditMemberFor(`menu:${mn.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 700 }}>変更</button>
+                            <button onClick={() => setEditMemberFor(`menu:${mn.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 500 }}>変更</button>
                           </span>
                         ))}
                       </div>
                       {/* 統一報酬ピル（bg-accent・999px・APPと同一記法・menu_rewards から表示整形のみ） */}
-                      <span style={{ justifySelf: 'end', display: 'inline-block', fontFamily: 'Inter', fontSize: '.68rem', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: 999, padding: '4px 12px', background: hasReward ? 'var(--blue-bg2)' : 'var(--bg2)', color: hasReward ? 'var(--blue)' : 'var(--muted)' }}>
+                      <span style={{ justifySelf: 'end', display: 'inline-block', fontFamily: 'Inter', fontSize: '.68rem', fontWeight: 500, whiteSpace: 'nowrap', borderRadius: 999, padding: '4px 12px', background: hasReward ? 'var(--blue-bg2)' : 'var(--bg2)', color: hasReward ? 'var(--blue)' : 'var(--muted)' }}>
                         {rewardPillForMenu(mn.rewards ?? [])}
                       </span>
                     </div>
@@ -1201,7 +1201,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       {/* ── Drawer ── */}
       <div style={{
         position: 'fixed', right: drawerOpen ? 0 : '-520px', top: 0, height: '100vh', width: 500,
-        background: '#fff', borderLeft: '1px solid var(--line)', boxShadow: '-8px 0 40px rgba(14,14,20,.12)',
+        background: '#fff', borderLeft: '0.5px solid var(--line)', boxShadow: '-8px 0 40px rgba(14,14,20,.12)',
         zIndex: 50, overflowY: 'auto', transition: 'right .3s cubic-bezier(.4,0,.2,1)',
       }}>
         {drawerOpen && (
@@ -1209,7 +1209,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-              <h2 style={{ fontSize: '.92rem', fontWeight: 900 }}>
+              <h2 style={{ fontSize: '.92rem', fontWeight: 500 }}>
                 {editing ? 'サービスを編集' : '新しいサービス'}
               </h2>
               <button type="button" onClick={closeDrawer} className="lift"
@@ -1279,9 +1279,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         saving={menuSaving} error={menuError}
                       />
                     ) : (
-                      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, marginBottom: 6 }}>
+                      <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 10, marginBottom: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px' }}>
-                          <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
+                          <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
                           <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                             {i > 0 && <Btn2 label="↑" onClick={() => moveMenu(menu.id, -1)} />}
                             {i < arr.length - 1 && <Btn2 label="↓" onClick={() => moveMenu(menu.id, 1)} />}
@@ -1320,7 +1320,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   />
                 ) : (
                   <button type="button" onClick={startAddMenu}
-                    style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: 'var(--blue-bg2)', color: 'var(--blue)', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
+                    style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: 'var(--blue-bg2)', color: 'var(--blue)', fontSize: '.74rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
                     ＋ メニューを追加
                   </button>
                 )}
@@ -1333,27 +1333,27 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 <SectionLabel>メニュー</SectionLabel>
 
                 {menuDrafts.map((d, i) => (
-                  <div key={d.id ?? `new-${i}`} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 12, background: '#fff' }}>
+                  <div key={d.id ?? `new-${i}`} style={{ border: '0.5px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 12, background: '#fff' }}>
                     {/* メニュー名 ＋ メニュー削除 */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <input value={d.name} onChange={e => setMenuField(i, { name: e.target.value })} placeholder="メニュー名"
-                        style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.84rem', fontWeight: 700 }} />
+                        style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.84rem', fontWeight: 500 }} />
                       <button type="button" onClick={() => removeMenuDraft(i)}
-                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 700, padding: '8px 2px', flexShrink: 0, whiteSpace: 'nowrap' }}>メニューを削除</button>
+                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, padding: '8px 2px', flexShrink: 0, whiteSpace: 'nowrap' }}>メニューを削除</button>
                     </div>
 
                     {/* 報酬ブロック（複数） */}
                     {d.rewards.map((r, ri) => (
                       <div key={r.id ?? `nr-${ri}`} style={{ marginTop: 12, border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '12px 12px', background: 'var(--blue-bg2)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <span style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--blue-dk)' }}>報酬{ri + 1}</span>
-                          <button type="button" onClick={() => removeReward(i, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 700 }}>削除</button>
+                          <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--blue-dk)' }}>報酬{ri + 1}</span>
+                          <button type="button" onClick={() => removeReward(i, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 500 }}>削除</button>
                         </div>
                         {/* 報酬タイプ：固定（円）/ 粗利（%）/ 継続（毎月）の3択 */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {([['fixed', '固定（円）'], ['rate', '粗利（%）'], ['continuous', '継続（毎月）']] as const).map(([v, l]) => (
                             <button type="button" key={v} onClick={() => setRewardField(i, ri, { reward_type: v })}
-                              style={{ padding: '8px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 700,
+                              style={{ padding: '8px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500,
                                 background: r.reward_type === v ? 'var(--c-blue)' : '#fff', color: r.reward_type === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
                           ))}
                         </div>
@@ -1362,38 +1362,38 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <input value={r.reward_value} onChange={e => setRewardField(i, ri, { reward_value: e.target.value })} inputMode="numeric"
                             placeholder={r.reward_type === 'fixed' ? '30000' : '50'}
                             style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
-                          <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700, flexShrink: 0 }}>
+                          <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500, flexShrink: 0 }}>
                             {r.reward_type === 'fixed' ? '円' : r.reward_type === 'rate' ? '%（粗利）' : '%（毎月の粗利）'}
                           </span>
                         </div>
                         {r.reward_type === 'continuous' && (
                           <>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                              <label style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', flexShrink: 0 }}>期間（デフォルト）</label>
+                              <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', flexShrink: 0 }}>期間（デフォルト）</label>
                               <input value={r.reward_months} onChange={e => setRewardField(i, ri, { reward_months: e.target.value })} inputMode="numeric"
                                 placeholder="12"
                                 style={{ width: 80, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
-                              <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 700 }}>ヶ月</span>
+                              <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>ヶ月</span>
                             </div>
                           </>
                         )}
                         {/* トリガー */}
                         <div style={{ marginTop: 10 }}>
-                          <label style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>トリガー（成果地点）</label>
+                          <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>トリガー（成果地点）</label>
                           <input value={r.reward_trigger} onChange={e => setRewardField(i, ri, { reward_trigger: e.target.value })} placeholder="例: 賃貸成約で確定"
                             style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', boxSizing: 'border-box', background: '#fff' }} />
                         </div>
                         {/* 協力タスク（この報酬で必要なもの） */}
                         <div style={{ marginTop: 10 }}>
-                          <label style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク（この報酬で必要なものを選ぶ）</label>
+                          <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク（この報酬で必要なものを選ぶ）</label>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {COOP_TASK_MASTER.map(mt => {
                               const on = r.tasks.includes(mt.label)
                               return (
                                 <label key={mt.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
                                   <input type="checkbox" checked={on} onChange={() => toggleRewardTask(i, ri, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
-                                  <span style={{ flex: 1, fontWeight: on ? 700 : 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
-                                  <span style={{ fontSize: '.48rem', fontWeight: 700, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
+                                  <span style={{ flex: 1, fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
+                                  <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
                                 </label>
                               )
                             })}
@@ -1404,7 +1404,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
                     {/* ＋報酬を追加 */}
                     <button type="button" onClick={() => addReward(i)}
-                      style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: '#fff', color: 'var(--blue)', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 }}>
+                      style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: '#fff', color: 'var(--blue)', fontSize: '.7rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 }}>
                       ＋ 報酬を追加
                     </button>
                   </div>
@@ -1412,7 +1412,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
                 {/* ＋ メニューを追加（破線） */}
                 <button type="button" onClick={addMenuDraft}
-                  style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: '1.5px dashed var(--c-blue)', background: 'var(--blue-bg2)', color: 'var(--c-blue)', fontSize: '.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
+                  style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: '1.5px dashed var(--c-blue)', background: 'var(--blue-bg2)', color: 'var(--c-blue)', fontSize: '.78rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
                   ＋ メニューを追加
                 </button>
               </>
@@ -1444,14 +1444,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{svcError}</p>}
 
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button type="submit" disabled={submitting || !svcForm.name} className="btn btn-p"
+              <button type="submit" disabled={submitting || !svcForm.name} className="ui-btn ui-btn--primary"
                 style={{ width: '100%', opacity: submitting || !svcForm.name ? .5 : 1 }}>
                 {submitting ? '保存中…' : editing ? '保存してパートナー画面へ反映' : '作成してパートナー画面へ公開'}
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }} />
               </button>
               {!editing && (addRefValue || addCoopPct) && (
                 <button type="button" onClick={() => submitService(undefined, false)} disabled={submitting || !svcForm.name}
-                  style={{ width: '100%', padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 700, cursor: submitting || !svcForm.name ? 'not-allowed' : 'pointer', opacity: submitting || !svcForm.name ? .5 : 1, fontFamily: 'inherit' }}>
+                  style={{ width: '100%', padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 500, cursor: submitting || !svcForm.name ? 'not-allowed' : 'pointer', opacity: submitting || !svcForm.name ? .5 : 1, fontFamily: 'inherit' }}>
                   名前だけで作る（報酬は後で）
                 </button>
               )}
@@ -1465,7 +1465,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         position: 'fixed', bottom: 32, right: 32,
         transform: `translateY(${toast ? 0 : 16}px)`,
         background: 'var(--txt)', color: '#fff', padding: '12px 22px',
-        borderRadius: 9, fontSize: '.74rem', fontWeight: 600,
+        borderRadius: 9, fontSize: '.74rem', fontWeight: 500,
         opacity: toast ? 1 : 0, pointerEvents: 'none',
         transition: 'all .28s', zIndex: 130, whiteSpace: 'nowrap',
         boxShadow: '0 8px 28px rgba(14,14,20,.18)',

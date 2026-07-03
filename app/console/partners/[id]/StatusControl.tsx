@@ -32,15 +32,15 @@ export default function StatusControl({ partnerId, currentStatus }: { partnerId:
   if (currentStatus === 'pending') return null   // pending はApprovalPanelで管理
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 16 }}>
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 12px' }}>アカウント管理</h2>
+    <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 16 }}>
+      <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 12px' }}>アカウント管理</h2>
       {isSuspended ? (
         <button
           onClick={() => toggle('active')}
           disabled={loading}
           style={{
             width: '100%', padding: '10px', border: 'none', borderRadius: 9,
-            background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: '.76rem',
+            background: 'var(--green)', color: '#fff', fontWeight: 500, fontSize: '.76rem',
             cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >
@@ -52,7 +52,7 @@ export default function StatusControl({ partnerId, currentStatus }: { partnerId:
           disabled={loading}
           style={{
             width: '100%', padding: '10px', border: '1px solid var(--red)', borderRadius: 9,
-            background: 'none', color: 'var(--red)', fontWeight: 700, fontSize: '.76rem',
+            background: 'none', color: 'var(--red)', fontWeight: 500, fontSize: '.76rem',
             cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >

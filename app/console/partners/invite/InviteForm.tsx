@@ -51,8 +51,8 @@ export default function InviteForm() {
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: 560 }}>
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '24px 24px' }}>
-        <h2 style={{ fontSize: '.88rem', fontWeight: 800, marginBottom: 18 }}>招待する</h2>
+      <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '24px 24px' }}>
+        <h2 style={{ fontSize: '.88rem', fontWeight: 500, marginBottom: 18 }}>招待する</h2>
 
         <form onSubmit={handleSubmit}>
           {/* ロール選択（統一導線） */}
@@ -61,7 +61,7 @@ export default function InviteForm() {
             <div style={{ display: 'flex', gap: 8 }}>
               {KINDS.map(k => (
                 <button type="button" key={k.id} onClick={() => { setKind(k.id); setInviteUrl('') }}
-                  style={{ flex: 1, padding: '9px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, cursor: 'pointer',
+                  style={{ flex: 1, padding: '9px 0', borderRadius: 9, fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, cursor: 'pointer',
                     border: `1.5px solid ${kind === k.id ? 'var(--blue)' : 'var(--line)'}`,
                     background: kind === k.id ? 'var(--blue)' : '#fff', color: kind === k.id ? '#fff' : 'var(--txt)' }}>
                   {k.label}
@@ -83,16 +83,16 @@ export default function InviteForm() {
 
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
 
-          <button type="submit" className="btn btn-p" style={{ justifyContent: 'center' }} disabled={loading || !email.trim() || (kind === 'delivery' && !name.trim())}>
+          <button type="submit" className="ui-btn ui-btn--primary" style={{ justifyContent: 'center' }} disabled={loading || !email.trim() || (kind === 'delivery' && !name.trim())}>
             {loading ? '作成中…' : '招待リンクを作成'}
           </button>
         </form>
 
         {inviteUrl && (
           <div style={{ marginTop: 24, padding: 16, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 10 }}>
-            <p style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', marginBottom: 8 }}>{cur.label}の招待リンクが作成されました（有効期限: 7日間）</p>
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 7, padding: '10px 12px', fontSize: '.68rem', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 10, color: 'var(--txt)' }}>{shareUrl}</div>
-            <button className="btn btn-g" style={{ fontSize: '.72rem', padding: '8px 16px' }} onClick={handleCopy}>{copied ? 'コピーしました ✓' : 'リンクをコピー'}</button>
+            <p style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--blue)', marginBottom: 8 }}>{cur.label}の招待リンクが作成されました（有効期限: 7日間）</p>
+            <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 7, padding: '10px 12px', fontSize: '.68rem', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 10, color: 'var(--txt)' }}>{shareUrl}</div>
+            <button className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '8px 16px' }} onClick={handleCopy}>{copied ? 'コピーしました ✓' : 'リンクをコピー'}</button>
             <p style={{ fontSize: '.65rem', color: 'var(--muted2)', marginTop: 10, lineHeight: 1.6 }}>
               {emailed ? '招待メールを送信しました。このリンクを直接共有することもできます。' : '招待メールを送信できませんでした。このリンクを直接共有してください。'}
             </p>

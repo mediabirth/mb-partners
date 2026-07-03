@@ -57,32 +57,32 @@ export default function DeliveriesPanel() {
           テーブル未作成です。<b>docs/reports/batchA2a_all_ddl.sql</b> を Supabase で実行すると有効になります。
         </div>
       )}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 22, display: 'flex', flexWrap: 'wrap', gap: 9, alignItems: 'center' }}>
+      <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 22, display: 'flex', flexWrap: 'wrap', gap: 9, alignItems: 'center' }}>
         <input value={name} onChange={e => setName(e.target.value)} placeholder="名称（例: 田中フォト）" style={{ ...inp, flex: 1, minWidth: 160 }} />
         <input value={kind} onChange={e => setKind(e.target.value)} placeholder="種別（カメラマン等）" style={{ ...inp, width: 160 }} />
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="連絡先メール（任意）" style={{ ...inp, width: 180 }} />
-        <button onClick={add} className="btn btn-p" style={{ fontSize: '.74rem', padding: '8px 16px' }}>追加</button>
+        <button onClick={add} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '8px 16px' }}>追加</button>
       </div>
       {loading ? <p style={{ fontSize: '.78rem', color: 'var(--muted2)' }}>読み込み中…</p> : list.length === 0 ? (
         <p style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>委託先がありません。</p>
       ) : (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
           {list.map((d, i) => (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: i < list.length - 1 ? '1px solid #F2F2F6' : 'none', opacity: d.active ? 1 : .5 }}>
+            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: i < list.length - 1 ? '0.5px solid var(--line)' : 'none', opacity: d.active ? 1 : .5 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.78rem', fontWeight: 700 }}>{d.name}</div>
+                <div style={{ fontSize: '.78rem', fontWeight: 500 }}>{d.name}</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{d.kind ?? '—'}{d.contact_email ? ` · ${d.contact_email}` : ''}</div>
               </div>
               {d.auth_user_id
-                ? <span title="ポータル連携済み" style={{ fontSize: '.56rem', fontWeight: 700, borderRadius: 20, padding: '2px 9px', color: 'var(--green)', background: 'var(--green-bg)' }}>連携済み</span>
-                : <button onClick={() => invite(d)} style={{ fontSize: '.6rem', fontWeight: 700, borderRadius: 20, padding: '3px 11px', border: '1px solid var(--green)', cursor: 'pointer', color: 'var(--green)', background: '#fff' }}>招待</button>}
-              <button onClick={() => patch(d.id, { active: !d.active })} style={{ fontSize: '.58rem', fontWeight: 700, borderRadius: 20, padding: '2px 9px', border: 'none', cursor: 'pointer', color: d.active ? 'var(--green)' : 'var(--muted)', background: d.active ? 'var(--green-bg)' : 'var(--bg2)' }}>{d.active ? '有効' : '無効'}</button>
+                ? <span title="ポータル連携済み" style={{ fontSize: '.56rem', fontWeight: 500, borderRadius: 20, padding: '2px 9px', color: 'var(--green)', background: 'var(--green-bg)' }}>連携済み</span>
+                : <button onClick={() => invite(d)} style={{ fontSize: '.6rem', fontWeight: 500, borderRadius: 20, padding: '3px 11px', border: '1px solid var(--green)', cursor: 'pointer', color: 'var(--green)', background: '#fff' }}>招待</button>}
+              <button onClick={() => patch(d.id, { active: !d.active })} style={{ fontSize: '.58rem', fontWeight: 500, borderRadius: 20, padding: '2px 9px', border: 'none', cursor: 'pointer', color: d.active ? 'var(--green)' : 'var(--muted)', background: d.active ? 'var(--green-bg)' : 'var(--bg2)' }}>{d.active ? '有効' : '無効'}</button>
               <button onClick={() => del(d.id)} style={{ fontSize: '.7rem', color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
             </div>
           ))}
         </div>
       )}
-      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99 }}>{toast}</div>}
+      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99 }}>{toast}</div>}
     </div>
   )
 }

@@ -32,9 +32,9 @@ export default function ChannelChart({
   }
 
   return (
-    <div className="card-hover" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14 }}>
+    <div className="card-hover" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }}>
       {/* Header */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <b style={{ fontSize: '.84rem' }}>チャネル別成約</b>
         <div style={{ display: 'flex', gap: 10, fontSize: '.6rem', color: 'var(--muted2)' }}>
           {CH.map(c => (
@@ -50,7 +50,7 @@ export default function ChannelChart({
       <div style={{ padding: '12px 16px 8px' }}>
         {/* Actual */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-          <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, width: 28, flexShrink: 0 }}>実績</span>
+          <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 500, width: 28, flexShrink: 0 }}>実績</span>
           {total > 0 ? (
             <div style={{ flex: 1, height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
               <div style={{ width: `${actPct.direct}%`,   background: '#0E0E14', transition: 'width .6s ease' }} />
@@ -66,7 +66,7 @@ export default function ChannelChart({
         </div>
         {/* Target */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, width: 28, flexShrink: 0 }}>目安</span>
+          <span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 500, width: 28, flexShrink: 0 }}>目安</span>
           <div style={{ flex: 1, height: 8, borderRadius: 4, overflow: 'hidden', display: 'flex' }}>
             <div style={{ width: `${TARGET.direct}%`,   background: '#0E0E14', opacity: .25 }} />
             <div style={{ width: `${TARGET.referral}%`, background: '#4733E6', opacity: .25 }} />

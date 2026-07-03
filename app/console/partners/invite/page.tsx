@@ -29,7 +29,7 @@ export default async function InvitePage() {
       <div style={{ flex: 1, marginLeft: 230 }}>
         <div style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid var(--line)', padding: '13px 28px',
+          borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', gap: 12,
           position: 'sticky', top: 0, zIndex: 30,
         }}>
@@ -40,7 +40,7 @@ export default async function InvitePage() {
             ← パートナー一覧
           </Link>
           <span style={{ color: 'var(--line)' }}>/</span>
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, margin: 0 }}>招待を作成</h1>
+          <h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>招待を作成</h1>
         </div>
 
         <div className="page-anim">

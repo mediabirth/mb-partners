@@ -53,10 +53,10 @@ export default function NewBroadcastPage() {
     })
   }
 
-  const labelStyle = { fontSize: '.72rem', fontWeight: 700, color: 'var(--muted2)', display: 'block', marginBottom: 5 }
+  const labelStyle = { fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', borderRadius: 8,
-    border: '1px solid var(--line)', fontSize: '.82rem',
+    border: '0.5px solid var(--line)', fontSize: '.82rem',
     fontFamily: 'inherit', outline: 'none',
   }
   const fieldStyle = { marginBottom: 22 }
@@ -69,7 +69,7 @@ export default function NewBroadcastPage() {
         {/* Top bar */}
         <div style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid var(--line)', padding: '13px 28px',
+          borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', gap: 12,
           position: 'sticky', top: 0, zIndex: 30,
         }}>
@@ -78,12 +78,12 @@ export default function NewBroadcastPage() {
           </button>
           <div>
             <div className="eyebrow">配信</div>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900 }}>新規配信作成</h1>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>新規配信作成</h1>
           </div>
         </div>
 
         <div className="page-anim" style={{ padding: '28px', maxWidth: 640 }}>
-          <form onSubmit={handleSubmit} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '28px' }}>
+          <form onSubmit={handleSubmit} style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, padding: '28px' }}>
 
             {/* Kind */}
             <div style={fieldStyle}>
@@ -95,7 +95,7 @@ export default function NewBroadcastPage() {
                     type="button"
                     onClick={() => setKind(k)}
                     style={{
-                      padding: '7px 20px', borderRadius: 8, fontSize: '.78rem', fontWeight: 700,
+                      padding: '7px 20px', borderRadius: 8, fontSize: '.78rem', fontWeight: 500,
                       cursor: 'pointer', border: '2px solid',
                       borderColor: kind === k ? 'var(--c-blue)' : 'var(--line)',
                       background: kind === k ? 'var(--blue-bg)' : '#fff',
@@ -172,11 +172,11 @@ export default function NewBroadcastPage() {
             <button
               type="submit"
               disabled={pending}
-              className={pending ? '' : 'btn btn-p'}
+              className={pending ? '' : 'ui-btn ui-btn--primary'}
               style={{
                 width: '100%', padding: '13px', borderRadius: 10,
                 background: pending ? 'var(--muted)' : 'var(--c-blue)',
-                color: '#fff', fontWeight: 700, fontSize: '.85rem',
+                color: '#fff', fontWeight: 500, fontSize: '.85rem',
                 border: 'none', cursor: pending ? 'not-allowed' : 'pointer',
               }}
             >

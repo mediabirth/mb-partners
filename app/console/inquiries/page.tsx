@@ -63,11 +63,11 @@ export default function ConsoleInquiriesPage() {
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#4733E6'} />
       <main className="page-anim" style={{ marginLeft: 230, flex: 1, padding: '32px 32px', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>問い合わせ</h1>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 500 }}>問い合わせ</h1>
           {openCount > 0 && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: '.66rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+              fontSize: '.66rem', fontWeight: 500, padding: '3px 10px', borderRadius: 20,
               color: 'var(--amber)', background: 'var(--amber-bg)',
             }}>
               <span className="status-dot" style={{ background: 'var(--amber)' }} />
@@ -80,7 +80,7 @@ export default function ConsoleInquiriesPage() {
           <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中...</p>
         ) : inquiries.length === 0 ? (
           <div style={{
-            background: '#fff', border: '1px solid var(--line)', borderRadius: 13,
+            background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13,
             padding: '48px 20px', textAlign: 'center', color: 'var(--muted2)', fontSize: '.82rem',
           }}>
             問い合わせはありません。
@@ -101,7 +101,7 @@ export default function ConsoleInquiriesPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 13, textDecoration: 'none',
                     background: '#fff', borderRadius: 12,
-                    border: '1px solid var(--line)',
+                    border: '0.5px solid var(--line)',
                     padding: '13px 18px',
                   }}
                 >
@@ -111,7 +111,7 @@ export default function ConsoleInquiriesPage() {
                       width: 38, height: 38, borderRadius: '50%',
                       background: inq.partners.profiles.color, color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '.8rem', fontWeight: 700, flexShrink: 0,
+                      fontSize: '.8rem', fontWeight: 500, flexShrink: 0,
                     }}>
                       {inq.partners.profiles.name[0]}
                     </span>
@@ -126,7 +126,7 @@ export default function ConsoleInquiriesPage() {
                         }} />
                       )}
                       <span style={{
-                        fontSize: '.82rem', color: 'var(--txt)', fontWeight: 700, flexShrink: 0,
+                        fontSize: '.82rem', color: 'var(--txt)', fontWeight: 500, flexShrink: 0,
                       }}>
                         {inq.partners?.profiles?.name ?? '(不明)'}
                       </span>
@@ -138,7 +138,7 @@ export default function ConsoleInquiriesPage() {
                       </span>
                       {overSLA && (
                         <span style={{
-                          fontSize: '.58rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20,
+                          fontSize: '.58rem', fontWeight: 500, padding: '1px 7px', borderRadius: 20,
                           color: 'var(--red)', background: 'var(--red-bg)', flexShrink: 0,
                         }}>
                           SLA超過
@@ -157,7 +157,7 @@ export default function ConsoleInquiriesPage() {
 
                   {/* Category chip */}
                   <span style={{
-                    fontSize: '.62rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                    fontSize: '.62rem', fontWeight: 500, padding: '3px 9px', borderRadius: 20,
                     color: cc.color, background: cc.bg, flexShrink: 0,
                   }}>
                     {CATEGORY_LABEL[inq.category] ?? inq.category}
@@ -166,7 +166,7 @@ export default function ConsoleInquiriesPage() {
                   {/* Status chip */}
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    fontSize: '.62rem', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                    fontSize: '.62rem', fontWeight: 500, padding: '3px 9px', borderRadius: 20,
                     color: sc.color, background: sc.bg, flexShrink: 0,
                   }}>
                     <span className="status-dot" style={{ background: sc.dot }} />

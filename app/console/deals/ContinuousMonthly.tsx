@@ -71,28 +71,28 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
     <div style={{ marginTop: 18, border: '1px solid var(--blue-bg)', borderRadius: 12, overflow: 'hidden' }}>
       {/* ヘッダ */}
       <div style={{ padding: '12px 16px', background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '.6rem', fontWeight: 800, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '2px 9px' }}>継続報酬</span>
-        <span style={{ fontSize: '.74rem', fontWeight: 800, color: 'var(--blue-dk)' }}>{baseLabel} {rate}% / 月</span>
+        <span style={{ fontSize: '.6rem', fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '2px 9px' }}>継続報酬</span>
+        <span style={{ fontSize: '.74rem', fontWeight: 500, color: 'var(--blue-dk)' }}>{baseLabel} {rate}% / 月</span>
         {deal.partners?.profiles?.name && <span style={{ fontSize: '.62rem', color: 'var(--muted2)', marginLeft: 'auto' }}>担当：{deal.partners.profiles.name}</span>}
       </div>
 
       {/* 進捗 ＋ 累計 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)' }}>
         <div style={{ background: '#fff', padding: '12px 16px' }}>
-          <p style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700 }}>進捗</p>
-          <p style={{ fontSize: '.9rem', fontWeight: 800, fontFamily: 'Inter', marginTop: 3 }}>
+          <p style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 500 }}>進捗</p>
+          <p style={{ fontSize: '.9rem', fontWeight: 500, fontFamily: 'Inter', marginTop: 3 }}>
             {confirmedRows.length}<span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}> / {months ?? '—'} ヶ月</span>
           </p>
         </div>
         <div style={{ background: '#fff', padding: '12px 16px' }}>
-          <p style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700 }}>累計報酬</p>
-          <p className="tnum" style={{ fontSize: '.9rem', fontWeight: 800, fontFamily: 'Inter', marginTop: 3, color: 'var(--c-blue)' }}>¥{totalReward.toLocaleString()}</p>
+          <p style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 500 }}>累計報酬</p>
+          <p className="tnum" style={{ fontSize: '.9rem', fontWeight: 500, fontFamily: 'Inter', marginTop: 3, color: 'var(--c-blue)' }}>¥{totalReward.toLocaleString()}</p>
         </div>
       </div>
 
       {/* 今月分を入力 */}
-      <div style={{ padding: '14px 16px', borderTop: '1px solid var(--line)', background: '#fff' }}>
-        <p style={{ fontSize: '.64rem', fontWeight: 800, marginBottom: 9 }}>今月分を入力</p>
+      <div style={{ padding: '14px 16px', borderTop: '0.5px solid var(--line)', background: '#fff' }}>
+        <p style={{ fontSize: '.64rem', fontWeight: 500, marginBottom: 9 }}>今月分を入力</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <input type="month" value={period} onChange={e => setPeriod(e.target.value)}
             style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: '.76rem' }} />
@@ -104,22 +104,22 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
           <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)' }}>{thisMonthReward > 0 ? `¥${thisMonthReward.toLocaleString()}` : '—'}</b>
         </div>
         {err && <p style={{ fontSize: '.66rem', color: 'var(--red)', marginBottom: 8 }}>{err}</p>}
-        <button onClick={confirmMonth} disabled={busy} className="btn btn-p" style={{ width: '100%', fontSize: '.74rem', padding: '9px 0' }}>
+        <button onClick={confirmMonth} disabled={busy} className="ui-btn ui-btn--primary" style={{ width: '100%', fontSize: '.74rem', padding: '9px 0' }}>
           {busy ? '処理中…' : '今月分を確定'}
         </button>
       </div>
 
       {/* 確定済みの月 */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line)', background: '#fff' }}>
-        <p style={{ fontSize: '.6rem', fontWeight: 800, color: 'var(--muted2)', marginBottom: 8 }}>確定済みの月</p>
+      <div style={{ padding: '12px 16px', borderTop: '0.5px solid var(--line)', background: '#fff' }}>
+        <p style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>確定済みの月</p>
         {loading ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>読み込み中…</p>
           : confirmedRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>まだありません</p>
           : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {confirmedRows.map(r => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', padding: '6px 0', borderBottom: '1px solid #F2F2F6' }}>
-                  <span style={{ color: 'var(--green)', fontWeight: 800 }}>✓</span>
-                  <span style={{ fontWeight: 700, minWidth: 78 }}>{fmtMonth(r.period_month)}</span>
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', padding: '6px 0', borderBottom: '0.5px solid var(--line)' }}>
+                  <span style={{ color: 'var(--green)', fontWeight: 500 }}>✓</span>
+                  <span style={{ fontWeight: 500, minWidth: 78 }}>{fmtMonth(r.period_month)}</span>
                   <span style={{ color: 'var(--muted2)', fontSize: '.64rem' }}>{baseLabel} ¥{Number(r.gross_input).toLocaleString()}</span>
                   <b className="tnum" style={{ marginLeft: 'auto', fontFamily: 'Inter', color: 'var(--c-blue)' }}>¥{r.confirmed_amount.toLocaleString()}</b>
                   <button onClick={() => removeRow(r.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.62rem' }}>取消</button>
@@ -130,20 +130,20 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
       </div>
 
       {/* 期間（この案件は何ヶ月） */}
-      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 700 }}>この案件の期間</span>
+      <div style={{ padding: '10px 16px', borderTop: '0.5px solid var(--line)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>この案件の期間</span>
         {editingMonths ? (
           <>
             <input value={monthsEdit} onChange={e => setMonthsEdit(e.target.value)} inputMode="numeric" placeholder="12"
               style={{ width: 64, border: '1.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.74rem', textAlign: 'right' }} />
             <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>ヶ月</span>
-            <button onClick={saveMonths} disabled={busy} className="btn btn-p" style={{ fontSize: '.64rem', padding: '5px 10px', marginLeft: 'auto' }}>保存</button>
-            <button onClick={() => { setEditingMonths(false); setMonthsEdit(months != null ? String(months) : '') }} className="btn btn-g" style={{ fontSize: '.64rem', padding: '5px 10px' }}>取消</button>
+            <button onClick={saveMonths} disabled={busy} className="ui-btn ui-btn--primary" style={{ fontSize: '.64rem', padding: '5px 10px', marginLeft: 'auto' }}>保存</button>
+            <button onClick={() => { setEditingMonths(false); setMonthsEdit(months != null ? String(months) : '') }} className="ui-btn ui-btn--secondary" style={{ fontSize: '.64rem', padding: '5px 10px' }}>取消</button>
           </>
         ) : (
           <>
             <b style={{ fontSize: '.74rem', fontFamily: 'Inter' }}>{months ?? '未設定'}{months != null ? ' ヶ月' : ''}</b>
-            <button onClick={() => setEditingMonths(true)} className="btn btn-g" style={{ fontSize: '.62rem', padding: '5px 10px', marginLeft: 'auto' }}>変更</button>
+            <button onClick={() => setEditingMonths(true)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.62rem', padding: '5px 10px', marginLeft: 'auto' }}>変更</button>
           </>
         )}
       </div>

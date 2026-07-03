@@ -54,8 +54,8 @@ export default function ApprovalPanel({ partners: initial }: { partners: Partner
           <b style={{ fontSize: '.78rem', color: 'var(--amber)' }}>承認待ちパートナー {partners.length}名</b>
         </div>
         {partners.map((p, i) => (
-          <div key={p.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 14, padding: '14px 18px', borderTop: i > 0 ? '1px solid #F2F2F6' : undefined, alignItems: 'center' }}>
-            <div style={{ width: 38, height: 38, borderRadius: '50%', background: p.profiles?.color ?? '#B9BAC4', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.72rem', fontWeight: 700, flexShrink: 0 }}>
+          <div key={p.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 14, padding: '14px 18px', borderTop: i > 0 ? '0.5px solid var(--line)' : undefined, alignItems: 'center' }}>
+            <div style={{ width: 38, height: 38, borderRadius: '50%', background: p.profiles?.color ?? '#B9BAC4', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.72rem', fontWeight: 500, flexShrink: 0 }}>
               {(p.profiles?.name ?? p.code)[0]}
             </div>
             <div style={{ minWidth: 0 }}>
@@ -71,7 +71,7 @@ export default function ApprovalPanel({ partners: initial }: { partners: Partner
               <button
                 onClick={() => approve(p.id, p.profiles?.name ?? p.code)}
                 disabled={pending}
-                className="btn btn-p"
+                className="ui-btn ui-btn--primary"
                 style={{ fontSize: '.7rem', padding: '7px 14px' }}
               >
                 承認
@@ -79,7 +79,7 @@ export default function ApprovalPanel({ partners: initial }: { partners: Partner
               <button
                 onClick={() => reject(p.id, p.profiles?.name ?? p.code)}
                 disabled={pending}
-                style={{ fontSize: '.7rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}
+                style={{ fontSize: '.7rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}
               >
                 却下
               </button>
@@ -92,7 +92,7 @@ export default function ApprovalPanel({ partners: initial }: { partners: Partner
         <div style={{
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--txt)', color: '#fff', padding: '12px 22px',
-          borderRadius: 9, fontSize: '.74rem', fontWeight: 600, zIndex: 99, whiteSpace: 'nowrap',
+          borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99, whiteSpace: 'nowrap',
         }}>
           {toast}
         </div>

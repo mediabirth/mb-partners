@@ -11,11 +11,10 @@ import MonthSelector from './MonthSelector'
 import { customerHonorific } from '@/lib/customer'
 import ConsoleMain from '@/components/ConsolePageTransition'
 import CountUp from '@/components/CountUp'
-import StatusPill from '@/components/ui/StatusPill'
+import StatusDot from './StatusDot'
 import StatCard from '@/components/ui/StatCard'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
-import { dealStatus, projectStatus as projectStatusPill, intakeType as intakePill } from '@/lib/status'
 import { PROJECT_STATUSES, INTAKE_LABEL } from '@/lib/phase'
 
 export const runtime = 'edge'
@@ -260,9 +259,9 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   return (
     <>
         {/* Top bar */}
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <h1 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-.01em' }}>ダッシュボード</h1>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>ダッシュボード</h1>
             <MonthSelector months={monthOptions} selected={selectedYm} current={ym} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -285,12 +284,12 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>{isCurrentMonth ? '今月' : selMonthLabel}のMB粗利</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 600, fontSize: '38px', fontFeatureSettings: '"tnum" 1', letterSpacing: '-.03em', marginTop: 6, lineHeight: 1.05 }}>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 600, opacity: .8, marginRight: 4 }}>¥</span>
+                <div style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 500, fontSize: '38px', fontFeatureSettings: '"tnum" 1', letterSpacing: '-.03em', marginTop: 6, lineHeight: 1.05 }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 500, opacity: .8, marginRight: 4 }}>¥</span>
                   <CountUp value={mbMargin} />
                 </div>
-                {grossRate != null && <span style={{ fontSize: '.72rem', fontWeight: 800, color: '#86EFAC' }}>▲ 粗利率 {grossRate}%</span>}
-                <span style={{ fontSize: '.72rem', fontWeight: 700, opacity: .92 }}>前月比 <HeroDelta cur={mbMargin} prev={prev.mbMargin} /></span>
+                {grossRate != null && <span style={{ fontSize: '.72rem', fontWeight: 500, color: 'rgba(255,255,255,.9)' }}>▲ 粗利率 {grossRate}%</span>}
+                <span style={{ fontSize: '.72rem', fontWeight: 500, opacity: .92 }}>前月比 <HeroDelta cur={mbMargin} prev={prev.mbMargin} /></span>
               </div>
               {targetPct != null ? (
                 <div style={{ marginTop: 14, maxWidth: 460 }}>
@@ -307,25 +306,25 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* 最重要KPI（ヒーロー直下に集約・3指標。重複を作らない＝対応中見込みは下のパイプラインへ） */}
           <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
-            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の成約数`} value={curWon} suffix="件" icon="deal" accent="var(--c-blue)" delta={{ cur: curWon, prev: prevWon }} />
-            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の総受注額`} value={cur.revenue} format="yen" icon="yen" accent="var(--green)" delta={{ cur: cur.revenue, prev: prev.revenue }} />
-            <KpiCard label="成約率" value={winRate ?? 0} suffix="%" icon="deal" accent="var(--amber)" />
+            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の成約数`} value={curWon} suffix="件" icon="deal" delta={{ cur: curWon, prev: prevWon }} />
+            <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の総受注額`} value={cur.revenue} format="yen" icon="yen" delta={{ cur: cur.revenue, prev: prev.revenue }} />
+            <KpiCard label="成約率" value={winRate ?? 0} suffix="%" icon="deal" />
           </div>
 
           {/* ⑥ 受注額未入力の透明性バナー */}
           {missingDeals.length > 0 && (
-            <Link href="/console/deals" className="lift" style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--amber-bg)', border: '1px solid var(--amber)', borderRadius: 12, padding: '11px 16px', marginBottom: 22, textDecoration: 'none', color: '#7A5A14' }}>
-              <span style={{ fontSize: '1rem' }}>⚠️</span>
+            <Link href="/console/deals" className="lift" style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 12, padding: '11px 16px', marginBottom: 22, textDecoration: 'none', color: 'var(--txt)' }}>
+              <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--st-warn)', flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: '.72rem', lineHeight: 1.6 }}>
                 <b>受注額未入力 {missingDeals.length}件</b> の成約案件があります。粗利は入力済の範囲で正確です（未入力分は売上が過小評価されます）。クリックで案件一覧へ。
               </span>
-              <span style={{ fontSize: '.66rem', fontWeight: 700 }}>→</span>
+              <span style={{ fontSize: '.66rem', fontWeight: 500 }}>→</span>
             </Link>
           )}
 
           {/* ② お金の内訳（今月）：受注額 → 各コスト → 残るMB粗利 */}
           <SectionTitle title="お金の内訳" />
-          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <WaterRow label="総受注額" val={cur.revenue} pct={100} color="var(--c-blue)" head />
             {costLines.map((c, i) => (
               <WaterRow key={i} label={c.label} val={c.val} pct={Math.round((c.val / barBase) * 100)} color={c.color} minus />
@@ -337,11 +336,12 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* ③ パイプライン（受注前の見込み・平均・商談ステージを1セクションに集約） */}
           <SectionTitle title="パイプライン" />
-          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
+          <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
             <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-              <StatCard label="対応中の見込み" value={`¥${pipeline.toLocaleString()}`} accent="blue" />
-              <StatCard label="パイプライン金額" value={`¥${pipelineAmount.toLocaleString()}`} accent="amber" />
-              <StatCard label="平均受注額" value={`¥${avgRevenue.toLocaleString()}`} accent="green" />
+              {/* v2.2：KPIの数値は中立（accent=neutral → var(--txt)）。塗り・色数値はヒーロー1面のみ。 */}
+              <StatCard label="対応中の見込み" value={`¥${pipeline.toLocaleString()}`} />
+              <StatCard label="パイプライン金額" value={`¥${pipelineAmount.toLocaleString()}`} />
+              <StatCard label="平均受注額" value={`¥${avgRevenue.toLocaleString()}`} />
             </div>
           </div>
 
@@ -349,8 +349,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           <SectionTitle title="要対応・最近の動き" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
             {/* 要対応（統合）：アラート → 停滞中 → 直近の商談 */}
-            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
-              <div style={{ padding: '15px 18px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ padding: '15px 18px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontSize: '.84rem' }}>要対応{alerts.length > 0 && <span style={{ color: 'var(--red)', marginLeft: 6 }}>{alerts.length}</span>}</b>
               </div>
               {/* アラート（差戻し経費・期日超過・課題フラグ・受注額未入力） */}
@@ -359,17 +359,17 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               ) : (
                 <div className="stagger">
                   {alerts.slice(0, 12).map((a, i) => (
-                    <Link key={i} href={`/console/deals?deal=${a.dealId}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '11px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
-                      <StatusPill size="sm" tone={a.tone}>{a.type}</StatusPill>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.detail}</span>
+                    <Link key={i} href={`/console/deals?deal=${a.dealId}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '11px 18px', borderBottom: '0.5px solid var(--line)', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
+                      <StatusDot tone={a.tone}>{a.type}</StatusDot>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.detail}</span>
                       <span style={{ color: 'var(--muted)', fontSize: '.72rem', flexShrink: 0 }}>›</span>
                     </Link>
                   ))}
                 </div>
               )}
               {/* 停滞中（7日以上動きなし） */}
-              <div style={{ padding: '12px 18px 6px', borderTop: '1px solid #F2F2F6' }}>
-                <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 6 }}>停滞中（7日以上動きなし）{stalled.length > 0 && <span style={{ color: 'var(--amber)' }}> · {stalled.length}件</span>}</div>
+              <div style={{ padding: '12px 18px 6px', borderTop: '0.5px solid var(--line)' }}>
+                <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>停滞中（7日以上動きなし）{stalled.length > 0 && <span style={{ color: 'var(--amber)' }}> · {stalled.length}件</span>}</div>
                 {stalled.length === 0 ? (
                   <EmptyState title="停滞している案件はありません" compact />
                 ) : stalled.slice(0, 3).map(d => {
@@ -377,15 +377,15 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                   return (
                     <Link key={d.id} href={`/console/deals?deal=${d.id}`} className="lift" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', textDecoration: 'none', color: 'var(--txt)' }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)', flexShrink: 0 }} />
-                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
-                      <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--amber)', fontWeight: 700 }}>{days}日</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
+                      <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--amber)', fontWeight: 500 }}>{days}日</span>
                     </Link>
                   )
                 })}
               </div>
               {/* 直近の商談 */}
-              <div style={{ padding: '8px 18px 14px', borderTop: '1px solid #F2F2F6' }}>
-                <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--muted2)', margin: '4px 0 6px' }}>直近の商談</div>
+              <div style={{ padding: '8px 18px 14px', borderTop: '0.5px solid var(--line)' }}>
+                <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', margin: '4px 0 6px' }}>直近の商談</div>
                 {upcomingMeetings.length === 0 ? (
                   <EmptyState title="予定されている商談はありません" compact />
                 ) : upcomingMeetings.slice(0, 3).map(d => {
@@ -393,11 +393,11 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                   const isToday = dt.toDateString() === now.toDateString()
                   return (
                     <Link key={d.id} href={`/console/deals?deal=${d.id}`} className="lift" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 0', textDecoration: 'none', color: 'var(--txt)' }}>
-                      <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: isToday ? 'var(--c-blue)' : 'var(--muted2)', fontWeight: 700, width: 64 }}>
+                      <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: isToday ? 'var(--c-blue)' : 'var(--muted2)', fontWeight: 500, width: 64 }}>
                         {dt.toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
-                      {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--c-blue)' }}>本日</span>}
+                      <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
+                      {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, padding: '1px 6px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--c-blue)' }}>本日</span>}
                     </Link>
                   )
                 })}
@@ -405,21 +405,21 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             </div>
 
             {/* 最近の動き */}
-            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 18px', borderBottom: '1px solid var(--line)' }}>
+            <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 18px', borderBottom: '0.5px solid var(--line)' }}>
                 <b style={{ fontSize: '.84rem' }}>最近の動き</b>
-                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--c-blue)', fontWeight: 700, textDecoration: 'none' }}>案件へ →</Link>
+                <Link href="/console/deals" style={{ fontSize: '.62rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>案件へ →</Link>
               </div>
               {(recentEvents ?? []).length === 0 ? (
                 <EmptyState title="まだ記録がありません" compact />
               ) : (
                 <div className="stagger">
                   {(recentEvents ?? []).map((e: any) => (
-                    <Link key={e.id} href={`/console/deals?deal=${e.deal_id}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '12px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
+                    <Link key={e.id} href={`/console/deals?deal=${e.deal_id}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '12px 18px', borderBottom: '0.5px solid var(--line)', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
                       <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: 'var(--muted)', width: 34 }}>
                         {new Date(e.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })}
                       </span>
-                      <b style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <b style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {e.deals ? customerHonorific(e.deals) : ''}
                       </b>
                       {e.deals?.channel && <ChannelMark channel={e.deals.channel} showLabel={false} />}
@@ -442,7 +442,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 function ConsoleDashboardSkeleton() {
   return (
     <div aria-busy="true">
-      <div style={{ borderBottom: '1px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="ui-skeleton" style={{ width: 170, height: 22, borderRadius: 6 }} />
         <div className="ui-skeleton" style={{ width: 130, height: 30, borderRadius: 8 }} />
       </div>
@@ -464,8 +464,8 @@ function ConsoleDashboardSkeleton() {
 // B3：セクション見出し（情報設計の階層・余白用。表示専用・数値計算なし）。
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div style={{ margin: '4px 2px 12px', borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
-      <h2 style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: 0 }}>{title}</h2>
+    <div style={{ margin: '4px 2px 12px', borderBottom: '0.5px solid var(--line)', paddingBottom: 8 }}>
+      <h2 style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: 0 }}>{title}</h2>
       {subtitle && <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>{subtitle}</p>}
     </div>
   )
@@ -476,8 +476,8 @@ function WaterRow({ label, val, pct, color, minus, head, strong }: { label: stri
   return (
     <div style={{ padding: head ? '2px 0 9px' : '6px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: strong || head ? '.76rem' : '.68rem', fontWeight: strong || head ? 800 : 500, color: minus ? 'var(--muted2)' : 'var(--txt)' }}>{minus ? '− ' : ''}{label}</span>
-        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: strong || head ? '.84rem' : '.72rem', fontWeight: strong || head ? 800 : 600, color: strong ? color : minus ? 'var(--txt)' : 'var(--txt)' }}>
+        <span style={{ fontSize: strong || head ? '.76rem' : '.68rem', fontWeight: 500, color: minus ? 'var(--muted2)' : 'var(--txt)' }}>{minus ? '− ' : ''}{label}</span>
+        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: strong || head ? '.84rem' : '.72rem', fontWeight: 500, color: 'var(--txt)' }}>
           {minus && val > 0 ? '−' : ''}¥{Math.abs(val).toLocaleString()}
         </span>
       </div>
@@ -502,7 +502,7 @@ function DeltaBadge({ cur, prev }: { cur: number; prev: number }) {
   const color = diff === 0 ? 'var(--muted2)' : up ? 'var(--green)' : 'var(--red)'
   const arrow = diff === 0 ? '±' : up ? '▲' : '▼'
   return (
-    <span style={{ fontSize: '.58rem', fontWeight: 700, color }}>
+    <span style={{ fontSize: '.58rem', fontWeight: 500, color }}>
       <span style={{ color: 'var(--muted2)', fontWeight: 400, marginRight: 4 }}>前月比</span>
       {arrow}{pct != null ? `${Math.abs(pct)}%` : Math.abs(diff)}
     </span>
@@ -521,33 +521,27 @@ function KpiIcon({ id }: { id: string }) {
   }
 }
 
-function KpiCard({ label, value, suffix, format, icon, accent, alert, delta, sub }: {
+// v2.2：KPI面は中立（塗りはヒーロー1面のみ）。アイコンタイルの色面を撤去し、数値は var(--txt) 固定。
+function KpiCard({ label, value, suffix, format, icon, delta, sub }: {
   label: string; value: number; suffix?: string; format?: 'number' | 'yen'
-  icon: string; accent: string; alert?: boolean
+  icon: string
   delta?: { cur: number; prev: number }; sub?: string
 }) {
-  const TINT: Record<string, string> = {
-    'var(--c-blue)': 'var(--blue-bg)', 'var(--green)': 'var(--green-bg)', 'var(--amber)': 'var(--amber-bg)',
-    'var(--muted2)': 'var(--bg2)',
-  }
-  const numColor = alert ? 'var(--red)' : 'var(--txt)'
-  const badgeColor = alert ? 'var(--red)' : accent
-  const badgeBg = alert ? 'var(--red-bg)' : (TINT[accent] ?? 'var(--blue-bg)')
   return (
     <div className="card-hover" style={{
-      background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 18px',
+      background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: '10px', color: 'var(--t-tertiary)', fontWeight: 700, paddingTop: 4 }}>{label}</div>
+        <div style={{ fontSize: '10px', color: 'var(--t-tertiary)', fontWeight: 500, paddingTop: 4 }}>{label}</div>
         <span style={{
           width: 30, height: 30, borderRadius: 9, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: badgeBg, color: badgeColor,
+          color: 'var(--muted2)',
         }}>
           <KpiIcon id={icon} />
         </span>
       </div>
-      <div style={{ fontFamily: 'var(--font-sans), Inter', fontSize: '18px', fontWeight: 700, marginTop: 8, fontFeatureSettings: '"tnum" 1', letterSpacing: '-.02em', color: numColor }}>
+      <div style={{ fontFamily: 'var(--font-sans), Inter', fontSize: '18px', fontWeight: 500, marginTop: 8, fontFeatureSettings: '"tnum" 1', letterSpacing: '-.02em', color: 'var(--txt)' }}>
         <CountUp value={value} format={format} />
         {suffix && <small style={{ fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 400, marginLeft: 3, color: 'var(--muted2)' }}>{suffix}</small>}
       </div>

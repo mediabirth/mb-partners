@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import StatCard from '@/components/ui/StatCard'
 import { SectionHeader } from '@/components/ui/Header'
-import StatusPill from '@/components/ui/StatusPill'
+import StatusDot from '../StatusDot'
 import { dealStatus, intakeType as intakePill } from '@/lib/status'
 
 type Rec = {
@@ -107,7 +107,7 @@ export default function AnalyticsClient() {
 
   const Delta = ({ cur, prev, unit }: { cur: number; prev: number; unit?: string }) => {
     const diff = cur - prev, up = diff >= 0
-    return <span style={{ fontSize: '.58rem', fontWeight: 700, color: diff === 0 ? 'var(--muted2)' : up ? 'var(--green)' : 'var(--red)' }}>{diff === 0 ? '±' : up ? '▲' : '▼'}{Math.abs(diff)}{unit ?? ''} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>前期比</span></span>
+    return <span style={{ fontSize: '.58rem', fontWeight: 500, color: diff === 0 ? 'var(--muted2)' : up ? 'var(--green)' : 'var(--red)' }}>{diff === 0 ? '±' : up ? '▲' : '▼'}{Math.abs(diff)}{unit ?? ''} <span style={{ color: 'var(--muted2)', fontWeight: 400 }}>前期比</span></span>
   }
 
   return (
@@ -116,7 +116,7 @@ export default function AnalyticsClient() {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
         <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
           {([['this', '今月'], ['last', '先月'], ['3mo', '過去3ヶ月'], ['custom', '任意期間']] as const).map(([v, l]) => (
-            <button key={v} onClick={() => setPeriod(v)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 700, padding: '7px 14px', borderRadius: 7, color: period === v ? 'var(--txt)' : 'var(--muted2)', background: period === v ? '#fff' : 'transparent', boxShadow: period === v ? '0 1px 4px rgba(14,14,20,.1)' : 'none' }}>{l}</button>
+            <button key={v} onClick={() => setPeriod(v)} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '7px 14px', borderRadius: 7, color: period === v ? 'var(--txt)' : 'var(--muted2)', background: period === v ? '#fff' : 'transparent', boxShadow: period === v ? '0 1px 4px rgba(14,14,20,.1)' : 'none' }}>{l}</button>
           ))}
         </div>
         {period === 'custom' && <>
@@ -129,15 +129,16 @@ export default function AnalyticsClient() {
 
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
-        <StatCard label="成約率" value={view.k.rate} unit="%" accent="green" sub={<Delta cur={view.k.rate} prev={view.kp.rate} unit="pt" />} />
-        <StatCard label="受注額" value={yen(view.k.revenue)} accent="blue" sub={`成約 ${view.k.wonCount}件`} />
-        <StatCard label="MB粗利" value={yen(view.k.margin)} accent="blue" sub={<Delta cur={Math.round(view.k.margin / 1000)} prev={Math.round(view.kp.margin / 1000)} unit="k" />} />
-        <StatCard label="平均受注額" value={yen(view.k.avg)} accent="amber" sub={`成約 ${view.k.wonCount}件の平均`} />
+        {/* v2.2：KPIの数値は中立（accent=neutral → var(--txt)）。色はステータスドット1点まで。 */}
+        <StatCard label="成約率" value={view.k.rate} unit="%" sub={<Delta cur={view.k.rate} prev={view.kp.rate} unit="pt" />} />
+        <StatCard label="受注額" value={yen(view.k.revenue)} sub={`成約 ${view.k.wonCount}件`} />
+        <StatCard label="MB粗利" value={yen(view.k.margin)} sub={<Delta cur={Math.round(view.k.margin / 1000)} prev={Math.round(view.kp.margin / 1000)} unit="k" />} />
+        <StatCard label="平均受注額" value={yen(view.k.avg)} sub={`成約 ${view.k.wonCount}件の平均`} />
       </div>
 
       {/* ファネル＋弱点 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, marginBottom: 22 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+        <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
           <SectionHeader title="ファネル" />
           <div style={{ marginTop: 12 }}>
             {funnel.map(f => {
@@ -146,8 +147,8 @@ export default function AnalyticsClient() {
               return (
                 <button key={f.key} onClick={() => openDrill(`${f.label}（${f.n}件）`, rows)} className="lift" style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '7px 0', fontFamily: 'inherit' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: '.72rem', fontWeight: 600 }}>{f.label}</span>
-                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)' }}>{f.n}件 <span style={{ fontSize: '.58rem' }}>({shodanCur.length ? Math.round(f.n / shodanCur.length * 100) : 0}%)</span></span>
+                    <span style={{ fontSize: '.72rem', fontWeight: 500 }}>{f.label}</span>
+                    <span style={{ fontSize: '.7rem', fontWeight: 500, color: 'var(--muted2)' }}>{f.n}件 <span style={{ fontSize: '.58rem' }}>({shodanCur.length ? Math.round(f.n / shodanCur.length * 100) : 0}%)</span></span>
                   </div>
                   <div style={{ height: 8, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><div style={{ width: `${w}%`, height: '100%', background: f.color, borderRadius: 4 }} /></div>
                 </button>
@@ -155,12 +156,12 @@ export default function AnalyticsClient() {
             })}
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
+        <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 20px' }}>
           <SectionHeader title="要注目（弱点）" />
           {weakService ? (
             <button onClick={() => openDrill(`${weakService.label}（成約率 ${weakService.rate}%）`, view.cur.filter(r => r.service_id === weakService.key))} className="lift" style={{ display: 'block', width: '100%', textAlign: 'left', border: '1px solid var(--red-bg)', background: 'var(--red-bg)', borderRadius: 12, padding: '14px', cursor: 'pointer', marginTop: 12, fontFamily: 'inherit' }}>
-              <div style={{ fontSize: '.62rem', color: 'var(--red)', fontWeight: 800, marginBottom: 4 }}>最も成約率が低いサービス</div>
-              <div style={{ fontSize: '.86rem', fontWeight: 800 }}>{weakService.label}</div>
+              <div style={{ fontSize: '.62rem', color: 'var(--red)', fontWeight: 500, marginBottom: 4 }}>最も成約率が低いサービス</div>
+              <div style={{ fontSize: '.86rem', fontWeight: 500 }}>{weakService.label}</div>
               <div style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 3 }}>成約率 <b style={{ color: 'var(--red)' }}>{weakService.rate}%</b>（{weakService.won}/{weakService.total}件）· 改善の起点</div>
             </button>
           ) : <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 12 }}>十分なサンプルがありません（3件以上で判定）。</p>}
@@ -168,14 +169,14 @@ export default function AnalyticsClient() {
       </div>
 
       {/* 月推移 */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 22 }}>
+      <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 22 }}>
         <SectionHeader title="月推移（受注額＋成約率）" />
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 130, marginTop: 16 }}>
           {months.map((m, i) => {
             const h = Math.max(3, Math.round((m.revenue / monthRevMax) * 100))
             return (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                <span style={{ fontSize: '.56rem', color: 'var(--green)', fontWeight: 700 }}>{m.rate}%</span>
+                <span style={{ fontSize: '.56rem', color: 'var(--green)', fontWeight: 500 }}>{m.rate}%</span>
                 <div className="bar-grow" style={{ width: '100%', maxWidth: 34, height: h, borderRadius: '6px 6px 0 0', background: i === months.length - 1 ? 'var(--blue)' : 'var(--blue-bg)' }} title={yen(m.revenue)} />
                 <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>{m.label}</span>
               </div>
@@ -191,19 +192,19 @@ export default function AnalyticsClient() {
         { title: 'MB担当別', rows: byDirector, kf: (r: Rec, k: string) => (r.director_id ?? '__none__') === k },
         { title: '流入経路別', rows: byIntake, kf: (r: Rec, k: string) => r.intake === k },
       ] as const).map(seg => (
-        <div key={seg.title} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 18 }}>
+        <div key={seg.title} style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 20px', marginBottom: 18 }}>
           <SectionHeader title={`${seg.title} 成約率・受注額`} />
           <div style={{ marginTop: 12 }}>
             {seg.rows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>データがありません。</p> : seg.rows.map(s => {
               const weak = s.total >= 3 && s.rate < 40
               return (
-                <button key={s.key} onClick={() => openDrill(`${s.label}（${seg.title}）`, view.cur.filter(r => seg.kf(r, s.key)))} className="lift" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.2fr auto', gap: 12, alignItems: 'center', width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '9px 0', borderTop: '1px solid #F2F2F6', fontFamily: 'inherit' }}>
-                  <span style={{ fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}<span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 5 }}>{s.won}/{s.total}件</span>{weak && <span style={{ fontSize: '.5rem', fontWeight: 800, color: '#fff', background: 'var(--red)', borderRadius: 20, padding: '1px 6px', marginLeft: 6 }}>要注目</span>}</span>
+                <button key={s.key} onClick={() => openDrill(`${s.label}（${seg.title}）`, view.cur.filter(r => seg.kf(r, s.key)))} className="lift" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.2fr auto', gap: 12, alignItems: 'center', width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '9px 0', borderTop: '0.5px solid var(--line)', fontFamily: 'inherit' }}>
+                  <span style={{ fontSize: '.74rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}<span style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 5 }}>{s.won}/{s.total}件</span>{weak && <span style={{ fontSize: '.5rem', fontWeight: 500, color: '#fff', background: 'var(--red)', borderRadius: 20, padding: '1px 6px', marginLeft: 6 }}>要注目</span>}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ flex: 1, height: 6, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}><span style={{ display: 'block', width: `${s.rate}%`, height: '100%', background: weak ? 'var(--red)' : 'var(--green)', borderRadius: 4 }} /></span>
-                    <span style={{ fontSize: '.64rem', fontWeight: 700, color: weak ? 'var(--red)' : 'var(--muted2)', width: 32, textAlign: 'right' }}>{s.rate}%</span>
+                    <span style={{ fontSize: '.64rem', fontWeight: 500, color: weak ? 'var(--red)' : 'var(--muted2)', width: 32, textAlign: 'right' }}>{s.rate}%</span>
                   </span>
-                  <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.78rem', textAlign: 'right' }}>{yen(s.revenue)}</span>
+                  <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '.78rem', textAlign: 'right' }}>{yen(s.revenue)}</span>
                 </button>
               )
             })}
@@ -215,18 +216,18 @@ export default function AnalyticsClient() {
       {drill && (
         <div onClick={() => setDrill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', zIndex: 90, display: 'flex', justifyContent: 'flex-end' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 440, maxWidth: '94vw', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '-18px 0 48px rgba(14,14,20,.12)' }}>
-            <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <b style={{ fontSize: '.86rem' }}>{drill.label} · {drill.rows.length}件</b>
               <button onClick={() => setDrill(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div className="cascade" style={{ flex: 1, overflowY: 'auto' }}>
               {drill.rows.length === 0 ? <p style={{ padding: 20, fontSize: '.74rem', color: 'var(--muted2)' }}>該当する案件がありません。</p> : drill.rows.map(r => (
-                <Link key={r.id} href={`/console/deals?deal=${r.id}`} className="row-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderBottom: '1px solid #F2F2F6', textDecoration: 'none', color: 'var(--txt)' }}>
+                <Link key={r.id} href={`/console/deals?deal=${r.id}`} className="row-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderBottom: '0.5px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '.76rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+                    <div style={{ fontSize: '.76rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
                     <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{r.service_name}{r.revenue > 0 && ` · ${yen(r.revenue)}`}</div>
                   </div>
-                  {r.intake === 'direct' ? <StatusPill size="sm" {...intakePill('direct')} /> : <StatusPill size="sm" {...dealStatus(r.status)} />}
+                  {r.intake === 'direct' ? <StatusDot {...intakePill('direct')} /> : <StatusDot {...dealStatus(r.status)} />}
                   <span style={{ color: 'var(--muted)', fontSize: '.72rem' }}>›</span>
                 </Link>
               ))}
