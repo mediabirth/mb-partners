@@ -43,7 +43,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 .no-break{white-space:nowrap}
 /* Opportunity Board カードの stagger（各カード animationDelay インライン・reduced-motionで無効） */
 .ob-card{animation:obIn 150ms ease-out backwards}@keyframes obIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in{animation:none}}`}</style>
+.check-in{animation:checkIn 150ms ease-out}@keyframes checkIn{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in,.check-in{animation:none}}`}</style>
       <div className="app-quiet" style={{ display: 'contents' }}>
         <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
       </div>

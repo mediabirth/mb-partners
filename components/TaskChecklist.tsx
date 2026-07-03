@@ -31,7 +31,7 @@ export default function TaskChecklist({ tasks: initial, descriptions = {}, heari
           return (
             <div key={t.id} style={{ position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '0.5px solid var(--line)' }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? 'var(--c-blue)' : '#fff', border: done ? 'none' : '1.5px solid var(--line)', color: '#fff' }}>
+                <span className={done ? 'check-in' : undefined} style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? 'var(--c-blue)' : '#fff', border: done ? 'none' : '1.5px solid var(--line)', color: '#fff' }}>
                   {done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>}
                 </span>
                 <span style={{ fontSize: 14, fontWeight: 400, color: done ? 'var(--muted2)' : 'var(--txt)' }}>{t.label}</span>

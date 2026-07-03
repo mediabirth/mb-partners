@@ -72,7 +72,7 @@ const fmtFull = (iso: string) => new Date(iso).toLocaleString('ja', { month: 'nu
 export default function InboxPage() {
   const [notifs,     setNotifs]     = useState<Notification[]>([])
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([])
-  const [tab,        setTab]        = useState<'all' | 'personal' | 'news' | 'tips'>('all')
+  const [tab,        setTab]        = useState<'all' | 'personal' | 'news'>('all')
   const [loading,    setLoading]    = useState(true)
   const [detail,     setDetail]     = useState<Broadcast | null>(null)
 
@@ -179,13 +179,12 @@ export default function InboxPage() {
           )}
         </div>
 
-        {/* Tabs — prototype has: すべて / あなた宛 / お知らせ / お役立ち */}
+        {/* Tabs — すべて / あなた宛 / お知らせ（「お役立ち」タブは廃止＝⑧） */}
         <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 10, padding: 4, marginBottom: 14 }}>
           {([
             ['all', 'すべて'],
             ['personal', 'あなた宛'],
             ['news', 'お知らせ'],
-            ['tips', 'お役立ち'],
           ] as const).map(([val, lbl]) => (
             <button key={val} onClick={() => setTab(val)} style={{
               flex: 1, border: 'none', padding: '9px 2px', borderRadius: 8,
@@ -237,15 +236,6 @@ export default function InboxPage() {
         broadcasts.filter(b => b.kind === 'news').length === 0 ? (
           <EmptyState title="まだお知らせはありません" compact />
         ) : broadcasts.filter(b => b.kind === 'news').map(b => (
-          <BroadcastRow key={b.id} b={b} onClick={() => setDetail(b)} />
-        ))
-      )}
-
-      {/* Tips */}
-      {tab === 'tips' && (
-        broadcasts.filter(b => b.kind === 'tips').length === 0 ? (
-          <EmptyState title="まだお役立ち情報はありません" compact />
-        ) : broadcasts.filter(b => b.kind === 'tips').map(b => (
           <BroadcastRow key={b.id} b={b} onClick={() => setDetail(b)} />
         ))
       )}

@@ -1,5 +1,5 @@
 'use client'
-import { Fragment, useEffect, useState, useTransition } from 'react'
+import { Fragment, useEffect, useRef, useState, useTransition } from 'react'
 import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
@@ -208,15 +208,37 @@ export default function ReferPage() {
     return hay.includes(q)
   })
 
+  // ④a 検索がメニュー名にヒット→該当ブランドを自動展開（検索解除で閉じる）。排他は expandedSvc 単一値で担保。
+  useEffect(() => {
+    const qq = norm(query)
+    if (!qq) { setExpandedSvc(null); return }
+    const hit = filteredServices.find(svc =>
+      svc.service_menus.some(sm => (sm.menus ?? []).some(m => norm(m.name).includes(qq))))
+    if (hit) setExpandedSvc(hit.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
+
+  // ④c チップ行の横スクロール可否（右端フェードの表示判定）。
+  const chipRowRef = useRef<HTMLDivElement>(null)
+  const [chipsOverflow, setChipsOverflow] = useState(false)
+  useEffect(() => {
+    const el = chipRowRef.current
+    if (!el) return
+    const check = () => setChipsOverflow(el.scrollWidth > el.clientWidth + 2)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [categories.length])
+
   return (
     <div>
       {/* ── Opportunity Board：フル幅ブランドカード＋直下メニュー展開 ── */}
       {step === 'select' && (
         <div className="page-anim">
           <div style={{ padding: '22px 20px 12px' }}>
-            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.08em', color: 'var(--muted2)' }}>紹介をはじめる</div>
-            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em', marginTop: 4 }}>どなたの顔が浮かびますか？</h2>
-            {/* 検索フィールド（v3・クライアント絞り込み・API非追加。サブ文言は検索導入で冗長のため撤去） */}
+            {/* ② 見出しは「紹介をはじめる」18px/500 の1本（旧 eyebrow＋H1 の2行は廃止） */}
+            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>紹介をはじめる</h2>
+            {/* 検索フィールド（クライアント絞り込み・API非追加） */}
             <div style={{ position: 'relative', marginTop: 12 }}>
               <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', display: 'flex', pointerEvents: 'none' }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" /></svg>
@@ -225,16 +247,21 @@ export default function ReferPage() {
                 style={{ width: '100%', height: 36, border: '0.5px solid var(--line)', borderRadius: 10, padding: '0 12px 0 34px', fontFamily: 'inherit', fontSize: 13, fontWeight: 400, background: '#fff', color: 'var(--txt)' }} />
             </div>
           </div>
-          {/* カテゴリチップ行（横スクロール・単一選択・選択中＝黒系塗り＝v2.1規律） */}
+          {/* カテゴリチップ行（横スクロール・単一選択・選択中＝黒系塗り＝v2.1規律・右端フェード④c） */}
           {categories.length > 1 && (
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '0 20px 12px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-              {categories.map(cat => {
-                const on = category === cat
-                return (
-                  <button key={cat} onClick={() => setCategory(cat)} className="no-break"
-                    style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 500 : 400, cursor: 'pointer', borderRadius: 999, padding: '5px 13px', whiteSpace: 'nowrap', border: on ? '0.5px solid var(--txt)' : '0.5px solid var(--line)', background: on ? 'var(--txt)' : '#fff', color: on ? '#fff' : 'var(--muted2)' }}>{cat}</button>
-                )
-              })}
+            <div style={{ position: 'relative' }}>
+              <div ref={chipRowRef} style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '0 20px 12px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+                {categories.map(cat => {
+                  const on = category === cat
+                  return (
+                    <button key={cat} onClick={() => setCategory(cat)} className="no-break"
+                      style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 500 : 400, cursor: 'pointer', borderRadius: 999, padding: '5px 13px', whiteSpace: 'nowrap', border: on ? '0.5px solid var(--txt)' : '0.5px solid var(--line)', background: on ? 'var(--txt)' : '#fff', color: on ? '#fff' : 'var(--muted2)' }}>{cat}</button>
+                  )
+                })}
+              </div>
+              {chipsOverflow && (
+                <div aria-hidden style={{ position: 'absolute', top: 0, right: 0, bottom: 12, width: 24, pointerEvents: 'none', background: 'linear-gradient(90deg, rgba(247,247,250,0), var(--bg2))' }} />
+              )}
             </div>
           )}
           <div style={{ padding: '0 20px 28px' }}>
@@ -260,16 +287,18 @@ export default function ReferPage() {
                 <p style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>検索語やカテゴリを変えてみてください。<br />お探しのものが見つからないときは、下の相談からどうぞ。</p>
               </div>
             )}
-            {/* 相談カード（全幅最下部・0.5px破線） */}
-            <button onClick={() => { setStep('consult'); setError('') }} style={{ width: '100%', marginTop: 12, background: 'var(--bg2)', border: '0.5px dashed var(--line)', borderRadius: 14, padding: '15px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}>
-              <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            {/* ③ 相談カード＝一等市民（ブランドカードと同一解剖学：0.5px実線・radius14・40px bg-accentタイル） */}
+            <button onClick={() => { setStep('consult'); setError('') }} style={{ width: '100%', marginTop: 12, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--blue-bg2)', color: 'var(--c-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>迷ったらまず相談</span>
-                <span style={{ display: 'block', fontSize: 11, color: 'var(--muted2)', marginTop: 2 }}>どのメニューが合うか、MBが一緒に考えます</span>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 500 }}>まず相談</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>どのメニューか決まっていない・迷っている人はこちら。MBが一緒に考えます</span>
               </span>
-              <span style={{ color: 'var(--muted)', fontSize: 15, flexShrink: 0 }}>›</span>
+              <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
+              </span>
             </button>
           </div>
         </div>
@@ -400,26 +429,32 @@ export default function ReferPage() {
       {step === 'consult' && (
         <div className="page-anim">
           <button onClick={() => setStep('select')} style={backBtn}>← 戻る</button>
-          <div style={{ padding: '8px 20px 4px' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>迷ったら相談</h2>
-            <p style={{ ...C.note, marginTop: 6 }}>内容は面談で詰めます。サービス・報酬は後からMBが決めます。</p>
+          {/* ⑤ 相談ページヘッダ再設計：40px bg-accentタイル＋「まず相談」18/500＋説明12/secondary/1.7 */}
+          <div style={{ padding: '8px 20px 4px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--blue-bg2)', color: 'var(--c-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>まず相談</h2>
+              <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, marginTop: 6 }}>メニューが決まっていなくて大丈夫です。お客さまの状況を伺って、MBが最適なご提案を一緒に考えます。</p>
+            </div>
           </div>
           <form onSubmit={handleConsultSubmit} style={{ padding: '18px 20px 32px' }}>
             <div style={{ marginBottom: 14 }}>
               <Segment value={customerType} onChange={setCustomerType} options={[['individual', '個人'], ['corporate', '法人']]} />
             </div>
             {customerType === 'individual' ? (
-              <div style={{ marginBottom: 14 }}><label style={C.label}>お名前</label>
+              <div style={{ marginBottom: 14 }}><label style={C.label}>お名前（必須）</label>
                 <input style={C.input} value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" /></div>
             ) : (
               <>
-                <div style={{ marginBottom: 14 }}><label style={C.label}>会社名</label>
+                <div style={{ marginBottom: 14 }}><label style={C.label}>会社名（必須）</label>
                   <input style={C.input} value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" /></div>
                 <div style={{ marginBottom: 14 }}><label style={C.label}>ご担当者名（任意）</label>
                   <input style={C.input} value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" /></div>
               </>
             )}
-            <div style={{ marginBottom: 14 }}><label style={C.label}>相談内容（何を迷っているか）</label>
+            <div style={{ marginBottom: 14 }}><label style={C.label}>相談したいこと（何を迷っているか）</label>
               <textarea value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} placeholder="例：集客と採用、どちらから着手すべきか迷っている 等" style={{ ...C.input, resize: 'vertical' }} /></div>
             <div style={{ marginBottom: 12 }}><label style={C.label}>電話番号（任意）</label>
               <input style={C.input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" /></div>
@@ -432,8 +467,8 @@ export default function ReferPage() {
               <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--txt)' }}>お客さまに、MBからご連絡することを了承いただいています</span>
             </label>
             {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
-            <button type="submit" disabled={pending} style={{ ...btnPrimary, width: '100%', opacity: pending ? 0.4 : 1 }}>
-              {pending ? '送信中…' : '相談として起票する'}
+            <button type="submit" disabled={pending || !nameFilled} style={{ ...btnPrimary, width: '100%', opacity: (pending || !nameFilled) ? 0.4 : 1 }}>
+              {pending ? '送信中…' : '相談する'}
             </button>
           </form>
         </div>
@@ -506,15 +541,20 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
     .flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu })))
     .filter(({ menu }) => (menu.rewards ?? []).length > 0)
     .sort((a, b) => ((a.menu as { sort?: number }).sort ?? 0) - ((b.menu as { sort?: number }).sort ?? 0))
-  const range = rewardRangeLabel(groups.map(g => g.menu))
+  // ④b 展開時に選択カードを視界へ（150msスムーズ・reduced-motion無効）。
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!active) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [active])
   return (
-    <div className="ob-card" style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden', animationDelay: `${index * 60}ms` }}>
+    <div ref={cardRef} className="ob-card" style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden', animationDelay: `${index * 60}ms` }}>
       <button onClick={onToggle} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--txt)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* 1行目：ロゴ ＋ ブランド名(flex:1) ＋ 報酬レンジピル(右端) ＋ chevron */}
+        {/* ① 1行目：ロゴ ＋ ブランド名(flex:1) ＋ chevron のみ（報酬レンジピルは撤去＝価格はメニュー行の報酬ピルだけ） */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={40} />
           <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{svc.name}</div>
-          {range && <RewardPill style={{ flexShrink: 0 }}>{range}</RewardPill>}
           <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex', transition: 'transform 150ms ease-out', transform: active ? 'rotate(180deg)' : 'none' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9l6 6 6-6" /></svg>
           </span>

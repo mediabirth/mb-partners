@@ -8,6 +8,7 @@ import { rewardValueText } from '@/lib/reward-format'
 import DealNextActions from '@/components/DealNextActions'
 import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import { customerHonorific } from '@/lib/customer'
+import { rewardReachPrefix, statusNarrative } from '@/lib/deal-status-narrative'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
@@ -131,14 +132,38 @@ export default async function CaseDetailPage({
             defaultNeed={''}
           />
 
-          {/* 3. あなたのタスク（状態表示・ヒヤリングは該当行直下に入力） */}
+          {/* 3a. 協力タスクあり（⑥）：タスクチェック（状態表示・チェックイン・モーション） */}
           {deal.channel === 'cooperation' && tasks.length > 0 && (
             <TaskChecklist tasks={tasks} descriptions={taskDesc}
               hearing={hearingTask ? { dealId: deal.id, initial: hearingTask.note ?? '', done: !!hearingTask.done } : null} />
           )}
 
-          {/* 4. 進捗（ミニステップ） */}
-          <div style={{ padding: '24px 20px 8px' }}>
+          {/* 3b. 協力タスク0件＝つなぐだけ（⑦）：いまの状況ナラティブカード */}
+          {!(deal.channel === 'cooperation' && tasks.length > 0) && statusNarrative(deal.status) && (
+            <div style={{ padding: '24px 20px 0' }}>
+              <div style={{ border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 16px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.06em', marginBottom: 8 }}>いまの状況</div>
+                <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.55 }}>{statusNarrative(deal.status)!.title}</div>
+                {statusNarrative(deal.status)!.sub && (
+                  <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>{statusNarrative(deal.status)!.sub}</div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 13, borderTop: '0.5px solid var(--line)' }}>
+                  <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9" /><path d="M8.5 12.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--muted2)' }}>あなたのタスクはありません。あとはMBにお任せください</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. 進捗：報酬到達文言（⑥・共通）＋ミニステップ */}
+          {rewardReachPrefix(deal.status) && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--c-blue)', padding: '24px 20px 0' }}>
+              {rewardReachPrefix(deal.status)} <span style={{ fontWeight: 500 }}>{rewardText}</span>
+            </div>
+          )}
+          <div style={{ padding: rewardReachPrefix(deal.status) ? '10px 20px 8px' : '24px 20px 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', margin: '0 1px 6px' }}>
               {RAIL_STEPS.map((s, i) => (
                 <span key={i} style={{ display: 'contents' }}>
