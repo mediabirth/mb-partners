@@ -22,6 +22,11 @@ const C = {
   note: { fontSize: 11, color: 'var(--muted2)', lineHeight: 1.6 },
 }
 
+// v3 検索の正規化：NFKC（全角/半角統一）＋小文字＋空白除去。表示層の絞り込みのみ・データ非接触。
+function norm(s: string | null | undefined): string {
+  return (s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, '')
+}
+
 function rewardLabelFromReward(r: MenuReward | null): string { return r ? rewardValueText(r) : '' }
 function rewardPill(r: MenuReward): string { return rewardPillText(r) }
 function confirmTrailing(r: MenuReward): string {
@@ -70,6 +75,8 @@ export default function ReferPage() {
   const [selMenuData, setSelMenuData]     = useState<Menu | null>(null)
   const [selReward, setSelReward]         = useState<MenuReward | null>(null)
   const [showSheet, setShowSheet]         = useState(false)
+  const [query, setQuery]                 = useState('')                 // v3：検索（クライアント絞り込み）
+  const [category, setCategory]           = useState<string>('すべて')   // v3：カテゴリチップ（単一選択）
   const [consultNote, setConsultNote]     = useState('')
   const [pending, startTransition]        = useTransition()
   const [error, setError]                 = useState('')
@@ -182,16 +189,54 @@ export default function ReferPage() {
     : (phone.trim().length > 0 || customerEmail.trim().length > 0)
   const canSubmit = nameFilled && contactFilled && allTasksChecked && consent && !pending
 
+  // v3 スケール層：カテゴリ（services.sort 初出順のユニーク値）＋ 検索×チップ AND 絞り込み（クライアントのみ・API非追加）。
+  const categories = ['すべて', ...services.reduce<string[]>((acc, s) => {
+    const c = (s.category || '').trim()
+    if (c && !acc.includes(c)) acc.push(c)
+    return acc
+  }, [])]
+  const q = norm(query)
+  const filteredServices = services.filter(svc => {
+    const cat = (svc.category || '').trim()
+    if (category !== 'すべて' && cat !== category) return false
+    if (!q) return true
+    const hay = norm([
+      svc.name,
+      (svc as { target_audience?: string | null }).target_audience || '',
+      ...svc.service_menus.flatMap(sm => (sm.menus ?? []).map(m => m.name)),
+    ].join(' '))
+    return hay.includes(q)
+  })
+
   return (
     <div>
       {/* ── Opportunity Board：フル幅ブランドカード＋直下メニュー展開 ── */}
       {step === 'select' && (
         <div className="page-anim">
-          <div style={{ padding: '22px 20px 14px' }}>
+          <div style={{ padding: '22px 20px 12px' }}>
             <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.08em', color: 'var(--muted2)' }}>紹介をはじめる</div>
             <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em', marginTop: 4 }}>どなたの顔が浮かびますか？</h2>
-            <p style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>気になるメニューを開いて、そのまま紹介できます</p>
+            {/* 検索フィールド（v3・クライアント絞り込み・API非追加。サブ文言は検索導入で冗長のため撤去） */}
+            <div style={{ position: 'relative', marginTop: 12 }}>
+              <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', display: 'flex', pointerEvents: 'none' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" strokeLinecap="round" /></svg>
+              </span>
+              <input value={query} onChange={e => setQuery(e.target.value)} placeholder="ブランド・メニューを探す" inputMode="search"
+                style={{ width: '100%', height: 36, border: '0.5px solid var(--line)', borderRadius: 10, padding: '0 12px 0 34px', fontFamily: 'inherit', fontSize: 13, fontWeight: 400, background: '#fff', color: 'var(--txt)' }} />
+            </div>
           </div>
+          {/* カテゴリチップ行（横スクロール・単一選択・選択中＝黒系塗り＝v2.1規律） */}
+          {categories.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', padding: '0 20px 12px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+              {categories.map(cat => {
+                const on = category === cat
+                return (
+                  <button key={cat} onClick={() => setCategory(cat)} className="no-break"
+                    style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 500 : 400, cursor: 'pointer', borderRadius: 999, padding: '5px 13px', whiteSpace: 'nowrap', border: on ? '0.5px solid var(--txt)' : '0.5px solid var(--line)', background: on ? 'var(--txt)' : '#fff', color: on ? '#fff' : 'var(--muted2)' }}>{cat}</button>
+                )
+              })}
+            </div>
+          )}
           <div style={{ padding: '0 20px 28px' }}>
             {services.length === 0 && (svcLoading || svcError) && (
               <div style={{ background: '#fff', border: C.line, borderRadius: 14, padding: '26px 18px', marginBottom: 12, textAlign: 'center' }}>
@@ -205,10 +250,16 @@ export default function ReferPage() {
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {services.map((svc, i) => (
+              {filteredServices.map((svc, i) => (
                 <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} />
               ))}
             </div>
+            {services.length > 0 && filteredServices.length === 0 && (
+              <div style={{ padding: '30px 8px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>該当するメニューがありません</div>
+                <p style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>検索語やカテゴリを変えてみてください。<br />お探しのものが見つからないときは、下の相談からどうぞ。</p>
+              </div>
+            )}
             {/* 相談カード（全幅最下部・0.5px破線） */}
             <button onClick={() => { setStep('consult'); setError('') }} style={{ width: '100%', marginTop: 12, background: 'var(--bg2)', border: '0.5px dashed var(--line)', borderRadius: 14, padding: '15px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}>
               <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
@@ -236,19 +287,13 @@ export default function ReferPage() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 2 }}>
                   <h2 style={{ flex: 1, minWidth: 0, fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>{selMenuName}</h2>
                   {selReward && <MenuRowPill reward={selReward} />}
+                  <button type="button" onClick={() => setShowSheet(true)} aria-label="メニューの詳細"
+                    style={{ flexShrink: 0, width: 28, height: 28, borderRadius: '50%', border: '0.5px solid var(--line-2)', background: '#fff', color: 'var(--muted2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
+                  </button>
                 </div>
               </div>
             </div>
-            {selMenuData?.short_description && (
-              <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, marginTop: 8 }}>{selMenuData.short_description}</p>
-            )}
-            <button type="button" onClick={() => setShowSheet(true)}
-              style={{ marginTop: 8, background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>
-              このメニューを詳しく →
-            </button>
-            {selReward && (
-              <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted2)' }}>成約時、翌月末払い</div>
-            )}
           </div>
 
           <form onSubmit={handleSubmit} style={{ padding: '18px 20px 32px' }}>
@@ -540,43 +585,50 @@ function MenuDetailSheet({ svc, menuName, menuDescription, reward, tasks, onClos
     setTimeout(onClose, dur)
   }
   const imageUrl = (svc as { image_url?: string | null }).image_url || null
-  const subtitle = svc.subtitle || null
   const svcDesc = svc.description || null
+  const trigger = reward?.reward_trigger || null
+  const headStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.06em', marginBottom: 6 }
   return (
     <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.34)', opacity: open ? 1 : 0, transition: `opacity ${dur}ms ease-out`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true"
         style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: '18px 18px 0 0', padding: '10px 20px 28px', transform: open ? 'translateY(0)' : 'translateY(100%)', transition: `transform ${dur}ms ease-out` }}>
         {/* 1. ハンドル */}
         <button type="button" onClick={close} aria-label="閉じる" style={{ display: 'block', width: 38, height: 4, borderRadius: 999, background: 'var(--line)', border: 'none', margin: '2px auto 16px', cursor: 'pointer', padding: 0 }} />
-        {/* 2. イメージ画像 */}
-        {imageUrl && (
+        {/* 2. ヒーロー：image_url／未設定はロゴタイル56pxのフォールバック（全ブランドが視覚アンカーを持つ） */}
+        {imageUrl ? (
           <img src={imageUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 12, marginBottom: 16, display: 'block' }} />
+        ) : (
+          <div style={{ width: '100%', height: 140, borderRadius: 12, marginBottom: 16, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={56} />
+          </div>
         )}
         {/* 3. メニュー名＋報酬ピル */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <h3 style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, letterSpacing: '-.01em' }}>{menuName}</h3>
           {reward && <MenuRowPill reward={reward} />}
         </div>
-        {/* 4. サービス ─ サブタイトル */}
-        <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>{svc.name}{subtitle ? ` ─ ${subtitle}` : ''}</div>
+        {/* 4. 「{reward_trigger}に確定」右寄せ（選択中報酬のトリガー・空なら非表示） */}
+        {trigger && (
+          <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>{trigger}に確定</div>
+        )}
         {/* 5. 「{service}とは」＋サービス説明 */}
         {svcDesc && (
           <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>{svc.name}とは</div>
-            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--txt)' }}>{svcDesc}</p>
+            <div style={headStyle}>{svc.name}とは</div>
+            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--muted2)' }}>{svcDesc}</p>
           </div>
         )}
         {/* 6. 「このメニューでは」＋メニュー説明 */}
         {menuDescription && (
           <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>このメニューでは</div>
-            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--txt)' }}>{menuDescription}</p>
+            <div style={headStyle}>このメニューでは</div>
+            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--muted2)' }}>{menuDescription}</p>
           </div>
         )}
         {/* 7. あなたの協力タスク */}
         {tasks.length > 0 && (
           <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>あなたの協力タスク</div>
+            <div style={headStyle}>あなたの協力タスク</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {tasks.map(t => (
                 <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>

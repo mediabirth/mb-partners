@@ -57,12 +57,13 @@ type ServiceForm = {
   name: string; subtitle: string; description: string; who: string; url: string
   target_audience: string   // リファラルWave1：紹介対象（STEP1で太字表示）
   image_url: string         // menu_context v2：詳細シートのイメージ画像（任意）
+  category: string          // 紹介入口v3：カテゴリ（一覧チップ絞り込み・任意）
   logo_path: string; active: boolean
   icon: string; color: string  // kept for backward compat, not shown in UI
 }
 
 const defaultServiceForm: ServiceForm = {
-  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', image_url: '', logo_path: '',
+  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', image_url: '', category: '', logo_path: '',
   active: true, icon: 'arrows', color: '#4733e6',
 }
 
@@ -162,6 +163,7 @@ function svcFormToPayload(f: ServiceForm) {
     url:            f.url            || null,
     target_audience: f.target_audience || null,
     image_url:      f.image_url       || null,
+    category:       f.category        || null,
     logo_path:      f.logo_path      || null,
     active:         f.active,
     icon:           f.icon,
@@ -178,6 +180,7 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
     url:            svc.url         ?? '',
     target_audience: (svc as { target_audience?: string | null }).target_audience ?? '',
     image_url:      (svc as { image_url?: string | null }).image_url ?? '',
+    category:       (svc as { category?: string | null }).category ?? '',
     logo_path:      svc.logo_path   ?? '',
     active:         svc.active,
     icon:           svc.icon        || 'arrows',
@@ -1234,6 +1237,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
             <Fld label="紹介対象（パートナーのリファラル画面で太字表示）">
               <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例: 引越し・お部屋探しをしたい人" />
+            </Fld>
+
+            <Fld label="カテゴリ（任意・リファラル一覧の絞り込みチップに使用）">
+              <FInput value={svcForm.category} onChange={v => setF({ category: v })} placeholder="例: 不動産 / 人材 / 制作" />
             </Fld>
 
             <Fld label="サービスサイト URL">
