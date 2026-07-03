@@ -6,17 +6,17 @@
 import React from 'react'
 import Link from 'next/link'
 
-export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name, color, nav, headerExtra, children }: {
+export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name, color, avatarUrl, nav, headerExtra, children }: {
   homeHref: string
   mypageHref: string
   settingsHref: string
   name: string | null
   color: string | null
+  avatarUrl?: string | null // A6: 設定済みアバター画像。未指定/未設定は従来の人型シルエット。
   nav: React.ReactNode
   headerExtra?: React.ReactNode // surface固有の追加ヘッダー導線（app=SYNAPSE等）。未指定なら何も出ない（vendor不変）。
   children: React.ReactNode
 }) {
-  const initial = (name ?? '').trim().charAt(0) || 'M'
   return (
     <div style={{ background: '#E9E9ED', minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 430, background: 'var(--s-0)', minHeight: '100dvh', display: 'flex', flexDirection: 'column', boxShadow: '0 0 48px rgba(14,14,20,.12)', position: 'relative' }}>
@@ -34,9 +34,13 @@ export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name,
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {headerExtra}
             <Link href={mypageHref} aria-label={name ?? 'プロフィール'} style={{ textDecoration: 'none' }}>
-              {/* ④ ヘッダのアバターは人型シルエット（muted色＋surface背景・画像未設定フォールバック・3面共通） */}
-              <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg2)', color: 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+              {/* A6: 設定済みアバター画像を表示（未設定は従来の人型シルエット・3面共通） */}
+              <span style={{ position: 'relative', width: 36, height: 36, borderRadius: '50%', background: 'var(--bg2)', color: 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12.4a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4Zm0 1.7c-3.55 0-6.9 1.86-6.9 4.55V20a.75.75 0 0 0 .75.75h12.3A.75.75 0 0 0 18.9 20v-1.35c0-2.69-3.35-4.55-6.9-4.55Z" /></svg>
+                {avatarUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
               </span>
             </Link>
             {/* PWA: hit area を 44×44 に拡張（視覚は 40px の円のまま、外周 padding で確保）。 */}

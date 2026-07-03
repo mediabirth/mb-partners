@@ -25,7 +25,8 @@ export async function avatarPOST(req: Request) {
   const path = `${user.id}/avatar-${Date.now()}.${ext}`   // 本人フォルダ(<uid>/...)＝RLSと一致
   const buf = new Uint8Array(await file.arrayBuffer())
   const up = await admin.storage.from('avatars').upload(path, buf, { contentType: file.type, upsert: true })
-  if (up.error) return NextResponse.json({ error: up.error.message, needsBucket: true }, { status: 200 })
+  // A6: 失敗は失敗のステータスで返す（旧実装は 200 で error を返す矛盾契約＝クライアントの成否判定を壊していた）
+  if (up.error) return NextResponse.json({ error: up.error.message, needsBucket: true }, { status: 500 })
 
   const { data: { publicUrl } } = admin.storage.from('avatars').getPublicUrl(path)
   // 本人のみ：auth.uid の profiles 行だけを更新（お金関連列には触れない）

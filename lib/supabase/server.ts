@@ -58,8 +58,8 @@ export const getCachedProfile = cache(async () => {
   const uid = await getCachedUid()
   if (!uid) return null
   const supabase = await createClient()
-  const { data } = await supabase.from('profiles').select('name, role, color').eq('id', uid).single()
-  return data as { name: string | null; role: string | null; color: string | null } | null
+  const { data } = await supabase.from('profiles').select('name, role, color, avatar_url').eq('id', uid).single()
+  return data as { name: string | null; role: string | null; color: string | null; avatar_url: string | null } | null
 })
 
 export async function createServiceRoleClient() {

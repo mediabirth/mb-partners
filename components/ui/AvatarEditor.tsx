@@ -4,9 +4,10 @@
  * endpoint に各サーフェスの /api/<surface>/avatar を渡す（本人のみ・お金系非接触）。表示は共有 Avatar。
  */
 import React, { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Avatar from './Avatar'
 
-export default function AvatarEditor({ name, color, src, size = 56, endpoint }: {
+export default function AvatarEditor({ name, color, src, size = 56, endpoint, onChange }: {
   name?: string | null
   color?: string | null
   src?: string | null
@@ -14,28 +15,35 @@ export default function AvatarEditor({ name, color, src, size = 56, endpoint }: 
   endpoint: string
   onChange?: (url: string | null) => void   // additive：保存後に呼ばれる（省略時は従来通り）
 }) {
+  const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [cur, setCur] = useState<string | null>(src ?? null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [ok, setOk] = useState('')
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setBusy(true); setMsg('')
+    setBusy(true); setMsg(''); setOk('')
     try {
       const fd = new FormData(); fd.append('file', file)
       const res = await fetch(endpoint, { method: 'POST', body: fd })
       const data = await res.json().catch(() => ({}))
-      if (res.ok && data.avatar_url) { setCur(data.avatar_url); onChange?.(data.avatar_url) }
-      else setMsg(data.needsBucket ? 'アバター用バケットのDB適用が必要です' : (data.error ?? 'アップロードに失敗しました'))
+      if (res.ok && data.avatar_url) {
+        setCur(data.avatar_url); setOk('保存しました'); setTimeout(() => setOk(''), 2200)
+        onChange?.(data.avatar_url)
+        // A6: ヘッダ等のサーバ描画アバターへ即時反映（server components を再取得）
+        router.refresh()
+      }
+      else setMsg(data.error ?? 'アップロードに失敗しました')
     } catch { setMsg('アップロードに失敗しました') } finally { setBusy(false); if (fileRef.current) fileRef.current.value = '' }
   }
   async function remove() {
-    setBusy(true); setMsg('')
+    setBusy(true); setMsg(''); setOk('')
     try {
       const res = await fetch(endpoint, { method: 'DELETE' })
-      if (res.ok) { setCur(null); onChange?.(null) } else setMsg('削除に失敗しました')
+      if (res.ok) { setCur(null); onChange?.(null); router.refresh() } else setMsg('削除に失敗しました')
     } catch { setMsg('削除に失敗しました') } finally { setBusy(false) }
   }
 
@@ -52,6 +60,7 @@ export default function AvatarEditor({ name, color, src, size = 56, endpoint }: 
         <button onClick={remove} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 'var(--fs-micro)', color: 'var(--muted2)', fontWeight: 700 }}>画像を削除</button>
       )}
       {msg && <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--red)' }}>{msg}</span>}
+      {ok && <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--green)' }}>{ok}</span>}
     </div>
   )
 }

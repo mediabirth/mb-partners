@@ -19,7 +19,7 @@ export default async function VendorAppLayout({ children }: { children: React.Re
   if (!profile || profile.role !== 'vendor') redirect('/vendor/login')
 
   return (
-    <SurfaceShell homeHref="/vendor" mypageHref="/vendor/mypage" settingsHref="/vendor/settings" name={profile.name ?? null} color={profile.color ?? null} nav={<VendorNav />}>
+    <SurfaceShell homeHref="/vendor" mypageHref="/vendor/mypage" settingsHref="/vendor/settings" name={profile.name ?? null} color={profile.color ?? null} avatarUrl={profile.avatar_url ?? null} nav={<VendorNav />}>
       {children}
     </SurfaceShell>
   )
