@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { sendInviteEmail } from '@/lib/email'
+import { partnerFacingOrigin, requestOrigin } from '@/lib/app-origin'
 
 export const runtime = 'edge'
 
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest) {
   const { email, role: rawRole = 'partner', name } = body
   // ④ Owners are never invited via this flow — clamp anything but 'partner'.
   const role = rawRole === 'owner' ? 'partner' : rawRole
+  // A1: フロンティア意図はURLクエリではなくDBへ永続化（メールの素のリンクからでも確実にフロンティア登録になる）
+  const isFrontier = body.frontier === true
   if (!email?.trim()) return NextResponse.json({ error: 'email は必須です' }, { status: 400 })
 
   const service = await createServiceRoleClient()
@@ -36,6 +39,7 @@ export async function POST(req: NextRequest) {
       kind:       'partner',
       role,
       name:       name?.trim() || null,
+      is_frontier: isFrontier,
       created_by: user.id,
     })
     .select('token, email, name, expires_at')
@@ -43,10 +47,10 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const origin = req.headers.get('x-forwarded-proto') && req.headers.get('host')
-    ? `${req.headers.get('x-forwarded-proto')}://${req.headers.get('host')}`
-    : new URL(req.url).origin
-  const invite_url = `${origin}/invite/${invite.token}`
+  // A5: 招待URLは常にパートナーAPP側ホストで組む（consoleホスト由来のままだと受諾ページの
+  // サインイン cookie が mb-auth-console に書かれ、/app 遷移で必ずログインへ落ちる）
+  const origin = partnerFacingOrigin(requestOrigin(req))
+  const invite_url = `${origin}/invite/${invite.token}${isFrontier ? '?role=frontier' : ''}`
 
   // Send the branded invite email (no-op if RESEND_API_KEY is unset — the
   // invite_url is still returned so it can be shared manually).
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
     name: invite.name,
     url: invite_url,
     expiresAt: invite.expires_at,
+    kind: isFrontier ? 'frontier' : 'partner',
   })
 
   return NextResponse.json({ invite_url, token: invite.token, emailed: mail.sent }, { status: 201 })

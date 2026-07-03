@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { sendInviteEmail } from '@/lib/email'
+import { partnerFacingOrigin, requestOrigin } from '@/lib/app-origin'
 
 export const runtime = 'edge'
 
@@ -38,9 +39,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: error.message, needsMigration: true }, { status: 200 })
   }
 
-  const origin = req.headers.get('x-forwarded-proto') && req.headers.get('host')
-    ? `${req.headers.get('x-forwarded-proto')}://${req.headers.get('host')}`
-    : new URL(req.url).origin
+  // A5: ベンダー受諾URLも apex 固定（consoleホストで開くと surfaceFor が host 優先で 'console' になり、
+  // サインイン cookie が mb-auth-vendor でなく mb-auth-console に書かれて /vendor でログインへ落ちる）
+  const origin = partnerFacingOrigin(requestOrigin(req))
   const invite_url = `${origin}/vendor/accept/${invite.token}`
 
   // 招待メール（best-effort：失敗しても招待発行・成功は不変）。

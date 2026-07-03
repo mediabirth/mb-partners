@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   // ── 招待トークン検証 ──────────────────────────────────────────────────────
   const { data: invite, error: inviteErr } = await service
     .from('invites')
-    .select('id, email, role, expires_at, used_at')
+    .select('id, email, role, expires_at, used_at, is_frontier')
     .eq('token', token)
     .single()
 
@@ -199,9 +199,11 @@ export async function POST(req: NextRequest) {
       account_holder: (accountHolder ?? '').trim(),
     } : null
     const nowIso = new Date().toISOString()
-    // R2: フロンティア役割／配下紐づけ（招待リンクのパラメータ由来）
+    // A1: フロンティア判定は招待レコード（invites.is_frontier）を真実とする。
+    // URLパラメータ（?role=frontier）はメールの素のリンクでは失われるため補助扱い（後方互換で OR）。
+    const isFrontierInvite = (invite as { is_frontier?: boolean }).is_frontier === true || frontierFlag === true
     const frontierFields: Record<string, unknown> = {}
-    if (frontierFlag === true) frontierFields.is_frontier = true
+    if (isFrontierInvite) frontierFields.is_frontier = true
     if (typeof frontierId === 'string' && frontierId) {
       frontierFields.frontier_id = frontierId
       frontierFields.frontier_linked_at = nowIso
@@ -261,7 +263,7 @@ export async function POST(req: NextRequest) {
   try {
     const { sendSlack, sendOpsEmail } = await import('@/lib/notify')
     const roleLabel = role === 'partner'
-      ? (frontierFlag === true ? 'パートナー（フロンティア）' : 'パートナー')
+      ? ((invite as { is_frontier?: boolean }).is_frontier === true || frontierFlag === true ? 'パートナー（フロンティア）' : 'パートナー')
       : role
     await sendSlack(`🎉 パートナー参加: ${name}（${roleLabel}${partnerCode ? ` / ${partnerCode}` : ''}）`)
     await sendOpsEmail(

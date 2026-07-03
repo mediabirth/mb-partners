@@ -21,7 +21,8 @@ export default function InviteForm() {
   const [emailed, setEmailed] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const shareUrl = inviteUrl ? (kind === 'frontier' ? `${inviteUrl}?role=frontier` : inviteUrl) : ''
+  // A1: フロンティア判定はサーバ（invites.is_frontier）が真実。URLはサーバが返すものをそのまま共有する。
+  const shareUrl = inviteUrl
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,7 +38,7 @@ export default function InviteForm() {
         if (!ir.ok || !id.invite_url) { setError(id.error || '招待リンクの発行に失敗しました'); setLoading(false); return }
         setInviteUrl(id.invite_url); setEmailed(!!id.emailed); setName('')
       } else {
-        const res = await fetch('/api/console/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, role: 'partner' }) })
+        const res = await fetch('/api/console/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, role: 'partner', frontier: kind === 'frontier' }) })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) { setError(data.error || 'エラーが発生しました'); setLoading(false); return }
         setInviteUrl(data.invite_url); setEmailed(!!data.emailed); setName('')

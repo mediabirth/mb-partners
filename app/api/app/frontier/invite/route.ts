@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const origin = req.headers.get('x-forwarded-proto') && req.headers.get('host')
-    ? `${req.headers.get('x-forwarded-proto')}://${req.headers.get('host')}`
-    : new URL(req.url).origin
+  // A5: 招待URLは apex 固定ヘルパ経由（通常は apex 発だが www 等でも surface 不一致を作らない）
+  const { partnerFacingOrigin, requestOrigin } = await import('@/lib/app-origin')
+  const origin = partnerFacingOrigin(requestOrigin(req))
   // 配下紐づけ: ?f=フロンティアのpartner_id
   const invite_url = `${origin}/invite/${invite.token}?f=${partner.id}`
 
