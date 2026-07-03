@@ -14,6 +14,7 @@ type Props = {
   avatarUrl: string | null; avatarColor: string
   partnerCode: string; taxType: string; bank: Bank
   nickname: string | null
+  isFrontier?: boolean
 }
 
 const LOCK = (
@@ -26,7 +27,7 @@ const LOCK = (
   </span>
 )
 
-export default function MypageClient({ name, email, avatarUrl, avatarColor, partnerCode, taxType, bank, nickname: initialNickname }: Props) {
+export default function MypageClient({ name, email, avatarUrl, avatarColor, partnerCode, taxType, bank, nickname: initialNickname, isFrontier }: Props) {
   const [editing, setEditing] = useState(false)
   const [avatar, setAvatar] = useState<string | null>(avatarUrl)
   const [nickname, setNickname] = useState(initialNickname ?? '')
@@ -108,6 +109,26 @@ export default function MypageClient({ name, email, avatarUrl, avatarColor, part
             <KV label="住所" value={address || '未登録'} muted={!address} />
             <KV label={<>税区分 {LOCK}</>} value={taxLabel} last />
           </div>
+
+          {/* フロンティア導線（A確定・ホームから移設）。is_frontier 保有チームのみ表示（現行ゲート踏襲）。機能非接触＝場所のみ。 */}
+          {isFrontier && (
+            <a href="/app/frontier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
+              <span style={{ color: 'var(--c-blue)', display: 'flex', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+                  <rect x="19" y="19" width="10" height="10" rx="3" fill="currentColor" />
+                  <rect x="6" y="6" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
+                  <rect x="34" y="6" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
+                  <rect x="6" y="34" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
+                  <rect x="34" y="34" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
+                </svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>フロンティア ダッシュボード</div>
+                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>チームの招待・オーバーライドを管理</div>
+              </div>
+              <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
+            </a>
+          )}
 
           <div style={{ padding: '0 20px 8px' }}>
             <h2 style={{ fontSize: '.78rem', fontWeight: 500, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>

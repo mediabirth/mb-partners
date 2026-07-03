@@ -32,6 +32,7 @@ export default async function MypagePage() {
       taxType={partnerData.tax_type ?? 'individual'}
       bank={bank}
       nickname={profile?.nickname ?? null}
+      isFrontier={(partnerData as { is_frontier?: boolean }).is_frontier ?? false}
     />
   )
 }

@@ -148,27 +148,7 @@ export default async function AppPage() {
         </div>
       </div>
 
-      {/* R2-C: フロンティア導線（is_frontier 保有チームのみ＝従来の表示gateを維持・read-only/書込ゼロ/money非接触）。
-          旗艦②：塗り→静かな白線カード（白地＋極薄線＋小さな青アイコン枠）。判定/OVERRIDE_RATE/payout は不変。 */}
-      {(partner as { is_frontier?: boolean }).is_frontier && (
-        <Link href="/app/frontier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 20px 0', background: 'var(--s-0)', border: '1px solid var(--line)', color: 'var(--txt)', borderRadius: 14, padding: '14px 16px', textDecoration: 'none' }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(71,51,230,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {/* Hub マーク（単色フラット・2×2グリッドの世界観・青） */}
-            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
-              <rect x="19" y="19" width="10" height="10" rx="3" fill="var(--c-blue)"/>
-              <rect x="6"  y="6"  width="8" height="8" rx="2.5" stroke="var(--c-blue)" strokeWidth="2.4"/>
-              <rect x="34" y="6"  width="8" height="8" rx="2.5" stroke="var(--c-blue)" strokeWidth="2.4"/>
-              <rect x="6"  y="34" width="8" height="8" rx="2.5" stroke="var(--c-blue)" strokeWidth="2.4"/>
-              <rect x="34" y="34" width="8" height="8" rx="2.5" stroke="var(--c-blue)" strokeWidth="2.4"/>
-            </svg>
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '.82rem', fontWeight: 500 }}>フロンティア ダッシュボード</div>
-            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1 }}>あなたのチームのオーバーライドと招待を管理</div>
-          </div>
-          <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
-        </Link>
-      )}
+      {/* フロンティア導線はマイページへ移設（A確定）。ホームからは撤去。 */}
 
       {/* ⑨ 動機づけ: 次回振込までの進捗＋励まし */}
       {!isEmpty && (
