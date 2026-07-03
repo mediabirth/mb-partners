@@ -12,7 +12,7 @@ export default async function MypagePage() {
 
   const [partnerData, profileRes] = await Promise.all([
     getPartnerByUserId(supabase, user.id),
-    supabase.from('profiles').select('name, email, color, avatar_url, nickname').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, email, color, avatar_url').eq('id', user.id).single(),
   ])
   if (!partnerData) redirect('/login')
 
@@ -21,6 +21,7 @@ export default async function MypagePage() {
     bank_name?: string; branch_name?: string
     account_type?: string; account_number?: string; account_holder?: string
   } | null
+  const p = partnerData as { phone?: string | null; address?: string | null; invoice_number?: string | null; is_frontier?: boolean }
 
   return (
     <MypageClient
@@ -31,8 +32,10 @@ export default async function MypagePage() {
       partnerCode={partnerData.code}
       taxType={partnerData.tax_type ?? 'individual'}
       bank={bank}
-      nickname={profile?.nickname ?? null}
-      isFrontier={(partnerData as { is_frontier?: boolean }).is_frontier ?? false}
+      phone={p.phone ?? null}
+      address={p.address ?? null}
+      invoiceNumber={p.invoice_number ?? null}
+      isFrontier={p.is_frontier ?? false}
     />
   )
 }
