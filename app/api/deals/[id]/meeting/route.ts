@@ -83,9 +83,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     try { await admin.from('deals').update({ meeting_url: meetingUrl }).eq('id', id) } catch { /* 列なし時は無視 */ }
   }
 
-  // P: 自動チェック — 商談設定で auto タスク（trigger 'meeting_set'）を完了（冪等・best-effort）。
+  // A2: 自動チェック — アポイント/つなぐの実テンプレは trigger_key='in_progress'（'meeting_set' のタスクは
+  // 存在せず、商談予約してもアポイントにチェックが入らなかった）。商談が確定した時点で「つなぐ」「アポイント」は
+  // 意味的に完了しているため 'in_progress' を発火。'meeting_set' も将来テンプレ用に併発（冪等・best-effort）。
   try {
     const { markAutoTaskDone } = await import('@/lib/coop-tasks')
+    await markAutoTaskDone(admin, id, 'in_progress')
     await markAutoTaskDone(admin, id, 'meeting_set')
   } catch { /* best-effort */ }
 
