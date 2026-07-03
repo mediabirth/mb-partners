@@ -7,6 +7,7 @@ import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase
 import { rewardValueText, rewardPillText, rewardRangeLabel } from '@/lib/reward-format'
 import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
 import RewardPill from '@/components/ui/RewardPill'
+import MenuDetailSheet from '@/components/MenuDetailSheet'
 import { submitPartnerReferral, getPartnerInfo } from './actions'
 
 // リファラル v3.1：世界観は「紹介」1つ。協力タスクで報酬が変わるだけ。「協力/関わり方」はUIに出さない。
@@ -354,7 +355,7 @@ export default function ReferPage() {
               <div style={{ marginBottom: 14 }}><label style={C.label}>メールアドレス{customerType === 'corporate' ? '（必須）' : '（どちらか必須）'}</label>
                 <input style={C.input} type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
               <div><label style={C.label}>メモ（任意）</label>
-                <input style={C.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="7月に引越し希望 など" /></div>
+                <input style={C.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="7月に引越し希望 など" maxLength={500} /></div>
             </div>
 
             {/* アポ型：日時の決めかた。連絡のみ：1行 info（アイコン＋11px）。 */}
@@ -399,8 +400,9 @@ export default function ReferPage() {
                       {openInfo === t.label && t.description && (
                         <>
                           <div onClick={() => setOpenInfo(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-                          <div className="pop-in" style={{ position: 'relative', zIndex: 21, background: '#fff', border: C.line, borderRadius: 10, boxShadow: '0 6px 24px rgba(14,14,20,.12)', padding: '10px 12px', margin: '0 0 10px 26px' }}>
-                            <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>{t.description}</p>
+                          {/* 省スペースポップオーバー：absolute（レイアウトを押し下げない・親div=relative）・幅70%/max260・375pxではみ出さない */}
+                          <div className="pop-in" style={{ position: 'absolute', left: 26, top: '100%', marginTop: -6, width: '70%', maxWidth: 260, zIndex: 21, background: '#fff', border: C.line, borderRadius: 10, boxShadow: '0 4px 14px rgba(14,14,20,.10)', padding: '8px 10px' }}>
+                            <p style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>{t.description}</p>
                           </div>
                         </>
                       )}
@@ -543,6 +545,9 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
     .flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu })))
     .filter(({ menu }) => (menu.rewards ?? []).length > 0)
     .sort((a, b) => ((a.menu as { sort?: number }).sort ?? 0) - ((b.menu as { sort?: number }).sort ?? 0))
+  // 事業概要ⓘ：services.description 由来（説明が無いブランドはⓘ非表示・安全側）。
+  const [showBrandInfo, setShowBrandInfo] = useState(false)
+  const hasBrandInfo = (svc.description || '').trim().length > 0
   // ④b 展開時に選択カードを視界へ（150msスムーズ・reduced-motion無効）。
   const cardRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -557,6 +562,15 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={40} />
           <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{svc.name}</div>
+          {/* 事業概要ⓘ（カード展開トグルへは伝播させない・親がbuttonのためrole="button"のspan） */}
+          {hasBrandInfo && (
+            <span role="button" tabIndex={0} aria-label={`${svc.name}の事業概要`}
+              onClick={e => { e.stopPropagation(); setShowBrandInfo(true) }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowBrandInfo(true) } }}
+              style={{ width: 16, height: 16, color: 'var(--muted)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
+            </span>
+          )}
           <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex', transition: 'transform 150ms ease-out', transform: active ? 'rotate(180deg)' : 'none' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9l6 6 6-6" /></svg>
           </span>
@@ -595,6 +609,16 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
           })}
         </div>
       )}
+      {/* 事業概要シート（MenuDetailSheet のブランド版・overlayはfixedのためカード外に描画される） */}
+      {showBrandInfo && (
+        <MenuDetailSheet
+          variant="brand"
+          svc={svc}
+          audience={audience || null}
+          menus={groups.map(({ menu }) => ({ name: menu.name, reward: (menu.rewards ?? [])[0] ?? null }))}
+          onClose={() => setShowBrandInfo(false)}
+        />
+      )}
     </div>
   )
 }
@@ -607,83 +631,4 @@ function MenuRowPill({ reward }: { reward: MenuReward }) {
   return <RewardPill style={{ flexShrink: 0 }}>{rewardLabelFromReward(reward)}</RewardPill>
 }
 
-// メニュー詳細シート（下からスライドイン・overlayタップ/ハンドル/閉じるボタンで閉じる・reduced-motion対応）。
-//   節は該当データがnullなら非表示（名前・報酬・協力タスクは常に表示）。塗りボタン禁止（閉じる=0.5px枠）。
-function MenuDetailSheet({ svc, menuName, menuDescription, reward, tasks, onClose }: {
-  svc: ServiceWithMenus; menuName: string; menuDescription: string | null
-  reward: MenuReward | null; tasks: CoopTaskItem[]; onClose: () => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [reduced, setReduced] = useState(false)
-  useEffect(() => {
-    setReduced(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
-    const id = requestAnimationFrame(() => setOpen(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
-  const dur = reduced ? 0 : 220
-  function close() {
-    if (reduced) { onClose(); return }
-    setOpen(false)
-    setTimeout(onClose, dur)
-  }
-  const imageUrl = (svc as { image_url?: string | null }).image_url || null
-  const svcDesc = svc.description || null
-  const trigger = reward?.reward_trigger || null
-  const headStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.06em', marginBottom: 6 }
-  return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.34)', opacity: open ? 1 : 0, transition: `opacity ${dur}ms ease-out`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true"
-        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: '18px 18px 0 0', padding: '10px 20px 28px', transform: open ? 'translateY(0)' : 'translateY(100%)', transition: `transform ${dur}ms ease-out` }}>
-        {/* 1. ハンドル */}
-        <button type="button" onClick={close} aria-label="閉じる" style={{ display: 'block', width: 38, height: 4, borderRadius: 999, background: 'var(--line)', border: 'none', margin: '2px auto 16px', cursor: 'pointer', padding: 0 }} />
-        {/* 2. ヒーロー：image_url／未設定はロゴタイル56pxのフォールバック（全ブランドが視覚アンカーを持つ） */}
-        {imageUrl ? (
-          <img src={imageUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 12, marginBottom: 16, display: 'block' }} />
-        ) : (
-          <div style={{ width: '100%', height: 140, borderRadius: 12, marginBottom: 16, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={56} />
-          </div>
-        )}
-        {/* 3. メニュー名＋報酬ピル */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <h3 style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, letterSpacing: '-.01em' }}>{menuName}</h3>
-          {reward && <MenuRowPill reward={reward} />}
-        </div>
-        {/* 4. 「{reward_trigger}に確定」右寄せ（選択中報酬のトリガー・空なら非表示） */}
-        {trigger && (
-          <div style={{ textAlign: 'right', fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>{trigger}に確定</div>
-        )}
-        {/* 5. 「{service}とは」＋サービス説明 */}
-        {svcDesc && (
-          <div style={{ marginTop: 20 }}>
-            <div style={headStyle}>{svc.name}とは</div>
-            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--muted2)' }}>{svcDesc}</p>
-          </div>
-        )}
-        {/* 6. 「このメニューでは」＋メニュー説明 */}
-        {menuDescription && (
-          <div style={{ marginTop: 20 }}>
-            <div style={headStyle}>このメニューでは</div>
-            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--muted2)' }}>{menuDescription}</p>
-          </div>
-        )}
-        {/* 7. あなたの協力タスク */}
-        {tasks.length > 0 && (
-          <div style={{ marginTop: 20 }}>
-            <div style={headStyle}>あなたの協力タスク</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {tasks.map(t => (
-                <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>
-              ))}
-            </div>
-          </div>
-        )}
-        {/* 8. 閉じる（塗りボタン禁止・0.5px枠） */}
-        <button type="button" onClick={close}
-          style={{ width: '100%', minHeight: 44, marginTop: 24, background: '#fff', color: 'var(--txt)', border: '0.5px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-          閉じる
-        </button>
-      </div>
-    </div>
-  )
-}
+// メニュー詳細シートは components/MenuDetailSheet.tsx へ共有化（案件詳細ⓘ・ブランドⓘと同一コンポーネント）。

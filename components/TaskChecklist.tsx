@@ -77,11 +77,13 @@ function HearingInline({ dealId, initial, onSaved }: { dealId: string; initial: 
   }
   return (
     <div style={{ padding: '2px 0 14px 28px' }}>
-      <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={3} maxLength={4000}
         placeholder="予算感・希望時期・現状の課題 などを記入して保存"
         style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 8, padding: '10px 12px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />
+      {/* 文字数カウンタ（右下・静かな表示・サーバ側 slice(0,4000) と整合） */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
         {msg && <span style={{ fontSize: 11, color: msg.includes('失敗') || msg.includes('通信') ? 'var(--red)' : 'var(--muted2)' }}>{msg}</span>}
+        <span style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{text.length}/4000</span>
         <button onClick={save} disabled={saving}
           style={{ height: 34, padding: '0 16px', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', color: 'var(--c-blue)', background: 'transparent', border: '0.5px solid var(--line)', borderRadius: 8, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
           {saving ? '保存中…' : '保存'}

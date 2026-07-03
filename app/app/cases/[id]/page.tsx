@@ -7,6 +7,7 @@ import RewardPill from '@/components/ui/RewardPill'
 import { rewardValueText } from '@/lib/reward-format'
 import DealNextActions from '@/components/DealNextActions'
 import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
+import MenuInfoButton from '@/components/MenuInfoButton'
 import { customerHonorific } from '@/lib/customer'
 import { statusNarrative } from '@/lib/deal-status-narrative'
 
@@ -46,6 +47,9 @@ export default async function CaseDetailPage({
   let items: { id: string; kind: string; amount: number; base_amount: number | null; services?: { name: string } | null }[] = []
   // お客さま向け新名称（reward_snapshot に記録された新menu id → menus.name）。改名せず表示のみ。
   let newMenuName: string | null = null
+  // メニューⓘ（共有 MenuDetailSheet）用：メニュー説明＋サービスの説明/イメージ画像。取れなければⓘ非表示（安全側）。
+  let menuInfoDescription: string | null = null
+  let svcExtra: { description: string | null; image_url: string | null } | null = null
   const snapMenuId = ((deal as { reward_snapshot?: { menu_id?: string } | null }).reward_snapshot)?.menu_id ?? null
   try {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -61,8 +65,13 @@ export default async function CaseDetailPage({
     const { data: it } = await admin.from('deal_items').select('id, kind, amount, base_amount, sort, services(name)').eq('deal_id', id).order('sort')
     items = (it ?? []) as typeof items
     if (snapMenuId) {
-      const { data: mm } = await admin.from('menus').select('name').eq('id', snapMenuId).maybeSingle()
+      const { data: mm } = await admin.from('menus').select('name, description').eq('id', snapMenuId).maybeSingle()
       newMenuName = (mm as { name?: string } | null)?.name ?? null
+      menuInfoDescription = (mm as { description?: string | null } | null)?.description ?? null
+    }
+    if (newMenuName && deal.service_id) {
+      const { data: sx } = await admin.from('services').select('description, image_url').eq('id', deal.service_id).maybeSingle()
+      svcExtra = (sx as { description: string | null; image_url: string | null } | null) ?? null
     }
   } catch { /* best-effort */ }
   const menuLabel: string | null = newMenuName || ((deal as any).service_menus?.name ?? null)
@@ -76,10 +85,17 @@ export default async function CaseDetailPage({
   const bookingUrl = partner.code ? `https://mb-partners.app/book/${partner.code}` : null
   const custDisplay = customerHonorific(deal) || 'お客さま'
   // 報酬ピル文言：reward_snapshot（凍結報酬）から値/率のみ。無ければ確定金額 or「成約時に確定」。★money表示値は既存を読むだけ。
-  const snapReward = (deal as { reward_snapshot?: { reward_type?: string; reward_value?: number | string } | null }).reward_snapshot
+  const snapReward = (deal as { reward_snapshot?: { reward_type?: string; reward_value?: number | string; reward_trigger?: string | null; default_months?: number | null } | null }).reward_snapshot
   const rewardText = snapReward?.reward_type
     ? rewardValueText({ reward_type: snapReward.reward_type as 'fixed' | 'rate' | 'continuous', reward_value: snapReward.reward_value ?? 0 })
     : (deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '成約時に確定')
+
+  // メニューⓘ（共有シート）：reward_snapshot.menu_id 経由でメニューが解決できた場合のみ表示（安全側）。
+  const showMenuInfo = !!(svc && newMenuName && menuLabel)
+  const sheetReward = snapReward?.reward_type
+    ? { reward_type: snapReward.reward_type as 'fixed' | 'rate' | 'continuous', reward_value: snapReward.reward_value ?? 0, reward_trigger: snapReward.reward_trigger ?? null, default_months: snapReward.default_months ?? null }
+    : null
+  const sheetTasks = tasks.map(t => ({ label: t.label, description: taskDesc[t.label] ?? null }))
 
   return (
     <div>
@@ -96,6 +112,16 @@ export default async function CaseDetailPage({
           <h1 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>{custDisplay} の案件</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc?.name ?? '相談（サービス未定）'}{menuLabel ? ` ─ ${menuLabel}` : ''}</span>
+            {/* メニューⓘ：タップで共有 MenuDetailSheet（データが解決できた案件のみ） */}
+            {showMenuInfo && (
+              <MenuInfoButton
+                svc={{ name: svc.name, logo_path: svc.logo_path ?? null, icon: svc.icon ?? '', color: svc.color ?? '', image_url: svcExtra?.image_url ?? null, description: svcExtra?.description ?? null }}
+                menuName={menuLabel!}
+                menuDescription={menuInfoDescription}
+                reward={sheetReward}
+                tasks={sheetTasks}
+              />
+            )}
             {/* ステータス＝6pxドット＋テキスト（塗りピル廃止） */}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: deal.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)', display: 'inline-block' }} />
