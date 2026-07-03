@@ -4,7 +4,8 @@ import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
-import { rewardValueText, rewardPillText, rewardRangeLabel, effortBadge, menuEffortKinds, brandHasTsunaguOnly, CONNECT_ONLY_LABEL } from '@/lib/reward-format'
+import { rewardValueText, rewardPillText, rewardRangeLabel } from '@/lib/reward-format'
+import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
 import RewardPill from '@/components/ui/RewardPill'
 import { submitPartnerReferral, getPartnerInfo } from './actions'
 
@@ -66,7 +67,9 @@ export default function ReferPage() {
   const [openInfo, setOpenInfo]           = useState<string | null>(null)   // ⓘポップオーバーが開いているタスク
   const [selMenuRef, setSelMenuRef]       = useState<string | null>(null)
   const [selMenuName, setSelMenuName]     = useState<string>('')
+  const [selMenuData, setSelMenuData]     = useState<Menu | null>(null)
   const [selReward, setSelReward]         = useState<MenuReward | null>(null)
+  const [showSheet, setShowSheet]         = useState(false)
   const [consultNote, setConsultNote]     = useState('')
   const [pending, startTransition]        = useTransition()
   const [error, setError]                 = useState('')
@@ -96,7 +99,9 @@ export default function ReferPage() {
     setSelMenu(serviceMenu)
     setSelMenuRef(menu.id)
     setSelMenuName(menu.name)
+    setSelMenuData(menu)
     setSelReward(reward)
+    setShowSheet(false)
     setCoopMode(reward.reward_type === 'rate' || reward.reward_type === 'continuous')
     setTaskChecks([]); setConsent(false); setIntroMethod('send'); setOpenInfo(null); setError('')
     setStep('form')
@@ -166,12 +171,8 @@ export default function ReferPage() {
 
   // 担い：rate/continuous（=coopMode）はアポイント担当→「日時の決めかた」を出す。fixed は連絡のみ。
   const hasAppointment = coopMode
-  // あなたが担うこと：cooperation_task_templates 由来（label＋description・データ）。連絡型は先頭タスクのみ表示。
-  const allTaskDetails: TaskDetail[] = dedupeTasks((selMenu as { coverage_task_details?: TaskDetail[] } | null)?.coverage_task_details
-    ?? ((selMenu as { coverage_tasks?: string[] } | null)?.coverage_tasks ?? []).map(l => ({ label: l, description: null })))
-    // ② ヒヤリングは常に最下部（案件ページと表示順を統一）。
-    .sort((a, b) => (a.label.includes('ヒヤリング') ? 1 : 0) - (b.label.includes('ヒヤリング') ? 1 : 0))
-  const taskDetails = hasAppointment ? allTaskDetails : allTaskDetails.slice(0, 1)
+  // ★協力タスクは一覧ピルと完全同一の解決経路（resolveMenuCoopTasks）＝共通純関数から出す（構造的整合保証）。
+  const taskDetails: CoopTaskItem[] = resolveMenuCoopTasks((selMenu as { coverage_task_details?: CoopTaskItem[] } | null)?.coverage_task_details, selReward?.reward_type)
   const coverageTasks = taskDetails.map(t => t.label)
   const allTasksChecked = coverageTasks.every(t => taskChecks.includes(t))
   const nameFilled = (customerType === 'corporate' ? companyName : customerName).trim().length > 0
@@ -226,15 +227,27 @@ export default function ReferPage() {
       {/* ── 登録ページ v3.1 ── */}
       {step === 'form' && selSvc && (
         <div className="page-anim">
-          <button onClick={() => setStep('select')} style={backBtn}>← 戻る</button>
+          <button onClick={() => setStep('select')} style={backBtn}>← メニュー選択に戻る</button>
           <div style={{ padding: '8px 20px 4px' }}>
-            <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{selSvc.name}{selMenuName ? ` ─ ${selMenuName}` : ''}</div>
-            <h2 style={{ fontSize: 18, fontWeight: 500, marginTop: 5, letterSpacing: '-.01em' }}>お客さまを紹介する</h2>
-            {selReward && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <RewardPill>{rewardLabelFromReward(selReward)}</RewardPill>
-                <span style={{ fontSize: 11, color: 'var(--muted2)' }}>成約時、翌月末払い</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <ServiceAvatar logoPath={selSvc.logo_path} icon={selSvc.icon} color={selSvc.color} name={selSvc.name} size={40} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{selSvc.name}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 2 }}>
+                  <h2 style={{ flex: 1, minWidth: 0, fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>{selMenuName}</h2>
+                  {selReward && <MenuRowPill reward={selReward} />}
+                </div>
               </div>
+            </div>
+            {selMenuData?.short_description && (
+              <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, marginTop: 8 }}>{selMenuData.short_description}</p>
+            )}
+            <button type="button" onClick={() => setShowSheet(true)}
+              style={{ marginTop: 8, background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--accent)', cursor: 'pointer' }}>
+              このメニューを詳しく →
+            </button>
+            {selReward && (
+              <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted2)' }}>成約時、翌月末払い</div>
             )}
           </div>
 
@@ -380,6 +393,17 @@ export default function ReferPage() {
           </form>
         </div>
       )}
+
+      {showSheet && selSvc && (
+        <MenuDetailSheet
+          svc={selSvc}
+          menuName={selMenuName}
+          menuDescription={selMenuData?.description ?? null}
+          reward={selReward}
+          tasks={resolveMenuCoopTasks((selMenu as { coverage_task_details?: CoopTaskItem[] } | null)?.coverage_task_details, selReward?.reward_type)}
+          onClose={() => setShowSheet(false)}
+        />
+      )}
     </div>
   )
 }
@@ -437,56 +461,48 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
     .flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu })))
     .filter(({ menu }) => (menu.rewards ?? []).length > 0)
     .sort((a, b) => ((a.menu as { sort?: number }).sort ?? 0) - ((b.menu as { sort?: number }).sort ?? 0))
-  const menuList = groups.map(g => g.menu)
-  const range = rewardRangeLabel(menuList)
-  const hasTsunaguOnly = brandHasTsunaguOnly(menuList as Array<{ rewards?: MenuReward[] | null; effort_task_kinds?: string[] | null }>)
+  const range = rewardRangeLabel(groups.map(g => g.menu))
   return (
     <div className="ob-card" style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden', animationDelay: `${index * 60}ms` }}>
       <button onClick={onToggle} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--txt)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* 1行目 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* 1行目：ロゴ ＋ ブランド名(flex:1) ＋ 報酬レンジピル(右端) ＋ chevron */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={40} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{svc.name}</div>
-            <div className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 1 }}>メニュー {groups.length}</div>
-          </div>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{svc.name}</div>
+          {range && <RewardPill style={{ flexShrink: 0 }}>{range}</RewardPill>}
           <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex', transition: 'transform 150ms ease-out', transform: active ? 'rotate(180deg)' : 'none' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9l6 6 6-6" /></svg>
           </span>
         </div>
-        {/* 2行目 フック文（target_audience そのまま・折返し・truncateしない） */}
+        {/* フック文（target_audience そのまま・折返し・truncateしない） */}
         {audience && <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>{audience}</p>}
-        {/* 3行目 レンジピル＋連絡のみヒント */}
-        {(range || hasTsunaguOnly) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {range && <RewardPill>{range}</RewardPill>}
-            {hasTsunaguOnly && <span className="no-break" style={{ fontSize: 11, color: 'var(--muted2)' }}>{`${CONNECT_ONLY_LABEL}のメニューあり`}</span>}
-          </div>
-        )}
       </button>
-      {/* 展開：メニュー行リスト（0.5px罫線区切り） */}
+      {/* 展開：メニュー行（1行目=名前+報酬ピル+chevron／2行目=協力タスクピル） */}
       {active && (
         <div className="exp-in" style={{ borderTop: '0.5px solid var(--line)', padding: '0 16px' }}>
           {groups.length === 0 ? (
             <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '13px 0', margin: 0 }}>メニューは準備中です。</p>
           ) : groups.map(({ sm, menu }, i) => {
             const reward = (menu.rewards ?? [])[0]
-            const short = (menu as { short_description?: string | null }).short_description
-            const badge = effortBadge(menuEffortKinds(reward?.reward_type, (menu as { effort_task_kinds?: string[] }).effort_task_kinds))
+            // ★一覧のタスクピル＝登録ページのチェック項目 と同一の解決経路（共通純関数）。
+            const tasks = resolveMenuCoopTasks((sm as { coverage_task_details?: CoopTaskItem[] }).coverage_task_details, reward?.reward_type)
             return (
               <button key={menu.id} onClick={() => onPick(sm, menu, reward)}
-                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', padding: '13px 0', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--txt)' }}>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: 14, fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
-                    {badge && <span className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '1px 8px', flexShrink: 0 }}>{badge}</span>}
+                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', padding: '13px 0', display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--txt)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
+                  {reward && <MenuRowPill reward={reward} />}
+                  <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
                   </span>
-                  {short && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>{short}</span>}
                 </span>
-                {reward && <MenuRowPill reward={reward} />}
-                <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
-                </span>
+                {tasks.length > 0 && (
+                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {tasks.map(t => (
+                      <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>
+                    ))}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -502,4 +518,78 @@ function MenuRowPill({ reward }: { reward: MenuReward }) {
     return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
   }
   return <RewardPill style={{ flexShrink: 0 }}>{rewardLabelFromReward(reward)}</RewardPill>
+}
+
+// メニュー詳細シート（下からスライドイン・overlayタップ/ハンドル/閉じるボタンで閉じる・reduced-motion対応）。
+//   節は該当データがnullなら非表示（名前・報酬・協力タスクは常に表示）。塗りボタン禁止（閉じる=0.5px枠）。
+function MenuDetailSheet({ svc, menuName, menuDescription, reward, tasks, onClose }: {
+  svc: ServiceWithMenus; menuName: string; menuDescription: string | null
+  reward: MenuReward | null; tasks: CoopTaskItem[]; onClose: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [reduced, setReduced] = useState(false)
+  useEffect(() => {
+    setReduced(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+    const id = requestAnimationFrame(() => setOpen(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+  const dur = reduced ? 0 : 220
+  function close() {
+    if (reduced) { onClose(); return }
+    setOpen(false)
+    setTimeout(onClose, dur)
+  }
+  const imageUrl = (svc as { image_url?: string | null }).image_url || null
+  const subtitle = svc.subtitle || null
+  const svcDesc = svc.description || null
+  return (
+    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.34)', opacity: open ? 1 : 0, transition: `opacity ${dur}ms ease-out`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true"
+        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: '18px 18px 0 0', padding: '10px 20px 28px', transform: open ? 'translateY(0)' : 'translateY(100%)', transition: `transform ${dur}ms ease-out` }}>
+        {/* 1. ハンドル */}
+        <button type="button" onClick={close} aria-label="閉じる" style={{ display: 'block', width: 38, height: 4, borderRadius: 999, background: 'var(--line)', border: 'none', margin: '2px auto 16px', cursor: 'pointer', padding: 0 }} />
+        {/* 2. イメージ画像 */}
+        {imageUrl && (
+          <img src={imageUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 12, marginBottom: 16, display: 'block' }} />
+        )}
+        {/* 3. メニュー名＋報酬ピル */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <h3 style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, letterSpacing: '-.01em' }}>{menuName}</h3>
+          {reward && <MenuRowPill reward={reward} />}
+        </div>
+        {/* 4. サービス ─ サブタイトル */}
+        <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>{svc.name}{subtitle ? ` ─ ${subtitle}` : ''}</div>
+        {/* 5. 「{service}とは」＋サービス説明 */}
+        {svcDesc && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>{svc.name}とは</div>
+            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--txt)' }}>{svcDesc}</p>
+          </div>
+        )}
+        {/* 6. 「このメニューでは」＋メニュー説明 */}
+        {menuDescription && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>このメニューでは</div>
+            <p style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--txt)' }}>{menuDescription}</p>
+          </div>
+        )}
+        {/* 7. あなたの協力タスク */}
+        {tasks.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>あなたの協力タスク</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {tasks.map(t => (
+                <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* 8. 閉じる（塗りボタン禁止・0.5px枠） */}
+        <button type="button" onClick={close}
+          style={{ width: '100%', minHeight: 44, marginTop: 24, background: '#fff', color: 'var(--txt)', border: '0.5px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+          閉じる
+        </button>
+      </div>
+    </div>
+  )
 }

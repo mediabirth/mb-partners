@@ -24,7 +24,6 @@ export function rewardPillText(r: RewardLike): string {
 // ── Opportunity Board 用 純関数（表示層導出のみ・money/データ非接触・単体テスト対象）──
 export type RangeReward = { reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: number | string }
 export type RangeMenu = { rewards?: RangeReward[] | null }
-export type EffortKind = 'auto' | 'manual' | string
 
 /** ブランド内 全報酬から報酬レンジ文字列。fixed優先で¥表記、fixed無しは rate→continuous。0件は null（ピル非表示）。 */
 export function rewardRangeLabel(menus: RangeMenu[] | null | undefined): string | null {
@@ -49,28 +48,6 @@ export function rewardRangeLabel(menus: RangeMenu[] | null | undefined): string 
     return max > min ? `継続 粗利${min}%〜${max}%/月` : `継続 粗利${min}%/月`
   }
   return null
-}
-
-// ★モック指定のUIラベル（連絡のみ）。判定は kind（auto/manual）で行い、タスク名の文字列照合はしない。
-export const CONNECT_ONLY_LABEL = 'つなぐだけ'
-
-/** その報酬の協力タスク種別集合から手間バッジ。auto種別のみ→連絡のみラベル／manual含む→タスクN／0件→null。 */
-export function effortBadge(kinds: EffortKind[] | null | undefined): string | null {
-  const ks = kinds ?? []
-  if (ks.length === 0) return null
-  if (ks.every(k => k === 'auto')) return CONNECT_ONLY_LABEL
-  return `タスク ${ks.length}`
-}
-
-/** メニューの手間判定用 kind 集合：fixed（連絡のみ・協力タスク非実体化）は auto のみ／rate・continuous は全 kind。 */
-export function menuEffortKinds(rewardType: string | undefined | null, serviceKinds: EffortKind[] | null | undefined): EffortKind[] {
-  const ks = serviceKinds ?? []
-  return rewardType === 'fixed' ? ks.filter(k => k === 'auto') : ks
-}
-
-/** ブランド内に「連絡のみ」該当メニューが1つでもあるか（ヒント表示用）。 */
-export function brandHasTsunaguOnly(menus: Array<{ rewards?: RangeReward[] | null; effort_task_kinds?: EffortKind[] | null }> | null | undefined): boolean {
-  return (menus ?? []).some(m => effortBadge(menuEffortKinds(m.rewards?.[0]?.reward_type, m.effort_task_kinds)) === CONNECT_ONLY_LABEL)
 }
 
 /** メニューの複数報酬を1つの統一ピル文言に（コンソール一覧用）。

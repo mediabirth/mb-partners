@@ -28,6 +28,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('calendar_member_id' in b) patch.calendar_member_id = b.calendar_member_id ? String(b.calendar_member_id) : null
   // リファラルWave1：メニュー一言説明（''→null）
   if ('short_description' in b) patch.short_description = typeof b.short_description === 'string' && b.short_description.trim() ? b.short_description.trim().slice(0, 200) : null
+  // menu_context v2：メニュー詳細説明（''→null・詳細シート「このメニューでは」）
+  if ('description' in b) patch.description = typeof b.description === 'string' && b.description.trim() ? b.description.trim().slice(0, 1000) : null
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   const admin = await createServiceRoleClient()
   const { data, error } = await admin.from('menus').update(patch).eq('id', id).select('*').single()

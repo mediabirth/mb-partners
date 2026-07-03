@@ -56,12 +56,13 @@ type MenuDraft = {
 type ServiceForm = {
   name: string; subtitle: string; description: string; who: string; url: string
   target_audience: string   // リファラルWave1：紹介対象（STEP1で太字表示）
+  image_url: string         // menu_context v2：詳細シートのイメージ画像（任意）
   logo_path: string; active: boolean
   icon: string; color: string  // kept for backward compat, not shown in UI
 }
 
 const defaultServiceForm: ServiceForm = {
-  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', logo_path: '',
+  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', image_url: '', logo_path: '',
   active: true, icon: 'arrows', color: '#4733e6',
 }
 
@@ -74,6 +75,7 @@ type MenuForm = {
   ref_trigger: string
   coverage_steps: CoverageStep[]
   qualification: string
+  description: string   // menu_context v2：メニュー詳細説明（任意・詳細シート用）
   ref_months: string
   // ── 協力（per-menu cooperation） ──
   coop_enabled: boolean
@@ -88,6 +90,7 @@ const defaultMenuForm: MenuForm = {
   name: '', ref_enabled: true, ref_type: 'fixed', ref_value: '', ref_base: '', ref_trigger: '',
   coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })),
   qualification: '',
+  description: '',
   ref_months: '',
   coop_enabled: false, coop_type: 'rate', coop_value: '', coop_base: '粗利',
   coop_coverage: COVERAGE_DEFAULTS.map(s => ({ ...s })),
@@ -115,6 +118,7 @@ function menuToForm(m: MenuRow): MenuForm {
                     ? m.coverage_steps
                     : COVERAGE_DEFAULTS.map(s => ({ ...s })),
     qualification:  m.qualification ?? '',
+    description:    (m as { description?: string | null }).description ?? '',
     ref_months:     m.ref_months && m.ref_months > 1 ? String(m.ref_months) : '',
     coop_enabled:   mm.coop_enabled ?? false,
     coop_type:      mm.coop_type ?? 'rate',
@@ -137,6 +141,7 @@ function formToMenuPayload(f: MenuForm) {
     ref_trigger:    f.ref_trigger || null,
     coverage_steps: f.coverage_steps,
     qualification:  f.qualification || null,
+    description:    f.description || null,
     ref_months:     f.ref_months ? Number(f.ref_months) : null,
     // ── 協力（per-menu cooperation） ──
     coop_enabled:   f.coop_enabled,
@@ -156,6 +161,7 @@ function svcFormToPayload(f: ServiceForm) {
     who:            f.who            || null,
     url:            f.url            || null,
     target_audience: f.target_audience || null,
+    image_url:      f.image_url       || null,
     logo_path:      f.logo_path      || null,
     active:         f.active,
     icon:           f.icon,
@@ -171,6 +177,7 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
     who:            svc.who         ?? '',
     url:            svc.url         ?? '',
     target_audience: (svc as { target_audience?: string | null }).target_audience ?? '',
+    image_url:      (svc as { image_url?: string | null }).image_url ?? '',
     logo_path:      svc.logo_path   ?? '',
     active:         svc.active,
     icon:           svc.icon        || 'arrows',
@@ -311,6 +318,53 @@ function LogoUpload({ logoPath, name, onUpload }: { logoPath: string; name: stri
         {err && <p style={{ fontSize: '.62rem', color: 'var(--red)', marginTop: 4 }}>{err}</p>}
         <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
       </div>
+    </div>
+  )
+}
+
+// ─── Image Upload（詳細シート用イメージ画像・横長プレビュー・LogoUploadと同一storageインフラ）──
+function ImageUpload({ imageUrl, onUpload }: { imageUrl: string; onUpload: (url: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setErr(''); setUploading(true)
+    try {
+      const sb = createClient()
+      const ext = file.name.split('.').pop() ?? 'png'
+      const path = `images/${Date.now()}.${ext}`
+      const { error: upErr } = await sb.storage.from('service-logos').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { setErr(upErr.message); return }
+      const { data } = sb.storage.from('service-logos').getPublicUrl(path)
+      onUpload(data.publicUrl)
+    } catch (ex: unknown) {
+      setErr((ex as Error).message ?? 'アップロード失敗')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <div>
+      {imageUrl && (
+        <img src={imageUrl} alt="" style={{ width: '100%', maxWidth: 260, height: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 8, display: 'block', border: '0.5px solid var(--line)' }} />
+      )}
+      <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+        style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: uploading ? .6 : 1 }}>
+        {uploading ? 'アップロード中…' : imageUrl ? '画像を変更' : '画像を選択'}
+      </button>
+      {imageUrl && (
+        <button type="button" onClick={() => onUpload('')}
+          style={{ marginLeft: 8, fontSize: '.68rem', color: 'var(--muted2)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+          削除
+        </button>
+      )}
+      {err && <p style={{ fontSize: '.62rem', color: 'var(--red)', marginTop: 4 }}>{err}</p>}
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
     </div>
   )
 }
@@ -504,6 +558,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [audDraft, setAudDraft]         = useState('')
   const [editDescMenu, setEditDescMenu] = useState<string | null>(null) // 一言説明を編集中のメニューid
   const [descDraft, setDescDraft]       = useState('')
+  const [editLongMenu, setEditLongMenu] = useState<string | null>(null) // 詳細説明(description)を編集中のメニューid
+  const [longDraft, setLongDraft]       = useState('')
   const [editMemberFor, setEditMemberFor] = useState<string | null>(null) // 担当プルダウンを開いている対象キー（brand:<id> / menu:<id>）
 
   const [menuEditId, setMenuEditId] = useState<string | null>(null)
@@ -878,6 +934,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       .then(() => showToast('一言説明を保存しました')).catch(() => {})
   }
 
+  // menu_context v2：詳細説明(description)のインライン保存。楽観更新＋menus PATCH。APP詳細シートと同一データ・money非接触。
+  function saveMenuLongDesc(svcId: string, menuId: string, val: string) {
+    const v = val.trim()
+    setServices(prev => prev.map(s => s.id !== svcId ? s : ({
+      ...s,
+      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id === menuId ? { ...m, description: v || null } : m) })),
+    })))
+    setEditLongMenu(null)
+    fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: v || null }) })
+      .then(() => showToast('詳細説明を保存しました')).catch(() => {})
+  }
+
   // ── Menu CRUD ─────────────────────────────────────────────────────────────
   function startAddMenu() {
     setMenuForm({ ...defaultMenuForm, coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })) })
@@ -1072,6 +1140,26 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
                           </div>
                         )}
+                        {/* 詳細説明（description・詳細シート「このメニューでは」に表示・複数行インライン編集） */}
+                        {editLongMenu === mn.id ? (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                            <textarea autoFocus value={longDraft} onChange={e => setLongDraft(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Escape') setEditLongMenu(null) }}
+                              placeholder="例）このメニューでは、お客さまの状況を伺い最適なプランをご提案します。"
+                              rows={3}
+                              style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', resize: 'vertical' }} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <button onClick={() => saveMenuLongDesc(svc.id, mn.id, longDraft)} style={{ fontSize: '.58rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                              <button onClick={() => setEditLongMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                            <span style={{ fontSize: '.62rem', color: (mn as { description?: string | null }).description ? 'var(--muted2)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(mn as { description?: string | null }).description ? '詳細説明あり' : '詳細説明を設定'}</span>
+                            <button onClick={() => { setLongDraft((mn as { description?: string | null }).description ?? ''); setEditLongMenu(mn.id) }} title="詳細説明を編集"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
+                          </div>
+                        )}
                         {/* 担当（テキスト＋変更→プルダウン。連携済メンバーがいる時のみ＝段階3aゲート維持） */}
                         {hasMembers && (editMemberFor === `menu:${mn.id}` ? (
                           <select autoFocus value={menuMember} onChange={e => { setMenuMember(svc.id, mn.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
@@ -1130,6 +1218,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
 
             <Fld label="ロゴ画像（推奨）">
               <LogoUpload logoPath={svcForm.logo_path} name={svcForm.name} onUpload={v => setF({ logo_path: v })} />
+            </Fld>
+
+            <Fld label="イメージ画像（任意・メニュー詳細シートに表示）">
+              <ImageUpload imageUrl={svcForm.image_url} onUpload={v => setF({ image_url: v })} />
             </Fld>
 
             <Fld label="サービス名 *">

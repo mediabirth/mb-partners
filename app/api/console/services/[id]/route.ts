@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params
   const body = await req.json()
   // 協力はメニュー単位に一本化（services の coop_* は廃止）。coverage_steps/ft_* は当面残置だが編集対象外。
-  const allowed = ['name', 'subtitle', 'icon', 'color', 'description', 'who', 'url', 'active', 'logo_path', 'sort', 'calendar_account_id', 'calendar_member_id', 'target_audience']
+  const allowed = ['name', 'subtitle', 'icon', 'color', 'description', 'who', 'url', 'active', 'logo_path', 'sort', 'calendar_account_id', 'calendar_member_id', 'target_audience', 'image_url']
   const patch: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) patch[key] = body[key]
