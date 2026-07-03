@@ -184,28 +184,24 @@ function QRModal({ linkUrl, onClose }: { linkUrl: string; onClose: () => void })
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const c = canvasRef.current; if (!c) return
-    const ctx = c.getContext('2d'); if (!ctx) return
-    const N = 25, S = c.width / N
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height)
-    ctx.fillStyle = '#0E0E14'
-    let seed = 0
-    for (const ch of linkUrl) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0
-    function rnd() { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967295 }
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (rnd() > 0.52) ctx.fillRect(i * S, j * S, S - 1, S - 1)
-    function eye(px: number, py: number) {
-      ctx!.fillStyle = '#0E0E14'; ctx!.fillRect(px, py, S * 7, S * 7)
-      ctx!.fillStyle = '#fff'; ctx!.fillRect(px + S, py + S, S * 5, S * 5)
-      ctx!.fillStyle = '#4733E6'; ctx!.fillRect(px + S * 2, py + S * 2, S * 3, S * 3)
-    }
-    eye(0, 0); eye(c.width - S * 7, 0); eye(0, c.height - S * 7)
+    // C: 旧実装は擬似ランダム描画（スキャン不能な飾りQR）だった。実QRを生成する。
+    import('qrcode').then(QRCode => {
+      QRCode.toCanvas(c, linkUrl, {
+        width: 220,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#0E0E14', light: '#FFFFFF' },
+      }).catch(() => { /* 描画失敗時はURLテキストが残る */ })
+    })
   }, [linkUrl])
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(4px)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 30 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, textAlign: 'center' }}>
-        <h3 style={{ fontSize: '.92rem', fontWeight: 900, marginBottom: 4 }}>紹介QRコード</h3>
-        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 14 }}>{linkUrl.replace(/^https?:\/\//, '')}</p>
-        <canvas ref={canvasRef} width={220} height={220} style={{ border: '1px solid var(--line)', borderRadius: 12, marginBottom: 14 }} />
+        <h3 style={{ fontSize: '.92rem', fontWeight: 500, marginBottom: 4 }}>紹介QRコード</h3>
+        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 14, overflowWrap: 'anywhere' }}>{linkUrl.replace(/^https?:\/\//, '')}</p>
+        {/* C: canvas はブロック要素化＋margin auto で確実に中央寄せ（左寄りバグ解消） */}
+        <canvas ref={canvasRef} width={220} height={220} style={{ display: 'block', margin: '0 auto 14px', border: '0.5px solid var(--line)', borderRadius: 12 }} />
         <button onClick={() => { const c = canvasRef.current; if (!c) return; const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'MB_Partners_QR.png'; a.click() }} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', padding: 11, fontSize: '.76rem' }}>保存する</button>
         <div onClick={onClose} style={{ marginTop: 8, fontSize: '.7rem', color: 'var(--muted2)', cursor: 'pointer', fontWeight: 500 }}>閉じる</div>
       </div>
