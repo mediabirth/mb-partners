@@ -8,7 +8,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import EmptyState from '@/components/ui/EmptyState'
 
 const STATUS_LABEL: Record<string, string> = {
-  received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済', lost: '不成立',
+  received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
 }
 // ⑥ 段階ステッパー（4段）
 const RAIL_STEPS = ['受付', '対応中', '成約', '支払済']
@@ -167,78 +167,27 @@ export default async function CasesPage({
         ) : (
           <div className="stagger" style={{ display: 'flex', flexDirection: 'column' }}>
             {filtered.map(d => {
-              const step = STATUS_STEP[d.status] ?? 0
-              // ④ 名簿“資産”表示：法人＝会社名(主)＋担当者(副・無ければサービス)／個人＝氏名(主)。表示のみ・金額/件数/status不変。
-              const corp = (d as { customer_type?: string }).customer_type === 'corporate'
-              const mainName = (corp ? (d.company_name || d.customer_name) : (d.customer_name || d.company_name)) || customerHonorific(d)
-              const subName = corp ? (d.contact_name || d.services?.name || '') : (d.services?.name || '')
+              // ⑤⑥ deal_list_card_v2：様付き名前＋ステータス／メニュー名（ブランド名なし）／報酬値＋登録日。
+              const name = customerHonorific(d) || (d as { company_name?: string; customer_name?: string }).company_name || (d as { customer_name?: string }).customer_name || 'お客さま'
+              const menuName = (d as { service_menus?: { name?: string } | null }).service_menus?.name || (d.services ? d.services.name : '相談（サービス未定）')
+              const showReward = ['confirmed', 'paid'].includes(d.status) && d.amount > 0
               return (
-                <Link
-                  key={d.id}
-                  href={`/app/cases/${d.id}`}
-                  className="card-hover lift ui-card"
-                  style={{
-                    display: 'block', textDecoration: 'none', color: 'var(--txt)',
-                    background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
-                    padding: '14px 15px 13px', marginBottom: 10,
-                  }}
-                >
-                  {/* Line 1 — ⑤サービスアバター + お客様名 + ⑥関わり方マーク (left), 報酬 (right, concise) */}
+                <Link key={d.id} href={`/app/cases/${d.id}`} className="card-hover lift ui-card"
+                  style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
+                  {/* 1行目：お客さま名 様 ＋ ステータス（6pxドット＋テキスト） */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
-                      {d.services
-                        ? <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={30} />
-                        : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={30} />}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                          <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: corp ? 'var(--c-blue)' : 'var(--muted2)', background: corp ? 'var(--blue-bg)' : 'var(--bg2)', borderRadius: 5, padding: '1px 6px' }}>{corp ? '法人' : '個人'}</span>
-                          <b style={{ fontSize: '.82rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{mainName}</b>
-                          {!d.services && (
-                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>相談</span>
-                          )}
-                          {(itemCounts[d.id] ?? 0) > 1 && (
-                            <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 6px' }}>+{itemCounts[d.id] - 1}</span>
-                          )}
-                        </div>
-                        {subName && <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subName}</div>}
-                      </div>
-                    </div>
-                    {d.status === 'lost' ? (
-                      <span style={{ flexShrink: 0, fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 10px' }}>不成立</span>
-                    ) : ['confirmed', 'paid'].includes(d.status) && d.amount > 0 ? (
-                      /* ②B 確定報酬：成約/支払済(確定)のみ表示・あなたの報酬(既存計算済み値を読むだけ)。案件金額(MB受注総額)は出さない */
-                      <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.78rem', fontWeight: 500, color: 'var(--txt)', letterSpacing: '-.012em' }}>
-                        報酬 ¥{d.amount.toLocaleString()}
-                      </span>
-                    ) : null}
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: d.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)' }} />
+                      <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{STATUS_LABEL[d.status] ?? d.status}</span>
+                    </span>
                   </div>
-
-                  {/* 段階ステッパー（不成立は見送りメッセージ） */}
-                  {d.status === 'lost' ? (
-                    <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 10 }}>この案件は不成立（見送り）となりました。</p>
-                  ) : (
-                    <StatusStepper step={step} />
-                  )}
-
-                  {/* ②B深化 (a)支払状況／予定 ＋ (b)報酬の根拠（確定=confirmed/paid のみ・既存値を読むだけ） */}
-                  {['confirmed', 'paid'].includes(d.status) && d.amount > 0 && (
-                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: '.58rem' }}>
-                      {d.status === 'paid'
-                        ? <span style={{ fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 999, padding: '2px 9px' }}>支払済</span>
-                        : <span style={{ fontWeight: 500, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 999, padding: '2px 9px' }}>未払い · {payoutLabel((d as { fixed_month?: string | null }).fixed_month)}払い見込み</span>}
-                      {rewardBasis((d as { reward_snapshot?: unknown }).reward_snapshot) && (
-                        <span style={{ color: 'var(--muted2)' }}>報酬の根拠：{rewardBasis((d as { reward_snapshot?: unknown }).reward_snapshot)}</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ②A 現在の段階（パートナー視点ラベル）＋紹介日／最終更新（read-only・金額なし） */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 11, paddingTop: 10, borderTop: '1px solid #F4F4F7', fontSize: '.58rem', color: 'var(--muted2)' }}>
-                    <span style={{ fontWeight: 500, color: (d.status as string) === 'lost' ? 'var(--muted2)' : d.status === 'confirmed' || d.status === 'paid' ? 'var(--green)' : 'var(--c-blue)' }}>現在：{partnerStageLabel(d.status, (d as { review_stage?: string | null }).review_stage)}</span>
-                    <span style={{ color: 'var(--line)' }}>|</span>
-                    <span>紹介 {fmtDate(d.created_at)}</span>
-                    <span style={{ color: 'var(--line)' }}>|</span>
-                    <span>最終更新 {fmtDate(d.updated_at)}</span>
+                  {/* 2行目：提供内容（メニュー名・ブランド名は出さない） */}
+                  <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuName}</div>
+                  {/* 3行目：報酬（値のみ500）＋登録日 */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{showReward ? `¥${d.amount.toLocaleString()}` : ''}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted2)' }}>登録 {fmtDate(d.created_at)}</span>
                   </div>
                 </Link>
               )

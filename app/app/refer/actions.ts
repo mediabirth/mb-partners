@@ -72,8 +72,12 @@ export async function submitPartnerReferral(formData: FormData) {
   const isConsultation = formData.get('isConsultation') === '1'
 
   if (!customerName) throw new Error('お客様情報は必須です')
-  // v3.1：電話番号かメールアドレスのどちらか一方は必須（相談起票を除く）。client と二重で担保。
-  if (!isConsultation && !(phone ?? '').trim() && !customerEmail) throw new Error('電話番号かメールアドレスのいずれかをご入力ください')
+  // v3.1/①：連絡先必須（相談起票を除く）。法人＝メール必須／個人＝電話orメールいずれか必須。client と二重で担保。
+  if (!isConsultation) {
+    if (customerType === 'corporate') {
+      if (!customerEmail) throw new Error('メールアドレスをご入力ください')
+    } else if (!(phone ?? '').trim() && !customerEmail) throw new Error('電話番号かメールアドレスのいずれかをご入力ください')
+  }
 
   const { data: partner } = await supabase
     .from('partners')

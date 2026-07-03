@@ -13,13 +13,16 @@ export default function TaskChecklist({ tasks: initial, descriptions = {}, heari
   descriptions?: Record<string, string>
   hearing?: { dealId: string; initial: string; done: boolean } | null
 }) {
-  const tasks = [...initial].sort((a, b) => a.sort - b.sort)
+  // ② ヒヤリング（入力枠つき）は常に最下部（表示順のみ・sortデータは不変）。
+  const isHearingRow = (t: DealTask) => (t.kind ?? '').includes('ヒヤリング') || (t.label ?? '').includes('ヒヤリング')
+  const tasks = [...initial].sort((a, b) => (isHearingRow(a) ? 1 : 0) - (isHearingRow(b) ? 1 : 0) || a.sort - b.sort)
   const [openInfo, setOpenInfo] = useState<string | null>(null)
   const [hearingDone, setHearingDone] = useState(!!hearing?.done)
 
   return (
     <div style={{ padding: '24px 20px 0' }}>
-      <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>あなたのタスク</div>
+      {/* ④ 呼称は「協力タスク」に統一（タスク群の名称としてのみ） */}
+      <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>協力タスク</div>
       <div>
         {tasks.map(t => {
           const desc = descriptions[t.label]

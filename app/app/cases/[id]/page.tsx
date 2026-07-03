@@ -8,10 +8,10 @@ import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import { customerHonorific } from '@/lib/customer'
 
 const STATUS_LABEL: Record<string, string> = {
-  received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済', lost: '不成立',
+  received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
 }
 const STATUS_STEP: Record<string, number> = { received: 0, in_progress: 1, confirmed: 2, paid: 3 }
-const RAIL_STEPS = ['受付', '対応中', '成約・確定', '支払済']
+const RAIL_STEPS = ['受付', '対応中', '成約', '支払済']
 
 export const runtime = 'edge'
 
@@ -61,7 +61,8 @@ export default async function CaseDetailPage({
   // 担い＝reward_type由来の channel。cooperation=アポイント→予約(/book/)、referral=連絡のみ（リンク導線なし）。
   const hasAppointment = deal.channel === 'cooperation'
   const hearingTask = tasks.find(t => (t.kind ?? '').includes('ヒヤリング') || (t.label ?? '').includes('ヒヤリング'))
-  const bookingUrl = partner.code ? `/book/${partner.code}` : null
+  // ① 正式なフルURL（相対だとコピー/送付先が壊れるため）。
+  const bookingUrl = partner.code ? `https://mb-partners.app/book/${partner.code}` : null
   const custDisplay = customerHonorific(deal) || 'お客さま'
   const rewardText = deal.amount > 0 ? `報酬 ¥${deal.amount.toLocaleString()}` : '報酬 成約時に確定'
 
@@ -180,11 +181,11 @@ export default async function CaseDetailPage({
           </div>
         )}
 
+        {/* ⑦ 履歴は記録が出るまで非表示（空状態の説明文を出さない） */}
+        {events.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 12 }}>これまでの流れ</div>
-          {events.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'var(--muted2)' }}>記録はまだありません。</p>
-          ) : events.map((e, i) => (
+          {events.map((e, i) => (
             <div key={e.id} style={{ display: 'flex', gap: 14, position: 'relative', paddingBottom: 17 }}>
               {i < events.length - 1 && <div style={{ position: 'absolute', left: 5, top: 16, bottom: 0, width: 1, background: 'var(--line)' }} />}
               <div style={{ width: 11, height: 11, borderRadius: '50%', flexShrink: 0, marginTop: 3, background: i === 0 ? 'var(--c-blue)' : '#D7D7E0' }} />
@@ -197,6 +198,7 @@ export default async function CaseDetailPage({
             </div>
           ))}
         </div>
+        )}
       </details>
     </div>
   )

@@ -68,14 +68,14 @@ function NextBox({ title, desc, children }: { title: string; desc: string; child
 function ShareLink({ url, serviceName, defaultContact, defaultNeed }: { url: string; serviceName: string | null; defaultContact: string; defaultNeed: string }) {
   const [copied, setCopied] = useState(false)
   const [showQR, setShowQR] = useState(false)
-  const bareUrl = url.replace(/^https?:\/\//, '')
+  // ① 正式なフルURLをそのまま表示・コピー・送付（相対だと貼付け先で壊れるため）。
   const mailHref = `mailto:?subject=${encodeURIComponent('ご事業に役立つ専門サービスのご紹介')}&body=${encodeURIComponent(['お世話になっております。', '', '下記より詳細をご確認ください。', url, '', '何卒よろしくお願い申し上げます。'].join('\n'))}`
   const lineHref = `https://line.me/R/share?text=${encodeURIComponent(['専門サービスのご紹介です。', url].join('\n'))}`
   const sec: React.CSSProperties = { flex: 1, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'transparent', border: '0.5px solid var(--line)', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: 'var(--txt)', cursor: 'pointer', textDecoration: 'none' }
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', borderRadius: 8, padding: '9px 10px 9px 12px', marginBottom: 10 }}>
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: 12, fontFamily: 'Inter' }}>{bareUrl}</span>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: 12, fontFamily: 'Inter' }}>{url}</span>
         <button aria-label="コピー" onClick={() => navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })}
           style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: copied ? 'var(--c-blue)' : 'var(--muted2)', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', fontSize: 11 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>

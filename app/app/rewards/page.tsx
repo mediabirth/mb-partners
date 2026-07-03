@@ -99,7 +99,7 @@ export default async function RewardsPage() {
                       <span style={{ fontWeight: 500 }}>{customerHonorific(d)}</span>
                     </div>
                     <div style={{ fontSize: '.59rem', color: 'var(--muted)', marginTop: 1 }}>
-                      {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約・確定' : d.status === 'lost' ? '不成立' : d.status === 'in_progress' ? '対応中' : '受付'}
+                      {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約' : d.status === 'lost' ? '不成立' : d.status === 'in_progress' ? '対応中' : '受付'}
                     </div>
                   </div>
                 </div>

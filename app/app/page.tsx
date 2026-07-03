@@ -282,7 +282,8 @@ export default async function AppPage() {
                 <div style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {deal ? customerHonorific(deal) : ''}
                 </div>
-                {deal && <StatusPill size="sm" {...dealStatus(deal.status)} />}
+                {/* ③ APP表示は4語統一（共有 lib/status は3面共通のため触れず、ここで表示だけ差し替え）。 */}
+                {deal && (() => { const s = dealStatus(deal.status); return <StatusPill size="sm" tone={s.tone} children={s.children === '成約・確定' ? '成約' : s.children} /> })()}
                 <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
               </Link>
             )

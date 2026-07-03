@@ -118,7 +118,10 @@ export default function ReferPage() {
     e.preventDefault(); setError('')
     const nm = (customerType === 'corporate' ? companyName : customerName).trim()
     if (!nm) { setError('お名前を入力してください'); return }
-    if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかをご入力ください'); return }
+    // ① 法人＝メール必須／個人＝電話orメールいずれか必須。
+    if (customerType === 'corporate') {
+      if (!customerEmail.trim()) { setError('メールアドレスをご入力ください'); return }
+    } else if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかをご入力ください'); return }
     if (!allTasksChecked) { setError('担当する内容をすべてご確認ください'); return }
     if (!consent) { setError('お客さまの了承の確認が必要です'); return }
     const fd = new FormData()
@@ -165,11 +168,16 @@ export default function ReferPage() {
   // あなたが担うこと：cooperation_task_templates 由来（label＋description・データ）。連絡型は先頭タスクのみ表示。
   const allTaskDetails: TaskDetail[] = dedupeTasks((selMenu as { coverage_task_details?: TaskDetail[] } | null)?.coverage_task_details
     ?? ((selMenu as { coverage_tasks?: string[] } | null)?.coverage_tasks ?? []).map(l => ({ label: l, description: null })))
+    // ② ヒヤリングは常に最下部（案件ページと表示順を統一）。
+    .sort((a, b) => (a.label.includes('ヒヤリング') ? 1 : 0) - (b.label.includes('ヒヤリング') ? 1 : 0))
   const taskDetails = hasAppointment ? allTaskDetails : allTaskDetails.slice(0, 1)
   const coverageTasks = taskDetails.map(t => t.label)
   const allTasksChecked = coverageTasks.every(t => taskChecks.includes(t))
   const nameFilled = (customerType === 'corporate' ? companyName : customerName).trim().length > 0
-  const contactFilled = phone.trim().length > 0 || customerEmail.trim().length > 0
+  // ① 法人＝メール必須／個人＝電話orメールいずれか必須。
+  const contactFilled = customerType === 'corporate'
+    ? customerEmail.trim().length > 0
+    : (phone.trim().length > 0 || customerEmail.trim().length > 0)
   const canSubmit = nameFilled && contactFilled && allTasksChecked && consent && !pending
 
   return (
@@ -251,9 +259,9 @@ export default function ReferPage() {
                     <input style={C.input} value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" /></div>
                 </>
               )}
-              <div style={{ marginBottom: 14 }}><label style={C.label}>電話番号（どちらか必須）</label>
+              <div style={{ marginBottom: 14 }}><label style={C.label}>電話番号{customerType === 'corporate' ? '（任意）' : '（どちらか必須）'}</label>
                 <input style={C.input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" /></div>
-              <div style={{ marginBottom: 14 }}><label style={C.label}>メールアドレス（どちらか必須）</label>
+              <div style={{ marginBottom: 14 }}><label style={C.label}>メールアドレス{customerType === 'corporate' ? '（必須）' : '（どちらか必須）'}</label>
                 <input style={C.input} type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
               <div><label style={C.label}>メモ（任意）</label>
                 <input style={C.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="7月に引越し希望 など" /></div>
@@ -282,7 +290,7 @@ export default function ReferPage() {
             {/* あなたが担うこと：グループカード（0.5px枠・checkbox行・罫線区切り）。★本人が操作＝checkbox の形を維持。 */}
             {taskDetails.length > 0 && (
               <div style={{ marginBottom: 28, border: C.line, borderRadius: 12, padding: '4px 16px' }}>
-                <div style={{ fontSize: 13, fontWeight: 500, padding: '13px 0 5px' }}>あなたが担うこと</div>
+                <div style={{ fontSize: 13, fontWeight: 500, padding: '13px 0 5px' }}>協力タスク</div>
                 {taskDetails.map((t, i) => {
                   const on = taskChecks.includes(t.label)
                   return (
