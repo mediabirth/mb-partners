@@ -5,10 +5,11 @@
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveVendor } from '@/lib/vendor-auth'
+import { customerHonorific } from '@/lib/customer'
 
-export type VAssign = { id: string; base_fee: number; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
+export type VAssign = { id: string; base_fee: number; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
 export type VExpense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean; created_at: string | null; approved_at: string | null }
-export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null; customer_name: string | null; service: { name: string; icon: string; color: string; logo_path: string | null } | null }
+export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null; customer_name: string | null; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; service: { name: string; icon: string; color: string; logo_path: string | null } | null }
 export type VTask = { id: string; assignment_id: string; title: string; type: string; needs_deliverable: boolean; due_date: string | null; sort: number; status: string; done_at: string | null }
 export type VDeliverable = { id: string; assignment_id: string; task_id: string | null; file_name: string | null; note: string | null; created_at: string | null; has_file: boolean }
 export type VUpdate = { id: string; assignment_id: string; kind: string; body: string; status: string | null; sender: string; created_at: string | null }
@@ -53,13 +54,13 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     // V-1 の delivery_brief を同梱（列未追加でも壊さないよう staged フォールバック）。
     let raw = (await admin
       .from('delivery_assignments')
-      .select('id, base_fee, assigned_at, deals(id, customer_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
+      .select('id, base_fee, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
       .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
     if (!raw) {
       raw = (await admin
         .from('delivery_assignments')
-        .select('id, base_fee, assigned_at, deals(id, customer_name, status, created_at, services(name, icon, color, logo_path))')
+        .select('id, base_fee, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, services(name, icon, color, logo_path))')
         .eq('delivery_id', v.deliveryId)
         .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
     }
@@ -69,7 +70,7 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
   const payoutsP: Promise<Record<string, unknown>[] | null> = (async () => {
     let raw = (await admin
       .from('delivery_payout_items')
-      .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at, deals(customer_name, services(name, icon, color, logo_path))')
+      .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at, deals(customer_name, customer_type, company_name, contact_name, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
       .order('period', { ascending: false })).data as Record<string, unknown>[] | null
     if (!raw) {
@@ -84,8 +85,8 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
 
   const [rawAssigns, rawPayouts] = await Promise.all([assignmentsP, payoutsP])
   const pos: VPayout[] = (rawPayouts ?? []).map((p: Record<string, unknown>) => {
-    const deal = (p.deals as { customer_name?: string; services?: VPayout['service'] } | null) ?? null
-    return { id: p.id as string, amount: (p.amount as number) ?? 0, base_fee: (p.base_fee as number) ?? 0, expense_total: (p.expense_total as number) ?? 0, period: p.period as string, status: p.status as string, paid_at: (p.paid_at as string) ?? null, frozen_at: (p.frozen_at as string) ?? null, customer_name: deal?.customer_name ?? null, service: deal?.services ?? null }
+    const deal = (p.deals as { customer_name?: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; services?: VPayout['service'] } | null) ?? null
+    return { id: p.id as string, amount: (p.amount as number) ?? 0, base_fee: (p.base_fee as number) ?? 0, expense_total: (p.expense_total as number) ?? 0, period: p.period as string, status: p.status as string, paid_at: (p.paid_at as string) ?? null, frozen_at: (p.frozen_at as string) ?? null, customer_name: deal?.customer_name ?? null, customer_type: deal?.customer_type ?? null, company_name: deal?.company_name ?? null, contact_name: deal?.contact_name ?? null, service: deal?.services ?? null }
   })
 
   const assignments: VAssign[] = (rawAssigns ?? []).map((a: Record<string, unknown>) => {
@@ -131,7 +132,8 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
 /** vendor 通知（既存データからの導出・DDLなし）。経費承認/却下・支払凍結/完了・案件アサインを時系列に。 */
 export type VNotif = { id: string; icon: 'ok' | 'ng' | 'pay' | 'freeze' | 'assign'; title: string; sub: string; at: string; href?: string }
 export function deriveVendorNotifs(b: VendorBundle): VNotif[] {
-  const labelOf = (assignId: string) => b.assignments.find(a => a.id === assignId)?.deal?.customer_name ?? '案件'
+  // 顧客名は敬称付き（法人=「法人名 様」/個人=「氏名 様」）で統一（lib/customer.ts 単一ソース）。
+  const labelOf = (assignId: string) => { const d = b.assignments.find(a => a.id === assignId)?.deal; return (d && customerHonorific(d)) || '案件' }
   const out: VNotif[] = []
   for (const e of b.expenses) {
     if (e.status === 'approved') out.push({ id: 'e' + e.id, icon: 'ok', title: '経費が承認されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} · ${labelOf(e.assignment_id)}`, at: e.approved_at ?? e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
@@ -142,7 +144,7 @@ export function deriveVendorNotifs(b: VendorBundle): VNotif[] {
     else out.push({ id: 'p' + p.id, icon: 'freeze', title: '支払予定が確定しました', sub: `${p.period} · ¥${p.amount.toLocaleString()}（未払い）`, at: p.frozen_at ?? '', href: '/vendor/rewards' })
   }
   for (const a of b.assignments) {
-    out.push({ id: 'a' + a.id, icon: 'assign', title: '案件にアサインされました', sub: `${a.deal?.customer_name ?? '案件'} · 委託費 ¥${a.base_fee.toLocaleString()}`, at: a.assigned_at ?? '', href: `/vendor/cases/${a.id}` })
+    out.push({ id: 'a' + a.id, icon: 'assign', title: '案件にアサインされました', sub: `${(a.deal && customerHonorific(a.deal)) || '案件'} · 委託費 ¥${a.base_fee.toLocaleString()}`, at: a.assigned_at ?? '', href: `/vendor/cases/${a.id}` })
   }
   return out.filter(n => n.at).sort((x, y) => (y.at).localeCompare(x.at))
 }

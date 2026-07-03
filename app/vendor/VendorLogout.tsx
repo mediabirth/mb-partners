@@ -10,7 +10,7 @@ export default function VendorLogout() {
     router.push('/vendor/login'); router.refresh()
   }
   return (
-    <button onClick={logout} className="btn btn-g" style={{ width: '100%', justifyContent: 'center' }}>
+    <button onClick={logout} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>
       ログアウト
     </button>
   )

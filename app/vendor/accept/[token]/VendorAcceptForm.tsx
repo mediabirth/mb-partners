@@ -29,19 +29,20 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
     router.push('/vendor'); router.refresh()
   }
 
-  const input: React.CSSProperties = { width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', marginBottom: 14 }
-  const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }
+  const input: React.CSSProperties = { width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', marginBottom: 14 }
+  const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }
 
+  // v2.2：radial 背景は撤去＝静かな単色の面（APPログインと同等）。minHeight は 100dvh。
   return (
-    <div style={{ minHeight: '100vh', background: 'radial-gradient(120% 90% at 85% 0%, var(--blue-bg2) 0%, var(--bg2) 55%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: 420, maxWidth: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 18, padding: '34px 30px', boxShadow: '0 28px 80px rgba(14,14,20,.12)' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ width: 420, maxWidth: '100%', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 18, padding: '34px 30px' }}>
         <svg width="40" height="40" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 14 }}>
           <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="2.6" />
           <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="2.6" />
           <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="2.6" />
           <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
         </svg>
-        <h1 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 4 }}>MB Partners デリバリー登録</h1>
+        <h1 style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: 4 }}>MB Partners デリバリー登録</h1>
         <p style={{ fontSize: '.72rem', color: 'var(--muted2)', marginBottom: 20 }}>{email} 宛の招待です。パスワードを設定してください。</p>
         <form onSubmit={submit}>
           <label style={lbl}>お名前 / 屋号</label>
@@ -51,7 +52,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
           <label style={lbl}>パスワード（確認）</label>
           <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} style={{ ...input, marginBottom: 18 }} />
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 14 }}>{error}</p>}
-          <button type="submit" disabled={loading || !ready} className="btn btn-p" style={{ width: '100%', justifyContent: 'center', background: '#4733E6', borderColor: '#4733E6', opacity: (loading || !ready) ? .6 : 1 }}>
+          <button type="submit" disabled={loading || !ready} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>
             {loading ? '作成中…' : 'アカウントを作成してログイン'}
           </button>
         </form>

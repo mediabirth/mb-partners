@@ -22,25 +22,25 @@ export default function VendorTerms() {
         <Link href="/vendor/settings" style={{ fontSize: '.7rem', color: 'var(--muted2)', textDecoration: 'none' }}>← 設定</Link>
       </div>
       <div style={{ padding: '10px 20px 6px' }}>
-        <h1 style={{ fontSize: '1.06rem', fontWeight: 700, letterSpacing: '-.01em' }}>業務委託規約・ヘルプ</h1>
+        <h1 style={{ fontSize: '1.06rem', fontWeight: 500, letterSpacing: '-.01em' }}>業務委託規約・ヘルプ</h1>
         <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>デリバリー（実行者）として案件を進めるうえでの基本ルールとよくある質問です。</p>
       </div>
 
-      <div style={{ padding: '2px 24px 8px', fontSize: '.68rem', color: 'var(--muted)', fontWeight: 600 }}>規約</div>
-      <div style={{ margin: '0 20px 16px', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ padding: '2px 24px 8px', fontSize: '.68rem', color: 'var(--muted)', fontWeight: 500 }}>規約</div>
+      <div style={{ margin: '0 20px 16px', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
         {SECTIONS.map((s, i) => (
-          <div key={s.h} style={{ padding: '14px 16px', borderBottom: i < SECTIONS.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
-            <div style={{ fontSize: '.77rem', fontWeight: 700, marginBottom: 4 }}>{s.h}</div>
+          <div key={s.h} style={{ padding: '14px 16px', borderBottom: i < SECTIONS.length - 1 ? '0.5px solid var(--line)' : 'none' }}>
+            <div style={{ fontSize: '.77rem', fontWeight: 500, marginBottom: 4 }}>{s.h}</div>
             <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>{s.b}</p>
           </div>
         ))}
       </div>
 
-      <div style={{ padding: '2px 24px 8px', fontSize: '.68rem', color: 'var(--muted)', fontWeight: 600 }}>よくある質問</div>
-      <div style={{ margin: '0 20px 16px', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ padding: '2px 24px 8px', fontSize: '.68rem', color: 'var(--muted)', fontWeight: 500 }}>よくある質問</div>
+      <div style={{ margin: '0 20px 16px', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
         {FAQ.map((f, i) => (
-          <div key={f.q} style={{ padding: '14px 16px', borderBottom: i < FAQ.length - 1 ? '1px solid #F2F2F6' : 'none' }}>
-            <div style={{ fontSize: '.74rem', fontWeight: 700, marginBottom: 4 }}>Q. {f.q}</div>
+          <div key={f.q} style={{ padding: '14px 16px', borderBottom: i < FAQ.length - 1 ? '0.5px solid var(--line)' : 'none' }}>
+            <div style={{ fontSize: '.74rem', fontWeight: 500, marginBottom: 4 }}>Q. {f.q}</div>
             <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>{f.a}</p>
           </div>
         ))}

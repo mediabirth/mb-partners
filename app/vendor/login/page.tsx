@@ -21,13 +21,14 @@ export default function VendorLoginPage() {
     router.push('/vendor'); router.refresh()
   }
 
+  // v2.2：三重オービット装飾・radial drift は撤去＝静かな単色の面。minHeight は 100dvh。
   return (
-    <div style={{ background: '#E9E9ED', minHeight: '100vh', display: 'flex', justifyContent: 'center' }}>
+    <div style={{ background: '#E9E9ED', minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
       <div style={{
         width: '100%',
         maxWidth: 430,
         background: '#fff',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         position: 'relative',
         boxShadow: '0 0 48px rgba(14,14,20,.12)',
         display: 'flex',
@@ -37,43 +38,29 @@ export default function VendorLoginPage() {
         overflow: 'hidden',
       }}>
 
-        {/* Orbit animation (top-right) */}
-        <div style={{ position: 'absolute', right: -110, top: -110, width: 340, height: 340, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0, border: '1.5px solid #EDEBFC', borderRadius: '50%', animation: 'spin 50s linear infinite' }} />
-          <div style={{ position: 'absolute', inset: 46, border: '1.5px solid #DCD8FA', borderRadius: '50%', animation: 'spin 34s linear infinite reverse' }} />
-          <div style={{ position: 'absolute', inset: 104, border: '1.5px solid #4733E6', borderRadius: '50%', opacity: .25, animation: 'spin 22s linear infinite' }} />
-        </div>
-
-        {/* Background gradient */}
-        <div style={{
-          position: 'absolute', inset: '-30%', pointerEvents: 'none',
-          background: 'radial-gradient(46% 36% at 72% 18%,#EDEBFC,transparent 70%)',
-          animation: 'drift 16s ease-in-out infinite alternate',
-        }} />
-
         {/* Content */}
         <div style={{ position: 'relative' }}>
           {/* Logo mark */}
-          <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 24, animation: 'up .5s .1s both' }}>
+          <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 24 }}>
             <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="2.6"/>
             <rect x="28" y="6"  width="14" height="14" rx="7"  stroke="#4733E6" strokeWidth="2.6"/>
             <rect x="6"  y="28" width="14" height="14" rx="7"  stroke="#0E0E14" strokeWidth="2.6"/>
             <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
           </svg>
 
-          <div className="eyebrow" style={{ animation: 'up .5s .18s both' }}>
+          <div className="eyebrow">
             Media Birth Partner Program
           </div>
 
           <h1 style={{
-            fontSize: '1.55rem', fontWeight: 900, lineHeight: 1.45,
-            margin: '10px 0 26px', animation: 'up .5s .26s both',
+            fontSize: '1.55rem', fontWeight: 500, lineHeight: 1.45,
+            margin: '10px 0 26px',
           }}>
             あなたの成果を、<br />
             <em style={{ fontStyle: 'normal', color: 'var(--blue)' }}>もっと見やすく</em>
           </h1>
 
-          <div className="ui-card" style={{ animation: 'up .5s .42s both', padding: 18 }}>
+          <div className="ui-card" style={{ padding: 18 }}>
             <form onSubmit={handleLogin}>
               <div className="fld">
                 <label htmlFor="email">メールアドレス</label>

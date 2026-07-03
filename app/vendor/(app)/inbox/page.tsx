@@ -32,7 +32,7 @@ export default async function VendorInbox() {
       {notifs.length === 0 ? (
         <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>通知はありません</p>
       ) : notifs.map(n => (
-        <Link key={n.id} href={n.href ?? '/vendor'} className="lift" style={{ display: 'flex', gap: 12, padding: '14px 20px', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'var(--txt)', alignItems: 'center' }}>
+        <Link key={n.id} href={n.href ?? '/vendor'} className="lift" style={{ display: 'flex', gap: 12, padding: '14px 20px', borderBottom: '0.5px solid var(--line)', textDecoration: 'none', color: 'var(--txt)', alignItems: 'center' }}>
           <Icon type={n.icon} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <b style={{ fontSize: '.78rem', display: 'block', marginBottom: 2 }}>{n.title}</b>

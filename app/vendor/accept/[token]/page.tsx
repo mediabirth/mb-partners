@@ -9,9 +9,9 @@ export const runtime = 'edge'
 
 function ErrorPage({ message }: { message: string }) {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: 400, maxWidth: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '32px 28px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 10 }}>招待リンクエラー</h1>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ width: 400, maxWidth: '100%', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, padding: '32px 28px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: 10 }}>招待リンクエラー</h1>
         <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.7 }}>{message}</p>
       </div>
     </div>

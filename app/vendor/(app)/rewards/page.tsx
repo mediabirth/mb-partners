@@ -4,6 +4,7 @@ import RewardHero from '@/components/ui/RewardHero'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { paymentState } from '@/lib/status'
 import { loadVendorBundle } from '@/lib/vendor-data'
+import { customerHonorific } from '@/lib/customer'
 
 export const runtime = 'edge'
 function monthLabel(p: string) { const [y, m] = p.split('-'); return `${y}年${Number(m)}月` }
@@ -34,8 +35,8 @@ export default async function VendorRewards() {
       <div style={{ padding: '18px 20px 6px' }}><h2 className="ty-h2">委託費の明細</h2></div>
       <div style={{ padding: '0 20px 8px' }}>
         {b.payouts.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 14, padding: '22px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '.74rem', fontWeight: 700 }}>まだ明細はありません</div>
+          <div style={{ background: '#fff', border: '0.5px dashed var(--line)', borderRadius: 14, padding: '22px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '.74rem', fontWeight: 500 }}>まだ明細はありません</div>
             <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>案件を納品し MB が確定すると、ここに委託費が積み上がります。</div>
           </div>
         ) : b.payouts.map(p => {
@@ -43,21 +44,21 @@ export default async function VendorRewards() {
           const hasExpense = (p.expense_total ?? 0) > 0
           const svc = p.service
           return (
-            <div key={p.id} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
+            <div key={p.id} className="card-hover ui-card" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                 {svc ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={38} /> : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={38} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.customer_name ?? monthLabel(p.period)}</div>
+                  <div style={{ fontSize: '.8rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(p) || monthLabel(p.period)}</div>
                   <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{monthLabel(p.period)}{p.paid_at ? ` · 支払 ${new Date(p.paid_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}` : ''}</div>
                 </div>
                 <StatusPill size="sm" {...paymentState(p.status)} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 11, paddingTop: 11, borderTop: '1px solid #F2F2F6' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 11, paddingTop: 11, borderTop: '0.5px solid var(--line)' }}>
                 {/* 内訳は経費がある月のみ展開（無ければ委託費＝総額で重複を出さない） */}
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.7 }}>
                   {hasExpense ? (<>委託費 <b className="tnum" style={{ color: 'var(--txt)' }}>¥{p.base_fee.toLocaleString()}</b><br />承認済経費 <b className="tnum" style={{ color: 'var(--txt)' }}>¥{p.expense_total.toLocaleString()}</b></>) : '委託費'}
                 </div>
-                <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.28rem', fontWeight: 800, color: isPaid ? 'var(--muted2)' : 'var(--txt)' }}>¥{p.amount.toLocaleString()}</div>
+                <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.28rem', fontWeight: 500, color: isPaid ? 'var(--muted2)' : 'var(--txt)' }}>¥{p.amount.toLocaleString()}</div>
               </div>
             </div>
           )

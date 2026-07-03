@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { loadVendorBundle, deriveVendorNotifs } from '@/lib/vendor-data'
-import StatusPill from '@/components/ui/StatusPill'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import { dealStatus } from '@/lib/status'
+import { VENDOR_DEAL_ST } from '@/lib/vendor-status'
+import { customerHonorific } from '@/lib/customer'
 import { BUILD_STAMP } from '@/lib/build-stamp'
 
 export const runtime = 'edge'
@@ -51,9 +51,9 @@ export default async function VendorHome() {
   for (const a of b.assignments) {
     const tks = tasksOf(a.id)
     for (const t of tks.filter(t => t.type === 'task' && t.status !== 'done').slice(0, 2))
-      todos.push({ key: 't' + t.id, title: t.title, sub: `${a.deal?.customer_name ?? '案件'}${t.due_date ? ` · 期日 ${t.due_date.slice(5)}` : ''}`, href: `/vendor/cases/${a.id}`, dot: 'var(--c-blue)' })
+      todos.push({ key: 't' + t.id, title: t.title, sub: `${(a.deal && customerHonorific(a.deal)) || '案件'}${t.due_date ? ` · 期日 ${t.due_date.slice(5)}` : ''}`, href: `/vendor/cases/${a.id}`, dot: 'var(--c-blue)' })
     for (const t of tks.filter(t => t.needs_deliverable && !b.deliverables.some(d => d.task_id === t.id)).slice(0, 2))
-      todos.push({ key: 'd' + t.id, title: `成果物を提出: ${t.title}`, sub: a.deal?.customer_name ?? '案件', href: `/vendor/cases/${a.id}`, dot: 'var(--amber)' })
+      todos.push({ key: 'd' + t.id, title: `成果物を提出: ${t.title}`, sub: (a.deal && customerHonorific(a.deal)) || '案件', href: `/vendor/cases/${a.id}`, dot: 'var(--amber)' })
   }
   for (const e of b.expenses.filter(e => e.status === 'rejected'))
     todos.push({ key: 'r' + e.id, title: '差し戻された経費があります', sub: `${e.kind} ¥${e.amount.toLocaleString()}`, href: `/vendor/cases/${e.assignment_id}`, dot: 'var(--red)' })
@@ -78,28 +78,25 @@ export default async function VendorHome() {
   return (
     <div className="page-anim">
       {/* Step1：支払予定を主役にしたヒーロー。上端＝theme-color(#4733E6) と一致させ継ぎ目を消す。
-          金額/件数の値・計算・クエリは無改修（既存値の再配置のみ）。装飾円は overflow:hidden 内に収容。 */}
+          金額/件数の値・計算・クエリは無改修（既存値の再配置のみ）。
+          v2.2：この塗りが「1画面1つの塗り」。回転する装飾円は撤去（装飾アニメ禁止）。 */}
       <div style={{ margin: '18px 20px 0', background: 'linear-gradient(155deg,#4733E6 0%,#3A28CE 100%)', borderRadius: 18, padding: '20px 22px 16px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', right: -60, top: -60, width: 200, height: 200, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%', animation: 'spin 30s linear infinite' }} />
-          <div style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%', animation: 'spin 20s linear infinite reverse' }} />
-        </div>
         {/* ① 小キャプション「今月の委託費見込み」＋状態チップ（履歴なし新規は非表示） */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
           <span style={{ fontSize: '.6rem', opacity: .9 }}>今月の委託費見込み{targetPeriod ? ` · ${fmtPeriod(targetPeriod)}` : ''}</span>
           {payState !== 'none' && (
-            <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
+            <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
           )}
         </div>
         {/* ② 状態別表示（金額は既存値のまま・再計算なし） */}
         {payState === 'due' ? (
           <Link href="/vendor/rewards" style={{ display: 'block', textDecoration: 'none', color: '#fff', marginTop: 6, position: 'relative', zIndex: 1 }}>
-            <span style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.3rem', letterSpacing: '-.022em', lineHeight: 1.05, fontFeatureSettings: '"tnum"' }}>¥{unpaid.toLocaleString()}</span>
+            <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '2.3rem', letterSpacing: '-.022em', lineHeight: 1.05, fontFeatureSettings: '"tnum"' }}>¥{unpaid.toLocaleString()}</span>
           </Link>
         ) : payState === 'done' ? (
           /* 予定0＋支払済履歴あり：巨大¥0をやめ安心表示。予定¥0は小さなミュート行に降格。 */
           <Link href="/vendor/rewards" style={{ display: 'block', textDecoration: 'none', color: '#fff', marginTop: 8, position: 'relative', zIndex: 1 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '1.04rem', fontWeight: 800, letterSpacing: '-.01em' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '1.04rem', fontWeight: 500, letterSpacing: '-.01em' }}>
               <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </span>
@@ -110,14 +107,14 @@ export default async function VendorHome() {
         ) : (
           /* 予定0＋履歴なし（新規）：中立表示。 */
           <div style={{ marginTop: 8, position: 'relative', zIndex: 1 }}>
-            <span style={{ fontSize: '1.0rem', fontWeight: 700, opacity: .95 }}>現在お支払い予定はありません</span>
+            <span style={{ fontSize: '1.0rem', fontWeight: 500, opacity: .95 }}>現在お支払い予定はありません</span>
           </div>
         )}
         {/* ③ 区切り線 ④ 3チップ（担当案件 / 未完タスク / 要対応） */}
         <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>進行中<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{active.length}件</b></div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>やること<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{todoList.length}件</b></div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>納品待ち<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 700, marginTop: 2 }}>{awaitingDelivery}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>進行中<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{active.length}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>やること<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{todoList.length}件</b></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>納品待ち<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{awaitingDelivery}件</b></div>
         </div>
       </div>
 
@@ -127,24 +124,25 @@ export default async function VendorHome() {
       </div>
       <div style={{ padding: '0 20px' }}>
         {todoList.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '20px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '1.4rem', marginBottom: 6 }} aria-hidden>✅</div>
-            <div style={{ fontSize: '.74rem', fontWeight: 700 }}>対応が必要な項目はありません</div>
+          <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '20px 16px', textAlign: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="1.8" style={{ marginBottom: 6 }} aria-hidden><circle cx="12" cy="12" r="9" /><path d="M8.5 12.5l2.5 2.5 5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <div style={{ fontSize: '.74rem', fontWeight: 500 }}>対応が必要な項目はありません</div>
           </div>
         ) : (
           <>
-            <Link href={todoList[0].href} className="card-hover lift" style={{ display: 'flex', gap: 12, alignItems: 'center', background: '#fff', border: '1.5px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px', textDecoration: 'none', color: 'var(--txt)', boxShadow: '0 2px 12px rgba(71,51,230,.08)' }}>
-              <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--blue-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* v2.2：青枠+青影は中立化（0.5px罫線カード）。 */}
+            <Link href={todoList[0].href} className="card-hover lift" style={{ display: 'flex', gap: 12, alignItems: 'center', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '15px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
+              <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: todoList[0].dot }} />
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.84rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{todoList[0].title}</div>
+                <div style={{ fontSize: '.84rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{todoList[0].title}</div>
                 <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{todoList[0].sub}</div>
               </div>
-              <span style={{ fontSize: '.66rem', fontWeight: 700, color: 'var(--c-blue)', flexShrink: 0 }}>進む ›</span>
+              <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)', flexShrink: 0 }}>進む ›</span>
             </Link>
             {todoList.length > 1 && (
-              <Link href={todoList[1].href} style={{ display: 'block', textAlign: 'center', fontSize: '.64rem', color: 'var(--muted2)', textDecoration: 'none', padding: '11px 0 2px', fontWeight: 600 }}>ほか {todoList.length - 1} 件</Link>
+              <Link href={todoList[1].href} style={{ display: 'block', textAlign: 'center', fontSize: '.64rem', color: 'var(--muted2)', textDecoration: 'none', padding: '11px 0 2px', fontWeight: 500 }}>ほか {todoList.length - 1} 件</Link>
             )}
           </>
         )}
@@ -163,23 +161,29 @@ export default async function VendorHome() {
         ) : projects.slice(0, 4).map(({ a, pending, done, total, nextMs }) => {
           const pct = total > 0 ? Math.round(done / total * 100) : 0
           return (
-            <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift ui-card" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
+            <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift ui-card" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '13px 15px', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {(() => { const svc = a.deal?.services; return svc
                   ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={40} />
                   : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={40} /> })()}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <b style={{ fontSize: '.82rem', fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.brief ?? a.deal?.customer_name ?? '案件'}</b>
-                  {a.brief && <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>{a.deal?.customer_name ?? ''}</span>}
+                  <b style={{ fontSize: '.82rem', fontWeight: 500, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.brief ?? ((a.deal && customerHonorific(a.deal)) || '案件')}</b>
+                  {a.brief && <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>{(a.deal && customerHonorific(a.deal)) || ''}</span>}
                 </div>
-                <StatusPill size="sm" {...dealStatus(a.deal?.status ?? '')} />
+                {/* 状態＝ベンダー語（lib/vendor-status 単一ソース）・6pxドット+テキスト（塗りピル廃止） */}
+                {(() => { const st = VENDOR_DEAL_ST[a.deal?.status ?? ''] ?? { label: a.deal?.status ?? '—', c: 'var(--muted2)' }; return (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.c, display: 'inline-block' }} />
+                    <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>{st.label}</span>
+                  </span>
+                ) })()}
               </div>
-              {/* 進捗バー（done/total） */}
+              {/* 進捗バー（done/total）＝中立の細線1点（青バー廃止） */}
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'var(--bg2)', overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: pct === 100 ? 'var(--green)' : 'var(--c-blue)' }} />
+                <div style={{ flex: 1, height: 3, borderRadius: 99, background: 'var(--bg2)', overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'var(--txt)' }} />
                 </div>
-                <span className="tnum" style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 700, flexShrink: 0, fontFamily: 'Inter' }}>{done}/{total}</span>
+                <span className="tnum" style={{ fontSize: '.58rem', color: 'var(--muted2)', fontWeight: 500, flexShrink: 0, fontFamily: 'Inter' }}>{done}/{total}</span>
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <span>未完タスク <b style={{ color: pending > 0 ? 'var(--c-blue)' : 'var(--muted2)' }}>{pending}</b></span>

@@ -22,9 +22,13 @@ export default function SchedulePicker({ id, label, dates }: { id: string; label
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--amber-bg)', borderRadius: 13, padding: '14px 15px', marginBottom: 10 }}>
+    <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13, padding: '14px 15px', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-        <span style={{ fontSize: '.54rem', fontWeight: 800, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 20, padding: '2px 9px' }}>確定待ち</span>
+        {/* 状態＝6pxドット+テキスト（塗りピル廃止） */}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block' }} />
+          <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>確定待ち</span>
+        </span>
         <b style={{ fontSize: '.78rem' }}>{label}</b>
       </div>
       <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 9px' }}>MB から候補日が届いています。希望日を選んでください。</p>
@@ -34,15 +38,15 @@ export default function SchedulePicker({ id, label, dates }: { id: string; label
           return (
             <button key={d} onClick={() => setSel(d)} type="button"
               style={{ minWidth: 64, padding: '9px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                border: `1.5px solid ${on ? 'var(--c-blue)' : 'var(--line)'}`, background: on ? 'var(--c-blue)' : '#fff', color: on ? '#fff' : 'var(--txt)' }}>
-              <div style={{ fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 800 }}>{fmtD(d)}</div>
+                border: on ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', background: on ? 'var(--c-blue)' : '#fff', color: on ? '#fff' : 'var(--txt)' }}>
+              <div style={{ fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 500 }}>{fmtD(d)}</div>
               <div style={{ fontSize: '.54rem', opacity: .8 }}>（{wd(d)}）</div>
             </button>
           )
         })}
       </div>
       {err && <p style={{ fontSize: '.64rem', color: 'var(--red)', marginBottom: 8 }}>{err}</p>}
-      <button onClick={confirm} disabled={busy || !sel} className="ui-btn ui-btn--primary" style={{ width: '100%', justifyContent: 'center', ...((busy || !sel) ? { background: 'var(--bg2)', color: 'var(--muted2)', border: '1px solid var(--line)', opacity: 1 } : {}) }}>
+      <button onClick={confirm} disabled={busy || !sel} className="ui-btn ui-btn--primary" style={{ width: '100%', justifyContent: 'center' }}>
         {busy ? '確定中…' : sel ? `${fmtD(sel)}（${wd(sel)}）で確定する` : '候補日を選んでください'}
       </button>
     </div>
