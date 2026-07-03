@@ -231,8 +231,8 @@ export default function ReferPage() {
 
           <form onSubmit={handleSubmit} style={{ padding: '18px 20px 32px' }}>
             {/* お客さまの情報 */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>お客さまの情報</div>
+            <div style={{ marginBottom: 28 }}>
+              <div style={sectionTitle}>お客さまの情報</div>
               <div style={{ marginBottom: 14 }}>
                 <Segment value={customerType} onChange={setCustomerType} options={[['individual', '個人'], ['corporate', '法人']]} />
               </div>
@@ -251,19 +251,18 @@ export default function ReferPage() {
                     <input style={C.input} value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="例：営業部 部長" /></div>
                 </>
               )}
-              <div style={{ marginBottom: 12 }}><label style={C.label}>電話番号（任意）</label>
+              <div style={{ marginBottom: 14 }}><label style={C.label}>電話番号（どちらか必須）</label>
                 <input style={C.input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" /></div>
-              <div style={{ marginBottom: 8 }}><label style={C.label}>メールアドレス（任意）</label>
+              <div style={{ marginBottom: 14 }}><label style={C.label}>メールアドレス（どちらか必須）</label>
                 <input style={C.input} type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
-              <p style={C.note}>電話番号とメールアドレスのどちらか一方は必ずご入力ください。MBからのご連絡に使用します。</p>
-              <div style={{ marginTop: 14 }}><label style={C.label}>メモ（任意）</label>
+              <div><label style={C.label}>メモ（任意）</label>
                 <input style={C.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="7月に引越し希望 など" /></div>
             </div>
 
-            {/* アポイントを担うメニュー：日時の決めかた。連絡のみ：info ボックス。 */}
+            {/* アポ型：日時の決めかた。連絡のみ：1行 info（アイコン＋11px）。 */}
             {hasAppointment ? (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>日時の決めかた</div>
+              <div style={{ marginBottom: 28 }}>
+                <div style={sectionTitle}>日時の決めかた</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <Radio active={introMethod === 'send'} onSelect={() => setIntroMethod('send')}
                     title="お客さまに面談日時調整リンクを送る" desc="お客さまがカレンダーから日時を選べます。" />
@@ -272,60 +271,60 @@ export default function ReferPage() {
                 </div>
               </div>
             ) : (
-              <div style={{ marginBottom: 24, background: 'var(--bg2)', borderRadius: 11, padding: '14px 15px' }}>
-                <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>
-                  ご紹介のあとは、MBからお客さまへご連絡します。あなたの作業はこのページで完了です。
-                </p>
+              <div style={{ marginBottom: 28, display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                <span style={{ color: 'var(--muted)', flexShrink: 0, marginTop: 1, display: 'flex' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
+                </span>
+                <p style={{ fontSize: 11, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>ご紹介のあとは、MBからお客さまへご連絡します。</p>
               </div>
             )}
 
-            {/* あなたが担うこと：個別タスクチェック＋ⓘポップオーバー */}
+            {/* あなたが担うこと：グループカード（0.5px枠・checkbox行・罫線区切り）。★本人が操作＝checkbox の形を維持。 */}
             {taskDetails.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>あなたが担うこと</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {taskDetails.map(t => {
-                    const on = taskChecks.includes(t.label)
-                    return (
-                      <div key={t.label} style={{ position: 'relative' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0' }}>
-                          <input type="checkbox" checked={on} onChange={() => setTaskChecks(p => on ? p.filter(x => x !== t.label) : [...p, t.label])}
-                            style={{ width: 16, height: 16, accentColor: 'var(--c-blue)', flexShrink: 0, cursor: 'pointer' }} />
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 400 }}>{t.label}</span>
-                          {t.description && (
-                            <button type="button" onClick={() => setOpenInfo(v => v === t.label ? null : t.label)} aria-label="説明"
-                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
-                              <InfoIcon />
-                            </button>
-                          )}
-                        </div>
-                        {openInfo === t.label && t.description && (
-                          <>
-                            <div onClick={() => setOpenInfo(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-                            <div style={{ position: 'relative', zIndex: 21, background: '#fff', border: C.line, borderRadius: 10, boxShadow: '0 6px 24px rgba(14,14,20,.12)', padding: '11px 13px', margin: '0 0 8px 26px' }}>
-                              <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>{t.description}</p>
-                            </div>
-                          </>
+              <div style={{ marginBottom: 28, border: C.line, borderRadius: 12, padding: '4px 16px' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, padding: '13px 0 5px' }}>あなたが担うこと</div>
+                {taskDetails.map((t, i) => {
+                  const on = taskChecks.includes(t.label)
+                  return (
+                    <div key={t.label} style={{ position: 'relative' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', borderTop: i === 0 ? 'none' : C.line, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={on} onChange={() => setTaskChecks(p => on ? p.filter(x => x !== t.label) : [...p, t.label])}
+                          style={{ width: 16, height: 16, accentColor: 'var(--c-blue)', flexShrink: 0, cursor: 'pointer' }} />
+                        <span style={{ fontSize: 14, fontWeight: 400 }}>{t.label}</span>
+                        {t.description && (
+                          <button type="button" onClick={e => { e.preventDefault(); setOpenInfo(v => v === t.label ? null : t.label) }} aria-label="説明"
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
+                          </button>
                         )}
-                      </div>
-                    )
-                  })}
-                </div>
+                      </label>
+                      {openInfo === t.label && t.description && (
+                        <>
+                          <div onClick={() => setOpenInfo(null)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
+                          <div className="pop-in" style={{ position: 'relative', zIndex: 21, background: '#fff', border: C.line, borderRadius: 10, boxShadow: '0 6px 24px rgba(14,14,20,.12)', padding: '10px 12px', margin: '0 0 10px 26px' }}>
+                            <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>{t.description}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
 
-            {/* 同意（必須・全ケース） */}
-            <label htmlFor="consent" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20, cursor: 'pointer' }}>
-              <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)}
-                style={{ width: 16, height: 16, marginTop: 1, accentColor: 'var(--c-blue)', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--txt)' }}>お客さまに、MBからご連絡することを了承いただいています</span>
-            </label>
-
-            {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
-            <button type="submit" disabled={!canSubmit} style={{ ...btnPrimary, width: '100%', opacity: canSubmit ? 1 : 0.4, cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-              {pending ? '送信中…' : '紹介する'}
-            </button>
-            <p style={{ ...C.note, textAlign: 'center', marginTop: 10 }}>押すと案件ページに移動します。リンクの発行・送付はそこで行えます。</p>
+            {/* 送信ゾーン：了承（担うことカードの外・区切り線の後）＋CTA。無効CTAはグレー。 */}
+            <div style={{ borderTop: C.line, paddingTop: 18 }}>
+              <label htmlFor="consent" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 16, cursor: 'pointer' }}>
+                <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)}
+                  style={{ width: 16, height: 16, marginTop: 1, accentColor: 'var(--c-blue)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--txt)' }}>お客さまに、MBからご連絡することを了承いただいています</span>
+              </label>
+              {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
+              <button type="submit" disabled={!canSubmit}
+                style={{ ...btnPrimary, width: '100%', background: canSubmit ? 'var(--c-blue)' : '#E7E7ED', color: canSubmit ? '#fff' : 'var(--muted)', cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
+                {pending ? '送信中…' : '紹介する'}
+              </button>
+            </div>
           </form>
         </div>
       )}
@@ -378,6 +377,7 @@ export default function ReferPage() {
 
 const btnPrimary: React.CSSProperties = { minHeight: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: '0 20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
 const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 400, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }
+const sectionTitle: React.CSSProperties = { fontSize: 13, fontWeight: 500, marginBottom: 12 }
 
 function chunk<T>(arr: T[], n: number): T[][] { const out: T[][] = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out }
 function dedupeTasks(list: TaskDetail[]): TaskDetail[] {
@@ -390,43 +390,42 @@ function InfoIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01" strokeLinecap="round"/></svg>
 }
 
-// 個人/法人の小セグメント（高さ30px・13px）。
+// 個人/法人の小セグメント（高さ30px・13px）。選択中＝neutral塗り（紫禁止）。
 function Segment({ value, onChange, options }: { value: string; onChange: (v: any) => void; options: [string, string][] }) {
   return (
     <div style={{ display: 'inline-flex', border: '0.5px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
       {options.map(([v, l], i) => (
         <button type="button" key={v} onClick={() => onChange(v)}
-          style={{ height: 30, padding: '0 18px', fontSize: 13, fontWeight: value === v ? 500 : 400, fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderLeft: i ? '0.5px solid var(--line)' : 'none', background: value === v ? 'var(--c-blue)' : '#fff', color: value === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+          style={{ height: 30, padding: '0 18px', fontSize: 13, fontWeight: value === v ? 500 : 400, fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderLeft: i ? '0.5px solid var(--line)' : 'none', background: value === v ? 'var(--txt)' : '#fff', color: value === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
       ))}
     </div>
   )
 }
 
+// ラジオカード：選択中＝1.5px accent枠のみ（薄紫の面bg禁止）・ドットはaccent。
 function Radio({ active, onSelect, title, desc }: { active: boolean; onSelect: () => void; title: string; desc: string }) {
   return (
-    <button type="button" onClick={onSelect} style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', borderRadius: 11, padding: '13px 14px', display: 'flex', gap: 11, alignItems: 'flex-start', border: `0.5px solid ${active ? 'var(--c-blue)' : 'var(--line)'}`, background: active ? 'var(--blue-bg2)' : '#fff' }}>
+    <button type="button" onClick={onSelect} style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', borderRadius: 11, padding: '13px 14px', display: 'flex', gap: 11, alignItems: 'flex-start', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', background: '#fff' }}>
       <span style={{ width: 16, height: 16, borderRadius: '50%', marginTop: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${active ? 'var(--c-blue)' : 'var(--line)'}`, background: active ? 'var(--c-blue)' : '#fff' }}>
         {active && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: active ? 'var(--blue-dk)' : 'var(--txt)' }}>{title}</span>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 500 }}>{title}</span>
         <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 3, lineHeight: 1.55 }}>{desc}</span>
       </span>
     </button>
   )
 }
 
-// STEP1 タイル：アイコン34px＋紹介対象13px/500（2行）＋報酬レンジ11px。展開時 2px accent。
+// 統合選択タイル：アイコン30px＋紹介対象13px（2行分確保）＋報酬レンジ下端。選択中＝1.5px accent枠のみ（面bg廃止）。
 function ServiceTile({ svc, active, onTap }: { svc: ServiceWithMenus; active: boolean; onTap: () => void }) {
   const audience = (svc as { target_audience?: string | null }).target_audience || svc.name
   const range = serviceRewardRange(svc)
   return (
-    <button onClick={onTap} style={{ background: active ? 'var(--blue-bg2)' : '#fff', border: active ? '2px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: active ? '13px 13px' : '14px 14px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 108 }}>
-      <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={34} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{audience}</div>
-        {range && <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 4 }}>{range}</div>}
-      </div>
+    <button onClick={onTap} style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: '14px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116 }}>
+      <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={30} />
+      <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, minHeight: 38, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{audience}</div>
+      {range && <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 'auto' }}>{range}</div>}
     </button>
   )
 }
@@ -438,7 +437,7 @@ function MenuPanel({ svc, onPick }: { svc: ServiceWithMenus; onPick: (sm: MenuRo
     .filter(({ menu }) => (menu.rewards ?? []).length > 0)
     .sort((a, b) => ((a.menu as { sort?: number }).sort ?? 0) - ((b.menu as { sort?: number }).sort ?? 0))
   return (
-    <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 16px', marginTop: 2 }}>
+    <div className="exp-in" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 16px', marginTop: 2 }}>
       <div style={{ fontSize: 12, color: 'var(--muted2)', marginBottom: 4 }}>{svc.name} のメニューを選ぶ</div>
       {groups.length === 0 ? (
         <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '10px 0', margin: 0 }}>メニューは準備中です。</p>
@@ -451,7 +450,8 @@ function MenuPanel({ svc, onPick }: { svc: ServiceWithMenus; onPick: (sm: MenuRo
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14, fontWeight: 500 }}>{menu.name}</span>
               {short && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>{short}</span>}
-              {reward && <span style={{ display: 'inline-block', fontSize: 11, color: 'var(--c-blue)', marginTop: 6 }}>{rewardPill(reward)}</span>}
+              {/* 静かなピル（bg-accent薄＋text-accent 12px・「報酬」接頭辞は省略） */}
+              {reward && <span style={{ display: 'inline-block', fontSize: 12, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 999, padding: '2px 10px', marginTop: 7 }}>{rewardLabelFromReward(reward)}</span>}
             </span>
             <span style={{ color: 'var(--muted)', fontSize: 15, flexShrink: 0 }}>›</span>
           </button>

@@ -2,11 +2,11 @@
 import { useEffect, useRef, useState } from 'react'
 import BookingDrawer from '@/components/BookingDrawer'
 
-// v3.1 案件ページ＝実行の場：「次にやること」（アポ型のみ：リンク送付 or 予約）＋ヒヤリング（保存で自動✓）。
-// 連絡型はアクションなし＝静かな状態カード。★リンクは /book/partnerCode を受け取って表示するだけ。money非接触。
+// v2 案件ページ：「次にやること」（アポ型のみ・1.5px accent＝1画面唯一の特権枠）。連絡型は静かな状態カード。
+// ★ヒヤリングは TaskChecklist（タスク行直下）へ移設。リンクは /book/partnerCode を表示するだけ。money非接触。
 export default function DealNextActions({
   dealId, method, hasAppointment, bookingUrl, customerEmail,
-  serviceName, defaultContact, defaultNeed, hearingEnabled, hearingInitial, hearingDone,
+  serviceName, defaultContact, defaultNeed,
 }: {
   dealId: string
   method: 'send' | 'self'
@@ -16,16 +16,12 @@ export default function DealNextActions({
   serviceName: string | null
   defaultContact: string
   defaultNeed: string
-  hearingEnabled: boolean
-  hearingInitial: string
-  hearingDone: boolean
 }) {
   const [showBooking, setShowBooking] = useState(false)
   const [booked, setBooked] = useState<string | null>(null)
 
   return (
     <div style={{ padding: '4px 20px 0' }}>
-      {/* 次にやること（アポ型のみ・2px accent枠・最大1つ） */}
       {hasAppointment && method === 'send' && bookingUrl && (
         <NextBox title="お客さまに面談日時調整リンクを送る" desc="お客さまがカレンダーから日時を選べます。">
           <ShareLink url={bookingUrl} serviceName={serviceName} defaultContact={defaultContact} defaultNeed={defaultNeed} />
@@ -34,23 +30,19 @@ export default function DealNextActions({
       {hasAppointment && method === 'self' && (
         <NextBox title="面談日時を予約する" desc="空き枠から日時を選んで、この案件の商談を設定します。">
           {booked ? (
-            <p style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500, margin: 0 }}>
+            <p style={{ fontSize: 12, color: 'var(--muted2)', margin: 0 }}>
               商談 {new Date(booked).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
             </p>
           ) : (
-            <button onClick={() => setShowBooking(true)} style={{ width: '100%', minHeight: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>面談日時を予約する</button>
+            <button onClick={() => setShowBooking(true)} style={{ width: '100%', height: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>面談日時を予約する</button>
           )}
         </NextBox>
       )}
-      {/* 連絡型：アクションなし＝静かな状態カード（枠なし） */}
       {!hasAppointment && (
         <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 15px', marginBottom: 14 }}>
           <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>MBが対応中です。お客さまへご連絡し、状況はここに表示されます。</p>
         </div>
       )}
-
-      {/* あなたのタスク：ヒヤリング（保存で対応タスク「ヒヤリング」を自動✓） */}
-      {hearingEnabled && <HearingBox dealId={dealId} initial={hearingInitial} initiallyDone={hearingDone} />}
 
       {showBooking && (
         <BookingDrawer dealId={dealId} defaultCustomerEmail={customerEmail}
@@ -60,86 +52,52 @@ export default function DealNextActions({
   )
 }
 
+// 1.5px accent枠（1画面唯一の特権）。見出しは塗りピルでなくテキスト（accent）。
 function NextBox({ title, desc, children }: { title: string; desc: string; children?: React.ReactNode }) {
   return (
-    <div style={{ background: 'var(--blue-bg2)', border: '2px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px', marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 5, padding: '2px 7px' }}>次にやること</span>
-        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--blue-dk)' }}>{title}</span>
-      </div>
-      <p style={{ fontSize: 12, color: '#52529E', margin: '0 0 12px', lineHeight: 1.6 }}>{desc}</p>
+    <div style={{ background: '#fff', border: '1.5px solid var(--c-blue)', borderRadius: 14, padding: '15px 16px', marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-blue)', marginBottom: 3 }}>次にやること</div>
+      <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{title}</div>
+      <p style={{ fontSize: 12, color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>{desc}</p>
       {children}
     </div>
   )
 }
 
-// リンク＋コピー＋メール／LINE／QR＋AIで送る文面を作る。
+// URL＋コピー(アイコン)／メール・LINE・QR＝3等分Secondary小／AI＝Tertiaryテキスト。塗り・緑背景は無し。
 function ShareLink({ url, serviceName, defaultContact, defaultNeed }: { url: string; serviceName: string | null; defaultContact: string; defaultNeed: string }) {
   const [copied, setCopied] = useState(false)
   const [showQR, setShowQR] = useState(false)
   const bareUrl = url.replace(/^https?:\/\//, '')
   const mailHref = `mailto:?subject=${encodeURIComponent('ご事業に役立つ専門サービスのご紹介')}&body=${encodeURIComponent(['お世話になっております。', '', '下記より詳細をご確認ください。', url, '', '何卒よろしくお願い申し上げます。'].join('\n'))}`
   const lineHref = `https://line.me/R/share?text=${encodeURIComponent(['専門サービスのご紹介です。', url].join('\n'))}`
+  const sec: React.CSSProperties = { flex: 1, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'transparent', border: '0.5px solid var(--line)', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: 'var(--txt)', cursor: 'pointer', textDecoration: 'none' }
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 8, padding: '11px 12px', marginBottom: 8 }}>
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: '.7rem', fontFamily: 'Inter', fontWeight: 600 }}>{bareUrl}</span>
-        <button onClick={() => navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })}
-          style={{ fontFamily: 'Inter', fontSize: '.55rem', letterSpacing: '.1em', background: copied ? 'var(--green)' : 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', flexShrink: 0 }}>
-          {copied ? 'COPIED' : 'COPY'}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg2)', borderRadius: 8, padding: '9px 10px 9px 12px', marginBottom: 10 }}>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--muted2)', fontSize: 12, fontFamily: 'Inter' }}>{bareUrl}</span>
+        <button aria-label="コピー" onClick={() => navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })}
+          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: copied ? 'var(--c-blue)' : 'var(--muted2)', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', fontSize: 11 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>
+          {copied && 'コピー済'}
         </button>
       </div>
-      <a href={mailHref} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, textDecoration: 'none' }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-        メールで送る
-      </a>
-      <a href={lineHref} target="_blank" rel="noopener" className="lift" style={{ width: '100%', minHeight: 44, background: '#06C755', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', fontWeight: 700, fontSize: '.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, textDecoration: 'none' }}>
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.07.7.2.8.5.07.27.05.7.02.97l-.13.8c-.04.24-.2.94.82.51 1.02-.43 5.5-3.24 7.5-5.55C20.6 14.9 22 13.1 22 11c0-4.4-4.5-8-10-8z"/></svg>
-        LINEで送る
-      </a>
-      <button onClick={() => setShowQR(v => !v)} className="ui-btn ui-btn--primary ui-btn--lg lift" style={{ width: '100%' }}>QRコードを表示</button>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+        <a href={mailHref} style={sec}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>メール
+        </a>
+        <a href={lineHref} target="_blank" rel="noopener" style={sec}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#06C755"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.07.7.2.8.5.07.27.05.7.02.97l-.13.8c-.04.24-.2.94.82.51 1.02-.43 5.5-3.24 7.5-5.55C20.6 14.9 22 13.1 22 11c0-4.4-4.5-8-10-8z" /></svg>LINE
+        </a>
+        <button onClick={() => setShowQR(v => !v)} style={sec}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M20 14v.01M14 20h.01M20 20v.01M17 17v.01M20 17h.01" /></svg>QR
+        </button>
+      </div>
       {showQR && <QRModal linkUrl={url} onClose={() => setShowQR(false)} />}
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 6 }}>
         <AiIntroPanel defaultContact={defaultContact} defaultService={serviceName ?? ''} defaultNeed={defaultNeed} />
       </div>
     </>
-  )
-}
-
-// ヒヤリング入力：保存すると /api/app/deals/[id]/hearing 経由で協力タスク「ヒヤリング」を自動チェック。
-function HearingBox({ dealId, initial, initiallyDone }: { dealId: string; initial: string; initiallyDone: boolean }) {
-  const [text, setText] = useState(initial)
-  const [saving, setSaving] = useState(false)
-  const [done, setDone] = useState(initiallyDone)
-  const [savedMsg, setSavedMsg] = useState('')
-
-  async function save() {
-    setSaving(true); setSavedMsg('')
-    try {
-      const res = await fetch(`/api/app/deals/${dealId}/hearing`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
-      const j = await res.json().catch(() => ({}))
-      if (res.ok) { setDone(!!j.done); setSavedMsg('保存しました。MBに共有されます。') }
-      else setSavedMsg('保存に失敗しました。時間をおいて再度お試しください。')
-    } catch { setSavedMsg('通信に失敗しました。') } finally { setSaving(false) }
-  }
-
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 14, fontWeight: 500 }}>あなたのタスク：ヒヤリング</span>
-        {done && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-blue)', background: 'var(--blue-bg)', borderRadius: 5, padding: '2px 7px' }}>完了</span>}
-      </div>
-      <p style={{ fontSize: 12, color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
-        お客さまの状況・ご要望をヒヤリングして入力してください。保存するとMBに共有され、このタスクは自動で完了になります。
-      </p>
-      <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
-        placeholder="例：予算感・希望時期・現状の課題・キーマン など"
-        style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />
-      <button onClick={save} disabled={saving} style={{ width: '100%', marginTop: 8, minHeight: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
-        {saving ? '保存中…' : '保存する'}
-      </button>
-      {savedMsg && <p style={{ fontSize: 12, color: savedMsg.includes('失敗') || savedMsg.includes('通信') ? 'var(--red)' : 'var(--muted2)', margin: '8px 0 0', fontWeight: 400 }}>{savedMsg}</p>}
-    </div>
   )
 }
 
@@ -177,16 +135,10 @@ function AiIntroPanel({ defaultContact, defaultService, defaultNeed }: { default
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="lift"
-        style={{ width: '100%', background: '#fff', border: '1px dashed var(--line)', borderRadius: 13, padding: '13px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--c-blue)' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z"/></svg>
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: '.8rem', fontWeight: 800 }}>AIで送る文面を作る</span>
-          <span style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>相手とニーズを入れると、送る文面の下書きを作成します。</span>
-        </span>
-        <span style={{ color: 'var(--muted)', fontSize: '.9rem', flexShrink: 0 }}>›</span>
+      <button type="button" onClick={() => setOpen(true)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--c-blue)', fontSize: 13, fontWeight: 500 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l1.9 4.6L18.5 9l-3.5 3 1 4.8L12 14.6 8 16.8l1-4.8L5.5 9l4.6-1.4L12 3z"/></svg>
+        AIで送る文面を作る
       </button>
     )
   }

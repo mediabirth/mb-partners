@@ -80,9 +80,17 @@ export default async function CaseDetailPage({
           <h1 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>{custDisplay} の案件</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc?.name ?? '相談（サービス未定）'}{menu?.name ? ` ─ ${menu.name}` : ''}</span>
-            <span style={{ fontSize: 11, fontWeight: 500, padding: '1px 8px', borderRadius: 20, background: 'var(--bg2)', color: 'var(--muted2)' }}>{STATUS_LABEL[deal.status] ?? deal.status}</span>
+            {/* ステータス＝6pxドット＋テキスト（塗りピル廃止） */}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: deal.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)', display: 'inline-block' }} />
+              <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{STATUS_LABEL[deal.status] ?? deal.status}</span>
+            </span>
           </div>
-          <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '2px 10px', marginTop: 8 }}>{rewardText}</span>
+          {/* 報酬＝テキスト（塗りピル廃止・ラベルmuted＋値500） */}
+          <div style={{ fontSize: 12, marginTop: 7 }}>
+            <span style={{ color: 'var(--muted2)' }}>報酬 </span>
+            <span style={{ fontWeight: 500 }}>{deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '成約時に確定'}</span>
+          </div>
         </div>
       </div>
 
@@ -97,7 +105,7 @@ export default async function CaseDetailPage({
         </div>
       ) : (
         <>
-          {/* 2. 次にやること ＋ 3. あなたのタスク（ヒヤリング入力） */}
+          {/* 2. 次にやること（アポ型のみ・1.5px accent） */}
           <DealNextActions
             dealId={deal.id}
             method={method}
@@ -107,16 +115,12 @@ export default async function CaseDetailPage({
             serviceName={svc?.name ?? null}
             defaultContact={customerHonorific(deal) || ''}
             defaultNeed={''}
-            hearingEnabled={!!hearingTask}
-            hearingInitial={hearingTask?.note ?? ''}
-            hearingDone={!!hearingTask?.done}
           />
 
-          {/* 3. あなたのタスク（個別チェックリスト・ⓘ説明付き） */}
+          {/* 3. あなたのタスク（状態表示・ヒヤリングは該当行直下に入力） */}
           {deal.channel === 'cooperation' && tasks.length > 0 && (
-            <div style={{ padding: '4px 20px 0' }}>
-              <TaskChecklist tasks={tasks} descriptions={taskDesc} />
-            </div>
+            <TaskChecklist tasks={tasks} descriptions={taskDesc}
+              hearing={hearingTask ? { dealId: deal.id, initial: hearingTask.note ?? '', done: !!hearingTask.done } : null} />
           )}
 
           {/* 4. 進捗（ミニステップ） */}

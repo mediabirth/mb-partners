@@ -32,7 +32,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* v3.1 デザイン規律：/app 本文のみ、共有部品由来の太字(b/見出し/ボタン/チップ/タグ)を500へ静音化。
           ★この <style> は /app レイアウト内のみ読み込まれ、セレクタも .app-quiet 配下に限定＝ベンダー/コンソールは不変。
           ★ロゴ「MB Partners」・アバター頭文字・ナビは SurfaceShell(この配下外)＝従来700のまま（ブランド表現）。 */}
-      <style>{`.app-quiet :is(b,strong,.btn,.ui-btn,.ty-h1,.ty-h2,.eyebrow,.chip,.ui-tag){font-weight:500}.app-quiet .rh-q *{font-weight:500!important}`}</style>
+      <style>{`.app-quiet :is(b,strong,.btn,.ui-btn,.ty-h1,.ty-h2,.eyebrow,.chip,.ui-tag){font-weight:500}.app-quiet .rh-q *{font-weight:500!important}
+.pop-in{animation:v2pop 120ms ease-out}@keyframes v2pop{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.exp-in{animation:v2exp 150ms ease-out}@keyframes v2exp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}`}</style>
       <div className="app-quiet" style={{ display: 'contents' }}>
         <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
       </div>
