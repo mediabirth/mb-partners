@@ -52,7 +52,31 @@ export async function getServicesWithMenus(supabase: SupabaseClient) {
   ) as ServiceWithMenus[]
   // G: 両者は services の別プロパティ（coverage_tasks / menus）を独立に付与＝相互依存なし → 並列化（結果不変）。
   await Promise.all([attachCoverageTasks(services), attachMenus(services)])
+  await attachEffortKinds(services)   // Opportunity Board：手間バッジ用 kind 集合（attachMenus後・read-only additive）
   return services
+}
+
+/** Opportunity Board 用：各メニューに協力タスクの kind 集合（effort_task_kinds）を付与（read-only・additive）。
+ *  cooperation_task_templates は service_role のみ読めるため専用クライアント。テーブル未作成/失敗は fail-open。 */
+async function attachEffortKinds(services: ServiceWithMenus[]) {
+  if (services.length === 0) return
+  try {
+    const { createServiceRoleClient } = await import('./server')
+    const admin = await createServiceRoleClient()
+    const { data: tpls } = await admin.from('cooperation_task_templates').select('service_id, menu_id, kind').eq('active', true)
+    const byService = new Map<string, { menu_id: string | null; kind: string }[]>()
+    for (const t of (tpls ?? []) as { service_id: string; menu_id: string | null; kind: string }[]) {
+      const arr = byService.get(t.service_id) ?? []; arr.push({ menu_id: t.menu_id, kind: t.kind }); byService.set(t.service_id, arr)
+    }
+    for (const svc of services) {
+      const list = byService.get(svc.id) ?? []
+      for (const sm of svc.service_menus) {
+        for (const m of (sm.menus ?? [])) {
+          m.effort_task_kinds = list.filter(t => t.menu_id == null || t.menu_id === m.id).map(t => t.kind)
+        }
+      }
+    }
+  } catch { /* fail-open: 未設定＝バッジ非表示 */ }
 }
 
 /**
@@ -310,6 +334,7 @@ export type Menu = {
   calendar_account_id?: string | null   // 段階B（旧・残置）
   calendar_member_id?: string | null     // 段階3a：担当メンバー（null=既定owner）
   short_description?: string | null      // リファラルWave1：メニュー一言説明（表示専用）
+  effort_task_kinds?: string[]           // Opportunity Board：協力タスク kind 集合（手間バッジ導出用・read-only）
   rewards?: MenuReward[]           // 報酬（複数）・表示用に付与
 }
 

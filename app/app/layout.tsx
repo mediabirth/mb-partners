@@ -34,7 +34,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           ★ロゴ「MB Partners」・アバター頭文字・ナビは SurfaceShell(この配下外)＝従来700のまま（ブランド表現）。 */}
       <style>{`.app-quiet :is(b,strong,.btn,.ui-btn,.ty-h1,.ty-h2,.eyebrow,.chip,.ui-tag){font-weight:500}.app-quiet .rh-q *{font-weight:500!important}
 .pop-in{animation:v2pop 120ms ease-out}@keyframes v2pop{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
-.exp-in{animation:v2exp 150ms ease-out}@keyframes v2exp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}`}</style>
+.exp-in{animation:v2exp 150ms ease-out}@keyframes v2exp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* タイポグラフィ規律v2.2（日本語改行・APP限定＝.app-quietスコープ＝3面分離維持・auto-phrase非対応はnormalフォールバック） */
+.app-quiet{line-break:strict}
+.app-quiet p,.app-quiet li{text-wrap:pretty}
+@supports (word-break:auto-phrase){.app-quiet p,.app-quiet li{word-break:auto-phrase}}
+.app-quiet :is(h1,h2,.ty-h1,.ty-h2){text-wrap:balance}
+.no-break{white-space:nowrap}
+/* Opportunity Board カードの stagger（各カード animationDelay インライン・reduced-motionで無効） */
+.ob-card{animation:obIn 150ms ease-out backwards}@keyframes obIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in{animation:none}}`}</style>
       <div className="app-quiet" style={{ display: 'contents' }}>
         <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
       </div>

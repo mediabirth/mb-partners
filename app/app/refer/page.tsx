@@ -4,7 +4,7 @@ import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
-import { rewardValueText, rewardPillText } from '@/lib/reward-format'
+import { rewardValueText, rewardPillText, rewardRangeLabel, effortBadge, menuEffortKinds, brandHasTsunaguOnly, CONNECT_ONLY_LABEL } from '@/lib/reward-format'
 import RewardPill from '@/components/ui/RewardPill'
 import { submitPartnerReferral, getPartnerInfo } from './actions'
 
@@ -183,12 +183,13 @@ export default function ReferPage() {
 
   return (
     <div>
-      {/* ── 統合サービス選択（タイル＋直下展開パネル） ── */}
+      {/* ── Opportunity Board：フル幅ブランドカード＋直下メニュー展開 ── */}
       {step === 'select' && (
         <div className="page-anim">
           <div style={{ padding: '22px 20px 14px' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>どんな人を紹介しますか？</h2>
-            <p style={{ ...C.note, marginTop: 6 }}>タップするとメニューが開きます。</p>
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.08em', color: 'var(--muted2)' }}>紹介をはじめる</div>
+            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em', marginTop: 4 }}>どなたの顔が浮かびますか？</h2>
+            <p style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>気になるメニューを開いて、そのまま紹介できます</p>
           </div>
           <div style={{ padding: '0 20px 28px' }}>
             {services.length === 0 && (svcLoading || svcError) && (
@@ -202,25 +203,19 @@ export default function ReferPage() {
                 ) : <div style={{ ...C.note }}>サービスを読み込んでいます…</div>}
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {chunk(services, 2).map((row, ri) => (
-                <Fragment key={ri}>
-                  {row.map(svc => (
-                    <ServiceTile key={svc.id} svc={svc} active={expandedSvc === svc.id} onTap={() => toggleTile(svc)} />
-                  ))}
-                  {row.some(s => s.id === expandedSvc) && (
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <MenuPanel svc={services.find(s => s.id === expandedSvc)!} onPick={pickReward} />
-                    </div>
-                  )}
-                </Fragment>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {services.map((svc, i) => (
+                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} />
               ))}
             </div>
-            {/* 相談カード（全幅最下部） */}
-            <button onClick={() => { setStep('consult'); setError('') }} style={{ width: '100%', marginTop: 12, background: 'var(--bg2)', border: '0.5px dashed var(--line)', borderRadius: 14, padding: '15px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* 相談カード（全幅最下部・0.5px破線） */}
+            <button onClick={() => { setStep('consult'); setError('') }} style={{ width: '100%', marginTop: 12, background: 'var(--bg2)', border: '0.5px dashed var(--line)', borderRadius: 14, padding: '15px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}>
+              <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 14, fontWeight: 500 }}>迷ったらまず相談</span>
-                <span style={{ display: 'block', ...C.note, marginTop: 2 }}>MBが一緒に決めます。</span>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>迷ったらまず相談</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--muted2)', marginTop: 2 }}>どのメニューが合うか、MBが一緒に考えます</span>
               </span>
               <span style={{ color: 'var(--muted)', fontSize: 15, flexShrink: 0 }}>›</span>
             </button>
@@ -431,47 +426,80 @@ function Radio({ active, onSelect, title, desc }: { active: boolean; onSelect: (
   )
 }
 
-// 統合選択タイル：アイコン30px＋紹介対象13px（2行分確保）＋報酬レンジ下端。選択中＝1.5px accent枠のみ（面bg廃止）。
-function ServiceTile({ svc, active, onTap }: { svc: ServiceWithMenus; active: boolean; onTap: () => void }) {
-  const audience = (svc as { target_audience?: string | null }).target_audience || svc.name
-  const range = serviceRewardRange(svc)
-  return (
-    <button onClick={onTap} style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: '14px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 132 }}>
-      <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={30} />
-      <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, minHeight: 38, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{audience}</div>
-      {/* 報酬レンジは下端揃え（無い場合も高さ統一のため slot を確保） */}
-      <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 'auto', minHeight: 15 }}>{range}</div>
-    </button>
-  )
-}
-
-// 展開パネル：<ブランド> のメニューを選ぶ ＋ メニュー行（名前14px＋short_desc12px＋報酬ピル＋chevron・0.5px罫線）。
-function MenuPanel({ svc, onPick }: { svc: ServiceWithMenus; onPick: (sm: MenuRow, menu: Menu, reward: MenuReward) => void }) {
+// Opportunity Board ブランドカード：フル幅・1行目(ロゴ40px+名前+メニューN+chevron)/2行目(フック文)/3行目(レンジピル+ヒント)。
+//   展開でカード内にメニュー行リスト（0.5px罫線）。展開機構は既存の expandedSvc を維持（URL不変）。
+function BrandCard({ svc, active, index, onToggle, onPick }: {
+  svc: ServiceWithMenus; active: boolean; index: number
+  onToggle: () => void; onPick: (sm: MenuRow, menu: Menu, reward: MenuReward) => void
+}) {
+  const audience = (svc as { target_audience?: string | null }).target_audience || ''
   const groups = svc.service_menus
     .flatMap(sm => (sm.menus ?? []).map(menu => ({ sm, menu })))
     .filter(({ menu }) => (menu.rewards ?? []).length > 0)
     .sort((a, b) => ((a.menu as { sort?: number }).sort ?? 0) - ((b.menu as { sort?: number }).sort ?? 0))
+  const menuList = groups.map(g => g.menu)
+  const range = rewardRangeLabel(menuList)
+  const hasTsunaguOnly = brandHasTsunaguOnly(menuList as Array<{ rewards?: MenuReward[] | null; effort_task_kinds?: string[] | null }>)
   return (
-    <div className="exp-in" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 16px', marginTop: 2 }}>
-      <div style={{ fontSize: 12, color: 'var(--muted2)', marginBottom: 4 }}>{svc.name} のメニューを選ぶ</div>
-      {groups.length === 0 ? (
-        <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '10px 0', margin: 0 }}>メニューは準備中です。</p>
-      ) : groups.map(({ sm, menu }, i) => {
-        const reward = (menu.rewards ?? [])[0]
-        const short = (menu as { short_description?: string | null }).short_description
-        return (
-          <button key={menu.id} onClick={() => onPick(sm, menu, reward)}
-            style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', padding: '13px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 500 }}>{menu.name}</span>
-              {short && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>{short}</span>}
-              {/* 報酬ピル（共通コンポーネント・「報酬」接頭辞は省略） */}
-              {reward && <span style={{ display: 'inline-block', marginTop: 7 }}><RewardPill>{rewardLabelFromReward(reward)}</RewardPill></span>}
-            </span>
-            <span style={{ color: 'var(--muted)', fontSize: 15, flexShrink: 0 }}>›</span>
-          </button>
-        )
-      })}
+    <div className="ob-card" style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden', animationDelay: `${index * 60}ms` }}>
+      <button onClick={onToggle} style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--txt)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* 1行目 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={40} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{svc.name}</div>
+            <div className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 1 }}>メニュー {groups.length}</div>
+          </div>
+          <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex', transition: 'transform 150ms ease-out', transform: active ? 'rotate(180deg)' : 'none' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9l6 6 6-6" /></svg>
+          </span>
+        </div>
+        {/* 2行目 フック文（target_audience そのまま・折返し・truncateしない） */}
+        {audience && <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>{audience}</p>}
+        {/* 3行目 レンジピル＋連絡のみヒント */}
+        {(range || hasTsunaguOnly) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {range && <RewardPill>{range}</RewardPill>}
+            {hasTsunaguOnly && <span className="no-break" style={{ fontSize: 11, color: 'var(--muted2)' }}>{`${CONNECT_ONLY_LABEL}のメニューあり`}</span>}
+          </div>
+        )}
+      </button>
+      {/* 展開：メニュー行リスト（0.5px罫線区切り） */}
+      {active && (
+        <div className="exp-in" style={{ borderTop: '0.5px solid var(--line)', padding: '0 16px' }}>
+          {groups.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '13px 0', margin: 0 }}>メニューは準備中です。</p>
+          ) : groups.map(({ sm, menu }, i) => {
+            const reward = (menu.rewards ?? [])[0]
+            const short = (menu as { short_description?: string | null }).short_description
+            const badge = effortBadge(menuEffortKinds(reward?.reward_type, (menu as { effort_task_kinds?: string[] }).effort_task_kinds))
+            return (
+              <button key={menu.id} onClick={() => onPick(sm, menu, reward)}
+                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', padding: '13px 0', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--txt)' }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontSize: 14, fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
+                    {badge && <span className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '1px 8px', flexShrink: 0 }}>{badge}</span>}
+                  </span>
+                  {short && <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>{short}</span>}
+                </span>
+                {reward && <MenuRowPill reward={reward} />}
+                <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
+}
+
+// メニュー行の報酬ピル（共通 RewardPill・継続は「粗利X%」500＋「/月」400）。
+function MenuRowPill({ reward }: { reward: MenuReward }) {
+  if (reward.reward_type === 'continuous') {
+    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
+  }
+  return <RewardPill style={{ flexShrink: 0 }}>{rewardLabelFromReward(reward)}</RewardPill>
 }
