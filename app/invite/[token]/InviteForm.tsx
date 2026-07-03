@@ -3,15 +3,14 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import BankBranchSelect, { type BankDraft } from '@/components/ui/BankBranchSelect'
 
 type Step = 1 | 2 | 3 | 4
 const STEP_LABELS = ['アカウント', '基本情報', '報酬受取', '確認と同意']
-// ⑤メジャーバンク（プルダウン）。無い場合は「その他」で自由入力。支店は自由入力（次段で銀行連動候補）。
-const MAJOR_BANKS = ['三菱UFJ銀行', '三井住友銀行', 'みずほ銀行', 'りそな銀行', 'ゆうちょ銀行', '楽天銀行', '住信SBIネット銀行', 'PayPay銀行', 'イオン銀行', 'GMOあおぞらネット銀行']
 
-const card: React.CSSProperties = { width: '100%', maxWidth: 430, background: '#fff', minHeight: '100vh', boxShadow: '0 0 48px rgba(14,14,20,.10)', display: 'flex', flexDirection: 'column' }
-const input: React.CSSProperties = { width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', color: 'var(--txt)', background: '#fff' }
-const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }
+const card: React.CSSProperties = { width: '100%', maxWidth: 430, background: '#fff', minHeight: '100dvh', boxShadow: '0 0 48px rgba(14,14,20,.10)', display: 'flex', flexDirection: 'column' }
+const input: React.CSSProperties = { width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', color: 'var(--txt)', background: '#fff' }
+const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }
 
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return <div style={{ marginBottom: 13 }}><span style={lbl}>{label}</span>{children}</div>
@@ -36,13 +35,13 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
   const [lastName, setLastName] = useState(nameParts.length >= 2 ? nameParts[0] : '')
   const [firstName, setFirstName] = useState(nameParts.length >= 2 ? nameParts.slice(1).join(' ') : '')
   const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')   // B: 住所（支払調書の送付・税務手続に使用）
   // STEP3
   const [taxType, setTaxType] = useState<'individual' | 'corporate'>('individual')
-  // ⑤銀行：メジャーバンクをプルダウン、「その他」で自由入力。
-  const [bankChoice, setBankChoice] = useState('')
-  const [bankOther, setBankOther] = useState('')
-  const bankName = bankChoice === '__other__' ? bankOther : bankChoice
-  const [branchName, setBranchName] = useState('')
+  // B: 銀行→支店は全銀マスタの段階選択（自由入力フォールバック付き）
+  const [bankDraft, setBankDraft] = useState<BankDraft>({ bank_name: '', branch_name: '' })
+  const bankName = bankDraft.bank_name
+  const branchName = bankDraft.branch_name
   const [accountType, setAccountType] = useState('普通')
   const [accountNumber, setAccountNumber] = useState('')
   const [accountHolder, setAccountHolder] = useState('')
@@ -52,7 +51,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
   const [agreePrivacy, setAgreePrivacy] = useState(false)
 
   const step1ok = password.length >= 8 && password === passwordConfirm
-  const step2ok = !!lastName.trim() && !!firstName.trim() && !!phone.trim()
+  const step2ok = !!lastName.trim() && !!firstName.trim() && !!phone.trim() && !!address.trim()
   const step3ok = !!bankName.trim() && !!branchName.trim() && !!accountNumber.trim() && !!accountHolder.trim()
   const step4ok = agreeTerms && agreePrivacy
 
@@ -73,7 +72,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
       body: JSON.stringify({
         token, email, password,
         lastName: lastName.trim(), firstName: firstName.trim(),
-        phone: phone.trim(),
+        phone: phone.trim(), address: address.trim(),
         taxType, bankName: bankName.trim(), branchName: branchName.trim(), accountType,
         accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim(), invoiceNumber: invoiceNumber.trim(),
         agreeTerms, agreePrivacy,
@@ -97,12 +96,12 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
           <div className="celebrate-pop" style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.4"><path d="M20 6L9 17l-5-5" /></svg>
           </div>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>登録が完了しました</h1>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 500, marginBottom: 8 }}>登録が完了しました</h1>
           <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 22 }}>MB Partners へようこそ。<br />あなたのパートナーコードはこちらです。</p>
           {code && (
             <div style={{ background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '16px 28px', marginBottom: 26 }}>
               <div className="eyebrow" style={{ marginBottom: 4 }}>Partner Code</div>
-              <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '.08em', color: 'var(--blue)' }}>{code}</div>
+              <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.5rem', letterSpacing: '.08em', color: 'var(--blue)' }}>{code}</div>
             </div>
           )}
           <button onClick={() => { window.location.href = '/app' }} className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }}>ダッシュボードへ</button>
@@ -123,7 +122,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
             <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="2.6" />
             <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
           </svg>
-          <h1 style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-.01em' }}>パートナー登録</h1>
+          <h1 style={{ fontSize: '1.12rem', fontWeight: 500, letterSpacing: '-.01em' }}>パートナー登録</h1>
           <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>STEP {step} / 4 — {STEP_LABELS[step - 1]}</p>
           <div style={{ display: 'flex', gap: 5, marginTop: 12 }}>
             {[1, 2, 3, 4].map((s) => (
@@ -155,6 +154,8 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
                 <div style={{ flex: 1 }}><Field label="名 *"><input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="太郎" style={input} /></Field></div>
               </div>
               <Field label="電話番号 *"><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" style={input} /></Field>
+              <Field label="住所 *"><input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="大阪府〇〇市〇〇1-2-3" style={input} /></Field>
+              <p style={{ fontSize: '.62rem', color: 'var(--muted)', margin: '-6px 0 0', lineHeight: 1.6 }}>住所は支払調書の発行など税務手続にのみ使用します。</p>
             </>
           )}
 
@@ -163,25 +164,15 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               <Field label="区分 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
-                    <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 700, fontSize: '.8rem', cursor: 'pointer' }}>{l}</button>
+                    <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer' }}>{l}</button>
                   ))}
                 </div>
               </Field>
-              <Field label="銀行 *">
-                <select value={bankChoice} onChange={(e) => setBankChoice(e.target.value)} style={input}>
-                  <option value="">選択してください</option>
-                  {MAJOR_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-                  <option value="__other__">その他（自由入力）</option>
-                </select>
-                {bankChoice === '__other__' && (
-                  <input value={bankOther} onChange={(e) => setBankOther(e.target.value)} placeholder="例：〇〇信用金庫" style={{ ...input, marginTop: 8 }} />
-                )}
-              </Field>
-              <Field label="支店 *"><input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="例：渋谷支店" style={input} /></Field>
+              <BankBranchSelect value={bankDraft} onChange={setBankDraft} />
               <Field label="種別 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {['普通', '当座'].map((v) => (
-                    <button key={v} type="button" onClick={() => setAccountType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${accountType === v ? 'var(--blue)' : 'var(--line)'}`, background: accountType === v ? 'var(--blue-bg2)' : '#fff', color: accountType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 700, fontSize: '.8rem', cursor: 'pointer' }}>{v}</button>
+                    <button key={v} type="button" onClick={() => setAccountType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${accountType === v ? 'var(--blue)' : 'var(--line)'}`, background: accountType === v ? 'var(--blue-bg2)' : '#fff', color: accountType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer' }}>{v}</button>
                   ))}
                 </div>
               </Field>
@@ -198,6 +189,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
                   ['お名前', `${lastName} ${firstName}`],
                   ['メール', email],
                   ['電話番号', phone],
+                  ['住所', address],
                   ['区分', taxType === 'individual' ? '個人' : '法人'],
                   ['振込先', `${bankName} ${branchName} ${accountType} ${accountNumber}`],
                   ['口座名義', accountHolder],
@@ -205,13 +197,14 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: '.72rem' }}>
                     <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{k}</span>
-                    <span style={{ fontWeight: 600, textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
+                    <span style={{ fontWeight: 500, textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
                   </div>
                 ))}
               </div>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
-                <span>利用規約に同意します　<a href={`/legal/terms?kind=${frontierFlag ? 'frontier' : 'partner'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline', fontWeight: 700 }}>利用規約を読む</a></span>
+                {/* B: プライバシーポリシーと同形式の文中リンクに統一（「利用規約を読む」ボタン風リンクは削除） */}
+                <span><a href={`/legal/terms?kind=${frontierFlag ? 'frontier' : 'partner'}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>利用規約</a>に同意します</span>
               </label>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 0', fontSize: '.74rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--blue)', width: 16, height: 16 }} />
