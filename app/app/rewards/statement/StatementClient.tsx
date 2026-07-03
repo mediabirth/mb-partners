@@ -132,7 +132,7 @@ export default function StatementClient({
             </table>
             {bankDisplay && (
               <div style={{ fontSize: '.58rem', color: 'var(--muted)', lineHeight: 1.8, marginTop: 14 }}>
-                振込先: {bankDisplay} / 源泉所得税は税法上の対象報酬にのみ適用されます。本明細は確定申告の参考資料としてご利用いただけます。
+                振込先: {bankDisplay} / 報酬額は税抜表示です。消費税はインボイス登録の有無に応じて別途のお取り扱いとなります。源泉所得税は税法上の対象報酬にのみ適用されます。本明細は確定申告の参考資料としてご利用いただけます。
               </div>
             )}
           </div>

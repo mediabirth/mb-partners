@@ -1,22 +1,12 @@
 /**
- * 案件詳細の「報酬到達文言」（⑥）＋「いまの状況ナラティブ」（⑦）。
+ * 案件詳細の「いまの状況ナラティブ」（⑦）。
  * ★money計算・reward_snapshot の書込には一切触れない。ステータス→文言の表示写像のみ。
  * 将来データ化できるよう定数マップとして分離（コード定数・現時点は静的）。
+ *
+ * 整合性プログラム決定②: 報酬到達文言（「成約すると ¥30,000」等）は全種削除し、
+ * ヘッダの報酬ピルに一本化（rewardReachPrefix は撤去済み）。
  */
 export type DealStatusKey = 'received' | 'in_progress' | 'confirmed' | 'paid'
-
-// ⑥ 報酬到達文言のプレフィックス（金額 {reward} は呼び出し側で 500 太字にして連結）。
-//   受付/対応中=「成約すると {reward}」／成約=「報酬が確定しました {reward}」／支払済=「お支払い済み {reward}」。
-//   lost・未知ステータスは null（表示しない）。
-export function rewardReachPrefix(status: string): string | null {
-  switch (status) {
-    case 'received':
-    case 'in_progress': return '成約すると'
-    case 'confirmed':   return '報酬が確定しました'
-    case 'paid':        return 'お支払い済み'
-    default:            return null
-  }
-}
 
 // ⑦ いまの状況ナラティブ（協力タスク0件＝つなぐだけの案件）。title 必須・sub 任意。
 export const STATUS_NARRATIVE: Record<DealStatusKey, { title: string; sub: string }> = {

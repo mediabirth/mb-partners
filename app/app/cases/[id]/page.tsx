@@ -8,7 +8,7 @@ import { rewardValueText } from '@/lib/reward-format'
 import DealNextActions from '@/components/DealNextActions'
 import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import { customerHonorific } from '@/lib/customer'
-import { rewardReachPrefix, statusNarrative } from '@/lib/deal-status-narrative'
+import { statusNarrative } from '@/lib/deal-status-narrative'
 
 const STATUS_LABEL: Record<string, string> = {
   received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
@@ -157,13 +157,8 @@ export default async function CaseDetailPage({
             </div>
           )}
 
-          {/* 4. 進捗：報酬到達文言（⑥・共通）＋ミニステップ */}
-          {rewardReachPrefix(deal.status) && (
-            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--c-blue)', padding: '24px 20px 0' }}>
-              {rewardReachPrefix(deal.status)} <span style={{ fontWeight: 500 }}>{rewardText}</span>
-            </div>
-          )}
-          <div style={{ padding: rewardReachPrefix(deal.status) ? '10px 20px 8px' : '24px 20px 8px' }}>
+          {/* 4. 進捗ミニステップ（決定②: 報酬到達文言は全種削除・報酬はヘッダのピルに一本化） */}
+          <div style={{ padding: '24px 20px 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', margin: '0 1px 6px' }}>
               {RAIL_STEPS.map((s, i) => (
                 <span key={i} style={{ display: 'contents' }}>
@@ -188,7 +183,7 @@ export default async function CaseDetailPage({
         <div style={{ marginTop: 8 }}>
           {[
             ['ステータス', STATUS_LABEL[deal.status]],
-            ['報酬予定額', deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '確認中'],
+            ['報酬予定額（税抜）', deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '確認中'],
             ['メニュー', menuLabel ? `${svc?.name ?? ''} ─ ${menuLabel}` : (svc?.name ?? '相談（サービス未定）')],
             ['登録日', new Date(deal.created_at).toLocaleDateString('ja')],
             ...(deal.meeting_at ? [['商談予定', new Date(deal.meeting_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })]] : []),

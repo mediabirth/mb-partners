@@ -30,7 +30,9 @@ function norm(s: string | null | undefined): string {
 function rewardLabelFromReward(r: MenuReward | null): string { return r ? rewardValueText(r) : '' }
 function rewardPill(r: MenuReward): string { return rewardPillText(r) }
 function confirmTrailing(r: MenuReward): string {
-  return `${rewardLabelFromReward(r)} ・ 成約時、翌月末払い`
+  // 決定①: 報酬は税抜統一。率報酬はラベル自体が「粗利(税抜)」を含むため、固定額のみ（税抜）を付す。
+  const tax = r.reward_type === 'fixed' ? '（税抜）' : ''
+  return `${rewardLabelFromReward(r)}${tax} ・ 成約時、翌月末払い`
 }
 
 // STEP1 タイルの報酬レンジ最小表記（1色）。
@@ -600,7 +602,7 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
 // メニュー行の報酬ピル（共通 RewardPill・継続は「粗利X%」500＋「/月」400）。
 function MenuRowPill({ reward }: { reward: MenuReward }) {
   if (reward.reward_type === 'continuous') {
-    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
+    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利(税抜)の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
   }
   return <RewardPill style={{ flexShrink: 0 }}>{rewardLabelFromReward(reward)}</RewardPill>
 }

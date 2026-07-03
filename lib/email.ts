@@ -129,7 +129,7 @@ ${rows.map(([k, v]) => `・${k}：${v}`).join('\n')}
 ${meetLineText}
 このあとはMBがお客さまへご連絡します。進捗は案件ページでご確認いただけます。
 ${caseLineText}
-※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。
+※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します（税抜表示・消費税はインボイス登録の有無に応じて支払時に別途）。
 
 ご不明な点は ${SUPPORT} までお問い合わせください。
 — MB Partners 運営事務局`
@@ -150,7 +150,7 @@ ${caseLineText}
     <div style="background:#fff;border-radius:10px;padding:14px 16px">
       <div style="font-size:13px;color:#41414E">このあとはMBがお客さまへご連絡します。進捗は案件ページでご確認いただけます。</div>
       ${caseUrl ? `<div style="margin-top:10px"><a href="${caseUrl}" style="color:#4733E6;word-break:break-all">案件ページを開く</a></div>` : ''}
-      <div style="font-size:12px;color:#6E707D;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します。</div>
+      <div style="font-size:12px;color:#6E707D;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します（税抜表示・消費税はインボイス登録の有無に応じて支払時に別途）。</div>
     </div>
   </div>
   <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>

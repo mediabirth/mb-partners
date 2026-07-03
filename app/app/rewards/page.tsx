@@ -45,7 +45,7 @@ export default async function RewardsPage() {
           v3.1：APP側のみ .rh-q ラッパで太字を500へ静音化（.app-quiet 配下・共有RewardHero本体は非改変＝vendor不変）。 */}
       <div className="rh-q">
       <RewardHero
-        label={`報酬 ${new Date().getFullYear()} 合計`}
+        label={`報酬（税抜） ${new Date().getFullYear()} 合計`}
         amount={totalGross}
         items={[
           { key: 'paid', label: '支払済', value: paidGross, format: 'yen' },

@@ -187,7 +187,7 @@ export default async function PartnerDetailPage({
           {/* KPI strip */}
           <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
             {[
-              { label: '累計報酬(税込)', value: cumulativeReward, unit: '',   yen: true,  color: 'var(--c-blue)' },
+              { label: '累計報酬（税抜）', value: cumulativeReward, unit: '',   yen: true,  color: 'var(--c-blue)' },
               { label: '累計案件',       value: totalDeals,       unit: '件', yen: false, color: undefined },
               { label: '進行中',         value: activeDeals,      unit: '件', yen: false, color: activeDeals > 0 ? 'var(--amber)' : undefined },
               { label: '今月成約',       value: monthConfirmed,   unit: '件', yen: false, color: monthConfirmed > 0 ? 'var(--green)' : undefined },

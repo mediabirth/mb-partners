@@ -93,7 +93,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   ) : (
     <div className="ctable-scroll" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '2.2fr .9fr .7fr .65fr .6fr 1fr .8fr', padding: '9px 20px', borderBottom: '1px solid var(--line)', background: 'var(--bg2)' }}>
-        {['パートナー', '区分', 'コード', '税区分', '累計成約', '累計報酬(税込)', '状態'].map(h => <span key={h} style={{ fontSize: '.58rem', fontWeight: 700, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>)}
+        {['パートナー', '区分', 'コード', '税区分', '累計成約', '累計報酬（税抜）', '状態'].map(h => <span key={h} style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>)}
       </div>
       {rows.map((r, i) => {
         if (r.kind === 'delivery') {

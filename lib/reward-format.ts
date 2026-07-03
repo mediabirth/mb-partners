@@ -8,12 +8,13 @@ export type RewardLike = {
   default_months?: number | null
 }
 
-/** 単一報酬の値記法。fixed=¥、rate=粗利のX%、continuous=継続 粗利X%/月（months指定で・Yヶ月）。 */
+/** 単一報酬の値記法。fixed=¥、rate=粗利(税抜)のX%、continuous=継続 粗利(税抜)X%/月（months指定で・Yヶ月）。
+ *  決定①: 報酬の基準は税抜粗利。率報酬は基準を「粗利(税抜)」と明記（金額の税抜は画面側の注記/ラベルで統一）。 */
 export function rewardValueText(r: RewardLike, opts?: { months?: boolean }): string {
   const v = Number(r.reward_value)
   if (r.reward_type === 'fixed') return `¥${v.toLocaleString()}`
-  if (r.reward_type === 'continuous') return `継続 粗利${v}%/月${opts?.months && r.default_months ? `・${r.default_months}ヶ月` : ''}`
-  return `粗利の${v}%`
+  if (r.reward_type === 'continuous') return `継続 粗利(税抜)${v}%/月${opts?.months && r.default_months ? `・${r.default_months}ヶ月` : ''}`
+  return `粗利(税抜)の${v}%`
 }
 
 /** 「報酬 ¥30,000」等の統一ピル文言（単一報酬・APP用）。 */
@@ -41,11 +42,11 @@ export function rewardRangeLabel(menus: RangeMenu[] | null | undefined): string 
   }
   if (rateVals.length) {
     const min = Math.min(...rateVals), max = Math.max(...rateVals)
-    return max > min ? `粗利の${min}%〜${max}%` : `粗利の${min}%〜`
+    return max > min ? `粗利(税抜)の${min}%〜${max}%` : `粗利(税抜)の${min}%〜`
   }
   if (contVals.length) {
     const min = Math.min(...contVals), max = Math.max(...contVals)
-    return max > min ? `継続 粗利${min}%〜${max}%/月` : `継続 粗利${min}%/月`
+    return max > min ? `継続 粗利(税抜)${min}%〜${max}%/月` : `継続 粗利(税抜)${min}%/月`
   }
   return null
 }
