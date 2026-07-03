@@ -876,7 +876,8 @@ export default function DealsPage() {
                       const rejectedExp = (d._deliveries ?? []).some(a => (a._expenses ?? []).some(e => e.status === 'rejected'))
                       const revenueMissing = (d._phase ?? phaseOf(d)) === 'project' && (d.deal_items?.length ?? 0) > 0 && (d.deal_items ?? []).every(it => it.revenue == null)
                       const attention = needsBase(d) || rejectedExp || revenueMissing
-                      const meta = [directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel ? partnerKindLabel + ' ' : ''}${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('　·　')
+                      {/* C: ボードカードでメニュー名が分かるように（サービス名はアイコンで判別可のためメニュー名を先頭に） */}
+                      const meta = [menuLabelOf(d), directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel ? partnerKindLabel + ' ' : ''}${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('　·　')
                       return (
                         <div
                           key={d.id}
