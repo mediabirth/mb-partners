@@ -38,11 +38,7 @@ export default function DealNextActions({
           )}
         </NextBox>
       )}
-      {!hasAppointment && (
-        <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 15px', marginBottom: 14 }}>
-          <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, margin: 0 }}>MBが対応中です。お客さまへご連絡し、状況はここに表示されます。</p>
-        </div>
-      )}
+      {/* 連絡型（協力タスク0件）の状態表示は案件ページ側「いまの状況」カード（⑦）に一本化＝旧・灰色カードは廃止 */}
 
       {showBooking && (
         <BookingDrawer dealId={dealId} defaultCustomerEmail={customerEmail}
