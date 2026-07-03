@@ -422,10 +422,11 @@ function ServiceTile({ svc, active, onTap }: { svc: ServiceWithMenus; active: bo
   const audience = (svc as { target_audience?: string | null }).target_audience || svc.name
   const range = serviceRewardRange(svc)
   return (
-    <button onClick={onTap} style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: '14px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116 }}>
+    <button onClick={onTap} style={{ background: '#fff', border: active ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: '14px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 132 }}>
       <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={30} />
       <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, minHeight: 38, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{audience}</div>
-      {range && <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 'auto' }}>{range}</div>}
+      {/* 報酬レンジは下端揃え（無い場合も高さ統一のため slot を確保） */}
+      <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 'auto', minHeight: 15 }}>{range}</div>
     </button>
   )
 }
