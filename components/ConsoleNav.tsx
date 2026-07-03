@@ -109,10 +109,10 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
           <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
         </svg>
         <div>
-          <b style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.98rem', color: 'var(--txt)' }}>
+          <b className="cq-brand" style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.98rem', color: 'var(--txt)' }}>
             MB <span style={{ color: 'var(--c-blue)' }}>Partners</span>
           </b>
-          <small style={{ display: 'block', fontFamily: 'Inter', fontSize: '.46rem', letterSpacing: '.3em', color: 'var(--c-blue)', marginTop: 2, fontWeight: 700, textTransform: 'uppercase' }}>Console</small>
+          <small className="cq-brand" style={{ display: 'block', fontFamily: 'Inter', fontSize: '.46rem', letterSpacing: '.3em', color: 'var(--c-blue)', marginTop: 2, fontWeight: 700, textTransform: 'uppercase' }}>Console</small>
         </div>
       </Link>
 
@@ -132,7 +132,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
           {item.id === 'partners' && badges.pendingPartners > 0 && (
             <span style={{
               marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-              background: 'var(--c-blue)', color: '#fff', fontSize: '.56rem', fontWeight: 700,
+              background: 'var(--c-blue)', color: '#fff', fontSize: '.56rem', fontWeight: 500,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
               animation: 'pulseDot 2.8s ease-in-out infinite',
             }}>
@@ -142,7 +142,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
           {item.id === 'inquiries' && badges.openInquiries > 0 && (
             <span style={{
               marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-              background: 'var(--amber)', color: '#fff', fontSize: '.56rem', fontWeight: 700,
+              background: 'var(--amber)', color: '#fff', fontSize: '.56rem', fontWeight: 500,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
               animation: 'pulseDot 2.8s ease-in-out infinite',
             }}>
@@ -166,7 +166,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
             <>
               <Avatar name={acctName || '—'} color={acctColor} src={acctAvatar} size={30} />
               <span style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', lineHeight: 1.25 }}>
-                <span style={{ fontSize: '.74rem', fontWeight: 700, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctName || '—'}</span>
+                <span style={{ fontSize: '.74rem', fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctName || '—'}</span>
                 <span style={{ fontSize: '.6rem', color: 'var(--muted2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acctRole || 'メンバー'}</span>
               </span>
             </>
