@@ -47,7 +47,7 @@ export default async function StatementPage() {
     return {
       ym, year: y, month: m,
       deals: mDeals.map(d => ({
-        date: new Date(d.fixed_month ?? d.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' }),
+        date: new Date(d.fixed_month ?? d.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' }),
         name: `${d.customer_name} / ${d.services?.name ?? ''}`,
         // 区分は現行タクソノミ：関わり方（紹介/協力/直販）。override行は「統括報酬」。
         channel: d.channel === 'override' ? '統括報酬'

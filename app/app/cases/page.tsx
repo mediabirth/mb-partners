@@ -34,7 +34,8 @@ function partnerStageLabel(status: string, reviewStage?: string | null): string 
 function fmtDate(s?: string | null): string {
   if (!s) return '—'
   const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? '—' : `${d.getMonth() + 1}/${d.getDate()}`
+  // JST明示（getMonth/getDate は実行環境TZ依存＝Edge(UTC)で日付がずれる）
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('ja', { month: 'numeric', day: 'numeric', timeZone: 'Asia/Tokyo' })
 }
 // ②B深化(b) 報酬の根拠（reward_snapshot を読むだけ・再計算しない）。率 or 固定。
 function rewardBasis(snap: unknown): string {

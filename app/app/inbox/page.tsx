@@ -66,8 +66,8 @@ const HERO_COLORS: Record<string, string> = {
   tips: 'linear-gradient(130deg,#C07A12,#EDB45C)',
 }
 
-const fmt = (iso: string) => new Date(iso).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })
-const fmtFull = (iso: string) => new Date(iso).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+const fmt = (iso: string) => new Date(iso).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })
+const fmtFull = (iso: string) => new Date(iso).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 export default function InboxPage() {
   const [notifs,     setNotifs]     = useState<Notification[]>([])

@@ -24,7 +24,7 @@ export type Template = {
 }
 type PendingImage = { path: string; previewUrl: string; filename: string }
 
-const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
+const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 
 export default function MessagesClient({ threads, messages, signedUrls = {}, templates = [] }: { threads: ThreadRow[]; messages: Msg[]; signedUrls?: Record<string, string>; templates?: Template[] }) {
   const [sel, setSel] = useState<string | null>(threads[0]?.key ?? null)

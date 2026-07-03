@@ -163,7 +163,7 @@ export default function SettingsPage() {
   function exportCsv() {
     const headers = ['日時', '操作者', 'カテゴリ', '対象', 'アクション']
     const rows = auditLogs.map(l => [
-      new Date(l.created_at).toLocaleString('ja'),
+      new Date(l.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' }),
       l.actor_name, l.category, l.target, l.action,
     ])
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -368,7 +368,7 @@ export default function SettingsPage() {
                 {auditLogs.map((log, i) => (
                   <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < auditLogs.length - 1 ? '1px solid #F2F2F6' : undefined, alignItems: 'flex-start' }}>
                     <span style={{ fontSize: '.62rem', color: 'var(--muted)', fontFamily: 'Inter', flexShrink: 0, paddingTop: 2, minWidth: 54 }}>
-                      {new Date(log.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                      {new Date(log.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>

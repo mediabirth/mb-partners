@@ -133,7 +133,7 @@ function TodoTab({ assignmentId, doTasks, nextId, deliverables, onChange, onErro
                 <FileThumb id={d.id} hasFile={d.has_file} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.file_name ?? '成果物'}</div>
-                  <div suppressHydrationWarning style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{d.created_at ? new Date(d.created_at).toLocaleDateString('ja') : ''}{d.note ? ` · ${d.note}` : ''}</div>
+                  <div suppressHydrationWarning style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{d.created_at ? new Date(d.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' }) : ''}{d.note ? ` · ${d.note}` : ''}</div>
                 </div>
                 <span style={{ fontSize: '.5rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>納品済</span>
               </div>
@@ -175,7 +175,7 @@ function MessageTab({ assignmentId, messages, onChange, onError }: { assignmentI
                     <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
                       {!mine && <span style={{ fontSize: '.52rem', color: 'var(--muted2)', fontWeight: 700, margin: '0 0 3px 6px' }}>MB</span>}
                       <div style={{ maxWidth: '80%', padding: '9px 13px', borderRadius: 16, fontSize: '.75rem', lineHeight: 1.55, background: mine ? 'var(--c-blue)' : '#fff', color: mine ? '#fff' : 'var(--txt)', border: mine ? 'none' : '1px solid var(--line)', borderBottomRightRadius: mine ? 5 : 16, borderBottomLeftRadius: mine ? 16 : 5 }}>{m.body}</div>
-                      <span suppressHydrationWarning style={{ fontSize: '.5rem', color: 'var(--muted)', margin: '3px 6px 0' }}>{m.created_at ? new Date(m.created_at).toLocaleTimeString('ja', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      <span suppressHydrationWarning style={{ fontSize: '.5rem', color: 'var(--muted)', margin: '3px 6px 0' }}>{m.created_at ? new Date(m.created_at).toLocaleTimeString('ja', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                   )
                 })}

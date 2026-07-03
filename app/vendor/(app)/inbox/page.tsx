@@ -7,7 +7,7 @@ export const runtime = 'edge'
 function fmt(at: string) {
   const d = new Date(at)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 function Icon({ type }: { type: string }) {
   const map: Record<string, { bg: string; c: string; d: React.ReactNode }> = {

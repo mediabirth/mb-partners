@@ -7,7 +7,7 @@ import { ChannelBadge, useIsNarrow, BlockBuilder, BlocksPreview, templateToBlock
 // Phase3-D②c：自由送信テンプレを左右1画面（master-detail）に統一。新規作成も右ペインで完結（別ルート遷移なし）。
 // ★既存CRUD API流用。resolve/送信/発火には触れない。
 const FREE_VARS = ['name']
-const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString('ja', { year: 'numeric', month: 'numeric', day: 'numeric' }) : ''
+const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'numeric', day: 'numeric' }) : ''
 type Sel = string | 'new' | null
 
 // ── 右ペイン：編集フォーム（key で選択ごとにリセット）─────────────

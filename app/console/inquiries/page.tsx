@@ -178,7 +178,7 @@ export default function ConsoleInquiriesPage() {
                     fontSize: '.64rem', color: 'var(--muted2)', flexShrink: 0,
                     minWidth: 74, textAlign: 'right',
                   }}>
-                    {new Date(inq.updated_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {new Date(inq.updated_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </Link>
               )

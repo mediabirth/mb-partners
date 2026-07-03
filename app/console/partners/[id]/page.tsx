@@ -176,7 +176,7 @@ export default async function PartnerDetailPage({
                 <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>
                   {p.profiles?.email}
                   <span style={{ margin: '0 6px', color: 'var(--line)' }}>·</span>
-                  登録 {new Date(p.created_at).toLocaleDateString('ja', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  登録 {new Date(p.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'short', day: 'numeric' })}
                   <span style={{ margin: '0 6px', color: 'var(--line)' }}>·</span>
                   {p.tax_type === 'individual' ? '個人（源泉10.21%）' : '法人'}
                 </div>
@@ -236,7 +236,7 @@ export default async function PartnerDetailPage({
                       <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
                         {d.services?.name ?? '相談（サービス未定）'}
                         <span style={{ margin: '0 5px' }}>·</span>
-                        {new Date(d.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                        {new Date(d.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })}
                       </div>
                     </div>
                     <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.8rem', fontFeatureSettings: '"tnum"', flexShrink: 0 }}>
@@ -297,7 +297,7 @@ export default async function PartnerDetailPage({
                   <tbody>
                     {[
                       { label: '税区分', value: p.tax_type === 'individual' ? '個人（源泉10.21%控除）' : '法人' },
-                      { label: 'KYC',    value: p.kyc_verified_at ? `✓ 確認済 (${new Date(p.kyc_verified_at).toLocaleDateString('ja')})` : '未確認' },
+                      { label: 'KYC',    value: p.kyc_verified_at ? `✓ 確認済 (${new Date(p.kyc_verified_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })})` : '未確認' },
                       { label: 'コード', value: p.code },
                     ].map(row => (
                       <tr key={row.label}>

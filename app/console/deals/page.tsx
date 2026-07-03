@@ -961,7 +961,7 @@ export default function DealsPage() {
                 ['ステータス', COLS.find(c => c.key === selected.status)?.label ?? selected.status],
                 ['報酬予定', selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '未確定'],
                 ['パートナー', selected.partners ? `${selected.partners.profiles?.name ?? ''} (${selected.partners.code})` : '—'],
-                ['登録日', new Date(selected.created_at).toLocaleString('ja')],
+                ['登録日', new Date(selected.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })],
               ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted2)' }}>{k}</span>
@@ -1288,7 +1288,7 @@ export default function DealsPage() {
                     <p style={{ fontSize: '.66rem', fontWeight: 800, color: 'var(--red)' }}>不成立（見送り）</p>
                     <p style={{ fontSize: '.7rem', color: 'var(--txt)', marginTop: 6 }}>理由：{selected.lost_reason ?? '—'}</p>
                     {selected.lost_note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>メモ：{selected.lost_note}</p>}
-                    {selected.lost_at && <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 6 }}>{new Date(selected.lost_at).toLocaleString('ja')}</p>}
+                    {selected.lost_at && <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 6 }}>{new Date(selected.lost_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}</p>}
                   </div>
                   {(() => {
                     // 復活は不成立から90日以内のみ。戻すと active になり金額編集が可能に。frozen/payout 無改修。

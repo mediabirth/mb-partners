@@ -124,7 +124,7 @@ export default function AnalyticsClient() {
           <span style={{ color: 'var(--muted2)' }}>〜</span>
           <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontFamily: 'inherit', fontSize: '.72rem' }} />
         </>}
-        <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{start.toLocaleDateString('ja')} 〜 {end.toLocaleDateString('ja')}</span>
+        <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>{start.toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })} 〜 {end.toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}</span>
       </div>
 
       {/* KPI */}

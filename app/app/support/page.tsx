@@ -187,7 +187,7 @@ export default function SupportPage() {
                   {inq.subject}
                 </div>
                 <div style={{ fontSize: '.64rem', color: 'var(--muted2)' }}>
-                  {CATEGORY_OPTIONS.find(c => c.value === inq.category)?.label} · {new Date(inq.updated_at).toLocaleDateString('ja')}
+                  {CATEGORY_OPTIONS.find(c => c.value === inq.category)?.label} · {new Date(inq.updated_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}
                 </div>
               </div>
               <span style={{

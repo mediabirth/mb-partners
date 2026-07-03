@@ -10,13 +10,14 @@ export function isCorporate(d: CustomerLike): boolean {
   return d.customer_type === 'corporate' || (!d.customer_type && !!d.company_name)
 }
 
-/** 敬称付き表示。個人=「氏名 様」 / 法人=「会社名 御中　担当者名 様」 */
+/** 敬称付き表示。個人=「氏名 様」 / 法人=「法人名 様」に固定（整合性プログラムC:
+ *  案件カード・詳細は法人名を担当者名より優先。担当者名は表示しない＝迷いのない一意表記）。 */
 export function customerHonorific(d: CustomerLike): string {
   if (isCorporate(d)) {
     const co = d.company_name || d.customer_name || ''
+    if (co) return `${co} 様`
     const person = d.contact_name
-    if (!co) return person ? `${person} 様` : ''
-    return person ? `${co} 御中　${person} 様` : `${co} 御中`
+    return person ? `${person} 様` : ''
   }
   const nm = d.customer_name || d.contact_name || ''
   return nm ? `${nm} 様` : ''

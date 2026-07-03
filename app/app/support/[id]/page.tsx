@@ -77,7 +77,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
           <div>
             <h2 style={{ fontSize: '.96rem', fontWeight: 500, marginBottom: 4 }}>{inquiry.subject}</h2>
             <p style={{ fontSize: '.65rem', color: 'var(--muted2)' }}>
-              {CATEGORY_OPTIONS[inquiry.category] ?? inquiry.category} · {new Date(inquiry.created_at).toLocaleDateString('ja')}
+              {CATEGORY_OPTIONS[inquiry.category] ?? inquiry.category} · {new Date(inquiry.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}
             </p>
           </div>
           <span style={{
@@ -116,7 +116,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
                 {msg.body}
               </div>
               <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 4, paddingLeft: isPartner ? 0 : 4, paddingRight: isPartner ? 4 : 0 }}>
-                {isPartner ? 'あなた' : '管理者'} · {new Date(msg.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {isPartner ? 'あなた' : '管理者'} · {new Date(msg.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
           )

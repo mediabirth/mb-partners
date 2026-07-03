@@ -93,7 +93,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--amber)' }}>⏳ 承認待ち</span>
             <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
-              {new Date(req.created_at).toLocaleString('ja-JP')}
+              {new Date(req.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
             </span>
           </div>
 
@@ -173,7 +173,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
                   {req.status === 'approved' ? '✓ 承認済み' : '✕ 却下済み'}
                 </span>
                 <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>
-                  {req.reviewed_at && new Date(req.reviewed_at).toLocaleString('ja-JP')}
+                  {req.reviewed_at && new Date(req.reviewed_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>

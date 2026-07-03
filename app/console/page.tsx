@@ -394,7 +394,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                   return (
                     <Link key={d.id} href={`/console/deals?deal=${d.id}`} className="lift" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 0', textDecoration: 'none', color: 'var(--txt)' }}>
                       <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: isToday ? 'var(--c-blue)' : 'var(--muted2)', fontWeight: 700, width: 64 }}>
-                        {dt.toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {dt.toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
                       {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--c-blue)' }}>本日</span>}
@@ -417,7 +417,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                   {(recentEvents ?? []).map((e: any) => (
                     <Link key={e.id} href={`/console/deals?deal=${e.deal_id}`} className="lift row-hover" style={{ display: 'flex', gap: 11, padding: '12px 18px', borderBottom: '1px solid #F2F2F6', alignItems: 'center', textDecoration: 'none', color: 'var(--txt)' }}>
                       <span style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.58rem', color: 'var(--muted)', width: 34 }}>
-                        {new Date(e.created_at).toLocaleDateString('ja', { month: 'numeric', day: 'numeric' })}
+                        {new Date(e.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })}
                       </span>
                       <b style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {e.deals ? customerHonorific(e.deals) : ''}

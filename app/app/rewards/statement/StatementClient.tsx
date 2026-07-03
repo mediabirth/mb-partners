@@ -154,8 +154,8 @@ export default function StatementClient({
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 16, lineHeight: 1.8 }}>
               <span>{partnerName} 様<br/>パートナーコード {partnerCode}</span>
               <span style={{ textAlign: 'right' }}>
-                集計期間 {yearLabel}/01/01–{new Date().toLocaleDateString('ja-JP').replace(/\//g, '/')}<br/>
-                発行日 {new Date().toLocaleDateString('ja', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                集計期間 {yearLabel}/01/01–{new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }).replace(/\//g, '/')}<br/>
+                発行日 {new Date().toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' })}
               </span>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.7rem', marginBottom: 14 }}>

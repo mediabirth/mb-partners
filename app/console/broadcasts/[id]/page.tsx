@@ -108,7 +108,7 @@ export default function BroadcastDetailPage() {
                 <div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 700, marginBottom: 4 }}>配信日時</div>
                   <div style={{ fontSize: '.82rem', fontWeight: 700 }}>
-                    {new Date(broadcast.sent_at).toLocaleString('ja')}
+                    {new Date(broadcast.sent_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}
                   </div>
                 </div>
                 <div style={{ borderLeft: '1px solid var(--line)', paddingLeft: 32 }}>
@@ -139,7 +139,7 @@ export default function BroadcastDetailPage() {
                     {broadcast.kind === 'news' ? 'NEWS' : 'TIPS'}
                   </span>
                   <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>
-                    {new Date(broadcast.created_at).toLocaleDateString('ja', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {new Date(broadcast.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })}
                   </span>
                 </div>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.4, marginBottom: 16 }}>

@@ -199,7 +199,7 @@ export async function sendInviteEmail(params: {
   const copy = INVITE_COPY[params.kind ?? 'partner'] ?? INVITE_COPY.partner
   const name = params.name?.trim() || copy.fallbackName
   const expires = params.expiresAt
-    ? new Date(params.expiresAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ? new Date(params.expiresAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
     : '発行から7日間'
 
   const subject = copy.subject

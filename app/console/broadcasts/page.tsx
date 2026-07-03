@@ -132,7 +132,7 @@ export default function BroadcastsPage() {
                     {b.title}
                   </div>
                   <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3 }}>
-                    作成: {new Date(b.created_at).toLocaleDateString('ja', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    作成: {new Date(b.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'short', day: 'numeric' })}
                   </div>
                 </div>
 
@@ -144,7 +144,7 @@ export default function BroadcastsPage() {
                         配信済
                       </div>
                       <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>
-                        {new Date(b.sent_at).toLocaleDateString('ja', { month: 'short', day: 'numeric' })}
+                        {new Date(b.sent_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'short', day: 'numeric' })}
                       </div>
                       <div style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>
                         開封 {b.read_count}件

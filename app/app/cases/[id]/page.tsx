@@ -185,8 +185,8 @@ export default async function CaseDetailPage({
             ['ステータス', STATUS_LABEL[deal.status]],
             ['報酬予定額（税抜）', deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '確認中'],
             ['メニュー', menuLabel ? `${svc?.name ?? ''} ─ ${menuLabel}` : (svc?.name ?? '相談（サービス未定）')],
-            ['登録日', new Date(deal.created_at).toLocaleDateString('ja')],
-            ...(deal.meeting_at ? [['商談予定', new Date(deal.meeting_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })]] : []),
+            ['登録日', new Date(deal.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })],
+            ...(deal.meeting_at ? [['商談予定', new Date(deal.meeting_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })]] : []),
             ...(deal.fixed_month ? [['計上月', deal.fixed_month.substring(0, 7)]] : []),
           ].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '0.5px solid var(--line)', fontSize: 13, gap: 12 }}>
@@ -225,7 +225,7 @@ export default async function CaseDetailPage({
               <div style={{ fontSize: 13, lineHeight: 1.55, color: i === 0 ? 'var(--txt)' : 'var(--muted2)', fontWeight: 400 }}>
                 {e.body}
                 <small style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2, fontWeight: 400 }}>
-                  {new Date(e.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(e.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </small>
               </div>
             </div>

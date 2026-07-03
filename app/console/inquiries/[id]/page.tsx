@@ -179,7 +179,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '.6rem', color: 'var(--muted2)', marginBottom: 4 }}>
                     <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{inquiry.partners?.profiles?.name ?? 'パートナー'}</span>
                     <span style={{ opacity: .8 }}>
-                      {new Date(inquiry.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(inquiry.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <span style={{ fontSize: '.56rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color, background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg }}>
                       {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
@@ -206,7 +206,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                       }}>
                         <span style={{ fontWeight: 600, color: 'var(--muted)' }}>{senderName}</span>
                         <span style={{ opacity: .8 }}>
-                          {new Date(msg.created_at).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(msg.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <div style={{
