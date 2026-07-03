@@ -11,6 +11,8 @@ import { createCentralMeetEvent } from '@/lib/mb-calendar-event'
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { partner_id, start_at, end_at, client_name, client_email } = body
+  // ② 公開予約ページのフリーテキスト（任意）。予約成立・空き枠・カレンダー・Meet には非接触・保存/通知のみ。
+  const note = typeof body.note === 'string' ? body.note.trim().slice(0, 2000) : ''
 
   if (!partner_id || !start_at || !end_at || !client_name || !client_email) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
       end_at,
       client_name,
       client_email,
+      note:             note || null,
       status:           'booked',
       google_event_id:  googleEventId,
     })
@@ -99,8 +102,10 @@ export async function POST(req: NextRequest) {
     const { sendSlack, sendOpsEmail, sendEmail, fmtJST } = await import('@/lib/notify')
     const whenJa = fmtJST(start_at)
     const meetLine = meetingUrl ? `\n・Meet：${meetingUrl}` : ''
-    await sendSlack(`📅 商談予約: ${client_name} — ${whenJa}${profile?.name ? `（担当: ${profile.name}）` : ''}${meetingUrl ? `\nMeet: ${meetingUrl}` : ''}`)
-    await sendOpsEmail(`【MB Partners】商談予約: ${client_name}`, `商談予約が入りました。\n・お客さま：${client_name}\n・日時：${whenJa}\n・担当：${profile?.name ?? '—'}${meetLine}`)
+    const noteLineSlack = note ? `\nメモ: ${note}` : ''
+    const noteLineMail = note ? `\n・ご相談内容：${note}` : ''
+    await sendSlack(`📅 商談予約: ${client_name} — ${whenJa}${profile?.name ? `（担当: ${profile.name}）` : ''}${meetingUrl ? `\nMeet: ${meetingUrl}` : ''}${noteLineSlack}`)
+    await sendOpsEmail(`【MB Partners】商談予約: ${client_name}`, `商談予約が入りました。\n・お客さま：${client_name}\n・日時：${whenJa}\n・担当：${profile?.name ?? '—'}${noteLineMail}${meetLine}`)
     if (profile?.email) {
       await sendEmail({
         to: profile.email,

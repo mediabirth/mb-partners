@@ -37,6 +37,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
   const [companyName, setCompanyName] = useState('')
   const [contactName, setContactName] = useState('')
   const [email, setEmail]            = useState('')
+  const [note, setNote]              = useState('')   // ② ご相談内容・メモ（任意）
   const [submitting, setSubmitting]  = useState(false)
   const [done, setDone]              = useState(false)
   const [doneSlot, setDoneSlot]      = useState<{ date: string; slot: Slot } | null>(null)
@@ -77,6 +78,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
         customer_type: customerType,
         company_name: customerType === 'corporate' ? companyName.trim() : null,
         contact_name: customerType === 'corporate' ? contactName.trim() : null,
+        note: note.trim() || null,
       }),
     })
     setSubmitting(false)
@@ -207,6 +209,13 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                 </label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="example@email.com"
                   style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }} />
+              </div>
+
+              {/* ② ご相談内容・メモ（任意）。予約成立・空き枠・Meet には非接触。 */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>ご相談内容・メモ（任意）</label>
+                <textarea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="ご相談したいことや当日話したい内容があればご記入ください"
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.6 }} />
               </div>
 
               {error && <p style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>{error}</p>}

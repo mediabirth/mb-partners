@@ -211,9 +211,12 @@ export async function submitPartnerReferral(formData: FormData) {
     if (channel === 'cooperation') {
       try {
         const { createServiceRoleClient } = await import('@/lib/supabase/server')
-        const { instantiateDealTasks } = await import('@/lib/coop-tasks')
+        const { instantiateDealTasks, markAutoTaskDone } = await import('@/lib/coop-tasks')
         const admin = await createServiceRoleClient()
         await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, menu_ref: menuRefRaw || null, reward_ref: rewardRefRaw || null, channel })
+        // ① 引き合わせタスク（＝紹介そのもの）は紹介成立で完了。専用 trigger_key='referral' で当該タスクのみ自動 done（アポイント等は不変）。
+        //   ★登録ページの本人チェック(coverage_agreed)とは別物・money/deal成立/他タスク非接触。
+        await markAutoTaskDone(admin, deal!.id, 'referral')
       } catch { /* best-effort */ }
     }
   }

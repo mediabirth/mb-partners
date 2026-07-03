@@ -1,23 +1,9 @@
 /**
- * F-2/F-4：Avatar — 人/パートナー用アバター。画像(src)があれば表示、無ければイニシャル＋色。
- * 画像はイニシャル円の上に重ねて描画するため、404時はイニシャルにフォールバック（JS不要・サーバー安全）。
- * color は hex か c-* 名（ServiceAvatar と同じ getServiceColors 相当）。BR-0トークン参照。
+ * Avatar — 人/パートナー用アバター（3面共通）。画像(src)があれば表示、無ければ人型シルエット。
+ * ④勝彦明示許可：画像未設定フォールバックを「頭文字1文字」→「人型シルエット（muted色＋surface背景）」に変更。
+ * ★ブランド/サービスのアイコン（ServiceAvatar）は対象外。size は現行踏襲。
  */
 import React from 'react'
-
-const NAMED: Record<string, { bg: string; fg: string }> = {
-  'c-blue':   { bg: '#EDEBFC', fg: '#4733E6' },
-  'c-purple': { bg: '#F0EAFA', fg: '#7A48D6' },
-  'c-amber':  { bg: '#FBF1DF', fg: '#C07A12' },
-  'c-green':  { bg: '#E7F6EF', fg: '#1E9E6A' },
-  'c-pink':   { bg: '#F9EAF4', fg: '#C2479E' },
-}
-
-function colorsOf(color?: string | null): { bg: string; fg: string } {
-  if (color && NAMED[color]) return NAMED[color]
-  if (color && /^#/.test(color)) return { bg: color, fg: '#fff' }
-  return { bg: 'var(--blue)', fg: '#fff' }
-}
 
 export type AvatarProps = {
   name?: string | null
@@ -27,21 +13,20 @@ export type AvatarProps = {
   style?: React.CSSProperties
 }
 
-export default function Avatar({ name, color, src, size = 32, style }: AvatarProps) {
-  const { bg, fg } = colorsOf(color)
-  const initial = (name ?? '').trim().charAt(0) || '?'
+export default function Avatar({ src, size = 32, style }: AvatarProps) {
   return (
     <span
       style={{
         position: 'relative', width: size, height: size, borderRadius: '50%', flexShrink: 0,
-        background: bg, color: fg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'Inter', fontWeight: 'var(--fw-strong)' as unknown as number,
-        fontSize: Math.max(10, Math.round(size * 0.42)), lineHeight: 1, userSelect: 'none', overflow: 'hidden',
-        ...style,
+        background: 'var(--bg2)', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', ...style,
       }}
       aria-hidden
     >
-      {initial}
+      {/* 人型シルエット（画像未設定時のフォールバック） */}
+      <svg width={Math.round(size * 0.62)} height={Math.round(size * 0.62)} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 12.4a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4Zm0 1.7c-3.55 0-6.9 1.86-6.9 4.55V20a.75.75 0 0 0 .75.75h12.3A.75.75 0 0 0 18.9 20v-1.35c0-2.69-3.35-4.55-6.9-4.55Z" />
+      </svg>
       {src && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
