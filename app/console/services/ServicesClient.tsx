@@ -5,7 +5,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import MenuDetailSheet, { type SheetMenuItem, type SheetReward } from '@/components/MenuDetailSheet'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
 import { parseAmount } from '@/lib/num'
-import { rewardPillForMenu, rewardValueText } from '@/lib/reward-format'
+import { rewardValueText } from '@/lib/reward-format'
 import RewardPill from '@/components/ui/RewardPill'
 import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
 
@@ -39,11 +39,12 @@ type MenuDraft = {
   name: string
   short_description: string    // menus.short_description（APP一覧の一言説明・3ペイン化でドロワーに集約）
   description: string          // menus.description（APP詳細シート「このメニューでは」）
+  calendar_member_id: string   // 担当メンバー（''=既定・一覧v2で担当selectを3ペインへ移設）
   rewards: RewardDraft[]
 }
 
 // 協力タスクテンプレ行（cooperation_task_templates・reward_id 紐付けの読込/同期に使用）。
-type Tpl = { id: string; service_id: string; menu_id: string | null; reward_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
+type Tpl = { id: string; service_id: string; menu_id: string | null; reward_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean; description: string | null }
 
 // 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
 type ServiceForm = {
@@ -165,13 +166,14 @@ function ServiceLogo({ logoPath, name, size = 44, icon = 'arrows', color = '#473
   return <ServiceAvatar logoPath={logoPath} icon={icon} color={color} name={name} size={size} />
 }
 
-// 並び替え用の上下ボタン（モバイルでも確実にタップできる方式）。
-function ReorderBtn({ label, onClick, disabled, small }: { label: string; onClick: () => void; disabled?: boolean; small?: boolean }) {
+// DnDハンドル（grip-vertical 14px/muted・SVG 2列6点）。行左端に常時表示・cursor:grab は親側で指定。
+function GripIcon() {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={label === '▲' ? '上へ移動' : '下へ移動'}
-      style={{ width: small ? 18 : 24, height: small ? 14 : 16, lineHeight: 1, fontSize: small ? '.5rem' : '.58rem', border: '0.5px solid var(--line)', borderRadius: 4, background: disabled ? 'var(--bg2)' : '#fff', color: disabled ? 'var(--line)' : 'var(--muted2)', cursor: disabled ? 'default' : 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {label}
-    </button>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{ display: 'block' }}>
+      <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+      <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+      <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+    </svg>
   )
 }
 
@@ -413,16 +415,20 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [navSel, setNavSel]      = useState<'basic' | number>('basic')
   const [svcForm, setSvcForm]    = useState<ServiceForm>(defaultServiceForm)
   const [submitting, startTrans] = useTransition()
-  const [toast, setToast]        = useState('')
+  // 一覧v2：トーストを {msg, undo?} 型へ拡張（undo付き＝8秒表示・deals ボードと同文法）。
+  const [toast, setToast]        = useState<{ msg: string; undo?: () => void } | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [svcError, setSvcError]  = useState('')
-  // Wave2：一覧のインライン編集（紹介対象・一言説明・担当変更）。★表示/編集UIのみ・money非接触。
-  const [editAudSvc, setEditAudSvc]     = useState<string | null>(null) // 紹介対象を編集中のブランドid
-  const [audDraft, setAudDraft]         = useState('')
-  const [editDescMenu, setEditDescMenu] = useState<string | null>(null) // 一言説明を編集中のメニューid
-  const [descDraft, setDescDraft]       = useState('')
-  const [editLongMenu, setEditLongMenu] = useState<string | null>(null) // 詳細説明(description)を編集中のメニューid
-  const [longDraft, setLongDraft]       = useState('')
-  const [editMemberFor, setEditMemberFor] = useState<string | null>(null) // 担当プルダウンを開いている対象キー（brand:<id> / menu:<id>）
+  // 一覧v2：ブランド行DnD（HTML5 draggable・deals/page.tsx ボードの流儀）。
+  const dragBrand = useRef<number | null>(null)
+  const [dragOverBrand, setDragOverBrand] = useState<number | null>(null)
+  // 3ペイン左ナビ：メニューDnD（同文法）。
+  const dragMenuNav = useRef<number | null>(null)
+  const [dragOverMenuNav, setDragOverMenuNav] = useState<number | null>(null)
+  // タスク説明（cooperation_task_templates.description・ラベル単位）：協力タスク内のインライン✎で編集。
+  const [taskDescs, setTaskDescs] = useState<Record<string, string>>({})
+  const [editTaskFor, setEditTaskFor] = useState<string | null>(null)   // `${mi}:${ri}:${label}`
+  const [taskDescDraft, setTaskDescDraft] = useState('')
 
   // ── メニュー編集（確定モック menu_edit_simplified_final・draft方式・保存で一括反映） ──
   const [menuDrafts, setMenuDrafts] = useState<MenuDraft[]>([])
@@ -446,17 +452,21 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     const tasksByReward: Record<string, Tpl[]> = {}
     const origT: Record<string, Tpl[]> = {}
     for (const t of (td.templates ?? []) as Tpl[]) if (t.reward_id) { (tasksByReward[t.reward_id] ??= []).push(t); (origT[t.reward_id] ??= []).push(t) }
+    // タスク説明（ラベル単位・初出値を代表に＝旧 TaskDescriptionEditor と同じ集約）→ 協力タスクの✎編集用。
+    const descs: Record<string, string> = {}
+    for (const t of (td.templates ?? []) as Tpl[]) if (!(t.label in descs)) descs[t.label] = t.description ?? ''
+    setTaskDescs(descs)
     const drafts: MenuDraft[] = []
     const origMids: string[] = []
     const rewardParent: Record<string, string> = {}
     for (const sm of svc.service_menus) {
       const md = await fetch(`/api/console/menus?service_menu_id=${sm.id}`).then(r => r.json()).catch(() => ({ menus: [] }))
-      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; short_description?: string | null; description?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
+      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; short_description?: string | null; description?: string | null; calendar_member_id?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
         origMids.push(mn.id)
         const rd = await fetch(`/api/console/menu-rewards?menu_id=${mn.id}`).then(r => r.json()).catch(() => ({ rewards: [] }))
         const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: number; reward_trigger: string | null; default_months: number | null }[])
           .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_months: r.default_months != null ? String(r.default_months) : '', reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
-        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, short_description: mn.short_description ?? '', description: mn.description ?? '', rewards })
+        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, short_description: mn.short_description ?? '', description: mn.description ?? '', calendar_member_id: mn.calendar_member_id ?? '', rewards })
       }
     }
     setMenuDrafts(drafts); setOrigMenuIds(origMids); setOrigRewardParent(rewardParent); setOrigTasks(origT)
@@ -464,7 +474,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function addMenuDraft() {
     const defaultSm = editing?.service_menus[0]?.id
     if (!defaultSm) { showToast('先にサービスを保存してください'); return }
-    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', short_description: '', description: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
+    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', short_description: '', description: '', calendar_member_id: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
     setNavSel(menuDrafts.length)   // 追加した draft を左ナビで即選択（中央＝メニュー編集・右＝シート追従）
   }
   function removeMenuDraft(i: number) {
@@ -487,16 +497,17 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     for (const oid of origMenuIds) if (!keepMenus.has(oid)) await fetch(`/api/console/menus/${oid}`, { method: 'DELETE' }).catch(() => {})
     for (const [rid, parentMenu] of Object.entries(origRewardParent)) if (keepMenus.has(parentMenu) && !keepRewards.has(rid)) await fetch(`/api/console/menu-rewards/${rid}`, { method: 'DELETE' }).catch(() => {})
     // メニュー upsert → 報酬 upsert → タスク同期
-    for (const d of menuDrafts) {
+    for (let di = 0; di < menuDrafts.length; di++) {
+      const d = menuDrafts[di]
       if (!d.name.trim() && d.rewards.every(r => !r.reward_value)) {
-        // 空draftは保存スキップ（既存idを持つ場合、DB行は残る＝一覧にも従来値のまま残す）
-        if (d.id && origMenuById.has(d.id)) { const om = origMenuById.get(d.id) as Menu; (rebuilt[om.service_menu_id] ??= []).push(om) }
+        // 空draftは保存スキップ（既存idを持つ場合、DB行は残る＝一覧にも従来値のまま残す）。
+        // rebuilt の sort は draft順（表示構築のみ・DBのsortには書かない＝sortはユーザー操作でのみ変更）。
+        if (d.id && origMenuById.has(d.id)) { const om = origMenuById.get(d.id) as Menu; (rebuilt[om.service_menu_id] ??= []).push({ ...om, sort: di }) }
         continue
       }
       const desc = d.description.trim() || null   // menus.description（詳細シート「このメニューでは」）
       const sdesc = d.short_description.trim() || null   // menus.short_description（一覧の一言説明）
       let menuId = d.id
-      let menuSort = menuId ? (origMenuById.get(menuId)?.sort ?? 0) : 0
       if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）', short_description: sdesc, description: desc }) }).catch(() => {})
       else {
         // POST /api/console/menus は name のみ受理（API変更は最小）→ description 系は POST 後に PATCH で反映。
@@ -504,7 +515,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         const jd = await res.json().catch(() => ({}))
         menuId = jd?.menu?.id ?? null
         if (!menuId) { showToast(`メニュー保存に失敗: ${jd?.error ?? res.status}`); continue }
-        menuSort = jd?.menu?.sort ?? 0
         if (desc || sdesc) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_description: sdesc, description: desc }) }).catch(() => {})
       }
       const builtRewards: MenuReward[] = []
@@ -529,8 +539,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         }
       }
       ;(rebuilt[d.service_menu_id] ??= []).push({
-        id: menuId, service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）', sort: menuSort, active: true,
-        calendar_member_id: d.id ? origMenuById.get(d.id)?.calendar_member_id ?? null : null,
+        id: menuId, service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）', sort: di, active: true,
+        calendar_member_id: d.calendar_member_id || null,
         short_description: sdesc,
         description: desc, rewards: builtRewards,
       })
@@ -538,7 +548,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     return rebuilt
   }
 
-  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 2500) }
+  // トースト（undo付きは8秒表示・既存 showToast('文字列') 呼び出しはそのまま動く）。
+  function showToast(msg: string, opts?: { undo?: () => void; duration?: number }) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ msg, undo: opts?.undo })
+    toastTimer.current = setTimeout(() => setToast(null), opts?.duration ?? 2500)
+  }
 
   function openEdit(svc: ServiceWithMenus) {
     setSvcForm(svcToForm(svc))
@@ -600,48 +615,50 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     })
   }
 
-  function toggleActive(svc: ServiceWithMenus) {
-    startTrans(async () => {
-      const res = await fetch(`/api/console/services/${svc.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !svc.active }),
-      })
-      if (res.ok) {
-        setServices(prev => prev.map(s => s.id === svc.id ? { ...s, active: !s.active } : s))
-        showToast(svc.active ? '停止しました' : '公開しました')
-      }
+  // ── 一覧v2：ブランド行DnD（sort のみ更新・money/中身は非接触）。表示順 = sort 昇順。 ──
+  // ドロップで並びを楽観更新 → sort=index へ採番し直し、変わった行だけ PATCH（旧 moveBrand の保存作法を継承）。
+  // 8秒Undoトースト：元の sort 配列を復元PATCH。sort はユーザーのドラッグ操作でのみ変更する。
+  function reorderBrands(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= services.length || to >= services.length) return
+    const before = services
+    const arr = [...before]
+    const [moved] = arr.splice(from, 1)
+    arr.splice(to, 0, moved)
+    const renum = arr.map((s, idx) => ({ ...s, sort: idx }))
+    const changed = renum.filter(s => (before.find(o => o.id === s.id)?.sort ?? -1) !== s.sort)
+    setServices(renum)
+    if (changed.length === 0) return
+    for (const s of changed) fetch(`/api/console/services/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: s.sort }) }).catch(() => {})
+    const prevSorts = changed.map(s => ({ id: s.id, sort: before.find(o => o.id === s.id)?.sort ?? 0 }))
+    showToast('並び替えました', {
+      duration: 8000,
+      undo: () => {
+        setServices(cur => cur
+          .map(s => { const p = prevSorts.find(x => x.id === s.id); return p ? { ...s, sort: p.sort } : s })
+          .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)))
+        for (const p of prevSorts) fetch(`/api/console/services/${p.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: p.sort }) }).catch(() => {})
+      },
     })
   }
-
-  // 並び替え（sort のみ更新・money/中身は非接触）。表示順 = sort 昇順。
-  // 入れ替え後に sort=index へ採番し直し、変わった行だけ PATCH（楽観更新）。
-  function moveBrand(i: number, dir: -1 | 1) {
-    const j = i + dir
-    if (j < 0 || j >= services.length) return
-    const arr = [...services]
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-    const renum = arr.map((s, idx) => ({ ...s, sort: idx }))
-    const changed = renum.filter(s => (services.find(o => o.id === s.id)?.sort ?? -1) !== s.sort)
-    setServices(renum)
-    for (const s of changed) fetch(`/api/console/services/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: s.sort }) }).catch(() => {})
-  }
-  // ★リスト表示のメニュー並び替え（ドロワーの moveMenu とは別物）。
-  // 以前は両方 moveMenu 同名で、関数巻き上げにより後者(ドロワー版/(mid,dir))がスコープを上書き→
-  // リストの▲▼が editing=null で即return＝メニューだけ動かなかった真因。名前を分離して解消。
-  function moveListMenu(svcId: string, flat: Menu[], i: number, dir: -1 | 1) {
-    const j = i + dir
-    if (j < 0 || j >= flat.length) return
-    const arr = [...flat]
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-    const renum = arr.map((m, idx) => ({ ...m, sort: idx }))
-    const sortById: Record<string, number> = {}
-    for (const m of renum) sortById[m.id] = m.sort
-    setServices(prev => prev.map(s => s.id !== svcId ? s : ({
+  // ── 3ペイン左ナビ：メニューDnD → menus.sort へ永続化（旧 moveListMenu の保存作法を継承）。 ──
+  // draft を並べ替え → sort=index で位置が変わった行のみ PATCH。services state の menus.sort も同期（表示整合）。
+  // 並び順は APP（refer 一覧の展開メニュー行・登録ページ）に menus.sort 昇順でそのまま反映される。
+  function reorderNavMenus(from: number, to: number) {
+    if (from === to || from < 0 || to < 0 || from >= menuDrafts.length || to >= menuDrafts.length) return
+    const before = menuDrafts
+    const arr = [...before]
+    const [moved] = arr.splice(from, 1)
+    arr.splice(to, 0, moved)
+    setMenuDrafts(arr)
+    setNavSel(prev => typeof prev === 'number' ? arr.indexOf(before[prev]) : prev)
+    const sortById: Record<string, number> = {}          // 既存メニュー全行の新sort（state同期用）
+    const changed: { id: string; sort: number }[] = []   // 位置が変わった既存行のみ PATCH
+    arr.forEach((d, idx) => { if (d.id) { sortById[d.id] = idx; if (before.indexOf(d) !== idx) changed.push({ id: d.id, sort: idx }) } })
+    for (const c of changed) fetch(`/api/console/menus/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: c.sort }) }).catch(() => {})
+    if (editing) setServices(prev => prev.map(s => s.id !== editing.id ? s : ({
       ...s,
       service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id in sortById ? { ...m, sort: sortById[m.id] } : m) })),
     })))
-    const changed = renum.filter(m => (flat.find(o => o.id === m.id)?.sort ?? -1) !== m.sort)
-    for (const m of changed) fetch(`/api/console/menus/${m.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: m.sort }) }).catch(() => {})
   }
 
   // 段階3a：メニューの担当メンバーを保存（''=既定owner へ）。楽観更新＋PATCH。money非接触。
@@ -661,39 +678,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     fetch(`/api/console/services/${svcId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calendar_member_id: val }) })
       .then(() => showToast('ブランドの担当メンバーを保存しました')).catch(() => {})
   }
-  // 段階3a：担当メンバーidから表示名を解決（既定=null は呼び出し側で文言化）。
-  const memberName = (id: string | null | undefined) => id ? (calMembers.find(m => m.user_id === id)?.name || 'メンバー') : null
-
-  // Wave2：紹介対象(target_audience)のインライン保存。楽観更新＋services PATCH。APP STEP1と同一データ・money非接触。
-  function saveBrandAudience(svcId: string, val: string) {
-    const v = val.trim()
-    setServices(prev => prev.map(s => s.id !== svcId ? s : ({ ...s, target_audience: v || null } as ServiceWithMenus)))
-    setEditAudSvc(null)
-    fetch(`/api/console/services/${svcId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_audience: v || null }) })
-      .then(() => showToast('紹介対象を保存しました')).catch(() => {})
-  }
-  // Wave2：一言説明(short_description)のインライン保存。楽観更新＋menus PATCH。APP STEP2と同一データ・money非接触。
-  function saveMenuDesc(svcId: string, menuId: string, val: string) {
-    const v = val.trim()
-    setServices(prev => prev.map(s => s.id !== svcId ? s : ({
-      ...s,
-      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id === menuId ? { ...m, short_description: v || null } : m) })),
-    })))
-    setEditDescMenu(null)
-    fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_description: v || null }) })
-      .then(() => showToast('一言説明を保存しました')).catch(() => {})
-  }
-
-  // menu_context v2：詳細説明(description)のインライン保存。楽観更新＋menus PATCH。APP詳細シートと同一データ・money非接触。
-  function saveMenuLongDesc(svcId: string, menuId: string, val: string) {
-    const v = val.trim()
-    setServices(prev => prev.map(s => s.id !== svcId ? s : ({
-      ...s,
-      service_menus: s.service_menus.map(sm => ({ ...sm, menus: (sm.menus ?? []).map(m => m.id === menuId ? { ...m, description: v || null } : m) })),
-    })))
-    setEditLongMenu(null)
-    fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: v || null }) })
-      .then(() => showToast('詳細説明を保存しました')).catch(() => {})
+  // タスク説明（ラベル単位一括・cooperation_task_templates.description）を保存。
+  // 旧 TaskDescriptionEditor と同一API（PATCH /api/console/task-templates {label, description}）を流用。money非接触。
+  function saveTaskDesc(label: string, description: string) {
+    const v = description.trim()
+    setTaskDescs(p => ({ ...p, [label]: v }))
+    setEditTaskFor(null)
+    fetch('/api/console/task-templates', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, description: v }) })
+      .then(r => showToast(r.ok ? `「${label}」の説明を保存しました` : '保存に失敗しました')).catch(() => showToast('通信に失敗しました'))
   }
 
   const drawerOpen = !!editing || showAdd
@@ -709,165 +701,47 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         </div>
       </div>
 
-      {/* ── Service list ── */}
-      <div className="page-anim stagger" style={{ padding: '28px', maxWidth: 860 }}>
-        {services.length === 0 && <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>}
-        {services.map((svc, si) => {
-          // ★一覧の「メニュー・報酬」は新 menus/menu_rewards のみを唯一のソースに統一。
-          //   旧 service_menus.ref/coop（¥30,000 等の残骸）は表示しない＝APP refer と完全一致。
-          //   メニュー表示は menus.sort 昇順（並び替え結果＝コンソール↔APP一致）。
-          const newMenus = svc.service_menus.flatMap(sm => (sm.menus ?? [])).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-          // 段階3a：連携済みメンバーが1人以上いる時だけ割当UIを出す（いなければ全て既定owner＝従来表示）。
-          const hasMembers = calMembers.length > 0
-          const brandMember = (svc as { calendar_member_id?: string | null }).calendar_member_id ?? ''
-          const audience = (svc as { target_audience?: string | null }).target_audience ?? ''
-          return (
-            <div key={svc.id} className="card-hover" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, marginBottom: 14, padding: '18px 22px' }}>
-
-              {/* Header row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={44} icon={svc.icon} color={svc.color} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <b style={{ fontSize: '.9rem' }}>{svc.name}</b>
-                    <span onClick={() => toggleActive(svc)} style={{
-                      fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
-                      background: svc.active ? 'var(--green-bg)' : 'var(--bg2)',
-                      color: svc.active ? 'var(--green)' : 'var(--muted2)',
-                    }}>
-                      {svc.active ? '公開中' : '停止中'}
-                    </span>
+      {/* ── Service list v2：1行1ブランドの0.5px罫線区切りリスト。編集は3ペインに集約（行クリック＝openEdit）。
+             行DnD（HTML5・deals ボードの流儀）で services.sort を即保存＋8秒Undo。 ── */}
+      <div className="page-anim" style={{ padding: '28px', maxWidth: 860 }}>
+        {services.length === 0 ? (
+          <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>
+        ) : (
+          <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+            {services.map((svc, si) => {
+              const menuCount = svc.service_menus.reduce((n, sm) => n + (sm.menus?.length ?? 0), 0)
+              const category = (svc as { category?: string | null }).category ?? ''
+              return (
+                <div key={svc.id} draggable
+                  onDragStart={() => { dragBrand.current = si }}
+                  onDragOver={e => { e.preventDefault(); setDragOverBrand(si) }}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverBrand(null) }}
+                  onDrop={e => { e.preventDefault(); setDragOverBrand(null); const f = dragBrand.current; dragBrand.current = null; if (f != null) reorderBrands(f, si) }}
+                  onClick={() => openEdit(svc)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', cursor: 'pointer',
+                    borderTop: si === 0 ? 'none' : '0.5px solid var(--line)',
+                    background: dragOverBrand === si ? 'var(--blue-bg2)' : 'transparent',
+                  }}>
+                  <span style={{ color: 'var(--muted)', cursor: 'grab', display: 'flex', flexShrink: 0 }}><GripIcon /></span>
+                  <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={32} icon={svc.icon} color={svc.color} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</div>
+                    {category && <div style={{ fontSize: 11, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{category}</div>}
                   </div>
-                  {/* 紹介対象＝商売の顔（ブランド名直下・常時表示＋インライン編集・APP STEP1と同一データ） */}
-                  {editAudSvc === svc.id ? (
-                    <div style={{ display: 'flex', gap: 6, marginTop: 5, alignItems: 'center' }}>
-                      <input autoFocus value={audDraft} onChange={e => setAudDraft(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') saveBrandAudience(svc.id, audDraft); if (e.key === 'Escape') setEditAudSvc(null) }}
-                        placeholder="例：引越し・お部屋探しをしたい人"
-                        style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 7, padding: '4px 9px', fontFamily: 'inherit', fontSize: '.74rem' }} />
-                      <button onClick={() => saveBrandAudience(svc.id, audDraft)} style={{ fontSize: '.62rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
-                      <button onClick={() => setEditAudSvc(null)} style={{ fontSize: '.66rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <span style={{ fontSize: '.75rem', fontWeight: 500, color: audience ? 'var(--txt)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audience || '紹介対象を設定'}</span>
-                      <button onClick={() => { setAudDraft(audience); setEditAudSvc(svc.id) }} title="紹介対象を編集"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.66rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
-                    </div>
-                  )}
-                  {/* カテゴリ（従属・muted）＋ブランド担当（同じ行・テキスト＋変更） */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
-                    {svc.subtitle && <span style={{ fontSize: '.6rem', color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 320 }}>{svc.subtitle}</span>}
-                    {hasMembers && (editMemberFor === `brand:${svc.id}` ? (
-                      <select autoFocus value={brandMember} onChange={e => { setBrandMember(svc.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
-                        title="このブランドの商談を入れる担当メンバー（メニュー個別指定が優先）"
-                        style={{ border: '0.5px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
-                        <option value="">既定（MB運営・神原勝彦）</option>
-                        {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
-                      </select>
-                    ) : (
-                      <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
-                        担当：{brandMember ? memberName(brandMember) : '既定（神原勝彦）'}
-                        <button onClick={() => setEditMemberFor(`brand:${svc.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 500 }}>変更</button>
-                      </span>
-                    ))}
-                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--muted2)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>メニュー {menuCount}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, width: 44 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, background: svc.active ? 'var(--c-blue)' : 'transparent', border: svc.active ? 'none' : '1px solid var(--muted)' }} />
+                    <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc.active ? '公開' : '停止'}</span>
+                  </span>
+                  <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
+                  </span>
                 </div>
-                {/* 並び替え（上下・モバイル確実）。sortのみ更新。 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-                  <ReorderBtn label="▲" onClick={() => moveBrand(si, -1)} disabled={si === 0} />
-                  <ReorderBtn label="▼" onClick={() => moveBrand(si, 1)} disabled={si === services.length - 1} />
-                </div>
-                <button onClick={() => openEdit(svc)}
-                  style={{ fontSize: '.7rem', color: 'var(--blue)', background: 'var(--blue-bg2)', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, flexShrink: 0 }}>
-                  編集
-                </button>
-              </div>
-
-              {/* ★メニュー＝価格表。新 menus/menu_rewards のみが唯一のソース（APP refer と同一）。
-                 一言説明＋担当をメニュー名の下に、報酬は統一ピルで右端に。空はCTA。 */}
-              {newMenus.length === 0 ? (
-                <div style={{ marginTop: 12, border: '1px dashed var(--line)', borderRadius: 10, padding: '18px 14px', textAlign: 'center', background: 'var(--bg2)' }}>
-                  <div style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 9 }}>メニューがまだありません</div>
-                  <button onClick={() => openEdit(svc)} style={{ fontSize: '.7rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontFamily: 'inherit' }}>＋ メニューを追加</button>
-                </div>
-              ) : (
-                <div style={{ marginTop: 12 }}>
-                  {newMenus.map((mn, idx) => {
-                    const menuMember = mn.calendar_member_id ?? ''
-                    const hasReward = (mn.rewards?.length ?? 0) > 0
-                    return (
-                    <div key={mn.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10, padding: '11px 2px', borderTop: idx === 0 ? 'none' : '0.5px solid var(--line)', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <ReorderBtn label="▲" small onClick={() => moveListMenu(svc.id, newMenus, idx, -1)} disabled={idx === 0} />
-                        <ReorderBtn label="▼" small onClick={() => moveListMenu(svc.id, newMenus, idx, 1)} disabled={idx === newMenus.length - 1} />
-                      </div>
-                      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <span style={{ fontSize: '.76rem', fontWeight: 500, color: 'var(--txt)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.name}</span>
-                        {/* 一言説明（名前の下・muted・1行省略＋インライン編集・APP STEP2と同一データ） */}
-                        {editDescMenu === mn.id ? (
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <input autoFocus value={descDraft} onChange={e => setDescDraft(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') saveMenuDesc(svc.id, mn.id, descDraft); if (e.key === 'Escape') setEditDescMenu(null) }}
-                              placeholder="例：お部屋を探している人を紹介するだけ。物件紹介はMBが対応。"
-                              style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '3px 8px', fontFamily: 'inherit', fontSize: '.64rem' }} />
-                            <button onClick={() => saveMenuDesc(svc.id, mn.id, descDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
-                            <button onClick={() => setEditDescMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                            <span style={{ fontSize: '.64rem', color: mn.short_description ? 'var(--muted2)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mn.short_description || '一言説明を設定'}</span>
-                            <button onClick={() => { setDescDraft(mn.short_description ?? ''); setEditDescMenu(mn.id) }} title="一言説明を編集"
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
-                          </div>
-                        )}
-                        {/* 詳細説明（description・詳細シート「このメニューでは」に表示・複数行インライン編集） */}
-                        {editLongMenu === mn.id ? (
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                            <textarea autoFocus value={longDraft} onChange={e => setLongDraft(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Escape') setEditLongMenu(null) }}
-                              placeholder="例：このメニューでは、お客さまの状況を伺い最適なプランをご提案します。"
-                              rows={3}
-                              style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', resize: 'vertical' }} />
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <button onClick={() => saveMenuLongDesc(svc.id, mn.id, longDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
-                              <button onClick={() => setEditLongMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                            <span style={{ fontSize: '.62rem', color: (mn as { description?: string | null }).description ? 'var(--muted2)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(mn as { description?: string | null }).description ? '詳細説明あり' : '詳細説明を設定'}</span>
-                            <button onClick={() => { setLongDraft((mn as { description?: string | null }).description ?? ''); setEditLongMenu(mn.id) }} title="詳細説明を編集"
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
-                          </div>
-                        )}
-                        {/* 担当（テキスト＋変更→プルダウン。連携済メンバーがいる時のみ＝段階3aゲート維持） */}
-                        {hasMembers && (editMemberFor === `menu:${mn.id}` ? (
-                          <select autoFocus value={menuMember} onChange={e => { setMenuMember(svc.id, mn.id, e.target.value); setEditMemberFor(null) }} onBlur={() => setEditMemberFor(null)}
-                            title="このメニューの商談を入れる担当メンバー"
-                            style={{ maxWidth: 240, border: '0.5px solid var(--line)', borderRadius: 7, padding: '3px 7px', fontFamily: 'inherit', fontSize: '.6rem', color: 'var(--muted2)', background: '#fff' }}>
-                            <option value="">既定（{brandMember ? 'ブランド担当' : 'MB運営・神原勝彦'}）</option>
-                            {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
-                          </select>
-                        ) : (
-                          <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>
-                            担当：{menuMember ? memberName(menuMember) : '既定'}
-                            <button onClick={() => setEditMemberFor(`menu:${mn.id}`)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '.6rem', color: 'var(--blue)', fontFamily: 'inherit', fontWeight: 500 }}>変更</button>
-                          </span>
-                        ))}
-                      </div>
-                      {/* 統一報酬ピル（bg-accent・999px・APPと同一記法・menu_rewards から表示整形のみ） */}
-                      <span style={{ justifySelf: 'end', display: 'inline-block', fontFamily: 'Inter', fontSize: '.68rem', fontWeight: 500, whiteSpace: 'nowrap', borderRadius: 999, padding: '4px 12px', background: hasReward ? 'var(--blue-bg2)' : 'var(--bg2)', color: hasReward ? 'var(--blue)' : 'var(--muted)' }}>
-                        {rewardPillForMenu(mn.rewards ?? [])}
-                      </span>
-                    </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Drawer overlay ── */}
@@ -902,10 +776,19 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     {svcForm.name || '（無題）'}
                   </button>
                   <button type="button" onClick={() => setNavSel('basic')} style={navItemStyle(navSel === 'basic')}>基本情報</button>
+                  {/* メニュー名列：DnDで並び替え → menus.sort へ永続化（APPの表示順に反映） */}
                   {menuDrafts.map((d, i) => (
-                    <button key={d.id ?? `nav-${i}`} type="button" onClick={() => setNavSel(i)} style={navItemStyle(navSel === i)}>
-                      {d.name.trim() || '（無題）'}
-                    </button>
+                    <div key={d.id ?? `nav-${i}`} draggable
+                      onDragStart={() => { dragMenuNav.current = i }}
+                      onDragOver={e => { e.preventDefault(); setDragOverMenuNav(i) }}
+                      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverMenuNav(null) }}
+                      onDrop={e => { e.preventDefault(); setDragOverMenuNav(null); const f = dragMenuNav.current; dragMenuNav.current = null; if (f != null) reorderNavMenus(f, i) }}
+                      style={{ display: 'flex', alignItems: 'center', flexShrink: 0, background: dragOverMenuNav === i ? 'var(--blue-bg2)' : 'transparent' }}>
+                      <span style={{ color: 'var(--muted)', cursor: 'grab', display: 'flex', flexShrink: 0, paddingLeft: 6 }}><GripIcon /></span>
+                      <button type="button" onClick={() => setNavSel(i)} style={{ ...navItemStyle(navSel === i), width: 'auto', flex: 1, minWidth: 0, padding: '7px 10px 7px 4px' }}>
+                        {d.name.trim() || '（無題）'}
+                      </button>
+                    </div>
                   ))}
                   <button type="button" onClick={addMenuDraft}
                     style={{ ...navItemStyle(false), color: 'var(--c-blue)', marginTop: 'auto', paddingTop: 14 }}>
@@ -965,6 +848,19 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         labelB="公開中"
                       />
                     </Fld>
+                    {/* 担当（ブランド既定・一覧v2でインライン担当selectをここへ移設。既存 setBrandMember 配線＝即時PATCH） */}
+                    {editing && calMembers.length > 0 && (
+                      <Fld label="担当">
+                        <select
+                          value={(services.find(s => s.id === editing.id) as { calendar_member_id?: string | null } | undefined)?.calendar_member_id ?? ''}
+                          onChange={e => setBrandMember(editing.id, e.target.value)}
+                          title="このブランドの商談を入れる担当メンバー（メニュー個別指定が優先）"
+                          style={inputStyle}>
+                          <option value="">既定（MB運営・神原勝彦）</option>
+                          {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                        </select>
+                      </Fld>
+                    )}
                   </>
                 ) : (
                   <>
@@ -980,6 +876,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     <Fld label="詳細説明">
                       <FTextarea value={selMenu.description} onChange={v => setMenuField(mi, { description: v })} placeholder="例：お客さまの状況を伺い、最適なプランをご提案します" />
                     </Fld>
+                    {/* 担当（メニュー個別・一覧v2でインライン担当selectをここへ移設。既存 setMenuMember 配線＝即時PATCH） */}
+                    {editing && selMenu.id && calMembers.length > 0 && (
+                      <Fld label="担当">
+                        <select value={selMenu.calendar_member_id}
+                          onChange={e => { const v = e.target.value; setMenuField(mi, { calendar_member_id: v }); setMenuMember(editing.id, selMenu.id as string, v) }}
+                          title="このメニューの商談を入れる担当メンバー"
+                          style={inputStyle}>
+                          <option value="">既定（ブランド担当）</option>
+                          {calMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.name}</option>)}
+                        </select>
+                      </Fld>
+                    )}
 
                     {/* 報酬ブロック（既存エディタ・枠なし＝0.5px罫線と余白で区切る） */}
                     {selMenu.rewards.map((r, ri) => (
@@ -1026,12 +934,32 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {COOP_TASK_MASTER.map(mt => {
                               const on = r.tasks.includes(mt.label)
+                              const taskKey = `${mi}:${ri}:${mt.label}`
                               return (
-                                <label key={mt.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
-                                  <input type="checkbox" checked={on} onChange={() => toggleRewardTask(mi, ri, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
-                                  <span style={{ flex: 1, fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
-                                  <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
-                                </label>
+                                <div key={mt.label}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
+                                    <input type="checkbox" checked={on} onChange={() => toggleRewardTask(mi, ri, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
+                                    <span style={{ fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
+                                    {/* タスク説明の✎（ラベル単位・登録ページのⓘに表示。旧 TaskDescriptionEditor をここへ統一） */}
+                                    <button type="button" title="タスク説明を編集（登録ページのⓘに表示）"
+                                      onClick={e => { e.preventDefault(); setTaskDescDraft(taskDescs[mt.label] ?? ''); setEditTaskFor(taskKey) }}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
+                                    <span style={{ flex: 1 }} />
+                                    <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
+                                  </label>
+                                  {editTaskFor === taskKey && (
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', margin: '2px 0 6px 22px' }}>
+                                      <textarea autoFocus value={taskDescDraft} onChange={e => setTaskDescDraft(e.target.value)} rows={2}
+                                        onKeyDown={e => { if (e.key === 'Escape') setEditTaskFor(null) }}
+                                        placeholder="このタスクの説明（登録ページのⓘに表示）"
+                                        style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', resize: 'vertical' }} />
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <button type="button" onClick={() => saveTaskDesc(mt.label, taskDescDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
+                                        <button type="button" onClick={() => setEditTaskFor(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               )
                             })}
                           </div>
@@ -1074,18 +1002,25 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         })()}
       </div>
 
-      {/* ── Toast ── */}
-      <div style={{
-        position: 'fixed', bottom: 32, right: 32,
-        transform: `translateY(${toast ? 0 : 16}px)`,
-        background: 'var(--txt)', color: '#fff', padding: '12px 22px',
-        borderRadius: 9, fontSize: '.74rem', fontWeight: 500,
-        opacity: toast ? 1 : 0, pointerEvents: 'none',
-        transition: 'all .28s', zIndex: 130, whiteSpace: 'nowrap',
-        boxShadow: '0 8px 28px rgba(14,14,20,.18)',
-      }}>
-        {toast}
-      </div>
+      {/* ── Toast（undo付き＝8秒・「元に戻す」＝deals ボードと同文法） ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 32, right: 32,
+          background: 'var(--txt)', color: '#fff', padding: '12px 22px',
+          borderRadius: 9, fontSize: '.74rem', fontWeight: 500,
+          zIndex: 130, whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: 14,
+          boxShadow: '0 8px 28px rgba(14,14,20,.18)',
+        }}>
+          <span>{toast.msg}</span>
+          {toast.undo && (
+            <button onClick={() => { const u = toast.undo; if (toastTimer.current) clearTimeout(toastTimer.current); setToast(null); u?.() }}
+              style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 500, padding: 0 }}>
+              元に戻す
+            </button>
+          )}
+        </div>
+      )}
     </>
   )
 }
