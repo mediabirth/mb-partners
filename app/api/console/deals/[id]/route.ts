@@ -290,10 +290,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: deal } = await supabase.from('deals').select('status').eq('id', id).single()
-  if (deal?.status === 'paid') return NextResponse.json({ error: 'Cannot cancel a paid deal' }, { status: 400 })
+  if (!deal) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (deal.status === 'paid') return NextResponse.json({ error: 'Cannot cancel a paid deal' }, { status: 400 })
 
-  const { error } = await supabase.from('deals').delete().eq('id', id)
+  // deals には delete の RLS ポリシーが無く、ユーザークライアントの delete は 0行マッチのまま
+  // 200 を返す（＝取り消しが一度も効いていなかった根因）。role 検査済みのうえ service_role で実行し、
+  // .select() で削除行の実在まで検証する。
+  const admin = await createServiceRoleClient()
+  const { data: deleted, error } = await admin.from('deals').delete().eq('id', id).select('id')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!deleted?.length) return NextResponse.json({ error: 'Delete had no effect' }, { status: 500 })
 
   return NextResponse.json({ ok: true })
 }
