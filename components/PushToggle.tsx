@@ -18,7 +18,12 @@ export default function PushToggle() {
       try {
         if (!pushSupported()) { setState('unsupported'); return }
         if (Notification.permission === 'denied') { setState('denied'); return }
-        const reg = await navigator.serviceWorker.ready
+        // serviceWorker.ready はSW未登録環境で永久に解決しないため getRegistration＋タイムアウトで判定
+        const reg = await Promise.race([
+          navigator.serviceWorker.getRegistration(),
+          new Promise<undefined>(res => setTimeout(() => res(undefined), 3000)),
+        ])
+        if (!reg) { setState('off'); return }  // SW未登録でもトグルは出す（オン操作時に ready を待つ）
         const sub = await reg.pushManager.getSubscription()
         setState(sub ? 'on' : 'off')
       } catch { setState('unsupported') }
