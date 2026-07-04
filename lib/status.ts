@@ -92,6 +92,18 @@ export function intakeType(intake: string | null | undefined): { tone: Tone; chi
   return { tone: key === 'direct' ? 'neutral' : 'progress', children: INTAKE_LABEL[key] ?? key }
 }
 
+// ── デリバリー割当（委託提示）の状態（提示中→ベンダー了承/辞退。assigned=旧既定値は了承済相当）──
+export const ASSIGN_STATUS: Record<string, Pill> = {
+  proposed: { tone: 'warn',    label: '提示中' },
+  accepted: { tone: 'success', label: '了承済' },
+  assigned: { tone: 'success', label: '了承済' },
+  declined: { tone: 'neutral', label: '辞退' },
+}
+export function assignStatus(status: string | null | undefined): { tone: Tone; children: string } {
+  const p = ASSIGN_STATUS[status ?? 'assigned'] ?? { tone: 'neutral' as Tone, label: status ?? '—' }
+  return { tone: p.tone, children: p.label }
+}
+
 // ── パートナー面の表示ラベル（操縦席・翻訳レイヤーの写像元）──
 // パートナーAPP（案件一覧/詳細/報酬）が実際に表示する語は DEAL_STATUS と同一（4語＋不成立）。
 // 旧 Wave2 の PARTNER_STAGE（MB対応中/見送り等）はどの画面にも描画されない死語彙だったため採用しない。

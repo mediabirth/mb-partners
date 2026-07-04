@@ -3,7 +3,7 @@ import Link from 'next/link'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import VendorStatusSteps from '@/components/VendorStatusSteps'
 import { loadVendorBundle } from '@/lib/vendor-data'
-import { VENDOR_DEAL_ST } from '@/lib/vendor-status'
+import { VENDOR_DEAL_ST, VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
 
 export const runtime = 'edge'
@@ -24,7 +24,9 @@ export default async function VendorCases() {
         {b.assignments.length === 0 ? (
           <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '20px 0' }}>担当している案件はまだありません</p>
         ) : b.assignments.map(a => {
-          const st = VENDOR_DEAL_ST[a.deal?.status ?? ''] ?? { label: a.deal?.status ?? '—', c: 'var(--muted2)', bg: 'var(--bg2)' }
+          // 提示中/辞退は割当自身の状態を優先（承諾前は案件状態語を出さない）
+          const st = (a.status === 'proposed' || a.status === 'declined' ? VENDOR_OFFER_ST[a.status] : null)
+            ?? VENDOR_DEAL_ST[a.deal?.status ?? ''] ?? { label: a.deal?.status ?? '—', c: 'var(--muted2)', bg: 'var(--bg2)' }
           const svc = a.deal?.services
           return (
             <Link key={a.id} href={`/vendor/cases/${a.id}`} className="card-hover lift ui-card" style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px 13px', marginBottom: 10 }}>

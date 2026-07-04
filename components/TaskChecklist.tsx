@@ -72,7 +72,7 @@ function HearingInline({ dealId, initial, onSaved }: { dealId: string; initial: 
       const res = await fetch(`/api/app/deals/${dealId}/hearing`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
       const j = await res.json().catch(() => ({}))
       if (res.ok) { if (j.done) onSaved(); setMsg('保存しました') }
-      else setMsg('保存に失敗しました')
+      else setMsg(j.error || '保存に失敗しました')
     } catch { setMsg('通信に失敗しました') } finally { setSaving(false) }
   }
   return (
@@ -80,7 +80,7 @@ function HearingInline({ dealId, initial, onSaved }: { dealId: string; initial: 
       <textarea value={text} onChange={e => setText(e.target.value)} rows={3} maxLength={4000}
         placeholder="予算感・希望時期・現状の課題 などを記入して保存"
         style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 8, padding: '10px 12px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />
-      {/* 文字数カウンタ（右下・静かな表示・サーバ側 slice(0,4000) と整合） */}
+      {/* 文字数カウンタ（右下・静かな表示・サーバ側は超過を400で拒否＝同じ4000上限） */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
         {msg && <span style={{ fontSize: 11, color: msg.includes('失敗') || msg.includes('通信') ? 'var(--red)' : 'var(--muted2)' }}>{msg}</span>}
         <span style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{text.length}/4000</span>

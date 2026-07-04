@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { loadVendorBundle } from '@/lib/vendor-data'
-import { VENDOR_CASE_ST } from '@/lib/vendor-status'
+import { VENDOR_CASE_ST, VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
 import VendorCaseTabs from './VendorCaseTabs'
+import VendorOfferActions from './VendorOfferActions'
 
 export const runtime = 'edge'
 
@@ -22,7 +23,9 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
   const updates = b.updates.filter(u => u.assignment_id === id)
   const expenses = b.expenses.filter(e => e.assignment_id === id)
   const brief = a.brief
-  const st = VENDOR_CASE_ST[a.deal?.status ?? ''] ?? { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' }
+  // 提示中/辞退は割当自身の状態が案件状態より優先（承諾前は「実行中」ではない）。
+  const offerSt = a.status === 'proposed' || a.status === 'declined' ? VENDOR_OFFER_ST[a.status] : null
+  const st = offerSt ?? VENDOR_CASE_ST[a.deal?.status ?? ''] ?? { label: '実行中', c: 'var(--c-blue)', bg: 'var(--blue-bg)' }
   const cust = (a.deal && customerHonorific(a.deal)) || ''
 
   // 進捗バー（タスク完了率・1つに統合：旧「プロジェクト管理%」＋ステップ表示は廃止）。
@@ -51,6 +54,12 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
           <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{cust || 'お客さま'} ・ {svc?.name ?? 'サービス'}</div>
         </div>
       </div>
+
+      {/* 委託提示への応答（提示中のみ）／辞退済は静かな注記 */}
+      {a.status === 'proposed' && <VendorOfferActions assignmentId={a.id} baseFee={a.base_fee} />}
+      {a.status === 'declined' && (
+        <p style={{ margin: '10px 20px 0', fontSize: '.68rem', color: 'var(--muted2)' }}>この委託提示は辞退しました。</p>
+      )}
 
       {/* 進捗バー（1つに統合） */}
       <div style={{ padding: '0 20px 4px' }}>

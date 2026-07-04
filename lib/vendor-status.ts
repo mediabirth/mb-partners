@@ -23,6 +23,14 @@ export const VENDOR_CASE_ST: Record<string, VendorSt> = {
   lost: { label: '終了', c: 'var(--muted2)', bg: 'var(--bg2)' },
 }
 
+/** delivery_assignments.status → ベンダー語（委託提示のライフサイクル。assigned=旧既定値は了承済相当）。 */
+export const VENDOR_OFFER_ST: Record<string, VendorSt> = {
+  proposed: { label: '承諾待ち', c: 'var(--amber)', bg: 'var(--amber-bg)' },
+  accepted: { label: '了承済', c: 'var(--green)', bg: 'var(--green-bg)' },
+  assigned: { label: '了承済', c: 'var(--green)', bg: 'var(--green-bg)' },
+  declined: { label: '辞退', c: 'var(--muted2)', bg: 'var(--bg2)' },
+}
+
 /** expense_claims.status → ベンダー語。 */
 export const VENDOR_EXPENSE_ST: Record<string, VendorSt> = {
   submitted: { label: '申請中', c: 'var(--amber)', bg: 'var(--amber-bg)' },

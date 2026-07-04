@@ -23,7 +23,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!deal) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json().catch(() => ({}))
-  const text = (typeof body.text === 'string' ? body.text : '').trim().slice(0, 4000)
+  const raw = (typeof body.text === 'string' ? body.text : '').trim()
+  // ライフサイクル: 文字数上限はサーバで強制（silent slice廃止＝超過は保存せず拒否。クライアントmaxLength=4000と同値）。
+  if (raw.length > 4000) {
+    return NextResponse.json({ error: '文字数上限（4,000字）を超えています', maxLength: 4000 }, { status: 400 })
+  }
+  const text = raw
 
   const admin = await createServiceRoleClient()
   // ヒヤリングタスク（kind か label に「ヒヤリング」を含む）を特定。

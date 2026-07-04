@@ -7,7 +7,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveVendor } from '@/lib/vendor-auth'
 import { customerHonorific } from '@/lib/customer'
 
-export type VAssign = { id: string; base_fee: number; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
+export type VAssign = { id: string; base_fee: number; status: string; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
 export type VExpense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean; created_at: string | null; approved_at: string | null }
 export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null; customer_name: string | null; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; service: { name: string; icon: string; color: string; logo_path: string | null } | null }
 export type VTask = { id: string; assignment_id: string; title: string; type: string; needs_deliverable: boolean; due_date: string | null; sort: number; status: string; done_at: string | null }
@@ -54,13 +54,13 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     // V-1 の delivery_brief を同梱（列未追加でも壊さないよう staged フォールバック）。
     let raw = (await admin
       .from('delivery_assignments')
-      .select('id, base_fee, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
+      .select('id, base_fee, status, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
       .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
     if (!raw) {
       raw = (await admin
         .from('delivery_assignments')
-        .select('id, base_fee, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, services(name, icon, color, logo_path))')
+        .select('id, base_fee, status, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, services(name, icon, color, logo_path))')
         .eq('delivery_id', v.deliveryId)
         .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
     }
@@ -91,7 +91,7 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
 
   const assignments: VAssign[] = (rawAssigns ?? []).map((a: Record<string, unknown>) => {
     const deal = (a.deals as VAssign['deal']) ?? null
-    return { id: a.id as string, base_fee: (a.base_fee as number) ?? 0, assigned_at: (a.assigned_at as string) ?? null, brief: deal?.delivery_brief ?? null, deal }
+    return { id: a.id as string, base_fee: (a.base_fee as number) ?? 0, status: (a.status as string) ?? 'assigned', assigned_at: (a.assigned_at as string) ?? null, brief: deal?.delivery_brief ?? null, deal }
   })
 
   const assignIds = assignments.map(a => a.id)

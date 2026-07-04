@@ -90,6 +90,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   const isRate = rate != null && !Number.isNaN(rate)
 
+  // ライフサイクル: 率案件は報酬確定（base確定・報酬計算済）前に支払済にできない（支払う額が存在しないため）。
+  if (hasStatus && status === 'paid' && isRate && (ctx?.base_amount ?? null) == null && !hasBase) {
+    return NextResponse.json({ error: '報酬が未確定です。粗利の確定（報酬を確定する）を先に行ってください', needsBase: true }, { status: 400 })
+  }
+
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (hasStatus) update.status = status
 
@@ -107,13 +112,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       update.amount = fixedAmount
       update.reward_snapshot = { ...(snap ?? {}), reward_type: 'fixed', base_label: baseLabel, computed: fixedAmount }
     } else if (isRate) {
-      // 料率：base 必須（未指定なら保存済みを使用、無ければ要求）
+      // ライフサイクル: 率案件は base（実額）が未確定のまま成約できる（勝彦フロー: 成約→受注額確定→…→経費承認→粗利算出→報酬確定）。
+      // 成約時点では報酬条件（rate/base_label）のみsnapshotに固定し、報酬額は「報酬を確定する」（①のbase書込）で後日確定する。
       const existing = ctx?.base_amount ?? null
       if (existing == null) {
-        return NextResponse.json({ error: 'base_amount required', needsBase: true, baseLabel, rate }, { status: 400 })
+        update.reward_snapshot = { ...(snap ?? {}), base_label: baseLabel, rate, computed: null }
+      } else {
+        update.amount = Math.round(Number(existing) * (rate as number) / 100)
+        update.reward_snapshot = { ...(snap ?? {}), base_amount: Number(existing), base_label: baseLabel, rate, computed: update.amount }
       }
-      update.amount = Math.round(Number(existing) * (rate as number) / 100)
-      update.reward_snapshot = { ...(snap ?? {}), base_amount: Number(existing), base_label: baseLabel, rate, computed: update.amount }
     }
     // 生来の紹介(fixed)はamount既定のまま
   }
