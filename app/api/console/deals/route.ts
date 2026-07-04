@@ -26,10 +26,13 @@ export async function POST(req: Request) {
     const sysId = await getSystemPartnerId(admin)
     if (!sysId) return NextResponse.json({ error: 'MB直営パートナーが未作成です（is_system seed 要）' }, { status: 409 })
     const revenue = Number(body.revenue ?? 0) || 0
+    // D: メニュー（任意・service_menusマスタid）。deals.menu_id＝表示用（ブランド ─ メニュー）／deal_items.menu_id＝明細メタ。
+    //   reward計算は起動しない（amount=0固定）＝menu_idを受けても報酬には一切影響しない。
+    const menuId = body.menu_id || null
     const { data: d, error: e } = await admin
       .from('deals')
       .insert({
-        customer_name, service_id, channel: 'referral', source: 'manual',
+        customer_name, service_id, menu_id: menuId, channel: 'referral', source: 'manual',
         status: 'confirmed', amount: 0, partner_id: sysId,
         intake_type: 'direct', project_status: '未着手',
         internal_memo: internal_memo ?? null, consent: true,
@@ -38,9 +41,16 @@ export async function POST(req: Request) {
       .single()
     if (e) return NextResponse.json({ error: e.message }, { status: 500 })
     // 明細1行：amount=0（パートナー報酬なし）／revenue=受注額（MB粗利）。
-    try { await admin.from('deal_items').insert({ deal_id: d.id, service_id, menu_id: null, kind: 'fixed', amount: 0, base_amount: null, revenue, sort: 0 }) } catch { /* best-effort */ }
+    // D: 作成した明細idをadditiveに返す（起票直後のデリバリー割当 POST deliveries が deal_item_id に使う）。
+    let item: { id: string } | null = null
+    try {
+      const { data: it } = await admin.from('deal_items')
+        .insert({ deal_id: d.id, service_id, menu_id: menuId, kind: 'fixed', amount: 0, base_amount: null, revenue, sort: 0 })
+        .select('id').single()
+      item = (it as { id: string } | null) ?? null
+    } catch { /* best-effort */ }
     await notifySlackEvent('new_deal', `🆕 直営業プロジェクト起票: ${customer_name}`)
-    return NextResponse.json({ deal: d })
+    return NextResponse.json({ deal: d, item })
   }
 
   const { data: deal, error } = await supabase
@@ -205,7 +215,14 @@ export async function GET() {
     .from('profiles').select('id, name, role, color').neq('role', 'partner').order('name')
   let deliveriesList: unknown[] = []
   try {
-    const { data: dl } = await admin.from('deliveries').select('id, name, kind, active').eq('active', true).order('name')
+    // C1: service_id（得意サービス・null=全サービス扱い）を読み取り列に追加＝アサインselectの2群表示に使う。
+    const r1 = await admin.from('deliveries').select('id, name, kind, service_id, active').eq('active', true).order('name')
+    let dl: unknown[] | null = r1.data
+    if (!dl) {
+      // service_id 列未適用（completion_deliveries_service_ddl 前）でも従来どおり返す。
+      const r2 = await admin.from('deliveries').select('id, name, kind, active').eq('active', true).order('name')
+      dl = r2.data
+    }
     deliveriesList = dl ?? []
   } catch { /* 未作成 */ }
 

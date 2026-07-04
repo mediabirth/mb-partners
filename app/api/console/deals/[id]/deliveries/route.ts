@@ -22,9 +22,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
 
-  const { data: deal } = await admin.from('deals').select('status').eq('id', id).single()
+  const { data: deal } = await admin.from('deals').select('status, intake_type').eq('id', id).single()
   if (!deal) return NextResponse.json({ error: 'Deal not found' }, { status: 404 })
-  if (!['received', 'in_progress'].includes(deal.status)) {
+  // D: 直営業（intake=direct）は商談を経ず confirmed で起票されるため、confirmed のみ割当を許可（paid後は従来どおりロック）。
+  //   委託費はP&L読取専用＝reward/payout/frozen には触れない（ロック緩和はお金の凍結と無関係）。
+  const editable = ['received', 'in_progress'].includes(deal.status)
+    || (deal.intake_type === 'direct' && deal.status === 'confirmed')
+  if (!editable) {
     return NextResponse.json({ error: '成約後の案件はデリバリー割当を編集できません' }, { status: 409 })
   }
 
