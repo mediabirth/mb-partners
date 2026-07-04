@@ -92,6 +92,20 @@ export function forecastLine(from: string, to: string): string {
   return parts.join('・')
 }
 
+/** ステータスマトリクスⓘ用: そのステータスに入るとき送られ得るメール一覧＋運営通知。 */
+export function statusEntryEffects(status: string): { mails: { key: string; name: string; audience: string }[]; mailNote?: string; opsNotify: boolean; extra?: string } {
+  const eff = ENTRY_EFFECTS[(status as DealStatusKey)] ?? { mailKeys: [], opsNotify: false }
+  return {
+    mails: eff.mailKeys.map(key => {
+      const def = MAIL_REGISTRY_BY_KEY[key]
+      return { key, name: def?.name ?? key, audience: AUDIENCE_LABEL[def?.audience ?? ''] ?? def?.audience ?? '' }
+    }),
+    mailNote: eff.mailNote,
+    opsNotify: eff.opsNotify,
+    extra: eff.extra,
+  }
+}
+
 /** コンソール案件詳細「次にやること」: ステータス→運営アクション定義（データ分離＝将来編集可能）。 */
 export type OpsAction = {
   cta: string
