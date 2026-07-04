@@ -1,4 +1,5 @@
 'use client'
+// 静音化v2.1: 稟議ステージ(review_stage)は概念廃止＝UI/保存関数を撤去（API /review-stage・DB列・既存データは残置＝コードから到達不能のdeprecate）。
 import { useEffect, useState, useTransition, useRef } from 'react'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import ChannelMark from '@/components/ChannelMark'
@@ -45,7 +46,6 @@ type Deal = {
   // F-1: 流入経路・フェーズ・プロジェクト実行ステータス（お金には非干渉の独立メタデータ）
   intake_type?: string | null
   project_status?: string | null
-  review_stage?: string | null // ②A-2: 稟議ステージ(表示専用メタ・status非接触)
   _phase?: 'shodan' | 'project'
 }
 
@@ -223,7 +223,8 @@ const SHODAN_LANES: Lane[] = [
   { key: 'in_progress', label: '商談中', group: 'shodan', tone: 'progress' },
 ]
 const PROJECT_LANES: Lane[] = [
-  { key: '未着手', label: '成約・未着手', group: 'project', tone: 'neutral' },
+  // 静音化v2.1(A2): レーン名は正典 DEAL_STATUS.confirmed.label（=成約）から導出（「成約・未着手」廃止）。
+  { key: '未着手', label: DEAL_STATUS.confirmed.label, group: 'project', tone: 'neutral' },
   { key: '進行中', label: '進行中',       group: 'project', tone: 'progress' },
   { key: '確認待ち', label: '確認待ち',   group: 'project', tone: 'warn' },
   { key: '修正対応', label: '修正対応',   group: 'project', tone: 'danger' },
@@ -312,9 +313,7 @@ export default function DealsPage() {
   const [services, setServices]     = useState<Service[]>([])
   const dragItem = useRef<{ id: string; status: string } | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
-  // B2: 0件カラムを細い折りたたみ列に（表示のみ）。ユーザーが手動展開したカラムを保持（永続化不要）。
-  const [expandedEmpty, setExpandedEmpty] = useState<Record<string, boolean>>({})
-  const toggleCol = (key: string) => setExpandedEmpty(p => ({ ...p, [key]: !p[key] }))
+  // 静音化v2.1(A3): 空レーンの畳み機構（expandedEmpty）は撤去＝空レーンも通常ヘッダ＋件数0で常時表示。
   // ② base-amount entry on confirming a rate-based deal
   const [baseModal, setBaseModal] = useState<{ deal: Deal; rate: number; baseLabel: string } | null>(null)
   const [baseInput, setBaseInput] = useState('')
@@ -497,7 +496,16 @@ export default function DealsPage() {
     try {
       const res = await fetch(`/api/console/deals/${selected.id}/pnl`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json().catch(() => ({}))
-      if (res.ok && !data.needsMigration) await refreshDeals(selected.id)
+      if (res.ok && !data.needsMigration) {
+        // 静音化v2.1(B2): MB担当の保存はrefresh待ちにせず selected/deals へ即時反映（体感のための楽観更新・確定はrefreshで上書き）。
+        if ('director_id' in body) {
+          const did = (body.director_id as string | null) ?? null
+          const dealId = selected.id
+          setSelected(s => s && s.id === dealId ? { ...s, director_id: did } : s)
+          setDeals(prev => prev.map(d => d.id === dealId ? { ...d, director_id: did } : d))
+        }
+        await refreshDeals(selected.id)
+      }
       else if (data.needsMigration) showToast('P&L列のDB適用が必要です（batchPnlA1 DDL）')
       else showToast(data.error ?? '保存に失敗しました')
     } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
@@ -511,18 +519,6 @@ export default function DealsPage() {
       const data = await res.json().catch(() => ({}))
       if (res.ok && !data.needsMigration) { await refreshDeals(selected.id); showToast('プロジェクト状態を更新しました') }
       else if (data.needsMigration) showToast('project_status列のDB適用が必要です（batchF1 DDL）')
-      else showToast(data.error ?? '保存に失敗しました')
-    } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
-  }
-  // ②A-2: 稟議ステージ更新（隔離ルート /review-stage）。★status enum・confirmed遷移・reward/frozen/payout/pnl・④b発火に一切触れない。
-  async function saveReviewStage(rs: string | null) {
-    if (!selected) return
-    setItemBusy(true)
-    try {
-      const res = await fetch(`/api/console/deals/${selected.id}/review-stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ review_stage: rs }) })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && !data.needsMigration) { await refreshDeals(selected.id); showToast('稟議ステージを更新しました') }
-      else if (data.needsMigration) showToast('保存できませんでした。時間をおいて再度お試しください')
       else showToast(data.error ?? '保存に失敗しました')
     } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
   }
@@ -756,7 +752,7 @@ export default function DealsPage() {
       requestStatusMove(deal, lane.key as Status)         // 受付↔商談中（既存処理＋実装2の結果予告）
     } else if (srcPhase === 'shodan') {
       if (lane.key === '未着手') requestStatusMove(deal, 'confirmed')   // 成約フロー（base/報酬は既存処理＋実装2の結果予告）
-      else showToast('先に「成約・未着手」へ移動して成約してください')
+      else showToast(`先に「${DEAL_STATUS.confirmed.label}」へ移動して成約してください`)
     } else {
       // 実装2: project間は波及なし（3面表示・メール不変）＝即時実行＋Undoトースト8秒。
       const undoFrom = deal.project_status ?? '未着手'
@@ -854,7 +850,7 @@ export default function DealsPage() {
             ))}
           </select>
 
-          {/* F-3a: 直営業プロジェクト起票（商談を経ず MB直営・確定で起票）。紹介・協力の商談起票は従来どおり別導線。 */}
+          {/* F-3a: 直営業プロジェクト起票（商談を経ず MB直営・確定で起票）。パートナー経由の商談起票は従来どおり別導線。 */}
           <Button variant="primary" size="sm" onClick={() => setDirectModal(true)} style={{ whiteSpace: 'nowrap' }}>＋ 直営業プロジェクト</Button>
         </div>
 
@@ -934,67 +930,50 @@ export default function DealsPage() {
         <div style={{ padding: '18px 0 28px' }}>
           {/* F-3a: フェーズ×ステータスのパイプライン。左→右で 商談(受付→商談中)→成約→プロジェクト(未着手→納品完了)。
               直営業は商談を飛ばしプロジェクト列に出現。レーン間ドラッグ：商談=status変更／成約=既存の成約フロー／プロジェクト間=project_status変更（お金非干渉）。 */}
-          <div className="page-anim" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', overflowX: 'auto', padding: '0 32px 10px' }}>
-            {PIPELINE_LANES.map((lane, idx) => {
-              const laneDeals = boardDeals.filter(d => laneKeyOf(d) === lane.key)
-              const groupStart = lane.group === 'project' && (idx === 0 || PIPELINE_LANES[idx - 1].group === 'shodan')
-              // B2: 0件カラムは既定で細い折りたたみ列。手動展開中・1件以上なら通常幅（0→1で自動的に通常表示）。
-              const isEmpty = laneDeals.length === 0
-              const collapsed = isEmpty && !expandedEmpty[lane.key]
-              return (
-                <div key={lane.key} style={{ display: 'flex', alignItems: 'stretch', gap: 14, flexShrink: 0 }}>
-                  {groupStart && <div aria-hidden style={{ width: 1, background: 'var(--line)', alignSelf: 'stretch' }} />}
+          {/* 静音化v2.1(A4): ゾーン見出し＝PHASE_LABEL正典（商談/プロジェクト）から導出・11px/muted 1行。
+              ゾーン間ガター24px・レーン間12px。projectの3面写像ツールチップ（MappingTip）はゾーン見出しに1回のみ。
+              静音化v2.1(A3): 空レーンの畳み機構は撤去＝通常ヘッダ＋件数0で常時表示。 */}
+          <div className="page-anim" style={{ display: 'flex', gap: 24, alignItems: 'flex-start', overflowX: 'auto', padding: '0 32px 10px' }}>
+            {(['shodan', 'project'] as const).map(group => (
+              <div key={group} style={{ flexShrink: 0 }}>
+                <div style={{ marginBottom: 8, paddingLeft: 2 }}>
+                  {group === 'project' ? (
+                    <MappingTip partner={projectLaneTranslation().partner} vendor={projectLaneTranslation().vendor}>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', cursor: 'default' }}>{PHASE_LABEL.project}</span>
+                    </MappingTip>
+                  ) : (
+                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em' }}>{PHASE_LABEL.shodan}</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  {PIPELINE_LANES.filter(l => l.group === group).map(lane => {
+                    const laneDeals = boardDeals.filter(d => laneKeyOf(d) === lane.key)
+                    return (
                   <div
+                    key={lane.key}
                     onDragOver={e => onDragOver(e, lane.key)}
                     onDragLeave={onDragLeave}
                     onDrop={e => onDrop(e, lane.key)}
-                    onClick={collapsed ? () => toggleCol(lane.key) : undefined}
-                    className={collapsed ? 'card-hover' : undefined}
-                    title={collapsed ? 'クリックで展開' : undefined}
-                    style={{ width: collapsed ? 50 : 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: collapsed ? '12px 4px' : 14, minHeight: 220, cursor: collapsed ? 'pointer' : 'default', border: `0.5px solid ${dragOverCol === lane.key ? 'var(--c-blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out), width .18s var(--ease-out)' }}
+                    style={{ width: 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: 14, minHeight: 220, border: `0.5px solid ${dragOverCol === lane.key ? 'var(--c-blue)' : 'var(--line)'}`, transition: 'border-color .15s var(--ease-out)' }}
                   >
-                    {collapsed ? (
-                      /* B2: 細い折りたたみ列＝ステージ名(縦書き)＋件数0のみ。大きな空ボックスは出さない。 */
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, height: '100%', minHeight: 196, paddingTop: 2 }}>
+                    {/* 静音化v2(C): レーンヘッダ＝ステータス名14px/500＋件数muted のみ（グループ極小ラベルはA4ゾーン見出しへ一本化）。
+                        写像は常時表示せず MappingTip（hover/クリック）へ退避＝shodanはレーン名、projectはゾーン見出しに1回。 */}
+                    <div style={{ marginBottom: 12, padding: '2px 2px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
                         <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${lane.tone})`, flexShrink: 0 }} />
-                        <span className="tnum" style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 999, padding: '1px 6px', minWidth: 20, textAlign: 'center' }}>0</span>
-                        <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', whiteSpace: 'nowrap', letterSpacing: '.04em' }}>{lane.label}</span>
-                      </div>
-                    ) : (<>
-                    {/* 静音化v2(C): レーンヘッダ＝ステータス名14px/500＋件数muted のみ。
-                        写像は常時表示せず MappingTip（hover/クリック）へ退避＝shodanはレーン名、projectはグループ見出しに1回。 */}
-                    <div style={{ marginBottom: 12, padding: '2px 2px 0' }}>
-                      {lane.group === 'project' ? (
-                        <div style={{ marginBottom: 5 }}>
-                          <MappingTip partner={projectLaneTranslation().partner} vendor={projectLaneTranslation().vendor}>
-                            <span style={{ fontSize: '.5rem', letterSpacing: '.14em', color: 'var(--muted)', fontWeight: 500, textTransform: 'uppercase', cursor: 'default' }}>プロジェクト</span>
+                        {lane.group === 'shodan' ? (
+                          <MappingTip partner={statusTranslation(lane.key).partner} vendor={statusTranslation(lane.key).vendor}>
+                            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap', cursor: 'default' }}>{lane.label}</span>
                           </MappingTip>
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: '.5rem', letterSpacing: '.14em', color: 'var(--muted)', fontWeight: 500, textTransform: 'uppercase', marginBottom: 5 }}>商談</p>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-                          <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${lane.tone})`, flexShrink: 0 }} />
-                          {lane.group === 'shodan' ? (
-                            <MappingTip partner={statusTranslation(lane.key).partner} vendor={statusTranslation(lane.key).vendor}>
-                              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap', cursor: 'default' }}>{lane.label}</span>
-                            </MappingTip>
-                          ) : (
-                            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{lane.label}</span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                          {isEmpty && (
-                            <button onClick={() => toggleCol(lane.key)} title="畳む" style={{ background: 'none', border: '0.5px solid var(--line)', borderRadius: 7, cursor: 'pointer', color: 'var(--muted2)', fontSize: '.62rem', fontWeight: 500, lineHeight: 1, padding: '3px 6px' }}>‹ 畳む</button>
-                          )}
-                          <span className="tnum" style={{ fontSize: '.7rem', fontWeight: 400, color: 'var(--muted2)' }}>{laneDeals.length}</span>
-                        </div>
+                        ) : (
+                          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{lane.label}</span>
+                        )}
                       </div>
+                      <span className="tnum" style={{ fontSize: '.7rem', fontWeight: 400, color: 'var(--muted2)', flexShrink: 0 }}>{laneDeals.length}</span>
                     </div>
 
                     {laneDeals.map(d => {
-                      // BR-C3: 最小・均一カード。表示は 案件名 / 紹介・協力パートナー名(経由時のみ) / MB担当 / デリバリー。
+                      // BR-C3: 最小・均一カード。表示は 案件名 / パートナー名(経由時のみ) / MB担当 / デリバリー。
                       //   種別・ステージ・フェーズ・ステータスは載せない（レーンで分かる）。詳細は案件詳細へ。
                       const intake = d.intake_type ?? 'referral_coop'
                       const partnerName = intake !== 'direct' && d.partners?.profiles ? d.partners.profiles.name : null
@@ -1003,7 +982,12 @@ export default function DealsPage() {
                       const deliveryName = (d._deliveries ?? []).find(a => a.delivery_id)?.deliveries?.name ?? null
                       const rejectedExp = (d._deliveries ?? []).some(a => (a._expenses ?? []).some(e => e.status === 'rejected'))
                       const revenueMissing = (d._phase ?? phaseOf(d)) === 'project' && (d.deal_items?.length ?? 0) > 0 && (d.deal_items ?? []).every(it => it.revenue == null)
-                      const attention = needsBase(d) || rejectedExp || revenueMissing
+                      // 静音化v2.1(A1): 要対応＝テキストピル廃止→カード右上7px赤丸（理由は判定根拠から導出しtitleへ）。
+                      const attentionReasons = [
+                        needsBase(d) && '実績金額が未入力',
+                        rejectedExp && '却下された経費があります',
+                        revenueMissing && '受注額（売上）が未入力',
+                      ].filter(Boolean) as string[]
                       {/* 静音化v2(C): カード2行文法＝名前13px/500＋「ブランド ─ メニュー」11px/muted。担当/委託は3行目11px。詳細はドロワーが語る。 */}
                       const brandMenu = [d.services?.name, menuLabelOf(d)].filter(Boolean).join(' ─ ')
                       const sub = [directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel ? partnerKindLabel + ' ' : ''}${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('・')
@@ -1014,10 +998,12 @@ export default function DealsPage() {
                           onDragStart={() => onDragStart(d)}
                           onClick={() => setSelected(d)}
                           className="card-hover ui-card"
-                          style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 13, padding: '10px 12px', marginBottom: 8, cursor: 'grab', boxShadow: selected?.id === d.id ? '0 0 0 2px var(--c-blue)' : undefined, userSelect: 'none', minHeight: 66, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}
+                          style={{ position: 'relative', background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 13, padding: '10px 12px', marginBottom: 8, cursor: 'grab', boxShadow: selected?.id === d.id ? '0 0 0 2px var(--c-blue)' : undefined, userSelect: 'none', minHeight: 66, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}
                         >
+                          {attentionReasons.length > 0 && (
+                            <span title={`要対応: ${attentionReasons.join('・')}`} style={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', background: 'var(--red)' }} />
+                          )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                            {attention && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: '#fff', background: 'var(--red)', borderRadius: 20, padding: '2px 7px', letterSpacing: '.02em' }}>要対応</span>}
                             {d.services
                               ? <ServiceAvatar logoPath={(d.services as any).logo_path ?? null} icon={d.services.icon} color={d.services.color} name={d.services.name} size={24} />
                               : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={24} />}
@@ -1028,11 +1014,12 @@ export default function DealsPage() {
                         </div>
                       )
                     })}
-                    </>)}
                   </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         </div>
         )}
@@ -1124,19 +1111,7 @@ export default function DealsPage() {
                         </select>
                       </div>
                     )}
-                    {/* ②A-2: 稟議ステージ（in_progress時のみ・表示専用メタ・お金/confirmed非接触の隔離更新でpartnerに細分化表示） */}
-                    {selected.status === 'in_progress' && (
-                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>稟議ステージ</span>
-                        <select value={selected.review_stage ?? ''} disabled={itemBusy} title="パートナーの案件詳細に進捗の細分化として表示"
-                          onChange={e => saveReviewStage(e.target.value === '' ? null : e.target.value)}
-                          style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: 'var(--txt)' }}>
-                          <option value="">未設定（MB対応中）</option>
-                          <option value="negotiating">商談中</option>
-                          <option value="review">稟議中</option>
-                        </select>
-                      </div>
-                    )}
+                    {/* 静音化v2.1(B3): 稟議ステージselectは概念廃止＝撤去（API/DB列は残置・到達不能） */}
                   </div>
                 )
               })()}
@@ -1291,13 +1266,27 @@ export default function DealsPage() {
                 {([
                   ['ソース', selected.source],
                   ['パートナー', selected.partners ? `${selected.partners.profiles?.name ?? ''} (${selected.partners.code})` : '—'],
-                  ...(selected.contact_title ? [['部署・役職', selected.contact_title] as [string, React.ReactNode]] : []),
                 ] as [string, React.ReactNode][]).map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: '0.5px solid var(--line)', fontSize: 12, alignItems: 'center' }}>
                     <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{k}</span>
                     <span style={{ fontWeight: 500, textAlign: 'right', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{v}</span>
                   </div>
                 ))}
+                {/* 静音化v2.1(B2): MB担当＝担当情報として常時可視（金額・原価の折りたたみから移設）。保存はsavePnl（楽観更新つき）。 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: '0.5px solid var(--line)', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', flexShrink: 0 }}>MB担当</span>
+                  <select value={selected.director_id ?? ''} onChange={e => savePnl({ director_id: e.target.value || null })} disabled={itemBusy}
+                    style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '5px 9px', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: 'var(--txt)', minWidth: 0, maxWidth: 180 }}>
+                    <option value="">未割当</option>
+                    {directors.map(d => <option key={d.id} value={d.id}>{d.name}（{d.role}）</option>)}
+                  </select>
+                </div>
+                {selected.contact_title && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: '0.5px solid var(--line)', fontSize: 12, alignItems: 'center' }}>
+                    <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>部署・役職</span>
+                    <span style={{ fontWeight: 500, textAlign: 'right', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{selected.contact_title}</span>
+                  </div>
+                )}
               </div>
 
               {/* ヒアリング（協力タスクのヒアリングnote。無ければ「—」） */}
@@ -1398,16 +1387,8 @@ export default function DealsPage() {
                       </div>
                     </div>
 
-                    {/* A1: MB担当・その他原価（いつでも編集可・P&L表示専用） */}
+                    {/* A1: その他原価（いつでも編集可・P&L表示専用）。MB担当は右カラム「お客さま」へ移設（B2・常時可視）。 */}
                     <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>MB担当</span>
-                        <select value={selected.director_id ?? ''} onChange={e => savePnl({ director_id: e.target.value || null })} disabled={itemBusy}
-                          style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 9px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff' }}>
-                          <option value="">未割当</option>
-                          {directors.map(d => <option key={d.id} value={d.id}>{d.name}（{d.role}）</option>)}
-                        </select>
-                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>その他原価</span>
                         <input defaultValue={selected.other_cost ?? ''} inputMode="numeric" placeholder="0" disabled={itemBusy}
