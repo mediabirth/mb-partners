@@ -121,12 +121,19 @@ async function expireSurface(ctx, surf) {
 }
 function cookieNameOf(surf) { return surf === 'console' ? 'mb-auth-console' : surf === 'vendor' ? 'mb-auth-vendor' : 'mb-auth-app' }
 
-// 「そのsurfaceのセッションが生きているか」= home を叩いてloginへ飛ばされないこと（middlewareが未ログインをloginへredirect）
+// 「そのsurfaceのセッションが生きているか」= home を叩いてloginへ飛ばされないこと（middlewareが未ログインをloginへredirect）。
+// 本番レイテンシで単発判定がぶれるため、生存判定は最大3回リトライ（安定化＝恒久標準チェックの信頼性）。
 async function isAlive(page, surf) {
   const s = SURF[surf]
-  const resp = await page.goto(s.base + s.home, { waitUntil: 'domcontentloaded' }).catch(() => null)
-  await page.waitForTimeout(600)
-  const path = new URL(page.url()).pathname
+  let path = ''
+  for (let i = 0; i < 3; i++) {
+    await page.goto(s.base + s.home, { waitUntil: 'domcontentloaded' }).catch(() => null)
+    await page.waitForTimeout(700)
+    path = new URL(page.url()).pathname
+    if (!s.loginRe.test(path) && path.startsWith(s.home)) return true
+    if (s.loginRe.test(path)) return false   // 明示的に login へ飛ばされた＝確実に未生存
+    await page.waitForTimeout(500)
+  }
   return !s.loginRe.test(path) && path.startsWith(s.home)
 }
 
