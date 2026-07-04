@@ -5,12 +5,11 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import ChannelMark from '@/components/ChannelMark'
 import ConsoleNav from '@/components/ConsoleNav'
 import { customerHonorific } from '@/lib/customer'
-import { computeProjectPnl } from '@/lib/pnl'
 import { phaseOf, PHASE_LABEL, PROJECT_STATUSES, PROJECT_STATUS_STYLE } from '@/lib/phase'
 import RewardPill from '@/components/ui/RewardPill'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
-import { DEAL_STATUS } from '@/lib/status'
+import { DEAL_STATUS, assignStatus } from '@/lib/status'
 import { engagementLabel } from '@/lib/engagement-labels'
 // 操縦席: ステータス翻訳レイヤー（3面写像・遷移の結果予告・次アクション）の単一ソース。文言/写像のハードコード禁止。
 import { statusTranslation, projectLaneTranslation, transitionForecast, forecastLine, statusEntryEffects, OPS_NEXT_ACTION, DEAL_STATUS_KEYS } from '@/lib/status-effects'
@@ -60,7 +59,7 @@ type Director = { id: string; name: string; role: string; color: string }
 type DeliveryOpt = { id: string; name: string; kind: string | null; service_id?: string | null }
 // A2b: 経費申請（割当単位）
 type Expense = { id: string; delivery_assignment_id: string; kind: string; amount: number; status: string; has_evidence?: boolean; note?: string | null }
-type DeliveryAssign = { id: string; deal_item_id: string | null; delivery_id: string | null; base_fee: number; deliveries?: { name: string; kind: string | null } | null; _expenses?: Expense[] }
+type DeliveryAssign = { id: string; deal_item_id: string | null; delivery_id: string | null; base_fee: number; status?: string; deliveries?: { name: string; kind: string | null } | null; _expenses?: Expense[] }
 type SvcMenu = { id: string; name: string; ref_type?: string | null; ref_value?: number | null; coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null }
 type SvcWithMenus = { id: string; name: string; service_menus?: SvcMenu[] }
 
@@ -94,6 +93,62 @@ function rateInfo(d: Deal): { isRate: boolean; rate: number | null; baseLabel: s
 }
 function needsBase(d: Deal): boolean {
   return rateInfo(d).isRate && (d.base_amount == null)
+}
+
+// ── ライフサイクル（勝彦定義の業務フローをそのまま画面のステートマシンに）──
+// nego: 受付/商談（金額系UIはレンダリングしない）／project: 成約後（デリバリー・計算式）／settled: 支払済（読み取り専用）／lost: 記録閲覧
+type LifecyclePhase = 'nego' | 'project' | 'settled' | 'lost'
+function lifecyclePhase(d: Deal): LifecyclePhase {
+  if (d.status === 'paid') return 'settled'
+  if (d.status === 'lost') return 'lost'
+  if (d.status === 'confirmed') return 'project'
+  return 'nego'
+}
+
+// 報酬ベース語の表示正規化（DB値 '利益' は勝彦語彙では「粗利」）。
+function baseWord(label: string | null | undefined): string {
+  const b = label ?? '粗利'
+  return b === '利益' ? '粗利' : b
+}
+
+// ヘッダ素性行の報酬条件＋トリガー（例「¥30,000（固定）・成約時」「粗利の20%・粗利確定時」）。
+// reward_snapshot／メニュー正典から導出（rateInfo/continuousInfo と同じ解決順・表示専用）。
+function rewardTermLine(d: Deal): string | null {
+  const cont = continuousInfo(d)
+  if (cont.isContinuous) return `継続 粗利の${cont.rate}%/月${cont.months ? `・${cont.months}ヶ月` : ''}・月次確定`
+  const ri = rateInfo(d)
+  if (ri.isRate) {
+    const bw = baseWord(ri.baseLabel)
+    return `${bw}の${ri.rate}%・${bw === '売上' ? '成約時' : '粗利確定時'}`
+  }
+  if (d.intake_type === 'direct') return null // 直営業＝パートナー報酬なし（素性は「ブランド ─ メニュー」で完結）
+  if (d.status === 'confirmed' || d.status === 'paid') {
+    return d.amount > 0 ? `¥${d.amount.toLocaleString()}（固定）・成約時` : null
+  }
+  // 成約前の固定：snapshotの条件値（無ければ現在のamount）
+  const rv = Number(d.reward_snapshot?.ref_value ?? 0)
+  const v = rv > 0 ? rv : d.amount
+  return v > 0 ? `¥${v.toLocaleString()}（固定）・成約時` : null
+}
+
+// 紹介ソースの日本語化（内部値の生露出禁止）。
+const SOURCE_LABEL: Record<string, string> = {
+  partner_form: 'パートナーフォームから',
+  manual: '手入力',
+  synapse: 'Synapse連携',
+}
+function sourceLine(d: Deal): string {
+  const label = SOURCE_LABEL[d.source] ?? '登録'
+  const dt = d.created_at ? new Date(d.created_at) : null
+  const when = dt ? `・${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}` : ''
+  return `${label}${when}`
+}
+
+// 報酬控除前のMB粗利（＝勝彦定義: 受注額 − 委託費 − 経費 − その他原価。率報酬のbaseはこの値）。
+// computeProjectPnl と同じ入力から partnerReward=0 で導出＝式の意味は lib/pnl と完全整合。
+function grossBeforeReward(d: Deal): number {
+  const revenue = (d.deal_items ?? []).reduce((s, it) => s + (it.revenue ?? 0), 0)
+  return revenue - (d._frontier_override ?? 0) - (d.other_cost ?? 0) - (d._delivery_cost ?? 0) - (d._delivery_expense ?? 0)
 }
 // メニュー名（APP正典 app/app/cases/[id] と同じ解決順：新名称 menus.name 優先 → service_menus.name）。
 function menuLabelOf(d: Deal): string | null {
@@ -328,16 +383,17 @@ export default function DealsPage() {
   const dragItem = useRef<{ id: string; status: string } | null>(null)
   const [dragOverCol, setDragOverCol] = useState<string | null>(null)
   // 静音化v2.1(A3): 空レーンの畳み機構（expandedEmpty）は撤去＝空レーンも通常ヘッダ＋件数0で常時表示。
-  // ② base-amount entry on confirming a rate-based deal
-  const [baseModal, setBaseModal] = useState<{ deal: Deal; rate: number; baseLabel: string } | null>(null)
-  const [baseInput, setBaseInput] = useState('')
-  // ① edit 実績金額 from the detail panel (any status)
-  const [editingBase, setEditingBase] = useState(false)
+  // ライフサイクル: 成約ダイアログ（売上入力＝率/継続/直営。明細0なら明細作成も兼ねる）・報酬確定ダイアログ（粗利=計算値×率）。
+  //   旧「実績金額（粗利）を入力」系（baseModal/editingBase）は全廃＝粗利は計算結果であり入力項目ではない。
+  const [confirmModal, setConfirmModal] = useState<Deal | null>(null)
+  const [confirmRevenue, setConfirmRevenue] = useState('')
+  const [confirmSvc, setConfirmSvc] = useState<{ service_id: string; menu_id: string }>({ service_id: '', menu_id: '' })
+  const [rewardModal, setRewardModal] = useState<Deal | null>(null)
+  // デリバリー提示の追加フォーム（成約後・0〜N行）
+  const [dlvAdd, setDlvAdd] = useState<{ open: boolean; delivery_id: string; fee: string }>({ open: false, delivery_id: '', fee: '' })
   // 実装4: タブ廃止→縦1カラム。金額・原価セクションの折りたたみ（received/in_progress のみ・既定閉）。
   //   <details> の open を state と同期し、閉時は中身を非レンダリング＝動的import(DeliveryProgress)は開くまでマウントしない。
-  const [moneyOpen, setMoneyOpen] = useState(false)
   const moneyRef = useRef<HTMLDivElement | null>(null)   // 「明細を追加して成約へ」からのスクロール先
-  const baseBoxRef = useRef<HTMLDivElement | null>(null) // 「実績金額を入力する」からのスクロール先
   // 実装2: 波及あり遷移（3面表示変化/メール送信）の確定前確認モーダル。
   const [moveConfirm, setMoveConfirm] = useState<{ deal: Deal; to: Status } | null>(null)
   // 静音化v2(A2): 動詞CTA・管理操作の確認ダイアログ（本文=forecastLine＋precondition・実行する/キャンセル）。
@@ -345,7 +401,6 @@ export default function DealsPage() {
   const [ctaConfirm, setCtaConfirm] = useState<{ deal: Deal; to: Status; from: string; precondition?: string; reopen?: boolean } | null>(null)
   // 実装3: ステータスマトリクス（3面写像＋通知メール）のⓘシート。
   const [matrixOpen, setMatrixOpen] = useState(false)
-  const [baseEdit, setBaseEdit] = useState('')
   // N: 不成立化モーダル（理由＋メモ）
   const [lostModal, setLostModal] = useState<Deal | null>(null)
   const [lostReason, setLostReason] = useState<string>('')
@@ -359,7 +414,6 @@ export default function DealsPage() {
   const [archiveSearch, setArchiveSearch] = useState('')
   // L2: 明細編集用（サービス+メニューのマスタ／追加フォーム）
   const [svcMenus, setSvcMenus] = useState<SvcWithMenus[]>([])
-  const [itemForm, setItemForm] = useState<{ service_id: string; menu_id: string; amount: string; base_amount: string }>({ service_id: '', menu_id: '', amount: '', base_amount: '' })
   const [itemBusy, setItemBusy] = useState(false)
   // A1: MB担当の選択肢（内部メンバー）／A2a: デリバリー委託先の選択肢
   const [directors, setDirectors] = useState<Director[]>([])
@@ -411,7 +465,7 @@ export default function DealsPage() {
   }, [selected])
 
   // 実装4: 案件を切り替えたら編集/折りたたみ状態をリセット（タブ廃止に伴い detailTab リセットは削除）。A3: 「…」メニューも閉じる。
-  useEffect(() => { setEditingBase(false); setMoneyOpen(false); setManageOpen(false) }, [selected?.id])
+  useEffect(() => { setManageOpen(false); setDlvAdd({ open: false, delivery_id: '', fee: '' }) }, [selected?.id])
 
   // A3: 「…」メニューは外側クリックで閉じる。
   useEffect(() => {
@@ -437,17 +491,6 @@ export default function DealsPage() {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ msg, undo: opts?.undo })
     toastTimer.current = setTimeout(() => setToast(null), opts?.duration ?? 2200)
-  }
-
-  // 静音化v2: 動詞CTAの特殊分岐からの誘導。金額・原価セクションを開いてスクロール／実績金額の入力を開いてスクロール。
-  function openMoneySection() {
-    setMoneyOpen(true)
-    setTimeout(() => moneyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
-  }
-  function openBaseEntry(deal: Deal) {
-    setEditingBase(true)
-    setBaseEdit(deal.base_amount?.toString() ?? '')
-    setTimeout(() => baseBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
   }
 
   // L2: 明細変更後にボードを再取得し選択中dealを更新（deals.amount=Σ・明細を反映）。
@@ -497,21 +540,6 @@ export default function DealsPage() {
       else showToast(data.error ?? '起票に失敗しました')
     } catch { showToast('起票に失敗しました') } finally { setDirectBusy(false) }
   }
-  async function addItem() {
-    if (!selected || !itemForm.service_id) { showToast('サービスを選択してください'); return }
-    const menu = svcMenus.find(s => s.id === itemForm.service_id)?.service_menus?.find(m => m.id === itemForm.menu_id)
-    const kind = menu ? (selected.channel === 'cooperation' ? (menu.coop_type === 'rate' ? 'rate' : 'fixed') : (menu.ref_type === 'rate' ? 'rate' : 'fixed')) : 'fixed'
-    setItemBusy(true)
-    try {
-      const res = await fetch(`/api/console/deals/${selected.id}/items`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service_id: itemForm.service_id, menu_id: itemForm.menu_id || null, kind, amount: itemForm.amount, base_amount: itemForm.base_amount }),
-      })
-      const data = await res.json()
-      if (res.ok && data.item) { await refreshDeals(selected.id); setItemForm({ service_id: '', menu_id: '', amount: '', base_amount: '' }); showToast('明細を追加しました') }
-      else showToast(data.error ?? '追加に失敗しました')
-    } catch { showToast('追加に失敗しました') } finally { setItemBusy(false) }
-  }
   async function patchItem(itemId: string, body: Record<string, unknown>) {
     if (!selected) return
     setItemBusy(true)
@@ -521,16 +549,6 @@ export default function DealsPage() {
       if (res.ok) await refreshDeals(selected.id)
       else showToast(data.error ?? '更新に失敗しました')
     } catch { showToast('更新に失敗しました') } finally { setItemBusy(false) }
-  }
-  async function deleteItem(itemId: string) {
-    if (!selected) return
-    setItemBusy(true)
-    try {
-      const res = await fetch(`/api/console/deals/${selected.id}/items/${itemId}`, { method: 'DELETE' })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok) { await refreshDeals(selected.id); showToast('明細を削除しました') }
-      else showToast(data.error ?? '削除に失敗しました')
-    } catch { showToast('削除に失敗しました') } finally { setItemBusy(false) }
   }
   // A1: P&Lメタ（MB担当・その他原価）。reward/payout 非接触。
   async function savePnl(body: Record<string, unknown>) {
@@ -565,19 +583,6 @@ export default function DealsPage() {
       else showToast(data.error ?? '保存に失敗しました')
     } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
   }
-  // A2a: 明細のデリバリー割当を set/clear（delivery_id null＝MB自身/委託費0）。reward/payout 非接触。
-  async function setItemDelivery(dealItemId: string, deliveryId: string | null, baseFee: number) {
-    if (!selected) return
-    setItemBusy(true)
-    try {
-      const res = await fetch(`/api/console/deals/${selected.id}/deliveries`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deal_item_id: dealItemId, delivery_id: deliveryId, base_fee: baseFee }) })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && !data.needsMigration) await refreshDeals(selected.id)
-      else if (data.needsMigration) showToast('デリバリーのDB適用が必要です（batchA2a DDL）')
-      else showToast(data.error ?? '割当に失敗しました')
-    } catch { showToast('割当に失敗しました') } finally { setItemBusy(false) }
-  }
-
   // A2b: 経費を追加（割当単位・領収書は任意・サーバ経由アップロード）。承認時のみP&L反映。reward/payout 非接触。
   async function addExpense(assignmentId: string, kind: string, amount: string, file: File | null) {
     if (!selected) return
@@ -627,13 +632,7 @@ export default function DealsPage() {
   }
 
   function updateStatus(deal: Deal, newStatus: Status) {
-    // ② Confirming a rate-based deal without a recorded base → ask for the actual amount first.
-    if (newStatus === 'confirmed' && needsBase(deal)) {
-      const ri = rateInfo(deal)
-      setBaseInput('')
-      setBaseModal({ deal, rate: ri.rate as number, baseLabel: ri.baseLabel })
-      return
-    }
+    // ライフサイクル: 率案件も base なしで成約可（報酬確定は成約後の「報酬を確定する」）。旧baseModal分岐は全廃。
     // N: 不成立化は理由入力を挟む（直接PATCHしない）
     if (newStatus === 'lost') {
       if (deal.status === 'paid') { showToast('支払済の案件は不成立にできません'); return }
@@ -651,63 +650,122 @@ export default function DealsPage() {
         setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: newStatus } : d))
         if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: newStatus } : d)
         showToast(`ステータスを「${COLS.find(c => c.key === newStatus)?.label}」に変更しました`)
-      } else if (data?.needsBase) {
-        // Fallback: server says base required (e.g. stale client data)
-        setBaseInput('')
-        setBaseModal({ deal, rate: Number(data.rate), baseLabel: data.baseLabel ?? '売上' })
       } else {
         showToast(data?.error ?? '更新に失敗しました')
       }
     })
   }
 
-  function confirmWithBase() {
-    if (!baseModal) return
-    const base = Number(baseInput.replace(/[,，\s]/g, ''))
-    if (!base || Number.isNaN(base) || base <= 0) { showToast('実額を正しく入力してください'); return }
-    const { deal, rate } = baseModal
+  // ── ライフサイクル: 成約ダイアログ ──
+  // 率/継続/直営は受注額（売上）を入力して成約（deal_items.revenue へ保存・報酬計算には不使用）。
+  // 明細0件の案件（相談等）はサービス/メニュー選択で明細作成も兼ねる（L3ガードを画面で満たす）。
+  function openConfirmDialog(deal: Deal) {
+    const rev = (deal.deal_items ?? []).reduce((s, it) => s + (it.revenue ?? 0), 0)
+    setConfirmRevenue(rev > 0 ? String(rev) : '')
+    setConfirmSvc({ service_id: '', menu_id: '' })
+    setConfirmModal(deal)
+  }
+  function confirmDeal() {
+    if (!confirmModal) return
+    const deal = confirmModal
+    const noItems = (deal.deal_items?.length ?? 0) === 0
+    const askRevenue = rateInfo(deal).isRate || continuousInfo(deal).isContinuous || deal.intake_type === 'direct'
+    const rev = Math.max(0, Number((confirmRevenue || '').replace(/[,，\s]/g, '')) || 0)
+    if (noItems && !confirmSvc.service_id) { showToast('サービスを選択してください'); return }
+    startTransition(async () => {
+      try {
+        let itemId = deal.deal_items?.[0]?.id ?? null
+        if (noItems) {
+          const res = await fetch(`/api/console/deals/${deal.id}/items`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ service_id: confirmSvc.service_id, menu_id: confirmSvc.menu_id || null, kind: 'fixed', amount: 0 }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok) { showToast(data?.error ?? '明細の作成に失敗しました'); return }
+          itemId = data.item?.id ?? null
+        }
+        if (askRevenue && rev > 0 && itemId) {
+          await fetch(`/api/console/deals/${deal.id}/items/${itemId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revenue: rev }),
+          }).catch(() => {})
+        }
+        const res2 = await fetch(`/api/console/deals/${deal.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'confirmed' }),
+        })
+        const data2 = await res2.json().catch(() => ({}))
+        if (!res2.ok) { showToast(data2?.error ?? '成約に失敗しました'); return }
+        setConfirmModal(null)
+        await refreshDeals(deal.id)
+        showToast('成約にしました')
+      } catch { showToast('成約に失敗しました') }
+    })
+  }
+
+  // ── ライフサイクル: 報酬確定（率案件）──
+  // 粗利は入力ではなく計算結果（受注額 − 委託費(了承済) − 経費(承認済) − その他原価）。
+  // その計算値を base として既存API（base×率＝報酬・snapshot追記）に確定させる＝式の意味は不変。
+  function confirmReward() {
+    if (!rewardModal) return
+    const deal = rewardModal
+    const ri = rateInfo(deal)
+    const revenue = (deal.deal_items ?? []).reduce((s, it) => s + (it.revenue ?? 0), 0)
+    const base = baseWord(ri.baseLabel) === '売上' ? revenue : grossBeforeReward(deal)
+    if (!(base > 0)) { showToast('計算値が0以下のため確定できません'); return }
     startTransition(async () => {
       const res = await fetch(`/api/console/deals/${deal.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'confirmed', base_amount: base }),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base_amount: base }),
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        const computed = Math.round(base * rate / 100)
-        setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: 'confirmed', base_amount: base, amount: computed } : d))
-        if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: 'confirmed', base_amount: base, amount: computed } : d)
-        setBaseModal(null)
-        showToast(`成約確定：報酬 ¥${computed.toLocaleString()}`)
+        setRewardModal(null)
+        await refreshDeals(deal.id)
+        showToast(`報酬を確定しました：¥${Math.round(base * (ri.rate as number) / 100).toLocaleString()}`)
       } else {
         showToast(data?.error ?? '確定に失敗しました')
       }
     })
   }
 
-  // ① Save/edit the actual amount (base) from the detail panel — reward recomputes.
-  function saveBase() {
-    if (!selected) return
-    const ri = rateInfo(selected)
-    const base = Number(baseEdit.replace(/[,，\s]/g, ''))
-    if (!base || Number.isNaN(base) || base <= 0) { showToast('実額を正しく入力してください'); return }
-    startTransition(async () => {
-      const res = await fetch(`/api/console/deals/${selected.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base_amount: base }),
+  // ── ライフサイクル: デリバリー提示（0〜N行・op方式）──
+  async function addAssignment() {
+    if (!selected || !dlvAdd.delivery_id) return
+    const fee = Math.max(0, Number((dlvAdd.fee || '').replace(/[,，\s]/g, '')) || 0)
+    setItemBusy(true)
+    try {
+      const res = await fetch(`/api/console/deals/${selected.id}/deliveries`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ op: 'add', delivery_id: dlvAdd.delivery_id, base_fee: fee, deal_item_id: selected.deal_items?.[0]?.id ?? null }),
       })
       const data = await res.json().catch(() => ({}))
-      if (res.ok) {
-        const computed = Math.round(base * (ri.rate as number) / 100)
-        setDeals(prev => prev.map(d => d.id === selected.id ? { ...d, base_amount: base, amount: computed } : d))
-        setSelected(s => s ? { ...s, base_amount: base, amount: computed } : s)
-        setEditingBase(false)
-        showToast(`実績金額を保存：報酬 ¥${computed.toLocaleString()}`)
-      } else {
-        showToast(data?.error ?? '保存に失敗しました')
-      }
-    })
+      if (!res.ok) { showToast(data?.error ?? '提示に失敗しました'); return }
+      setDlvAdd({ open: false, delivery_id: '', fee: '' })
+      await refreshDeals(selected.id)
+      showToast('委託費を提示しました（ベンダーの承諾待ち）')
+    } finally { setItemBusy(false) }
+  }
+  async function removeAssignment(assignmentId: string) {
+    if (!selected) return
+    setItemBusy(true)
+    try {
+      const res = await fetch(`/api/console/deals/${selected.id}/deliveries`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'remove', assignment_id: assignmentId }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d?.error ?? '削除に失敗しました'); return }
+      await refreshDeals(selected.id)
+      showToast('提示を取り下げました')
+    } finally { setItemBusy(false) }
+  }
+  async function patchAssignmentFee(assignmentId: string, fee: number) {
+    if (!selected) return
+    setItemBusy(true)
+    try {
+      const res = await fetch(`/api/console/deals/${selected.id}/deliveries`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'fee', assignment_id: assignmentId, base_fee: fee }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d?.error ?? '更新に失敗しました'); return }
+      await refreshDeals(selected.id)
+      showToast('委託費を変更しました（再提示＝ベンダーの承諾待ち）')
+    } finally { setItemBusy(false) }
   }
 
   // N: 不成立化を確定（理由＋メモ）。報酬は成功報酬制のため変更しない。
@@ -1027,7 +1085,9 @@ export default function DealsPage() {
                       const revenueMissing = (d._phase ?? phaseOf(d)) === 'project' && (d.deal_items?.length ?? 0) > 0 && (d.deal_items ?? []).every(it => it.revenue == null)
                       // 静音化v2.1(A1): 要対応＝テキストピル廃止→カード右上7px赤丸（理由は判定根拠から導出しtitleへ）。
                       const attentionReasons = [
-                        needsBase(d) && '実績金額が未入力',
+                        // ライフサイクル: 率案件は成約後に粗利計算→報酬確定。未確定＝要対応（成約前は正常状態なので出さない）。
+                        d.status === 'confirmed' && needsBase(d) && '報酬が未確定です（粗利の確定待ち）',
+                        (d._deliveries ?? []).some(a => a.status === 'proposed') && 'ベンダーの承諾待ちの提示があります',
                         rejectedExp && '却下された経費があります',
                         revenueMissing && '受注額（売上）が未入力',
                       ].filter(Boolean) as string[]
@@ -1082,8 +1142,12 @@ export default function DealsPage() {
                 : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={36} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(selected)}</div>
+                {/* ライフサイクル: 素性行＝「ブランド ─ メニュー・報酬条件・トリガー」を常時表示（reward_snapshot/正典から導出） */}
                 <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {selected.services?.name ? `${selected.services.name}${menuLabelOf(selected) ? ` ─ ${menuLabelOf(selected)}` : ''}` : '相談（サービス未定）'}
+                  {[
+                    selected.services?.name ? `${selected.services.name}${menuLabelOf(selected) ? ` ─ ${menuLabelOf(selected)}` : ''}` : '相談（サービス未定）',
+                    rewardTermLine(selected),
+                  ].filter(Boolean).join('・')}
                 </div>
               </div>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -1119,18 +1183,18 @@ export default function DealsPage() {
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
             </div>
 
-            {/* A2: 焦点＝動詞ボタン1つ（OPS_NEXT_ACTION正典由来・枠/見出し/常設予告なし）。
-                押下→確認ダイアログ（forecastLine＋precondition・実行する/キャンセル）→updateStatus（既存ガードは関数内で活きる）。
-                特殊分岐: 明細0→金額・原価を展開しスクロール／率base未入力→実績金額入力へ／lost90日内→再開／paid→非表示（ステータス行が完了を語る）。 */}
+            {/* ライフサイクル: 焦点＝動詞ボタン1つ（フェーズが決める次の一手）。
+                受付→対応中: 正典CTA（確認ダイアログ）／対応中→成約: 成約ダイアログ（率/継続/直営は売上入力・明細0は明細作成を兼ねる）／
+                成約×率×報酬未確定: 報酬を確定する（粗利=計算値×率のダイアログ）／成約→支払済: 正典CTA（率はサーバ側で報酬未確定を拒否）／
+                lost90日内→再開／paid→非表示（ステータス行が完了を語る）。 */}
             {(() => {
               const st = selected.status
-              const noItems = (selected.deal_items?.length ?? 0) === 0
               const nextAct = OPS_NEXT_ACTION[st as keyof typeof OPS_NEXT_ACTION] ?? null
               let act: { label: string; onClick: () => void } | null = null
-              if (st === 'in_progress' && noItems) {
-                act = { label: '明細を追加して成約へ', onClick: openMoneySection }
-              } else if (st === 'in_progress' && needsBase(selected)) {
-                act = { label: '実績金額を入力して成約へ', onClick: () => openBaseEntry(selected) }
+              if (st === 'in_progress') {
+                act = { label: '成約にする', onClick: () => openConfirmDialog(selected) }
+              } else if (st === 'confirmed' && needsBase(selected)) {
+                act = { label: '報酬を確定する', onClick: () => setRewardModal(selected) }
               } else if (nextAct) {
                 act = { label: nextAct.cta, onClick: () => setCtaConfirm({ deal: selected, to: nextAct.to, from: st, precondition: nextAct.precondition }) }
               } else if (st === 'lost') {
@@ -1202,15 +1266,14 @@ export default function DealsPage() {
                           <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.done ? 'var(--green)' : '#fff', border: `2px solid ${t.done ? 'var(--green)' : 'var(--line)'}`, color: '#fff' }}>
                             {t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>}
                           </span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, color: t.done ? 'var(--muted2)' : 'var(--txt)', textDecoration: t.done ? 'line-through' : 'none' }}>
+                          {/* ライフサイクル静音化: 完了は打ち消し線でなくチェック＋muted。ピルは必要情報（未達の必須）のみ・「自動」はtitleへ。 */}
+                          <span title={auto ? 'ステータス遷移で自動的に完了します' : undefined} style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, color: t.done ? 'var(--muted2)' : 'var(--txt)' }}>
                             {t.label}
-                            {/* A3: パートナー入力のヒアリング内容（deal_tasks.note）— 保存はされていたが表示欠落だった */}
                             {t.note && (
-                              <span style={{ display: 'block', fontSize: '.66rem', fontWeight: 400, color: 'var(--txt)', textDecoration: 'none', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginTop: 4, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 8 }}>{t.note}</span>
+                              <span style={{ display: 'block', fontSize: '.66rem', fontWeight: 400, color: 'var(--txt)', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginTop: 4, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 8 }}>{t.note}</span>
                             )}
                           </span>
-                          {t.required && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 7px' }}>必須</span>}
-                          {auto && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--muted)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>自動</span>}
+                          {t.required && !t.done && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 7px' }}>必須</span>}
                         </button>
                       )
                     })}
@@ -1218,51 +1281,7 @@ export default function DealsPage() {
                 </div>
               )}
 
-              {/* ① 実績金額（率案件）— 編集（base_amount→報酬再計算は不変）。静音化v2: 枠なし・0.5px罫線区切り。 */}
-              {rateInfo(selected).isRate && (
-                <div ref={baseBoxRef} style={{ marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>実績金額（{rateInfo(selected).baseLabel}）</p>
-                      <p style={{ fontSize: '.88rem', fontWeight: 500, fontFamily: 'Inter', marginTop: 3 }}>
-                        {selected.base_amount != null
-                          ? `¥${selected.base_amount.toLocaleString()}`
-                          : <span style={{ color: 'var(--amber)', fontSize: '.74rem' }}>未入力</span>}
-                      </p>
-                      <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 3 }}>
-                        × {rateInfo(selected).rate}% = 報酬 {selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '—'}
-                      </p>
-                    </div>
-                    {!editingBase && selected.status !== 'lost' && (
-                      <button onClick={() => { setEditingBase(true); setBaseEdit(selected.base_amount?.toString() ?? '') }} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px', flexShrink: 0 }}>
-                        {selected.base_amount != null ? '金額を編集' : '金額を入力'}
-                      </button>
-                    )}
-                  </div>
-                  {editingBase && (
-                    <div style={{ marginTop: 12 }}>
-                      <input
-                        autoFocus inputMode="numeric"
-                        value={baseEdit}
-                        onChange={e => setBaseEdit(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') saveBase() }}
-                        placeholder={`${rateInfo(selected).baseLabel}の実額（例：300000）`}
-                        style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'Inter', fontSize: '.85rem' }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
-                        <span style={{ color: 'var(--muted2)' }}>確定報酬（{rateInfo(selected).rate}%）</span>
-                        <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)' }}>
-                          {(() => { const bv = Number(baseEdit.replace(/[,，\s]/g, '')); return bv > 0 ? `¥${Math.round(bv * (rateInfo(selected).rate as number) / 100).toLocaleString()}` : '—' })()}
-                        </b>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setEditingBase(false)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
-                        <button onClick={saveBase} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存する</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* ライフサイクル: 旧「実績金額（粗利）を入力」ブロックは全廃＝粗利は計算式ブロックの計算結果・報酬確定はヘッダCTA。 */}
 
               {/* 継続報酬：月次入力セクション（継続案件のみ・通常案件には出さない）【進行セクション】 */}
               {continuousInfo(selected).isContinuous && (
@@ -1310,10 +1329,10 @@ export default function DealsPage() {
                 )}
               </div>
 
-              {/* 基本情報（表示専用）: サービス/ステータス/報酬/登録日はヘッダ・タイムラインへ再配置済＝ここは残余メタのみ */}
+              {/* 紹介（ライフサイクル）: パートナー名＋ソースの日本語化（partner_form等の内部値は生で出さない） */}
               <div style={{ marginTop: 12 }}>
                 {([
-                  ['ソース', selected.source],
+                  ['紹介', selected.intake_type === 'direct' ? '直営業' : sourceLine(selected)],
                   ['パートナー', selected.partners ? `${selected.partners.profiles?.name ?? ''} (${selected.partners.code})` : '—'],
                 ] as [string, React.ReactNode][]).map(([k, v]) => (
                   <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: '0.5px solid var(--line)', fontSize: 12, alignItems: 'center' }}>
@@ -1341,226 +1360,255 @@ export default function DealsPage() {
               {/* ヒアリング（協力タスクのヒアリングnote。無ければ「—」） */}
               <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', margin: '18px 0 8px' }}>ヒアリング</p>
               {(() => {
-                const notes = dealTasks.filter(t => t.note && t.note.trim()).map(t => t.note!.trim())
-                if (notes.length === 0) return <p style={{ fontSize: 12, color: 'var(--muted2)' }}>—</p>
-                return notes.map((n, i) => (
-                  <p key={i} style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted2)', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: i > 0 ? '8px 0 0' : 0 }}>{n}</p>
-                ))
-              })()}
-
-              {/* A3: 金額・原価 — 需要時表示（received/in_progress=クリック展開・confirmed/paid/lostは自動展開＝フェーズ連動）。
-                  展開内容＝既存の明細CRUD/デリバリー割当/経費/P&L/明細追加/DeliveryProgress一式（枠なし0.5px区切り）。 */}
-              <div ref={moneyRef} style={{ marginTop: 22, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
-              {(() => {
-                const items = selected.deal_items ?? []
-                // 完成D: 直営業（intake=direct）は商談を経ず confirmed で起票されるため、confirmed中はmoney編集可
-                //   （API側 deliveries ロック緩和と同条件。paid後はロック。パートナー報酬はMB直営=is_system＝支払対象外）。
-                const editable = ['received', 'in_progress'].includes(selected.status)
-                  || (selected.intake_type === 'direct' && selected.status === 'confirmed')
-                const svc = svcMenus.find(s => s.id === itemForm.service_id)
-                const autoOpen = !['received', 'in_progress'].includes(selected.status)
-                const opened = moneyOpen || autoOpen
-                const renderMoney = () => (<>
-                  <div style={{ marginTop: 12 }}>
-                    <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 6 }}>明細（内訳）</p>
-                    <div>
-                      {items.length === 0 && <p style={{ padding: '10px 0', fontSize: '.66rem', color: 'var(--muted2)' }}>明細はまだありません</p>}
-                      {[...items].sort((a, b) => a.sort - b.sort).map(it => (
-                        <div key={it.id} style={{ padding: '10px 0', borderBottom: '0.5px solid var(--line)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.services?.name ?? it.service_id}</div>
-                              <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 1 }}>
-                                {it.kind === 'rate' ? `率・実績 ${it.base_amount != null ? `¥${it.base_amount.toLocaleString()}` : '未入力'}` : '固定'} ・ 報酬
-                              </div>
-                            </div>
-                            {editable && it.kind === 'rate' && (
-                              <input key={`${selected.id}:${it.id}:base`} defaultValue={it.base_amount ?? ''} inputMode="numeric" placeholder="実績" disabled={itemBusy}
-                                onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.base_amount ?? '')) patchItem(it.id, { base_amount: v === '' ? null : Number(v) }) }}
-                                style={{ width: 78, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
-                            )}
-                            {editable && it.kind === 'fixed' && !it.menu_id && (
-                              <input key={`${selected.id}:${it.id}:amount`} defaultValue={it.amount ?? ''} inputMode="numeric" placeholder="報酬" disabled={itemBusy}
-                                onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.amount ?? '')) patchItem(it.id, { amount: v === '' ? 0 : Number(v) }) }}
-                                style={{ width: 78, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
-                            )}
-                            <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 500, minWidth: 58, textAlign: 'right', color: it.amount > 0 ? 'var(--txt)' : 'var(--muted)' }}>
-                              {it.amount > 0 ? `¥${it.amount.toLocaleString()}` : '—'}
-                            </span>
-                            {editable && (
-                              <button onClick={() => deleteItem(it.id)} disabled={itemBusy} style={{ flexShrink: 0, background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem' }}>✕</button>
-                            )}
-                          </div>
-                          {/* A1: 受注額（売上）— 成約前のみ編集 */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                            <span style={{ fontSize: '.58rem', color: 'var(--muted2)', flex: 1 }}>受注額（売上）</span>
-                            {editable ? (
-                              <input key={`${selected.id}:${it.id}:revenue`} defaultValue={it.revenue ?? ''} inputMode="numeric" placeholder="売上" disabled={itemBusy}
-                                onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.revenue ?? '')) patchItem(it.id, { revenue: v === '' ? null : Number(v) }) }}
-                                style={{ width: 110, border: '1.5px solid var(--blue-bg)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right', background: 'var(--blue-bg2)' }} />
-                            ) : (
-                              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.72rem', fontWeight: 500, color: it.revenue != null ? 'var(--txt)' : 'var(--muted)' }}>{it.revenue != null ? `¥${it.revenue.toLocaleString()}` : '未入力'}</span>
-                            )}
-                          </div>
-                          {/* A2a: デリバリー割当（明細単位） */}
-                          {(() => {
-                            const assign = (selected.deal_items ? (selected._deliveries ?? []) : []).find(a => a.deal_item_id === it.id)
-                            const curDelivery = assign?.delivery_id ?? ''
-                            const curFee = assign?.base_fee ?? 0
-                            return (
-                              <>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                                  <span style={{ fontSize: '.58rem', color: 'var(--muted2)', flex: 1 }}>デリバリー</span>
-                                  {/* C1: 候補はサービス一致を先頭グループ（このサービスの担当）、それ以外を「その他の委託先」へ */}
-                                  <select value={curDelivery} disabled={!editable || itemBusy}
-                                    onChange={e => setItemDelivery(it.id, e.target.value || null, e.target.value ? curFee : 0)}
-                                    style={{ border: '0.5px solid var(--line)', borderRadius: 7, padding: '4px 7px', fontFamily: 'inherit', fontSize: '.66rem', background: '#fff', maxWidth: 130 }}>
-                                    <option value="">MB自身（委託費0）</option>
-                                    <DeliveryOptGroups opts={deliveriesOpt} serviceId={it.service_id} />
-                                  </select>
-                                  {curDelivery && (
-                                    <input key={`${selected.id}:${it.id}:fee`} defaultValue={curFee || ''} inputMode="numeric" placeholder="委託費" disabled={!editable || itemBusy}
-                                      onBlur={e => { const v = Math.max(0, Number(e.target.value.trim() || 0)); if (v !== curFee) setItemDelivery(it.id, curDelivery, v) }}
-                                      style={{ width: 78, border: '0.5px solid var(--line)', borderRadius: 7, padding: '4px 7px', fontFamily: 'Inter', fontSize: '.68rem', textAlign: 'right' }} />
-                                  )}
-                                </div>
-                                {/* A2b: 割当が確定している明細のみ経費を申請/承認できる */}
-                                {curDelivery && assign?.id && (
-                                  <DeliveryExpenses assign={assign} editable={editable} busy={itemBusy}
-                                    onAdd={addExpense} onStatus={setExpenseStatus} onDelete={deleteExpense} onView={viewEvidence} />
-                                )}
-                              </>
-                            )
-                          })()}
-                        </div>
-                      ))}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 0' }}>
-                        <span style={{ fontSize: '.68rem', fontWeight: 500 }}>報酬合計（パートナー）</span>
-                        <RewardPill><span className="tnum" style={{ fontFamily: 'Inter' }}>¥{selected.amount.toLocaleString()}</span></RewardPill>
-                      </div>
-                    </div>
-
-                    {/* A1: その他原価（いつでも編集可・P&L表示専用）。MB担当は右カラム「お客さま」へ移設（B2・常時可視）。 */}
-                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>その他原価</span>
-                        {/* B2: key=selected.id で案件跨ぎのdefaultValue残留を解消（他のmoney入力も同様） */}
-                        <input key={selected.id} defaultValue={selected.other_cost ?? ''} inputMode="numeric" placeholder="0" disabled={itemBusy}
-                          onBlur={e => { const v = e.target.value.trim(); if (v !== String(selected.other_cost ?? '')) savePnl({ other_cost: v }) }}
-                          style={{ width: 96, border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 9px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right' }} />
-                      </div>
-                    </div>
-
-                    {/* A1: プロジェクトP&L（読取専用集計・保存値非接触） */}
-                    {(() => {
-                      const pnl = computeProjectPnl({
-                        items: items.map(i => ({ revenue: i.revenue ?? null })),
-                        partnerReward: selected.amount,
-                        frontierOverride: selected._frontier_override ?? 0,
-                        otherCost: selected.other_cost ?? 0,
-                        deliveryCost: selected._delivery_cost ?? 0,
-                        deliveryExpense: selected._delivery_expense ?? 0,
-                      })
-                      // B1: 行の並びで語る（説明文なし）。MB粗利=強調行13px/500・正=var(--txt)/負=var(--red)。式は computeProjectPnl 不変。
-                      const Row = ({ label, val, minus, strong }: { label: string; val: number; minus?: boolean; strong?: boolean }) => (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: strong ? '10px 0 0' : '4px 0', fontSize: strong ? 13 : '.68rem', fontWeight: 500, borderTop: strong ? '0.5px solid var(--line)' : undefined, marginTop: strong ? 6 : 0 }}>
-                          <span style={{ color: strong ? 'var(--txt)' : 'var(--muted2)' }}>{minus ? '− ' : ''}{label}</span>
-                          <span className="tnum" style={{ fontFamily: 'Inter', color: strong ? (pnl.mbMargin >= 0 ? 'var(--txt)' : 'var(--red)') : 'var(--txt)' }}>{minus && val > 0 ? '−' : ''}¥{Math.abs(val).toLocaleString()}</span>
-                        </div>
-                      )
-                      return (
-                        <div style={{ marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--line)' }}>
-                          <p style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>プロジェクトP&L</p>
-                          <Row label="受注額（売上合計）" val={pnl.revenue} />
-                          <Row label="パートナー報酬" val={pnl.partnerReward} minus />
-                          <Row label="フロンティアoverride" val={pnl.frontierOverride} minus />
-                          <Row label="デリバリー委託費" val={pnl.deliveryCost} minus />
-                          <Row label="デリバリー経費" val={pnl.deliveryExpense} minus />
-                          <Row label="その他原価" val={pnl.otherCost} minus />
-                          <Row label="MB粗利" val={pnl.mbMargin} strong />
-                        </div>
-                      )
-                    })()}
-
-                    {editable && (
-                      <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
-                        <select value={itemForm.service_id} onChange={e => setItemForm(f => ({ ...f, service_id: e.target.value, menu_id: '' }))} style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff' }}>
-                          <option value="">サービス…</option>
-                          {svcMenus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
-                        {svc && (
-                          <select value={itemForm.menu_id} onChange={e => setItemForm(f => ({ ...f, menu_id: e.target.value }))} style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff' }}>
-                            <option value="">メニュー（任意・固定額）</option>
-                            {(svc.service_menus ?? []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                          </select>
-                        )}
-                        {(() => {
-                          const m = svc?.service_menus?.find(x => x.id === itemForm.menu_id)
-                          const isRate = m ? (selected.channel === 'cooperation' ? m.coop_type === 'rate' : m.ref_type === 'rate') : false
-                          if (isRate) return <input value={itemForm.base_amount} onChange={e => setItemForm(f => ({ ...f, base_amount: e.target.value }))} placeholder="実績(率)" inputMode="numeric" style={{ width: 86, border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'Inter', fontSize: '.72rem' }} />
-                          if (!m) return <input value={itemForm.amount} onChange={e => setItemForm(f => ({ ...f, amount: e.target.value }))} placeholder="固定額" inputMode="numeric" style={{ width: 86, border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'Inter', fontSize: '.72rem' }} />
-                          return null
-                        })()}
-                        <button onClick={addItem} disabled={itemBusy || !itemForm.service_id} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '7px 12px' }}>明細を追加</button>
-                      </div>
-                    )}
-                  </div>
-                  {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。 */}
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />
-                </>)
-                {/* summary=「金額・原価 ▸」12px/muted 1行。confirmed/paid/lost（=編集ロック後）は自動展開＝クリックで閉じない。 */}
+                // ライフサイクル: 単一コンテンツ（ヒヤリングタスクのnote・パートナー編集制）。長文は折りたたみで全文表示。
+                const note = dealTasks.find(t => t.note && t.note.trim())?.note?.trim() ?? null
+                if (!note) return <p style={{ fontSize: 12, color: 'var(--muted2)' }}>—</p>
+                if (note.length <= 220) return <p style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted2)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{note}</p>
                 return (
-                  <details open={opened} onToggle={e => { if (!autoOpen) setMoneyOpen(e.currentTarget.open) }}>
-                    <summary onClick={e => { if (autoOpen) e.preventDefault() }}
-                      style={{ cursor: autoOpen ? 'default' : 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>
-                      <span>金額・原価</span>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-                        style={{ flexShrink: 0, transform: opened ? 'rotate(90deg)' : 'none', transition: 'transform .14s var(--ease-out)' }}>
-                        <path d="M9 6l6 6-6 6" />
-                      </svg>
+                  <details>
+                    <summary style={{ cursor: 'pointer', listStyle: 'none' }}>
+                      <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted2)', lineHeight: 1.7, whiteSpace: 'pre-wrap', display: 'block' }}>{note.slice(0, 220)}…</span>
+                      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-blue)' }}>すべて表示</span>
                     </summary>
-                    {/* 閉時は中身を非レンダリング＝動的import（DeliveryProgress）は開くまでマウントしない */}
-                    {opened && renderMoney()}
+                    <p style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted2)', lineHeight: 1.7, whiteSpace: 'pre-wrap', marginTop: 4 }}>{note.slice(220)}</p>
                   </details>
                 )
               })()}
-              </div>
+
+              {/* ライフサイクル: 金額ゾーンはフェーズが決める。
+                  nego（受付/商談）＝一切レンダリングしない（金額系UIはDOM不在）。
+                  project（成約後）＝①デリバリー提示 0〜N行 ②計算式ブロック（粗利＝計算結果・入力は売上/委託費/その他原価のみ）③明細。
+                  settled/lost＝同構造の読み取り専用。固定報酬×コスト無しは計算式ブロック自体を出さない（素性行が報酬を語る）。 */}
+              {(() => {
+                const phase = lifecyclePhase(selected)
+                if (phase === 'nego') return null
+                const items = selected.deal_items ?? []
+                const assigns = selected._deliveries ?? []
+                const editable = phase === 'project'
+                const ri = rateInfo(selected)
+                const cont = continuousInfo(selected)
+                const revenue = items.reduce((s2, it) => s2 + (it.revenue ?? 0), 0)
+                const acceptedCost = selected._delivery_cost ?? 0
+                const proposedSum = assigns.filter(a => a.status === 'proposed').reduce((s2, a) => s2 + (a.base_fee ?? 0), 0)
+                const expense = selected._delivery_expense ?? 0
+                const gross = grossBeforeReward(selected)
+                const rewardSettled = !ri.isRate || selected.base_amount != null
+                const hasCosts = assigns.length > 0 || (selected.other_cost ?? 0) > 0 || expense > 0 || revenue > 0
+                const showFormula = ri.isRate || cont.isContinuous || selected.intake_type === 'direct' || hasCosts
+                const projectedReward = ri.isRate
+                  ? Math.round(Math.max(0, baseWord(ri.baseLabel) === '売上' ? revenue : gross) * (ri.rate as number) / 100)
+                  : selected.amount
+                const rewardShown = ri.isRate && !rewardSettled ? projectedReward : selected.amount
+                const Row = ({ label, val, minus, strong, quiet }: { label: React.ReactNode; val: number; minus?: boolean; strong?: boolean; quiet?: boolean }) => (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: strong ? '10px 0 0' : '4px 0', fontSize: strong ? 13 : '.68rem', fontWeight: 500, borderTop: strong ? '0.5px solid var(--line)' : undefined, marginTop: strong ? 6 : 0, opacity: quiet ? .75 : 1 }}>
+                    <span style={{ color: strong ? 'var(--txt)' : 'var(--muted2)' }}>{minus ? '− ' : ''}{label}</span>
+                    <span className="tnum" style={{ fontFamily: 'Inter', color: strong ? (val >= 0 ? 'var(--txt)' : 'var(--red)') : 'var(--txt)' }}>{minus && val > 0 ? '−' : ''}¥{Math.abs(val).toLocaleString()}</span>
+                  </div>
+                )
+                return (
+                  <div ref={moneyRef}>
+                    {/* ① デリバリー（0〜N行・提示→ベンダー了承）。行＝名前＋委託費＋状態ドット＋取り下げ */}
+                    <div style={{ marginTop: 22, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
+                      <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', marginBottom: 6 }}>デリバリー</p>
+                      {assigns.length === 0 && !dlvAdd.open && (
+                        <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '6px 0' }}>MB自身で対応（委託なし）</p>
+                      )}
+                      {assigns.map(a => {
+                        const ast = assignStatus(a.status)
+                        return (
+                          <div key={a.id} style={{ padding: '9px 0', borderBottom: '0.5px solid var(--line)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.deliveries?.name ?? '委託先'}</span>
+                              {editable && a.status !== 'declined' ? (
+                                <input key={`${selected.id}:${a.id}:fee`} defaultValue={a.base_fee || ''} inputMode="numeric" placeholder="委託費" disabled={itemBusy}
+                                  onBlur={e => { const v = Math.max(0, Number(e.target.value.replace(/[,，\s]/g, '')) || 0); if (v !== a.base_fee) patchAssignmentFee(a.id, v) }}
+                                  style={{ width: 88, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right' }} />
+                              ) : (
+                                <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.74rem', fontWeight: 500 }}>¥{(a.base_fee ?? 0).toLocaleString()}</span>
+                              )}
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, minWidth: 52 }}>
+                                <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${ast.tone})` }} />
+                                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)' }}>{ast.children}</span>
+                              </span>
+                              {editable && (
+                                <button onClick={() => removeAssignment(a.id)} disabled={itemBusy} title="提示を取り下げる"
+                                  style={{ flexShrink: 0, background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem' }}>✕</button>
+                              )}
+                            </div>
+                            {/* 経費（割当単位・ベンダー申請→承認）。承認済のみ粗利に算入。 */}
+                            <DeliveryExpenses assign={a} editable={editable} busy={itemBusy}
+                              onAdd={addExpense} onStatus={setExpenseStatus} onDelete={deleteExpense} onView={viewEvidence} />
+                          </div>
+                        )
+                      })}
+                      {editable && !dlvAdd.open && (
+                        <button onClick={() => setDlvAdd({ open: true, delivery_id: '', fee: '' })} disabled={itemBusy}
+                          style={{ marginTop: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: 'var(--c-blue)' }}>
+                          ＋ デリバリーを追加
+                        </button>
+                      )}
+                      {editable && dlvAdd.open && (
+                        <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
+                          <select value={dlvAdd.delivery_id} onChange={e => setDlvAdd(f => ({ ...f, delivery_id: e.target.value }))} disabled={itemBusy}
+                            style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff', maxWidth: 170 }}>
+                            <option value="">委託先を選択</option>
+                            <DeliveryOptGroups opts={deliveriesOpt} serviceId={selected.service_id || null} />
+                          </select>
+                          <input value={dlvAdd.fee} onChange={e => setDlvAdd(f => ({ ...f, fee: e.target.value }))} placeholder="委託費" inputMode="numeric" disabled={itemBusy}
+                            style={{ width: 96, border: '1.5px solid var(--line)', borderRadius: 8, padding: '7px 9px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right' }} />
+                          <button onClick={addAssignment} disabled={itemBusy || !dlvAdd.delivery_id} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '7px 14px' }}>提示する</button>
+                          <button onClick={() => setDlvAdd({ open: false, delivery_id: '', fee: '' })} disabled={itemBusy} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '7px 10px' }}>閉じる</button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ② 計算式ブロック — 粗利・報酬は計算行のみ（入力欄は売上・委託費・その他原価だけ）。 */}
+                    {showFormula && (
+                      <div style={{ marginTop: 22, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
+                        <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', marginBottom: 8 }}>金額</p>
+                        {/* 受注額（売上）: 成約ダイアログで入力済・ここでは修正可（明細1件=インライン入力／複数=明細ブロックで行別入力） */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '.68rem', fontWeight: 500 }}>
+                          <span style={{ color: 'var(--muted2)' }}>受注額（売上）</span>
+                          {editable && items.length === 1 ? (
+                            <input key={`${selected.id}:rev`} defaultValue={items[0].revenue ?? ''} inputMode="numeric" placeholder="未入力" disabled={itemBusy}
+                              onBlur={e => { const v = e.target.value.trim(); if (v !== String(items[0].revenue ?? '')) patchItem(items[0].id, { revenue: v === '' ? null : Number(v.replace(/[,，\s]/g, '')) }) }}
+                              style={{ width: 110, border: '1.5px solid var(--blue-bg)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right', background: 'var(--blue-bg2)' }} />
+                          ) : (
+                            <span className="tnum" style={{ fontFamily: 'Inter', color: revenue > 0 ? 'var(--txt)' : 'var(--muted)' }}>¥{revenue.toLocaleString()}</span>
+                          )}
+                        </div>
+                        <Row label={`委託費（了承済${assigns.filter(a => (a.status ?? 'assigned') === 'accepted' || (a.status ?? 'assigned') === 'assigned').length}件）`} val={acceptedCost} minus />
+                        {proposedSum > 0 && <Row label="（提示中・未確定）" val={proposedSum} minus quiet />}
+                        {expense > 0
+                          ? <Row label="経費（承認済）" val={expense} minus />
+                          : <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '.68rem', fontWeight: 500 }}><span style={{ color: 'var(--muted2)' }}>− 経費</span><span style={{ fontSize: '.62rem', color: 'var(--muted)' }}>納品後に申請</span></div>}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '.68rem', fontWeight: 500 }}>
+                          <span style={{ color: 'var(--muted2)' }}>− その他原価</span>
+                          {editable ? (
+                            <input key={`${selected.id}:oc`} defaultValue={selected.other_cost ?? ''} inputMode="numeric" placeholder="0" disabled={itemBusy}
+                              onBlur={e => { const v = e.target.value.trim(); if (v !== String(selected.other_cost ?? '')) savePnl({ other_cost: v }) }}
+                              style={{ width: 96, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right' }} />
+                          ) : (
+                            <span className="tnum" style={{ fontFamily: 'Inter' }}>−¥{(selected.other_cost ?? 0).toLocaleString()}</span>
+                          )}
+                        </div>
+                        <Row label={`MB粗利（税抜・${rewardSettled && ri.isRate ? '確定' : phase === 'settled' ? '確定' : '見込み'}）`} val={gross} strong />
+                        {(ri.isRate || selected.amount > 0 || cont.isContinuous) && (
+                          <Row label={ri.isRate
+                              ? `パートナー報酬（${baseWord(ri.baseLabel)}の${ri.rate}%・${rewardSettled ? '確定' : '見込み'}）`
+                              : cont.isContinuous ? 'パートナー報酬（継続・月次）' : 'パートナー報酬（固定）'}
+                            val={rewardShown} minus />
+                        )}
+                        <Row label="手残り（報酬控除後）" val={gross - rewardShown} quiet />
+                      </div>
+                    )}
+
+                    {/* ③ 明細（サービス構成）— 成約前に整える機構の残置（複数タスク/L3ガード）。率・粗利の per-item 入力は全廃。 */}
+                    <div style={{ marginTop: 22, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
+                      <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', marginBottom: 6 }}>明細</p>
+                      {items.length === 0 && <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '4px 0' }}>明細はまだありません</p>}
+                      {[...items].sort((a, b) => a.sort - b.sort).map(it => (
+                        <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '0.5px solid var(--line)' }}>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.services?.name ?? it.service_id}</span>
+                          {editable && items.length > 1 && (
+                            <input key={`${selected.id}:${it.id}:rev`} defaultValue={it.revenue ?? ''} inputMode="numeric" placeholder="売上" disabled={itemBusy}
+                              onBlur={e => { const v = e.target.value.trim(); if (v !== String(it.revenue ?? '')) patchItem(it.id, { revenue: v === '' ? null : Number(v.replace(/[,，\s]/g, '')) }) }}
+                              style={{ width: 96, border: '0.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.7rem', textAlign: 'right' }} />
+                          )}
+                          <span className="tnum" style={{ flexShrink: 0, fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 500, minWidth: 58, textAlign: 'right', color: it.amount > 0 ? 'var(--txt)' : 'var(--muted)' }}>
+                            {it.amount > 0 ? `¥${it.amount.toLocaleString()}` : '—'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。 */}
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                    <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />
+                  </div>
+                )
+              })()}
               </div>
             </div>
           </div>
         </>
       )}
 
-      {/* ② Base-amount entry modal (rate-based confirmation) */}
-      {baseModal && (() => {
-        const base = Number(baseInput.replace(/[,，\s]/g, ''))
-        const preview = base && !Number.isNaN(base) && base > 0 ? Math.round(base * baseModal.rate / 100) : null
+      {/* ライフサイクル: 成約ダイアログ（売上入力＝率/継続/直営・明細0はサービス選択を兼ねる・forecastは本文で語る） */}
+      {confirmModal && (() => {
+        const deal = confirmModal
+        const noItems = (deal.deal_items?.length ?? 0) === 0
+        const askRevenue = rateInfo(deal).isRate || continuousInfo(deal).isContinuous || deal.intake_type === 'direct'
+        const csvc = svcMenus.find(x => x.id === confirmSvc.service_id)
         return (
           <>
-            <div onClick={() => setBaseModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
-            <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 380, maxWidth: '92vw', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
-              <b style={{ fontSize: '.92rem', display: 'block' }}>成約確定 — 実額の入力</b>
-              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.6 }}>
-                {baseModal.deal.customer_name}（報酬 {baseModal.rate}% × {baseModal.baseLabel}）。{baseModal.baseLabel}の実額を入力してください。
-              </p>
-              <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', margin: '16px 0 6px' }}>{baseModal.baseLabel}（円）</label>
-              <input
-                autoFocus
-                inputMode="numeric"
-                value={baseInput}
-                onChange={e => setBaseInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') confirmWithBase() }}
-                placeholder="例：300000"
-                style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'Inter', fontSize: '.9rem' }}
-              />
-              <div style={{ marginTop: 12, padding: '11px 14px', background: 'var(--blue-bg2)', borderRadius: 10, fontSize: '.74rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--muted2)' }}>確定報酬（{baseModal.rate}%）</span>
-                <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)', fontSize: '.95rem' }}>{preview != null ? `¥${preview.toLocaleString()}` : '—'}</b>
-              </div>
+            <div onClick={() => setConfirmModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
+            <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+              <b style={{ fontSize: '.92rem', display: 'block' }}>{customerHonorific(deal)}を成約にしますか</b>
+              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>{forecastLine(deal.status, 'confirmed')}</p>
+              {noItems && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>サービス</label>
+                  <div style={{ display: 'flex', gap: 7 }}>
+                    <select value={confirmSvc.service_id} onChange={e => setConfirmSvc({ service_id: e.target.value, menu_id: '' })}
+                      style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: '.74rem', background: '#fff' }}>
+                      <option value="">選択してください</option>
+                      {svcMenus.map(sv => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
+                    </select>
+                    {(csvc?.service_menus?.length ?? 0) > 0 && (
+                      <select value={confirmSvc.menu_id} onChange={e => setConfirmSvc(f => ({ ...f, menu_id: e.target.value }))}
+                        style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: '.74rem', background: '#fff' }}>
+                        <option value="">メニュー（任意）</option>
+                        {(csvc?.service_menus ?? []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )}
+              {askRevenue && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>受注額（売上・税抜）</label>
+                  <input autoFocus inputMode="numeric" value={confirmRevenue} onChange={e => setConfirmRevenue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') confirmDeal() }} placeholder="例：500000"
+                    style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'Inter', fontSize: '.9rem', textAlign: 'right' }} />
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
-                <button onClick={() => setBaseModal(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
-                <button onClick={confirmWithBase} disabled={pending || preview == null} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>成約確定する</button>
+                <button onClick={() => setConfirmModal(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+                <button onClick={confirmDeal} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>成約にする</button>
+              </div>
+            </div>
+          </>
+        )
+      })()}
+
+      {/* ライフサイクル: 報酬確定ダイアログ — 粗利は入力ではなく計算結果。計算内訳をそのまま提示して確定する。 */}
+      {rewardModal && (() => {
+        const deal = rewardModal
+        const ri = rateInfo(deal)
+        const revenue = (deal.deal_items ?? []).reduce((s2, it) => s2 + (it.revenue ?? 0), 0)
+        const bw = baseWord(ri.baseLabel)
+        const base = bw === '売上' ? revenue : grossBeforeReward(deal)
+        const reward = base > 0 ? Math.round(base * (ri.rate as number) / 100) : null
+        const pendingOffers = (deal._deliveries ?? []).filter(a => a.status === 'proposed').length
+        return (
+          <>
+            <div onClick={() => setRewardModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
+            <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+              <b style={{ fontSize: '.92rem', display: 'block' }}>報酬を確定しますか</b>
+              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>
+                {bw}（計算値）×{ri.rate}%でパートナー報酬を確定します。確定後は報酬一覧・支払集計に反映されます。
+              </p>
+              <div style={{ marginTop: 12, padding: '11px 14px', background: 'var(--blue-bg2)', borderRadius: 10, fontSize: '.72rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}><span style={{ color: 'var(--muted2)' }}>{bw}（計算値）</span><b className="tnum" style={{ fontFamily: 'Inter' }}>¥{base.toLocaleString()}</b></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}><span style={{ color: 'var(--muted2)' }}>報酬（{ri.rate}%）</span><b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)', fontSize: '.9rem' }}>{reward != null ? `¥${reward.toLocaleString()}` : '—'}</b></div>
+              </div>
+              {pendingOffers > 0 && (
+                <p style={{ fontSize: '.64rem', color: 'var(--amber)', marginTop: 10, lineHeight: 1.6 }}>承諾待ちの委託提示が{pendingOffers}件あります（未了承の委託費は計算に含まれていません）。</p>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
+                <button onClick={() => setRewardModal(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+                <button onClick={confirmReward} disabled={pending || reward == null} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>確定する</button>
               </div>
             </div>
           </>

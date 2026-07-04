@@ -115,7 +115,7 @@ export type OpsAction = {
 }
 export const OPS_NEXT_ACTION: Record<DealStatusKey, OpsAction | null> = {
   received:    { cta: 'お客さまへ連絡済みにして商談中へ', to: 'in_progress' },
-  in_progress: { cta: '成約にする', to: 'confirmed', precondition: '明細1件以上・率案件は実績金額が必要' },
+  in_progress: { cta: '成約にする', to: 'confirmed', precondition: '明細1件以上（率・継続・直営は成約時に受注額を入力）' },
   confirmed:   { cta: '支払済にする', to: 'paid', precondition: '通常は月次締め（cron）が実施' },
   paid:        null,
   lost:        null,  // 復活は既存の reopenDeal 導線（90日以内）
