@@ -98,13 +98,13 @@ export async function POST(req: NextRequest) {
     let to = (dlv?.contact_email as string) || null
     if (!to && dlv?.auth_user_id) { const { data: u } = await admin.auth.admin.getUserById(dlv.auth_user_id as string); to = u?.user?.email ?? null }
     if (to) {
-      const { sendEmail } = await import('@/lib/notify')
+      const { sendTemplatedEmail } = await import('@/lib/mail-send')
       const mm = period.split('-')[1] ?? ''
-      await sendEmail({
-        to,
-        subject: `${Number(mm)}月の委託費が確定しました`,
-        text: `${dlv?.name ?? ''} 様\n${period} の委託費 ¥${total.toLocaleString()} が確定しました。\nアプリの「委託費」からご確認いただけます。`,
+      await sendTemplatedEmail({
+        key: 'delivery-payout', to, toRole: 'vendor',
+        vars: { name: dlv?.name ?? '', month: `${Number(mm)}月`, amount: `¥${total.toLocaleString()}`, link: 'https://mb-partners.app/vendor/rewards' },
         buttons: [{ label: '委託費を確認する', url: 'https://mb-partners.app/vendor/rewards' }],
+        meta: { delivery_id: deliveryId, period },
       })
     }
   } catch { /* best-effort：通知失敗は支払凍結に影響しない */ }

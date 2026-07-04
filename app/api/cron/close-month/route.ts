@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       const list = items ?? []
       const totalNet = list.reduce((s, i) => s + (i.net ?? 0), 0)
       await sendSlack(`💰 ${targetMonth} 支払確定：${list.length}名 / 手取り総額 ¥${totalNet.toLocaleString()}`)
-      await sendOpsEmail(`【MB Partners】${targetMonth} 支払確定`, `月次締めが確定しました。\n・対象月：${targetMonth}\n・対象パートナー：${list.length}名\n・手取り総額：¥${totalNet.toLocaleString()}`)
+      await sendOpsEmail(`【MB Partners】${targetMonth} 支払確定`, `月次締めが確定しました。\n・対象月：${targetMonth}\n・対象パートナー：${list.length}名\n・手取り総額：¥${totalNet.toLocaleString()}`, undefined, { event: '支払確定' })
       if (list.length) {
         const partnerIds = list.map(i => i.partner_id)
         const { data: parts } = await supabase.from('partners').select('id, profile_id').in('id', partnerIds)
@@ -74,18 +74,25 @@ export async function GET(req: NextRequest) {
           if (!prof?.email) continue
           // ★金額算出(it.net)・対象判定・締め/payout/凍結は不変。本文textのみ templates 優先（無ければ既存文面）。
           const amount = `¥${(it.net ?? 0).toLocaleString()}`
+          const payoutVars = { name: prof.name ?? 'パートナー', month: targetMonth, amount }
           const defaultText = `${prof.name ?? 'パートナー'} 様\n${targetMonth} 分の報酬が確定しました。\n・手取り：${amount}\n明細はアプリの「報酬」からご確認いただけます。`
-          const custom = await resolveTemplateMedia('payout-confirmed', { name: prof.name ?? 'パートナー', month: targetMonth, amount })
+          const custom = await resolveTemplateMedia('payout-confirmed', payoutVars)
           const text = custom?.body ?? defaultText
+          // 磨き①: 件名もDB上書き可能に（category='payout-confirmed' の subject）
+          const { resolveMailOverride, logMail } = await import('@/lib/mail-send')
+          const { fillVars } = await import('@/lib/mail-registry')
+          const ov = await resolveMailOverride('payout-confirmed')
+          const subject = ov?.subject ? fillVars(ov.subject, payoutVars) : '【MB Partners】今月の報酬が確定しました'
           // 画像付きテンプレ時のみ添付（未設定なら従来と完全同一・金額算出は不変）。
           const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
-          await sendEmail({
+          const r = await sendEmail({
             to: prof.email,
-            subject: '【MB Partners】今月の報酬が確定しました',
+            subject,
             text,
             attachments: tplAttach,
             buttons: custom?.buttons,
           })
+          await logMail({ template_key: 'payout-confirmed', event: '支払確定', to_email: prof.email, to_role: 'partner', subject, status: r.sent ? 'sent' : (r.error ? 'error' : 'skipped'), detail: r.error ?? r.skipped ?? null, meta: { batch_id: batchId, month: targetMonth } })
         }
       }
     }

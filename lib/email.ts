@@ -11,6 +11,8 @@ import { MAIL_FROM as FROM } from './mail-from'
 import { resolveTemplateMedia } from './notify/template-resolve'
 import { emailAttachmentsFromTemplate } from './notify/template-media'
 import { brandedEmailHtml } from './notify'
+import { logMail, resolveMailOverride, bodyToBrandedHtml } from './mail-send'
+import { fillVars } from './mail-registry'
 
 const SUPPORT = 'support@mb-partners.app'
 
@@ -31,11 +33,17 @@ export async function sendBookingConfirmEmail(params: {
   meetingUrl?: string | null
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY
-  if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
   if (!params.to) return { sent: false, skipped: 'no recipient' }
   const when = new Date(params.startAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
-  const nm = params.clientName?.trim() || 'お客様'
-  const subject = '【MB Partners】ご予約を承りました'
+  const nm = params.clientName?.trim() || 'お客さま'
+  // 磨き①: 件名もDB上書き可能に（message_templates category='booking' の subject）
+  const vars = { name: nm, when, meetingUrl: params.meetingUrl ?? '' }
+  const override = await resolveMailOverride('booking')
+  const subject = override?.subject ? fillVars(override.subject, vars) : '【MB Partners】ご予約を承りました'
+  if (!key) {
+    await logMail({ template_key: 'booking', event: '商談予約', to_email: params.to, to_role: 'customer', subject, status: 'skipped', detail: 'RESEND_API_KEY 未設定' })
+    return { sent: false, skipped: 'RESEND_API_KEY not set' }
+  }
   const linkLine = params.meetingUrl ? `\n▼ 打ち合わせリンク\n${params.meetingUrl}\n` : ''
   const text =
 `${nm} 様
@@ -62,24 +70,26 @@ ${linkLine}
   <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
-  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名は不変。
-  const custom = await resolveTemplateMedia('booking', { name: nm, when, meetingUrl: params.meetingUrl ?? '' })
+  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路は不変。
+  const custom = await resolveTemplateMedia('booking', vars)
   const finalText = custom?.body ?? text
   const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body, buttons: custom.buttons }) : html
   // 画像付きテンプレ時のみ Resend 添付（未設定なら従来と完全同一）。
   const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
   const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }
   if (tplAttach) payload.attachments = tplAttach
+  let result: { sent: boolean; skipped?: string; error?: string }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
-    return { sent: true }
+    result = res.ok ? { sent: true } : { sent: false, error: `Resend ${res.status}` }
   } catch (e) {
-    return { sent: false, error: e instanceof Error ? e.message : 'send failed' }
+    result = { sent: false, error: e instanceof Error ? e.message : 'send failed' }
   }
+  await logMail({ template_key: 'booking', event: '商談予約', to_email: params.to, to_role: 'customer', subject, status: result.sent ? 'sent' : 'error', detail: result.error ?? null })
+  return result
 }
 
 /**
@@ -98,7 +108,6 @@ export async function sendReceiptEmail(params: {
   caseUrl?: string | null   // v3.1：案件ページURL（本文で「進捗はこちら」）
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY
-  if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
   if (!params.to) return { sent: false, skipped: 'no recipient' }
 
   // v3.1：パートナー向けから「協力/関わり方」の区分を排除。受付＝「ご紹介」で統一（商談予約のみ別ラベル）。
@@ -119,7 +128,14 @@ export async function sendReceiptEmail(params: {
   const meetLineText = params.meetingUrl ? `\n▼ オンライン会議（Google Meet）\n${params.meetingUrl}\n` : ''
   const caseLineText = caseUrl ? `\n▼ 案件ページ（進捗はこちら）\n${caseUrl}\n` : ''
 
-  const subject = `【MB Partners】${kindLabel}を受け付けました`
+  // 磨き①: 件名もDB上書き可能に（category='receipt' の subject・${kind}等の変数可）
+  const receiptVars = { name, kind: kindLabel, customer: params.customerName, service: serviceLine, meeting: meeting ?? '', link: caseUrl }
+  const subjOverride = await resolveMailOverride('receipt')
+  const subject = subjOverride?.subject ? fillVars(subjOverride.subject, receiptVars) : `【MB Partners】${kindLabel}を受け付けました`
+  if (!key) {
+    await logMail({ template_key: 'receipt', event: '紹介受付', to_email: params.to, to_role: 'partner', subject, status: 'skipped', detail: 'RESEND_API_KEY 未設定' })
+    return { sent: false, skipped: 'RESEND_API_KEY not set' }
+  }
   const text =
 `${name} 様
 
@@ -157,24 +173,26 @@ ${caseLineText}
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
 
-  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路/件名は不変。
-  const custom = await resolveTemplateMedia('receipt', { name, kind: kindLabel, customer: params.customerName, service: serviceLine, meeting: meeting ?? '', link: caseUrl })
+  // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路は不変。
+  const custom = await resolveTemplateMedia('receipt', receiptVars)
   const finalText = custom?.body ?? text
   const finalHtml = custom?.body ? brandedEmailHtml({ lead: custom.body, buttons: custom.buttons }) : html
   const tplAttach = custom?.attachments?.length ? await emailAttachmentsFromTemplate(custom.attachments) : undefined
   const payload: Record<string, unknown> = { from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }
   if (tplAttach) payload.attachments = tplAttach
+  let result: { sent: boolean; skipped?: string; error?: string }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) return { sent: false, error: `Resend ${res.status}` }
-    return { sent: true }
+    result = res.ok ? { sent: true } : { sent: false, error: `Resend ${res.status}` }
   } catch (e) {
-    return { sent: false, error: e instanceof Error ? e.message : 'send failed' }
+    result = { sent: false, error: e instanceof Error ? e.message : 'send failed' }
   }
+  await logMail({ template_key: 'receipt', event: params.kind === 'meeting' ? '商談予約' : '紹介受付', to_email: params.to, to_role: 'partner', subject, status: result.sent ? 'sent' : 'error', detail: result.error ?? null })
+  return result
 }
 
 // 招待メール（kind別文面）。partner は従来文面のまま（既存呼び出しは kind 省略＝byte互換）。
@@ -194,7 +212,6 @@ export async function sendInviteEmail(params: {
   kind?: InviteKind
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const key = process.env.RESEND_API_KEY
-  if (!key) return { sent: false, skipped: 'RESEND_API_KEY not set' }
 
   const copy = INVITE_COPY[params.kind ?? 'partner'] ?? INVITE_COPY.partner
   const name = params.name?.trim() || copy.fallbackName
@@ -202,7 +219,15 @@ export async function sendInviteEmail(params: {
     ? new Date(params.expiresAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
     : '発行から7日間'
 
-  const subject = copy.subject
+  // 磨き①: 件名・本文をDB上書き可能に（category='invite-{kind}'）。上書き時もCTAボタン（URL）は維持。
+  const inviteKey = `invite-${params.kind ?? 'partner'}`
+  const inviteVars = { name, url: params.url, expires }
+  const override = await resolveMailOverride(inviteKey)
+  const subject = override?.subject ? fillVars(override.subject, inviteVars) : copy.subject
+  if (!key) {
+    await logMail({ template_key: inviteKey, event: '招待発行', to_email: params.to, to_role: 'invitee', subject, status: 'skipped', detail: 'RESEND_API_KEY 未設定' })
+    return { sent: false, skipped: 'RESEND_API_KEY not set' }
+  }
   const text =
 `${name} 様
 
@@ -239,15 +264,20 @@ ${params.url}
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
 
+  // DB本文上書き時は brandedEmailHtml で描画（CTAボタン＝パスワード設定リンクは常に付与）
+  const finalText = override?.body ? fillVars(override.body, inviteVars) : text
+  const finalHtml = override?.body ? bodyToBrandedHtml(finalText, [{ label: 'パスワードを設定する', url: params.url }]) : html
+  let result: { sent: boolean; skipped?: string; error?: string }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [params.to], subject, text, html }),
+      body: JSON.stringify({ from: FROM, to: [params.to], subject, text: finalText, html: finalHtml }),
     })
-    if (!res.ok) return { sent: false, error: `Resend ${res.status}: ${(await res.text()).slice(0, 200)}` }
-    return { sent: true }
+    result = res.ok ? { sent: true } : { sent: false, error: `Resend ${res.status}: ${(await res.text()).slice(0, 200)}` }
   } catch (e) {
-    return { sent: false, error: e instanceof Error ? e.message : 'send failed' }
+    result = { sent: false, error: e instanceof Error ? e.message : 'send failed' }
   }
+  await logMail({ template_key: inviteKey, event: '招待発行', to_email: params.to, to_role: 'invitee', subject, status: result.sent ? 'sent' : 'error', detail: result.error ?? null })
+  return result
 }

@@ -48,34 +48,43 @@ export async function POST(req: NextRequest) {
   // 発火制御は呼び出し側（confirmed 遷移時のみ）＝多重送信なし。全て best-effort・成約処理は不変。
   const emailed: Record<string, boolean> = {}
   try {
-    const { sendEmail, sendOpsEmail } = await import('@/lib/notify')
+    const { sendOpsEmail } = await import('@/lib/notify')
+    const { sendTemplatedEmail } = await import('@/lib/mail-send')
     const { customerHonorific } = await import('@/lib/customer')
-    const { dealWonPartnerEmail, dealWonCustomerEmail } = await import('@/lib/mail-templates')
     const svcName = (deal as { services?: { name?: string } | { name?: string }[] | null }).services
     const serviceLine = Array.isArray(svcName) ? svcName[0]?.name ?? null : svcName?.name ?? null
     const customerLabel = customerHonorific(deal as never) || 'お客さま'
 
-    // パートナー宛
+    // パートナー宛（テンプレ経由・DB上書き可・送信履歴記録）
     const { data: pt } = await admin.from('partners').select('profile_id').eq('id', deal.partner_id).single()
     const { data: pr } = pt?.profile_id
       ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
       : { data: null }
     if (pr?.email) {
-      const m = dealWonPartnerEmail({ partnerName: pr.name ?? 'パートナー', customerLabel })
-      emailed.partner = (await sendEmail({ to: pr.email, ...m })).sent
+      emailed.partner = (await sendTemplatedEmail({
+        key: 'deal-won-partner', to: pr.email, toRole: 'partner',
+        vars: { name: pr.name ?? 'パートナー', customer: customerLabel, link: 'https://mb-partners.app/app/rewards' },
+        buttons: [{ label: '実績・報酬を見る', url: 'https://mb-partners.app/app/rewards' }],
+        meta: { deal_id: dealId },
+      })).sent
     }
 
     // お客さま宛（連絡先がある場合のみ・御礼）
     const custEmail = (deal as { customer_email?: string | null }).customer_email
     if (custEmail) {
-      const m = dealWonCustomerEmail({ customerName: customerLabel, serviceLine })
-      emailed.customer = (await sendEmail({ to: custEmail, ...m })).sent
+      emailed.customer = (await sendTemplatedEmail({
+        key: 'deal-won-customer', to: custEmail, toRole: 'customer',
+        vars: { customer: customerLabel, service: serviceLine ?? '' },
+        meta: { deal_id: dealId },
+      })).sent
     }
 
     // 運営宛（従来 Slack も無かったイベント）
     emailed.ops = (await sendOpsEmail(
       `【MB Partners】成約: ${customer}`,
       `${customerLabel} の案件が成約になりました。${serviceLine ? `\n・サービス：${serviceLine}` : ''}\n・案件ID：${dealId}\n（金額はコンソールでご確認ください）`,
+      undefined,
+      { event: '成約', meta: { deal_id: dealId } },
     )).sent
   } catch { /* best-effort */ }
 

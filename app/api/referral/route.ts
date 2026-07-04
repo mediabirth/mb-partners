@@ -132,15 +132,17 @@ export async function POST(req: NextRequest) {
       )
     } catch { /* best-effort */ }
 
-    // D: お客さま本人へ受付確認メール（連絡先がある場合のみ・best-effort）。
+    // D: お客さま本人へ受付確認メール（連絡先がある場合のみ・best-effort）。磨き①: テンプレ経由。
     try {
       if (customerEmail) {
-        const { sendEmail } = await import('@/lib/notify')
+        const { sendTemplatedEmail } = await import('@/lib/mail-send')
         const { customerHonorific } = await import('@/lib/customer')
-        const { customerReceiptEmail } = await import('@/lib/mail-templates')
         const label = customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }) || 'お客さま'
-        const m = customerReceiptEmail({ customerName: label, partnerName: null, serviceLine: service?.name ?? null })
-        await sendEmail({ to: customerEmail, ...m })
+        await sendTemplatedEmail({
+          key: 'customer-receipt', to: customerEmail, toRole: 'customer',
+          vars: { customer: label, partner: '', service: service?.name ?? '' },
+          meta: { deal_id: deal.id },
+        })
       }
     } catch { /* best-effort */ }
 

@@ -117,21 +117,31 @@ export async function GET(req: NextRequest) {
         const r = await sendSlack(`⏰ 商談リマインド（${head}）: ${m.customer} — ${whenJa}（担当: ${partnerName}）${meetSlack}`)
         if (r.sent) { await record(m.id, st.kind, 'ops'); sent++ }
       }
-      // 担当パートナー（メール）
+      // 担当パートナー（メール・テンプレ経由=DB上書き可＋送信履歴）
       if (partnerEmail && !already.has(`${m.id}|${st.kind}|partner`)) {
-        const r = await sendEmail({
-          to: partnerEmail,
-          subject: `【MB Partners】${st.soon ? 'まもなく商談のお時間です' : '明日の商談リマインド'}`,
-          text: `${partnerName} 様\n${st.soon ? 'まもなく商談のお時間です。' : '明日の商談予定のご案内です。'}\n・お客さま：${m.customer}\n・日時：${whenJa}${meetLine}`,
+        const { sendTemplatedEmail } = await import('@/lib/mail-send')
+        const r = await sendTemplatedEmail({
+          key: 'reminder-partner', to: partnerEmail, toRole: 'partner',
+          vars: { name: partnerName, customer: m.customer, when: whenJa, stage: head, meetingUrl: m.meetingUrl ?? '' },
+          fallback: {
+            subject: `【MB Partners】${st.soon ? 'まもなく商談のお時間です' : '明日の商談リマインド'}`,
+            text: `${partnerName} 様\n${st.soon ? 'まもなく商談のお時間です。' : '明日の商談予定のご案内です。'}\n・お客さま：${m.customer}\n・日時：${whenJa}${meetLine}`,
+          },
+          meta: { meeting_id: m.id, stage: st.kind },
         })
         if (r.sent) { await record(m.id, st.kind, 'partner'); sent++ }
       }
-      // お客様（メール・連絡先がある場合のみ）
+      // お客さま（メール・連絡先がある場合のみ）
       if (m.clientEmail && !already.has(`${m.id}|${st.kind}|client`)) {
-        const r = await sendEmail({
-          to: m.clientEmail,
-          subject: `【MB Partners】ご商談${st.soon ? '開始前' : '前日'}のご案内`,
-          text: `${m.customer} 様\n${st.soon ? 'まもなくご商談のお時間です。' : '明日のご商談のご案内です。'}\n・日時：${whenJa}${meetLine}\nどうぞよろしくお願いいたします。`,
+        const { sendTemplatedEmail } = await import('@/lib/mail-send')
+        const r = await sendTemplatedEmail({
+          key: 'reminder-customer', to: m.clientEmail, toRole: 'customer',
+          vars: { customer: `${m.customer} 様`, when: whenJa, stage: head, meetingUrl: m.meetingUrl ?? '' },
+          fallback: {
+            subject: `【MB Partners】ご商談${st.soon ? '開始前' : '前日'}のご案内`,
+            text: `${m.customer} 様\n${st.soon ? 'まもなくご商談のお時間です。' : '明日のご商談のご案内です。'}\n・日時：${whenJa}${meetLine}\nどうぞよろしくお願いいたします。`,
+          },
+          meta: { meeting_id: m.id, stage: st.kind },
         })
         if (r.sent) { await record(m.id, st.kind, 'client'); sent++ }
       }

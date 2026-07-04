@@ -280,15 +280,17 @@ export async function submitPartnerReferral(formData: FormData) {
   } catch { /* best-effort */ }
 
   // D: お客さま本人へ受付確認メール（従来はパートナー/運営のみで、お客さまへの受付通知が皆無だった）。
-  // 顧客メールが入力された場合のみ・best-effort。
+  // 顧客メールが入力された場合のみ・best-effort。磨き①: テンプレ経由（DB上書き可・送信履歴記録）。
   try {
     if (customerEmail) {
-      const { sendEmail } = await import('@/lib/notify')
+      const { sendTemplatedEmail } = await import('@/lib/mail-send')
       const { customerHonorific } = await import('@/lib/customer')
-      const { customerReceiptEmail } = await import('@/lib/mail-templates')
       const label = customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }) || 'お客さま'
-      const m = customerReceiptEmail({ customerName: label, partnerName: profile?.name ?? null, serviceLine: menuLine !== '—' ? menuLine : null })
-      await sendEmail({ to: customerEmail, ...m })
+      await sendTemplatedEmail({
+        key: 'customer-receipt', to: customerEmail, toRole: 'customer',
+        vars: { customer: label, partner: profile?.name ?? '', service: menuLine !== '—' ? menuLine : '' },
+        meta: { deal_id: deal!.id },
+      })
     }
   } catch { /* best-effort */ }
 

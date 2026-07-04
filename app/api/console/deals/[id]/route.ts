@@ -220,12 +220,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // D: 受付→対応中の遷移でパートナーへ状況更新メール（従来は両端＝受付/不成立/成約しか届かず中間経過が皆無だった）。
-    // 遷移時のみ（ctx.status が既に in_progress なら送らない）＝多重送信防止。best-effort。
+    // 遷移時のみ（ctx.status が既に in_progress なら送らない）＝多重送信防止。best-effort。磨き①: テンプレ経由。
     if (status === 'in_progress' && ctx?.status !== 'in_progress' && ctx?.partner_id) {
       try {
-        const { sendEmail } = await import('@/lib/notify')
+        const { sendTemplatedEmail } = await import('@/lib/mail-send')
         const { customerHonorific } = await import('@/lib/customer')
-        const { dealStatusUpdateEmail } = await import('@/lib/mail-templates')
         const { data: pt } = await admin.from('partners').select('profile_id').eq('id', ctx.partner_id).single()
         const { data: pr } = pt?.profile_id
           ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
@@ -234,8 +233,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           const { data: dd } = await admin.from('deals')
             .select('customer_name, customer_type, company_name, contact_name').eq('id', id).single()
           const customerLabel = dd ? (customerHonorific(dd as never) || 'お客さま') : 'お客さま'
-          const m = dealStatusUpdateEmail({ partnerName: pr.name ?? 'パートナー', customerLabel, dealId: id })
-          await sendEmail({ to: pr.email, ...m })
+          const link = `https://mb-partners.app/app/cases/${id}`
+          await sendTemplatedEmail({
+            key: 'deal-status-update', to: pr.email, toRole: 'partner',
+            vars: { name: pr.name ?? 'パートナー', customer: customerLabel, link },
+            buttons: [{ label: '案件ページを見る', url: link }],
+            meta: { deal_id: id },
+          })
         }
       } catch { /* best-effort */ }
     }
@@ -248,11 +252,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
           : { data: null }
         if (pr?.email) {
-          const { sendEmail } = await import('@/lib/notify')
-          await sendEmail({
-            to: pr.email,
-            subject: '【MB Partners】案件の進捗について',
-            text: `${pr.name ?? 'パートナー'} 様\n今回は成約に至りませんでした。ご紹介ありがとうございました。\n\n引き続き、別の機会でのご紹介をお待ちしております。\n（本プログラムは成功報酬制です。報酬は成約時のみ発生します。紹介の有効期間は90日です。）\n— MB Partners 運営事務局`,
+          const { sendTemplatedEmail } = await import('@/lib/mail-send')
+          await sendTemplatedEmail({
+            key: 'deal-lost-partner', to: pr.email, toRole: 'partner',
+            vars: { name: pr.name ?? 'パートナー' },
+            meta: { deal_id: id },
           })
         }
       } catch { /* best-effort */ }

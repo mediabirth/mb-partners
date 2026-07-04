@@ -107,10 +107,11 @@ export async function POST(req: NextRequest) {
     await sendSlack(`📅 商談予約: ${client_name} — ${whenJa}${profile?.name ? `（担当: ${profile.name}）` : ''}${meetingUrl ? `\nMeet: ${meetingUrl}` : ''}${noteLineSlack}`)
     await sendOpsEmail(`【MB Partners】商談予約: ${client_name}`, `商談予約が入りました。\n・お客さま：${client_name}\n・日時：${whenJa}\n・担当：${profile?.name ?? '—'}${noteLineMail}${meetLine}`)
     if (profile?.email) {
-      await sendEmail({
-        to: profile.email,
-        subject: '【MB Partners】商談予約が入りました',
-        text: `${profile?.name ?? 'パートナー'} 様\n担当案件に商談予約が入りました。\n・お客さま：${client_name}\n・日時：${whenJa}${meetingUrl ? `\n・Meet：${meetingUrl}` : ''}\n当日はどうぞよろしくお願いいたします。`,
+      const { sendTemplatedEmail } = await import('@/lib/mail-send')
+      await sendTemplatedEmail({
+        key: 'booking-partner', to: profile.email, toRole: 'partner',
+        vars: { name: profile?.name ?? 'パートナー', customer: client_name, when: whenJa, meetingUrl: meetingUrl ?? '' },
+        meta: { meeting_id: meeting.id },
       })
     }
   } catch { /* best-effort */ }

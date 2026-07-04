@@ -126,8 +126,9 @@ async function resolveOpsRecipients(): Promise<string[]> {
   return [...set]
 }
 
-/** 運営の受信先へメール。OPS_NOTIFY_EMAIL ＋ メンバー宛先（prefs）全員へ配信。未設定/宛先なしならスキップ。 */
-export async function sendOpsEmail(subject: string, text: string, html?: string): Promise<SendResult> {
+/** 運営の受信先へメール。OPS_NOTIFY_EMAIL ＋ メンバー宛先（prefs）全員へ配信。未設定/宛先なしならスキップ。
+ *  磨き①: 送信履歴（mail_log）へ必ず記録（best-effort・送信は阻害しない）。 */
+export async function sendOpsEmail(subject: string, text: string, html?: string, log?: { event?: string; meta?: Record<string, unknown> }): Promise<SendResult> {
   const recipients = await resolveOpsRecipients()
   if (recipients.length === 0) return { sent: false, skipped: 'OPS_NOTIFY_EMAIL 未設定' }
   // 各宛先へ個別送信（1件失敗が他を止めない・best-effort）。1件でも送れたら sent:true。
@@ -137,6 +138,10 @@ export async function sendOpsEmail(subject: string, text: string, html?: string)
     const r = await sendEmail({ to, subject, text, html })
     if (r.sent) anySent = true
     else if (r.error) lastErr = r.error
+    try {
+      const { logMail } = await import('./mail-send')
+      await logMail({ event: log?.event ?? null, to_email: to, to_role: 'ops', subject, status: r.sent ? 'sent' : (r.error ? 'error' : 'skipped'), detail: r.error ?? r.skipped ?? null, meta: log?.meta ?? null })
+    } catch { /* best-effort */ }
   }
   return anySent ? { sent: true } : { sent: false, error: lastErr ?? 'no recipient sent' }
 }

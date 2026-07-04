@@ -71,37 +71,26 @@ export async function POST(request: NextRequest) {
   // 2) 登録メールへ通知（best-effort・RESEND_API_KEY 未設定環境では自動 no-op）
   let notified = false
   try {
-    const { sendEmail, sendOpsEmail, brandedEmailHtml } = await import('@/lib/notify')
+    const { sendOpsEmail } = await import('@/lib/notify')
+    const { sendTemplatedEmail } = await import('@/lib/mail-send')
     if (profile?.email) {
-      const r = await sendEmail({
-        to: profile.email,
-        subject: '【MB Partners】振込口座の変更を受け付けました',
-        text: [
-          `${profile.name ?? ''} 様`,
-          '',
-          '振込口座の変更を受け付けました。',
-          '',
-          `・銀行：${next.bank_name} ${next.branch_name}`,
-          `・口座：${next.account_type} ${mask(next.account_number)}`,
-          `・名義：${next.account_holder}`,
-          '',
-          '心当たりのない変更の場合は、恐れ入りますがすぐに support@mb-partners.app までご連絡ください。',
-        ].join('\n'),
-        html: brandedEmailHtml({
-          lead: `${profile.name ?? ''} 様　振込口座の変更を受け付けました。`,
-          rows: [
-            ['銀行', `${next.bank_name} ${next.branch_name}`],
-            ['口座', `${next.account_type} ${mask(next.account_number)}`],
-            ['名義', next.account_holder],
-          ],
-          note: '心当たりのない変更の場合は、すぐにサポートまでご連絡ください。',
-        }),
+      const r = await sendTemplatedEmail({
+        key: 'bank-change', to: profile.email, toRole: 'partner',
+        vars: {
+          name: profile.name ?? '',
+          bank: `${next.bank_name} ${next.branch_name}`,
+          account: `${next.account_type} ${mask(next.account_number)}`,
+          holder: next.account_holder,
+        },
+        meta: { partner_code: partner.code },
       })
       notified = r.sent
     }
     await sendOpsEmail(
       '【MB Partners】振込口座が変更されました',
       `パートナー ${profile?.name ?? ''}（${partner.code}）が振込口座を変更しました。\n・銀行：${next.bank_name} ${next.branch_name}\n・口座：${next.account_type} ${mask(next.account_number)}\n・名義：${next.account_holder}\n（変更履歴は audit_logs / bank_change に記録済み）`,
+      undefined,
+      { event: '口座変更', meta: { partner_code: partner.code } },
     )
   } catch { /* best-effort */ }
 

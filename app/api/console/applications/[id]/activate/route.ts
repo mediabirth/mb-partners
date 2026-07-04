@@ -68,10 +68,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
           ? await admin.from('profiles').select('name, email').eq('id', pt.profile_id).single()
           : { data: null }
         if (pr?.email) {
-          const { sendEmail } = await import('@/lib/notify')
-          const { recognitionEmail } = await import('@/lib/mail-templates')
-          const m = recognitionEmail({ partnerName: pr.name ?? 'パートナー', newPartnerName: app.name })
-          await sendEmail({ to: pr.email, ...m })
+          const { sendTemplatedEmail } = await import('@/lib/mail-send')
+          await sendTemplatedEmail({
+            key: 'recognition-mail', to: pr.email, toRole: 'partner',
+            vars: { name: pr.name ?? 'パートナー', partner: app.name },
+            meta: { application_id: app.id },
+          })
         }
       } catch { /* best-effort */ }
     }

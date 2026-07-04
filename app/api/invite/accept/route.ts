@@ -268,10 +268,12 @@ export async function POST(req: NextRequest) {
         ? await service.from('profiles').select('name, email').eq('id', fp.profile_id).single()
         : { data: null }
       if (fpr?.email) {
-        const { sendEmail } = await import('@/lib/notify')
-        const { frontierJoinedEmail } = await import('@/lib/mail-templates')
-        const m = frontierJoinedEmail({ frontierName: fpr.name ?? 'フロンティア', newPartnerName: name })
-        await sendEmail({ to: fpr.email, ...m })
+        const { sendTemplatedEmail } = await import('@/lib/mail-send')
+        await sendTemplatedEmail({
+          key: 'frontier-joined', to: fpr.email, toRole: 'partner',
+          vars: { name: fpr.name ?? 'フロンティア', partner: name, link: 'https://mb-partners.app/app/frontier' },
+          buttons: [{ label: 'ダッシュボードを見る', url: 'https://mb-partners.app/app/frontier' }],
+        })
       }
     }
   } catch { /* best-effort */ }
