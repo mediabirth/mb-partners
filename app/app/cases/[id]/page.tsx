@@ -10,10 +10,10 @@ import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import MenuInfoButton from '@/components/MenuInfoButton'
 import { customerHonorific } from '@/lib/customer'
 import { statusNarrative } from '@/lib/deal-status-narrative'
+import { DEAL_STATUS } from '@/lib/status'
 
-const STATUS_LABEL: Record<string, string> = {
-  received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
-}
+// 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
+const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
 const STATUS_STEP: Record<string, number> = { received: 0, in_progress: 1, confirmed: 2, paid: 3 }
 const RAIL_STEPS = ['受付', '対応中', '成約', '支払済']
 

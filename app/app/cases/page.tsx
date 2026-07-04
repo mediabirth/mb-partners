@@ -9,29 +9,17 @@ import EmptyState from '@/components/ui/EmptyState'
 import RewardPill from '@/components/ui/RewardPill'
 import CasesSearch from '@/components/CasesSearch'
 import { rewardValueText } from '@/lib/reward-format'
+import { DEAL_STATUS } from '@/lib/status'
 
-const STATUS_LABEL: Record<string, string> = {
-  received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済', lost: '不成立',
-}
+// 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
+const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
 // ⑥ 段階ステッパー（4段）
 const RAIL_STEPS = ['受付', '対応中', '成約', '支払済']
 const STATUS_STEP: Record<string, number> = {
   received: 0, in_progress: 1, confirmed: 2, paid: 3,
 }
 
-// Wave2-②A：パートナー視点の段階ラベル（既存 status を“読み取って”表示するだけ・status値/遷移/お金は不変更）。
-const PARTNER_STAGE: Record<string, string> = {
-  received: '受付', in_progress: 'MB対応中', confirmed: '成約', paid: '成約（入金済）', lost: '見送り',
-}
-// ②A-2：in_progress を review_stage(表示専用メタ)で細分化。未設定は従来「MB対応中」にフォールバック。
-function partnerStageLabel(status: string, reviewStage?: string | null): string {
-  if (status === 'in_progress') {
-    if (reviewStage === 'review') return '稟議中'
-    if (reviewStage === 'negotiating') return '商談中'
-    return 'MB対応中'
-  }
-  return PARTNER_STAGE[status] ?? status
-}
+// Wave2-②A→操縦席: パートナー段階ラベルは正典（lib/status.ts partnerStageLabel）へ昇格済み。
 function fmtDate(s?: string | null): string {
   if (!s) return '—'
   const d = new Date(s)

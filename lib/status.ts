@@ -91,3 +91,10 @@ export function intakeType(intake: string | null | undefined): { tone: Tone; chi
   const key = intake ?? 'referral_coop'
   return { tone: key === 'direct' ? 'neutral' : 'progress', children: INTAKE_LABEL[key] ?? key }
 }
+
+// ── パートナー面の表示ラベル（操縦席・翻訳レイヤーの写像元）──
+// パートナーAPP（案件一覧/詳細/報酬）が実際に表示する語は DEAL_STATUS と同一（4語＋不成立）。
+// 旧 Wave2 の PARTNER_STAGE（MB対応中/見送り等）はどの画面にも描画されない死語彙だったため採用しない。
+export function partnerFacingLabel(status: string): string {
+  return DEAL_STATUS[status]?.label ?? status
+}
