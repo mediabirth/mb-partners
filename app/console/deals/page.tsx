@@ -11,6 +11,9 @@ import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { DEAL_STATUS } from '@/lib/status'
 import { engagementLabel } from '@/lib/engagement-labels'
+// 操縦席: ステータス翻訳レイヤー（3面写像・遷移の結果予告・次アクション）の単一ソース。文言/写像のハードコード禁止。
+import { statusTranslation, projectLaneTranslation, transitionForecast, forecastLine, statusEntryEffects, OPS_NEXT_ACTION, DEAL_STATUS_KEYS } from '@/lib/status-effects'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 // A: ドロワー内でのみ使う重い子を遅延読込（初回バンドルから除外・押下/展開時に取得）。
 const DeliveryProgress = dynamic(() => import('./DeliveryProgress'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 120, borderRadius: 12 }} /> })
@@ -144,6 +147,15 @@ function DealStepper({ status }: { status: string }) {
     </div>
   )
 }
+// 実装4: 詳細ドロワー縦1カラムのセクション見出し（eyebrow風・0.5px区切り・v2.2静音）。
+function SectionHead({ children, first }: { children: React.ReactNode; first?: boolean }) {
+  return (
+    <p className="eyebrow" style={{ margin: first ? '0 0 10px' : '24px 0 12px', paddingTop: first ? 0 : 16, borderTop: first ? undefined : '0.5px solid var(--line)' }}>
+      {children}
+    </p>
+  )
+}
+
 // QR: ボードはアクティブ3列のみ（成約・確定=入金待ちは残す）。支払済/不成立はアーカイブへ。
 const BOARD_KEYS: string[] = ['received', 'in_progress', 'confirmed']
 // 通常フローは線形（不成立は別操作・再開可能）
@@ -244,7 +256,9 @@ export default function DealsPage() {
   const [taskBusy, setTaskBusy]     = useState<string | null>(null)
   const [profile, setProfile]       = useState<{ name: string; color: string } | null>(null)
   const [pending, startTransition]  = useTransition()
-  const [toast, setToast]           = useState('')
+  // 実装2: トーストを {msg, undo?} 型へ拡張（既存 showToast('文字列') 呼び出しはそのまま動く）。undo付きは8秒表示。
+  const [toast, setToast]           = useState<{ msg: string; undo?: () => void } | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filterSvc, setFilterSvc]   = useState('all')
   const [services, setServices]     = useState<Service[]>([])
   const dragItem = useRef<{ id: string; status: string } | null>(null)
@@ -257,8 +271,15 @@ export default function DealsPage() {
   const [baseInput, setBaseInput] = useState('')
   // ① edit 実績金額 from the detail panel (any status)
   const [editingBase, setEditingBase] = useState(false)
-  // ② IA再構成：詳細ドロワーのタブ（概要/進行/金額・原価）。表示のグルーピングのみ・ハンドラ非接触。
-  const [detailTab, setDetailTab] = useState<'overview' | 'progress' | 'money'>('overview')
+  // 実装4: タブ廃止→縦1カラム。金額・原価セクションの折りたたみ（received/in_progress のみ・既定閉）。
+  //   <details> の open を state と同期し、閉時は中身を非レンダリング＝動的import(DeliveryProgress)は開くまでマウントしない。
+  const [moneyOpen, setMoneyOpen] = useState(false)
+  const moneyRef = useRef<HTMLDivElement | null>(null)   // 「明細を追加して成約へ」からのスクロール先
+  const baseBoxRef = useRef<HTMLDivElement | null>(null) // 「実績金額を入力する」からのスクロール先
+  // 実装2: 波及あり遷移（3面表示変化/メール送信）の確定前確認モーダル。
+  const [moveConfirm, setMoveConfirm] = useState<{ deal: Deal; to: Status } | null>(null)
+  // 実装3: ステータスマトリクス（3面写像＋通知メール）のⓘシート。
+  const [matrixOpen, setMatrixOpen] = useState(false)
   const [baseEdit, setBaseEdit] = useState('')
   // N: 不成立化モーダル（理由＋メモ）
   const [lostModal, setLostModal] = useState<Deal | null>(null)
@@ -319,8 +340,8 @@ export default function DealsPage() {
     return () => { alive = false }
   }, [selected])
 
-  // ② 案件を切り替えたらタブを「概要」に戻す（表示状態のリセットのみ）。
-  useEffect(() => { setDetailTab('overview'); setEditingBase(false) }, [selected?.id])
+  // 実装4: 案件を切り替えたら編集/折りたたみ状態をリセット（タブ廃止に伴い detailTab リセットは削除）。
+  useEffect(() => { setEditingBase(false); setMoneyOpen(false) }, [selected?.id])
 
   // ④ 管理側で done を立て/外す（done_by=管理者）。requiredTasksDone・確定ゲート・レート計算は不変（done値を書くだけ）。
   async function toggleDealTask(taskId: string, next: boolean) {
@@ -334,9 +355,21 @@ export default function DealsPage() {
     } catch { setDealTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !next } : t)) } finally { setTaskBusy(null) }
   }
 
-  function showToast(msg: string) {
-    setToast(msg)
-    setTimeout(() => setToast(''), 2200)
+  function showToast(msg: string, opts?: { undo?: () => void; duration?: number }) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ msg, undo: opts?.undo })
+    toastTimer.current = setTimeout(() => setToast(null), opts?.duration ?? 2200)
+  }
+
+  // 実装4: 「次にすること」からの誘導。金額・原価セクションを開いてスクロール／実績金額の入力を開いてスクロール。
+  function openMoneySection() {
+    setMoneyOpen(true)
+    setTimeout(() => moneyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
+  function openBaseEntry(deal: Deal) {
+    setEditingBase(true)
+    setBaseEdit(deal.base_amount?.toString() ?? '')
+    setTimeout(() => baseBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
   }
 
   // L2: 明細変更後にボードを再取得し選択中dealを更新（deals.amount=Σ・明細を反映）。
@@ -346,13 +379,15 @@ export default function DealsPage() {
     if (keepId) setSelected(d.deals.find((x: Deal) => x.id === keepId) ?? null)
   }
   // F-3a: 任意の deal の project_status を変更（ボードのプロジェクト・レーン間ドラッグ用）。お金に非干渉。
-  async function setProjectStatusForDeal(deal: Deal, ps: string) {
+  // 実装2: 波及なし（3面表示・メール不変）のため確認は挟まず即時実行。ドロップ経由(opts.undoFrom)は Undoトースト8秒。
+  async function setProjectStatusForDeal(deal: Deal, ps: string, opts?: { undoFrom: string; laneLabel: string }) {
     setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, project_status: ps } : d))  // 楽観更新
     if (selected?.id === deal.id) setSelected(s => s ? { ...s, project_status: ps } : s)
     try {
       const res = await fetch(`/api/console/deals/${deal.id}/project-status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_status: ps }) })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.needsMigration) { showToast(data.needsMigration ? 'project_status列のDB適用が必要です' : (data.error ?? '更新に失敗しました')); await refreshDeals(selected?.id) }
+      else if (opts) showToast(`「${opts.laneLabel}」へ移動しました`, { duration: 8000, undo: () => setProjectStatusForDeal(deal, opts.undoFrom) })
       else showToast(`プロジェクト状態を「${ps}」に変更しました`)
     } catch { showToast('更新に失敗しました'); await refreshDeals(selected?.id) }
   }
@@ -666,14 +701,22 @@ export default function DealsPage() {
     const srcPhase = deal._phase ?? phaseOf(deal)
     if (lane.group === 'shodan') {
       if (srcPhase === 'project') { showToast('プロジェクトの案件は商談へ戻せません'); dragItem.current = null; return }
-      updateStatus(deal, lane.key as Status)              // 受付↔商談中（既存）
+      requestStatusMove(deal, lane.key as Status)         // 受付↔商談中（既存処理＋実装2の結果予告）
     } else if (srcPhase === 'shodan') {
-      if (lane.key === '未着手') updateStatus(deal, 'confirmed')   // 成約フロー（base/報酬は既存処理）
+      if (lane.key === '未着手') requestStatusMove(deal, 'confirmed')   // 成約フロー（base/報酬は既存処理＋実装2の結果予告）
       else showToast('先に「成約・未着手」へ移動して成約してください')
     } else {
-      setProjectStatusForDeal(deal, lane.key)             // project_status 変更（お金に非干渉）
+      // 実装2: project間は波及なし（3面表示・メール不変）＝即時実行＋Undoトースト8秒。
+      const undoFrom = deal.project_status ?? '未着手'
+      setProjectStatusForDeal(deal, lane.key, { undoFrom, laneLabel: lane.label })
     }
     dragItem.current = null
+  }
+  // 実装2: status遷移のドロップは、波及(ripple＝3面表示変化 or メール送信)があれば確定前に結果予告モーダルを挟む。
+  //   波及なしの遷移（理論上のみ）は従来どおり即時。「移動する」後は従来の updateStatus（confirmed の baseModal/lostModal 分岐も生きる）。
+  function requestStatusMove(deal: Deal, to: Status) {
+    if (transitionForecast(deal.status, to).ripple) setMoveConfirm({ deal, to })
+    else updateStatus(deal, to)
   }
 
   // F-3a: フィルタ群（サービス・流入経路・フェーズ・MB担当・パートナー）を合成。
@@ -690,6 +733,14 @@ export default function DealsPage() {
     deals.filter(d => (d.intake_type ?? 'referral_coop') !== 'direct' && d.partners?.profiles)
       .map(d => [d.partners!.code, d.partners!.profiles!.name])
   ).entries())
+
+  // 実装1: ボードに載る案件（アクティブのみ）。レーン写像の表示判定と各レーンの絞り込みで共用。
+  const boardDeals = filteredDeals.filter(d => !['paid', 'lost'].includes(d.status))
+  // 実装1（採用した最適化）: projectレーンの3面写像は全6列で同一値（confirmed の翻訳＝社内語彙）のため、
+  // 列ごとの繰り返しを避け「最初に展開されているプロジェクト列」にのみ1回表示する。折りたたみ列には出さない。
+  const firstOpenProjectLaneKey = PIPELINE_LANES.find(l =>
+    l.group === 'project' && (boardDeals.some(d => laneKeyOf(d) === l.key) || expandedEmpty[l.key])
+  )?.key
 
   if (loading) return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
@@ -712,7 +763,20 @@ export default function DealsPage() {
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ flex: 1 }}>
             <p className="eyebrow" style={{ marginBottom: 2 }}>案件管理</p>
-            <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>{view === 'board' ? '案件ボード' : 'アーカイブ'}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>{view === 'board' ? '案件ボード' : 'アーカイブ'}</h1>
+              {/* 実装3: ステータスマトリクス（3面写像＋通知メール）を開くⓘ（SVG・絵文字不使用） */}
+              {view === 'board' && (
+                <button onClick={() => setMatrixOpen(true)} title="ステータスと3面の表示" aria-label="ステータスと3面の表示を開く"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 0, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <line x1="12" y1="11" x2="12" y2="16" />
+                    <circle cx="12" cy="7.6" r="0.5" fill="currentColor" stroke="none" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* QR: ボード / アーカイブ 切替 */}
@@ -824,7 +888,7 @@ export default function DealsPage() {
               直営業は商談を飛ばしプロジェクト列に出現。レーン間ドラッグ：商談=status変更／成約=既存の成約フロー／プロジェクト間=project_status変更（お金非干渉）。 */}
           <div className="page-anim" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', overflowX: 'auto', padding: '0 32px 10px' }}>
             {PIPELINE_LANES.map((lane, idx) => {
-              const laneDeals = filteredDeals.filter(d => !['paid', 'lost'].includes(d.status) && laneKeyOf(d) === lane.key)
+              const laneDeals = boardDeals.filter(d => laneKeyOf(d) === lane.key)
               const groupStart = lane.group === 'project' && (idx === 0 || PIPELINE_LANES[idx - 1].group === 'shodan')
               // B2: 0件カラムは既定で細い折りたたみ列。手動展開中・1件以上なら通常幅（0→1で自動的に通常表示）。
               const isEmpty = laneDeals.length === 0
@@ -864,6 +928,17 @@ export default function DealsPage() {
                           <span className="tnum" style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 8px', minWidth: 22, textAlign: 'center' }}>{laneDeals.length}</span>
                         </div>
                       </div>
+                      {/* 実装1: レーンの3面写像（正典 statusTranslation / projectLaneTranslation 由来・ハードコードなし）。
+                          shodanレーンは各列に、projectレーンは最初の展開列に1回だけ（全6列同一値のため）。折りたたみ列には出さない。 */}
+                      {(lane.group === 'shodan' || lane.key === firstOpenProjectLaneKey) && (() => {
+                        const t = lane.group === 'shodan' ? statusTranslation(lane.key) : projectLaneTranslation()
+                        return (
+                          <div style={{ marginTop: 6, paddingLeft: 14, fontSize: 11, fontWeight: 400, color: 'var(--muted2)', lineHeight: 1.55 }}>
+                            <div>パートナー：{t.partner}</div>
+                            <div>デリバリー：{t.vendor}</div>
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {isEmpty && (
@@ -926,54 +1001,55 @@ export default function DealsPage() {
               {/* R-a：読み取り専用の進捗ステッパー（現在statusをハイライト・変更導線なし） */}
               <DealStepper status={selected.status} />
 
-              {/* ② 次にすること：現 status を読むだけで主要操作を1つ提示。既存ハンドラ(updateStatus/reopenDeal)を呼ぶショートカット。新しい遷移/計算なし。 */}
+              {/* 実装4: 次にすること — 正典 OPS_NEXT_ACTION 駆動のCTA1つ＋直下に必ず結果予告1行（forecastLine）。
+                  特殊分岐（明細0→金額セクション誘導／率案件base未入力→実績金額誘導／lost→90日内復活／paid→完了表示）は維持。 */}
               {(() => {
                 const st = selected.status
                 const noItems = (selected.deal_items?.length ?? 0) === 0
-                let act: { label: string; onClick: () => void; hint?: string } | null = null
-                if (st === 'received') act = { label: '対応中にする', onClick: () => updateStatus(selected, 'in_progress') }
-                else if (st === 'in_progress') act = noItems
-                  ? { label: '明細を追加して成約へ', onClick: () => setDetailTab('money'), hint: '成約には明細が1つ以上必要です。' }
-                  : { label: '成約を確定する', onClick: () => updateStatus(selected, 'confirmed') }
-                else if (st === 'confirmed') act = { label: '支払済にする', onClick: () => updateStatus(selected, 'paid') }
-                else if (st === 'lost') {
+                const nextAct = OPS_NEXT_ACTION[st as keyof typeof OPS_NEXT_ACTION] ?? null
+                let act: { label: string; onClick: () => void; forecast: string; precondition?: string } | null = null
+                if (st === 'in_progress' && noItems) {
+                  // 明細0では成約できない（blockConfirmと同じガード）→ 金額・原価セクションを開いて誘導。
+                  act = { label: '明細を追加して成約へ', onClick: openMoneySection, forecast: '成約には明細が1つ以上必要です。追加すると成約にできます' }
+                } else if (nextAct) {
+                  act = { label: nextAct.cta, onClick: () => updateStatus(selected, nextAct.to), forecast: forecastLine(st, nextAct.to), precondition: nextAct.precondition }
+                } else if (st === 'lost') {
                   const days = selected.lost_at ? Math.floor((Date.now() - new Date(selected.lost_at).getTime()) / 86_400_000) : null
-                  if (days != null && days <= 90) act = { label: '対応中に戻す（復活）', onClick: () => reopenDeal(selected) }
+                  if (days != null && days <= 90) act = { label: '対応中に戻す（復活）', onClick: () => reopenDeal(selected), forecast: forecastLine('lost', 'in_progress') }
                 }
                 const baseNeeded = rateInfo(selected).isRate && selected.base_amount == null && st !== 'lost' && st !== 'paid'
-                if (!act && !baseNeeded) return null
+                if (!act && !baseNeeded && st !== 'paid') return null
                 return (
                   <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12 }}>
                     <p style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--blue-dk)', letterSpacing: '.06em', marginBottom: 8 }}>次にすること</p>
+                    {st === 'paid' && <p style={{ fontSize: '.72rem', color: 'var(--muted2)', lineHeight: 1.6 }}>この案件は完了しています</p>}
                     {act && (
-                      <button onClick={act.onClick} disabled={pending} className="ui-btn ui-btn--primary" style={{ width: '100%', fontSize: '.76rem', padding: '10px 14px' }}>
-                        {act.label}
-                      </button>
+                      <>
+                        <button onClick={act.onClick} disabled={pending} className="ui-btn ui-btn--primary" style={{ width: '100%', fontSize: '.76rem', padding: '10px 14px' }}>
+                          {act.label}
+                        </button>
+                        <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted2)', marginTop: 6, lineHeight: 1.55 }}>{act.forecast}</p>
+                        {act.precondition && <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>条件：{act.precondition}</p>}
+                      </>
                     )}
-                    {act?.hint && <p style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.5 }}>{act.hint}</p>}
                     {baseNeeded && (
-                      <button onClick={() => setDetailTab('progress')} className="ui-btn ui-btn--secondary" style={{ width: '100%', fontSize: '.72rem', padding: '8px 14px', marginTop: act ? 8 : 0 }}>
-                        実績金額を入力する
-                      </button>
+                      <>
+                        <button onClick={() => openBaseEntry(selected)}
+                          className="ui-btn ui-btn--secondary" style={{ width: '100%', fontSize: '.72rem', padding: '8px 14px', marginTop: act ? 8 : 0 }}>
+                          実績金額を入力する
+                        </button>
+                        <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted2)', marginTop: 6, lineHeight: 1.55 }}>実績金額を入力すると率から報酬額が確定します</p>
+                      </>
                     )}
                   </div>
                 )
               })()}
 
-              {/* ② タブ：概要（見るだけ）／進行（状態を進める）／金額・原価（明細・P&L）。中身は同じJSX・同じハンドラを箱に振り分けるだけ。 */}
-              <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg2)', borderRadius: 10, padding: 3 }}>
-                {([['overview', '概要'], ['progress', '進行'], ['money', '金額・原価']] as const).map(([k, l]) => (
-                  <button key={k} type="button" onClick={() => setDetailTab(k)}
-                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500,
-                      background: detailTab === k ? '#fff' : 'transparent', color: detailTab === k ? 'var(--c-blue)' : 'var(--muted2)',
-                      boxShadow: detailTab === k ? '0 1px 3px rgba(14,14,20,.08)' : 'none' }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
+              {/* 実装4: タブ廃止→縦1カラム（概要→進行→金額・原価→管理操作）。中身は同じJSX・同じハンドラのまま並べ替えのみ。 */}
+              <SectionHead first>概要</SectionHead>
 
               {/* 概要：基本情報（表示専用）。サービスは「サービス名 ─ メニュー名」・報酬は RewardPill（唯一のaccent） */}
-              {detailTab === 'overview' && ([
+              {([
                 ['サービス', selected.services?.name ? `${selected.services.name}${menuLabelOf(selected) ? ` ─ ${menuLabelOf(selected)}` : ''}` : '相談（サービス未定）'],
                 ['ソース', selected.source],
                 ['ステータス', COLS.find(c => c.key === selected.status)?.label ?? selected.status],
@@ -988,15 +1064,30 @@ export default function DealsPage() {
               ))}
 
               {/* ②c B2B: 法人の部署・役職を additive 表示（無い場合は非表示＝従来通り） */}
-              {detailTab === 'overview' && selected.contact_title && (
+              {selected.contact_title && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.75rem', gap: 12, alignItems: 'center' }}>
                   <span style={{ color: 'var(--muted2)' }}>部署・役職</span>
                   <span style={{ fontWeight: 500, textAlign: 'right' }}>{selected.contact_title}</span>
                 </div>
               )}
 
-              {/* F-1: フェーズ／流入経路バッジ ＋ プロジェクト実行ステータス（お金に非干渉の独立メタデータ）【進行タブ】 */}
-              {detailTab === 'progress' && (() => {
+              {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）。【概要セクション・表示専用】 */}
+              {selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
+                <div style={{ marginTop: 14, padding: '11px 14px', background: 'var(--amber-bg)', borderRadius: 10 }}>
+                  <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--amber)' }}>対応範囲が未達のため、固定報酬で確定</p>
+                  <p style={{ fontSize: '.64rem', color: 'var(--txt)', marginTop: 4, lineHeight: 1.6 }}>{selected.reward_snapshot.gate_reason}</p>
+                </div>
+              )}
+              {selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
+                <div style={{ marginTop: 14, padding: '9px 14px', background: 'var(--green-bg)', borderRadius: 10 }}>
+                  <p style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--green)' }}>対応範囲をすべて満たし、成果報酬（粗利%）で確定</p>
+                </div>
+              )}
+
+              <SectionHead>進行</SectionHead>
+
+              {/* F-1: フェーズ／流入経路バッジ ＋ プロジェクト実行ステータス（お金に非干渉の独立メタデータ）【進行セクション】 */}
+              {(() => {
                 const phase = selected._phase ?? phaseOf(selected)
                 const intake = selected.intake_type ?? 'referral_coop'
                 const ph = PHASE_STYLE[phase]
@@ -1008,40 +1099,164 @@ export default function DealsPage() {
                     </div>
                     {/* プロジェクト段階のみ実行ステータスを表示・変更可（商談段階は商談語彙のまま） */}
                     {phase === 'project' && (
-                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>プロジェクト状態</span>
-                        <select value={selected.project_status ?? ''} disabled={itemBusy}
-                          onChange={e => saveProjectStatus(e.target.value === '' ? null : e.target.value)}
-                          style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: PROJECT_STATUS_STYLE[selected.project_status ?? '']?.c ?? 'var(--txt)' }}>
-                          <option value="">未設定</option>
-                          {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>プロジェクト状態</span>
+                          <select value={selected.project_status ?? ''} disabled={itemBusy}
+                            onChange={e => saveProjectStatus(e.target.value === '' ? null : e.target.value)}
+                            style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: PROJECT_STATUS_STYLE[selected.project_status ?? '']?.c ?? 'var(--txt)' }}>
+                            <option value="">未設定</option>
+                            {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        {/* 実装4: 保存結果の説明（正典コメント準拠の固定文＝project_statusは社内管理・3面へ非公開） */}
+                        <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)', marginTop: 4, lineHeight: 1.5 }}>社内管理・パートナー/デリバリーには表示されません</p>
                       </div>
                     )}
                     {/* ②A-2: 稟議ステージ（in_progress時のみ・表示専用メタ・お金/confirmed非接触の隔離更新でpartnerに細分化表示） */}
                     {selected.status === 'in_progress' && (
-                      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>稟議ステージ</span>
-                        <select value={selected.review_stage ?? ''} disabled={itemBusy}
-                          onChange={e => saveReviewStage(e.target.value === '' ? null : e.target.value)}
-                          style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: 'var(--txt)' }}>
-                          <option value="">未設定（MB対応中）</option>
-                          <option value="negotiating">商談中</option>
-                          <option value="review">稟議中</option>
-                        </select>
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>稟議ステージ</span>
+                          <select value={selected.review_stage ?? ''} disabled={itemBusy}
+                            onChange={e => saveReviewStage(e.target.value === '' ? null : e.target.value)}
+                            style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: 'var(--txt)' }}>
+                            <option value="">未設定（MB対応中）</option>
+                            <option value="negotiating">商談中</option>
+                            <option value="review">稟議中</option>
+                          </select>
+                        </div>
+                        {/* 実装4: 保存結果の説明（正典コメント準拠の固定文＝review_stageはパートナーへ細分化表示） */}
+                        <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)', marginTop: 4, lineHeight: 1.5 }}>保存するとパートナーの案件詳細に進捗の細分化として表示されます</p>
                       </div>
                     )}
                   </div>
                 )
               })()}
 
-              {/* L2: 明細（サービス×金額）＋合計。成約前(received/in_progress)のみ編集可。【金額・原価タブ】 */}
-              {detailTab === 'money' && (() => {
+              {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。【進行セクション】 */}
+              {selected.channel === 'cooperation' && dealTasks.length > 0 && (
+                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 10 }}>
+                  <p style={{ fontSize: '.66rem', fontWeight: 500, marginBottom: 2 }}>対応範囲</p>
+                  <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて満たすと成果報酬＝粗利%が確定）。</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {[...dealTasks].sort((a, b) => a.sort - b.sort).map(t => {
+                      const auto = t.kind !== 'manual'
+                      return (
+                        <button key={t.id} type="button" onClick={() => !auto && toggleDealTask(t.id, !t.done)} disabled={auto || taskBusy === t.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', background: 'none', border: 'none', borderBottom: '0.5px solid var(--line)', textAlign: 'left', width: '100%', cursor: auto ? 'default' : 'pointer', opacity: taskBusy === t.id ? .6 : 1, fontFamily: 'inherit' }}>
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.done ? 'var(--green)' : '#fff', border: `2px solid ${t.done ? 'var(--green)' : 'var(--line)'}`, color: '#fff' }}>
+                            {t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, color: t.done ? 'var(--muted2)' : 'var(--txt)', textDecoration: t.done ? 'line-through' : 'none' }}>
+                            {t.label}
+                            {/* A3: パートナー入力のヒアリング内容（deal_tasks.note）— 保存はされていたが表示欠落だった */}
+                            {t.note && (
+                              <span style={{ display: 'block', fontSize: '.66rem', fontWeight: 400, color: 'var(--txt)', textDecoration: 'none', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginTop: 4, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 8 }}>{t.note}</span>
+                            )}
+                          </span>
+                          {t.required && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 7px' }}>必須</span>}
+                          {auto && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--muted)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>自動</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ① 実績金額（率案件）— 編集（base_amount→報酬再計算は不変）。【進行セクション】 */}
+              {rateInfo(selected).isRate && (
+                <div ref={baseBoxRef} style={{ marginTop: 18, padding: '14px 16px', background: 'var(--bg2)', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>実績金額（{rateInfo(selected).baseLabel}）</p>
+                      <p style={{ fontSize: '.88rem', fontWeight: 500, fontFamily: 'Inter', marginTop: 3 }}>
+                        {selected.base_amount != null
+                          ? `¥${selected.base_amount.toLocaleString()}`
+                          : <span style={{ color: 'var(--amber)', fontSize: '.74rem' }}>未入力</span>}
+                      </p>
+                      <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 3 }}>
+                        × {rateInfo(selected).rate}% = 報酬 {selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '—'}
+                      </p>
+                    </div>
+                    {!editingBase && selected.status !== 'lost' && (
+                      <button onClick={() => { setEditingBase(true); setBaseEdit(selected.base_amount?.toString() ?? '') }} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px', flexShrink: 0 }}>
+                        {selected.base_amount != null ? '金額を編集' : '金額を入力'}
+                      </button>
+                    )}
+                    {selected.status === 'lost' && (
+                      <span style={{ fontSize: '.58rem', color: 'var(--muted)', flexShrink: 0 }}>不成立のため編集不可</span>
+                    )}
+                  </div>
+                  {editingBase && (
+                    <div style={{ marginTop: 12 }}>
+                      <input
+                        autoFocus inputMode="numeric"
+                        value={baseEdit}
+                        onChange={e => setBaseEdit(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveBase() }}
+                        placeholder={`${rateInfo(selected).baseLabel}の実額（例：300000）`}
+                        style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'Inter', fontSize: '.85rem' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
+                        <span style={{ color: 'var(--muted2)' }}>確定報酬（{rateInfo(selected).rate}%）</span>
+                        <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)' }}>
+                          {(() => { const bv = Number(baseEdit.replace(/[,，\s]/g, '')); return bv > 0 ? `¥${Math.round(bv * (rateInfo(selected).rate as number) / 100).toLocaleString()}` : '—' })()}
+                        </b>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button onClick={() => setEditingBase(false)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
+                        <button onClick={saveBase} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存する</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 継続報酬：月次入力セクション（継続案件のみ・通常案件には出さない）【進行セクション】 */}
+              {continuousInfo(selected).isContinuous && (
+                <ContinuousMonthly deal={selected} onChanged={() => refreshDeals(selected.id)} />
+              )}
+
+              {/* N: 不成立の詳細＋再開【進行セクション】 */}
+              {selected.status === 'lost' && (
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ padding: '13px 15px', background: 'var(--red-bg)', borderRadius: 12 }}>
+                    <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--red)' }}>不成立（見送り）</p>
+                    <p style={{ fontSize: '.7rem', color: 'var(--txt)', marginTop: 6 }}>理由：{selected.lost_reason ? lostReasonLabel(selected.lost_reason) : '—'}</p>
+                    {selected.lost_note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>メモ：{selected.lost_note}</p>}
+                    {selected.lost_at && <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 6 }}>{new Date(selected.lost_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}</p>}
+                  </div>
+                  {(() => {
+                    // 復活は不成立から90日以内のみ。戻すと active になり金額編集が可能に。frozen/payout 無改修。
+                    const days = selected.lost_at ? Math.floor((Date.now() - new Date(selected.lost_at).getTime()) / 86_400_000) : null
+                    const canReopen = days != null && days <= 90
+                    return canReopen ? (
+                      <div style={{ marginTop: 12 }}>
+                        <button onClick={() => reopenDeal(selected)} disabled={pending} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px' }}>
+                          対応中に戻す（復活）{days != null && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>・ 残り{90 - days}日</span>}
+                        </button>
+                        {/* 実装4: 結果予告（正典 forecastLine 由来） */}
+                        <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.5 }}>{forecastLine('lost', 'in_progress')}</p>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 12, lineHeight: 1.6 }}>
+                        復活期限切れ（不成立から90日を超えたため、この案件は復活できません）。
+                      </p>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* 実装4: 金額・原価セクション — received/in_progress は <details> 折りたたみ（既定閉・「成約時に確定します」注記）、
+                  confirmed以降（paid/lost含む）は展開表示＝成約フェーズで前面化。中身のJSX・ハンドラは旧「金額・原価」タブのまま。 */}
+              <div ref={moneyRef}>
+              {(() => {
                 const items = selected.deal_items ?? []
                 const editable = ['received', 'in_progress'].includes(selected.status)
                 const svc = svcMenus.find(s => s.id === itemForm.service_id)
-                return (
-                  <div style={{ marginTop: 18 }}>
+                const renderMoney = () => (<>
+                  <div style={{ marginTop: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>明細（内訳）</p>
                       {!editable && <span style={{ fontSize: '.56rem', color: 'var(--muted)', fontWeight: 500 }}>成約後はロック</span>}
@@ -1194,171 +1409,85 @@ export default function DealsPage() {
                       </div>
                     )}
                   </div>
+                  {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。 */}
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />
+                </>)
+                if (!editable) return (
+                  <div>
+                    <SectionHead>金額・原価</SectionHead>
+                    {renderMoney()}
+                  </div>
+                )
+                return (
+                  <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--line)' }}>
+                    <details open={moneyOpen} onToggle={e => setMoneyOpen(e.currentTarget.open)}>
+                      <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+                          style={{ color: 'var(--muted)', flexShrink: 0, transform: moneyOpen ? 'rotate(90deg)' : 'none', transition: 'transform .14s var(--ease-out)' }}>
+                          <path d="M9 6l6 6-6 6" />
+                        </svg>
+                        <span className="eyebrow" style={{ margin: 0 }}>金額・原価</span>
+                        <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)' }}>成約時に確定します</span>
+                      </summary>
+                      {/* 閉時は中身を非レンダリング＝動的import（DeliveryProgress）は開くまでマウントしない */}
+                      {moneyOpen && renderMoney()}
+                    </details>
+                  </div>
                 )
               })()}
+              </div>
 
-              {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。【金額・原価タブ】 */}
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {detailTab === 'money' && <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />}
-
-              {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）。【概要タブ・表示専用】 */}
-              {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
-                <div style={{ marginTop: 14, padding: '11px 14px', background: 'var(--amber-bg)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--amber)' }}>対応範囲が未達のため、固定報酬で確定</p>
-                  <p style={{ fontSize: '.64rem', color: 'var(--txt)', marginTop: 4, lineHeight: 1.6 }}>{selected.reward_snapshot.gate_reason}</p>
-                </div>
-              )}
-              {detailTab === 'overview' && selected.channel === 'cooperation' && selected.reward_snapshot?.effective_kind === 'cooperation' && (
-                <div style={{ marginTop: 14, padding: '9px 14px', background: 'var(--green-bg)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.64rem', fontWeight: 500, color: 'var(--green)' }}>対応範囲をすべて満たし、成果報酬（粗利%）で確定</p>
-                </div>
-              )}
-
-              {/* ④ 対応範囲（協力タスク）の管理側チェック：運営が確認して done を立てる（必須全達成→協力レート確定の入力）。【進行タブ】 */}
-              {detailTab === 'progress' && selected.channel === 'cooperation' && dealTasks.length > 0 && (
-                <div style={{ marginTop: 14, padding: '12px 14px', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 10 }}>
-                  <p style={{ fontSize: '.66rem', fontWeight: 500, marginBottom: 2 }}>対応範囲</p>
-                  <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '0 0 8px', lineHeight: 1.5 }}>運営が対応を確認してチェックします（必須をすべて満たすと成果報酬＝粗利%が確定）。</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {[...dealTasks].sort((a, b) => a.sort - b.sort).map(t => {
-                      const auto = t.kind !== 'manual'
+              {/* 実装4: 管理操作 — ステータス変更（各ボタン直下に結果予告forecastLine＝全保存操作に結果予告）＋取り消し。
+                  lost時は非表示（復活導線は進行セクションと「次にすること」）。ハンドラは updateStatus / cancelDeal のまま不変。 */}
+              {selected.status !== 'lost' && (
+                <div>
+                  <SectionHead>管理操作</SectionHead>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {NEXT[selected.status] && (() => {
+                      const to = NEXT[selected.status]!
+                      const blockConfirm = to === 'confirmed' && (selected.deal_items?.length ?? 0) === 0
+                      const line = forecastLine(selected.status, to)
                       return (
-                        <button key={t.id} type="button" onClick={() => !auto && toggleDealTask(t.id, !t.done)} disabled={auto || taskBusy === t.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 4px', background: 'none', border: 'none', borderBottom: '0.5px solid var(--line)', textAlign: 'left', width: '100%', cursor: auto ? 'default' : 'pointer', opacity: taskBusy === t.id ? .6 : 1, fontFamily: 'inherit' }}>
-                          <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.done ? 'var(--green)' : '#fff', border: `2px solid ${t.done ? 'var(--green)' : 'var(--line)'}`, color: '#fff' }}>
-                            {t.done && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6 9 17l-5-5" /></svg>}
-                          </span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, color: t.done ? 'var(--muted2)' : 'var(--txt)', textDecoration: t.done ? 'line-through' : 'none' }}>
-                            {t.label}
-                            {/* A3: パートナー入力のヒアリング内容（deal_tasks.note）— 保存はされていたが表示欠落だった */}
-                            {t.note && (
-                              <span style={{ display: 'block', fontSize: '.66rem', fontWeight: 400, color: 'var(--txt)', textDecoration: 'none', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginTop: 4, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 8 }}>{t.note}</span>
-                            )}
-                          </span>
-                          {t.required && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 7px' }}>必須</span>}
-                          {auto && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--muted)', background: 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>自動</span>}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ① 実績金額（率案件）— 編集（base_amount→報酬再計算は不変）。【進行タブ】 */}
-              {detailTab === 'progress' && rateInfo(selected).isRate && (
-                <div style={{ marginTop: 18, padding: '14px 16px', background: 'var(--bg2)', borderRadius: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>実績金額（{rateInfo(selected).baseLabel}）</p>
-                      <p style={{ fontSize: '.88rem', fontWeight: 500, fontFamily: 'Inter', marginTop: 3 }}>
-                        {selected.base_amount != null
-                          ? `¥${selected.base_amount.toLocaleString()}`
-                          : <span style={{ color: 'var(--amber)', fontSize: '.74rem' }}>未入力</span>}
-                      </p>
-                      <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 3 }}>
-                        × {rateInfo(selected).rate}% = 報酬 {selected.amount > 0 ? `¥${selected.amount.toLocaleString()}` : '—'}
-                      </p>
-                    </div>
-                    {!editingBase && selected.status !== 'lost' && (
-                      <button onClick={() => { setEditingBase(true); setBaseEdit(selected.base_amount?.toString() ?? '') }} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px', flexShrink: 0 }}>
-                        {selected.base_amount != null ? '金額を編集' : '金額を入力'}
-                      </button>
-                    )}
-                    {selected.status === 'lost' && (
-                      <span style={{ fontSize: '.58rem', color: 'var(--muted)', flexShrink: 0 }}>不成立のため編集不可</span>
-                    )}
-                  </div>
-                  {editingBase && (
-                    <div style={{ marginTop: 12 }}>
-                      <input
-                        autoFocus inputMode="numeric"
-                        value={baseEdit}
-                        onChange={e => setBaseEdit(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') saveBase() }}
-                        placeholder={`${rateInfo(selected).baseLabel}の実額（例：300000）`}
-                        style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'Inter', fontSize: '.85rem' }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
-                        <span style={{ color: 'var(--muted2)' }}>確定報酬（{rateInfo(selected).rate}%）</span>
-                        <b className="tnum" style={{ fontFamily: 'Inter', color: 'var(--c-blue)' }}>
-                          {(() => { const bv = Number(baseEdit.replace(/[,，\s]/g, '')); return bv > 0 ? `¥${Math.round(bv * (rateInfo(selected).rate as number) / 100).toLocaleString()}` : '—' })()}
-                        </b>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setEditingBase(false)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
-                        <button onClick={saveBase} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存する</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 継続報酬：月次入力セクション（継続案件のみ・通常案件には出さない） */}
-              {detailTab === 'progress' && continuousInfo(selected).isContinuous && (
-                <ContinuousMonthly deal={selected} onChanged={() => refreshDeals(selected.id)} />
-              )}
-
-              {/* 進行タブ：不成立詳細＋復活／ステータス変更＋管理操作（ハンドラ不変） */}
-              {detailTab === 'progress' && (selected.status === 'lost' ? (
-                /* N: 不成立の詳細＋再開 */
-                <div style={{ marginTop: 18 }}>
-                  <div style={{ padding: '13px 15px', background: 'var(--red-bg)', borderRadius: 12 }}>
-                    <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--red)' }}>不成立（見送り）</p>
-                    <p style={{ fontSize: '.7rem', color: 'var(--txt)', marginTop: 6 }}>理由：{selected.lost_reason ? lostReasonLabel(selected.lost_reason) : '—'}</p>
-                    {selected.lost_note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>メモ：{selected.lost_note}</p>}
-                    {selected.lost_at && <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 6 }}>{new Date(selected.lost_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}</p>}
-                  </div>
-                  {(() => {
-                    // 復活は不成立から90日以内のみ。戻すと active になり金額編集が可能に。frozen/payout 無改修。
-                    const days = selected.lost_at ? Math.floor((Date.now() - new Date(selected.lost_at).getTime()) / 86_400_000) : null
-                    const canReopen = days != null && days <= 90
-                    return canReopen ? (
-                      <button onClick={() => reopenDeal(selected)} disabled={pending} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px', marginTop: 12 }}>
-                        対応中に戻す（復活）{days != null && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>・ 残り{90 - days}日</span>}
-                      </button>
-                    ) : (
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 12, lineHeight: 1.6 }}>
-                        復活期限切れ（不成立から90日を超えたため、この案件は復活できません）。
-                      </p>
-                    )
-                  })()}
-                </div>
-              ) : (
-                <>
-                  <div style={{ marginTop: 18 }}>
-                    <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 8 }}>ステータス変更</p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {NEXT[selected.status] && (() => {
-                        const blockConfirm = NEXT[selected.status] === 'confirmed' && (selected.deal_items?.length ?? 0) === 0
-                        return (
-                          <button onClick={() => updateStatus(selected, NEXT[selected.status]!)} disabled={pending || blockConfirm} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '9px 14px', opacity: blockConfirm ? .5 : 1 }}>
-                            → {COLS.find(c => c.key === NEXT[selected.status])?.label}
+                        <div>
+                          <button onClick={() => updateStatus(selected, to)} disabled={pending || blockConfirm} title={line} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '9px 14px', opacity: blockConfirm ? .5 : 1 }}>
+                            → {COLS.find(c => c.key === to)?.label}
                           </button>
-                        )
-                      })()}
-                      {PREV[selected.status] && (
-                        <button onClick={() => updateStatus(selected, PREV[selected.status]!)} disabled={pending} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px' }}>
-                          ← {COLS.find(c => c.key === PREV[selected.status])?.label}
-                        </button>
-                      )}
-                      {selected.status !== 'paid' && (
-                        <button onClick={() => updateStatus(selected, 'lost')} disabled={pending} style={{ fontSize: '.72rem', padding: '9px 14px', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
-                          不成立にする
-                        </button>
-                      )}
-                    </div>
+                          <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.5 }}>{line}</p>
+                        </div>
+                      )
+                    })()}
+                    {PREV[selected.status] && (() => {
+                      const to = PREV[selected.status]!
+                      const line = forecastLine(selected.status, to)
+                      return (
+                        <div>
+                          <button onClick={() => updateStatus(selected, to)} disabled={pending} title={line} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px' }}>
+                            ← {COLS.find(c => c.key === to)?.label}
+                          </button>
+                          <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.5 }}>{line}</p>
+                        </div>
+                      )
+                    })()}
+                    {selected.status !== 'paid' && (() => {
+                      const line = forecastLine(selected.status, 'lost')
+                      return (
+                        <div>
+                          <button onClick={() => updateStatus(selected, 'lost')} disabled={pending} title={line} style={{ fontSize: '.72rem', padding: '9px 14px', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                            不成立にする
+                          </button>
+                          <p style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted2)', marginTop: 4, lineHeight: 1.5 }}>{line}</p>
+                        </div>
+                      )
+                    })()}
                   </div>
-
                   {selected.status !== 'paid' && (
-                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--line)' }}>
-                      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 8 }}>管理操作</p>
-                      <button onClick={() => cancelDeal(selected)} disabled={pending} style={{ fontSize: '.7rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
-                        案件を取り消し
-                      </button>
-                    </div>
+                    <button onClick={() => cancelDeal(selected)} disabled={pending} style={{ marginTop: 16, fontSize: '.7rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                      案件を取り消し
+                    </button>
                   )}
-                </>
-              ))}
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -1437,9 +1566,115 @@ export default function DealsPage() {
           position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--txt)', color: '#fff', padding: '12px 22px',
           borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99, whiteSpace: 'nowrap',
+          display: 'flex', alignItems: 'center', gap: 14,
         }}>
-          {toast}
+          <span>{toast.msg}</span>
+          {/* 実装2: Undo（project間ドロップ後8秒間）。元に戻す＝setProjectStatusForDeal(deal, 元のproject_status) */}
+          {toast.undo && (
+            <button onClick={() => { const u = toast.undo; if (toastTimer.current) clearTimeout(toastTimer.current); setToast(null); u?.() }}
+              style={{ background: 'none', border: 'none', color: '#fff', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 500, padding: 0 }}>
+              元に戻す
+            </button>
+          )}
         </div>
+      )}
+
+      {/* 実装2: 波及あり遷移（3面表示変化/メール送信）の確定前確認。本文は正典 forecastLine。承認後は従来の updateStatus。 */}
+      {moveConfirm && (() => {
+        const t = statusTranslation(moveConfirm.to)
+        return (
+          <>
+            <div onClick={() => setMoveConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
+            <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+              <b style={{ fontSize: '.92rem', display: 'block', lineHeight: 1.5 }}>{customerHonorific(moveConfirm.deal)}を「{t.ops}」へ移動しますか</b>
+              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 8, lineHeight: 1.7 }}>
+                {forecastLine(moveConfirm.deal.status, moveConfirm.to)}
+              </p>
+              <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
+                <button onClick={() => setMoveConfirm(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+                <button onClick={() => { const { deal, to } = moveConfirm; setMoveConfirm(null); updateStatus(deal, to) }} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>移動する</button>
+              </div>
+            </div>
+          </>
+        )
+      })()}
+
+      {/* 実装3: ステータスマトリクス — 行=DEAL_STATUS_KEYS＋project_status注記行、列=運営/パートナー/デリバリー/通知メール。
+          値は正典（statusTranslation / statusEntryEffects / projectLaneTranslation）から導出・ハードコードなし。 */}
+      {matrixOpen && (
+        <>
+          <div onClick={() => setMatrixOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
+          <div className="page-anim" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 680, maxWidth: '94vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <b style={{ fontSize: '.92rem' }}>ステータスと3面の表示</b>
+              <button onClick={() => setMatrixOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1rem', width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '.68rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>
+              案件ステータスごとに、パートナー・デリバリーへの表示と自動送信メールが決まります
+            </p>
+            <div style={{ marginTop: 14, border: '0.5px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.7rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg2)' }}>
+                    {['運営', 'パートナー', 'デリバリー', '通知メール'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', fontWeight: 500, fontSize: '.6rem', color: 'var(--muted2)', padding: '8px 12px', borderBottom: '0.5px solid var(--line)' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DEAL_STATUS_KEYS.map(k => {
+                    const t = statusTranslation(k)
+                    const eff = statusEntryEffects(k)
+                    return (
+                      <tr key={k}>
+                        <td style={{ padding: '9px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${DEAL_STATUS[k]?.tone ?? 'neutral'})`, flexShrink: 0 }} />
+                            <span style={{ fontWeight: 500 }}>{t.ops}</span>
+                          </span>
+                        </td>
+                        <td style={{ padding: '9px 12px', borderBottom: '0.5px solid var(--line)', fontWeight: 400, verticalAlign: 'top' }}>{t.partner}</td>
+                        <td style={{ padding: '9px 12px', borderBottom: '0.5px solid var(--line)', fontWeight: 400, verticalAlign: 'top' }}>{t.vendor}</td>
+                        <td style={{ padding: '9px 12px', borderBottom: '0.5px solid var(--line)', fontWeight: 400, verticalAlign: 'top', lineHeight: 1.6 }}>
+                          {eff.mails.length === 0
+                            ? <span style={{ color: 'var(--muted)' }}>—</span>
+                            : eff.mails.map(m => <div key={m.key}>{m.audience}宛「{m.name}」</div>)}
+                          {eff.mailNote && <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>（{eff.mailNote}）</div>}
+                          {eff.opsNotify && <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>運営へ通知</div>}
+                          {eff.extra && <div style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{eff.extra}</div>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {/* project_status の注記行（3面写像は projectLaneTranslation＝confirmed の翻訳に固定） */}
+                  {(() => {
+                    const pt = projectLaneTranslation()
+                    return (
+                      <tr>
+                        <td style={{ padding: '9px 12px', verticalAlign: 'top' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--st-neutral)', flexShrink: 0 }} />
+                            <span style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>プロジェクト状態</span>
+                          </span>
+                          <div style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 2 }}>未着手〜納品完了</div>
+                        </td>
+                        <td style={{ padding: '9px 12px', fontWeight: 400, verticalAlign: 'top' }}>{pt.partner}</td>
+                        <td style={{ padding: '9px 12px', fontWeight: 400, verticalAlign: 'top' }}>{pt.vendor}</td>
+                        <td style={{ padding: '9px 12px', fontWeight: 400, verticalAlign: 'top', color: 'var(--muted)' }}>—</td>
+                      </tr>
+                    )
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 12, lineHeight: 1.7 }}>
+              プロジェクト状態（未着手〜納品完了）は社内管理で、パートナー・デリバリーには表示されません
+            </p>
+            <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.7 }}>
+              メール文面の編集は <Link href="/console/settings/mail" style={{ color: 'var(--c-blue)', textDecoration: 'underline', textUnderlineOffset: 3 }}>設定→メール</Link>
+            </p>
+          </div>
+        </>
       )}
 
       {/* F-3a: 直営業プロジェクト起票モーダル。intake=direct → API が MB直営(is_system)・confirmed・amount=0・未着手 で作成。
