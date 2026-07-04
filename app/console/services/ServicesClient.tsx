@@ -701,15 +701,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         </div>
       </div>
 
-      {/* ── Service list v2：1行1ブランドの0.5px罫線区切りリスト。編集は3ペインに集約（行クリック＝openEdit）。
-             行DnD（HTML5・deals ボードの流儀）で services.sort を即保存＋8秒Undo。 ── */}
-      <div className="page-anim" style={{ padding: '28px', maxWidth: 860 }}>
+      {/* ── Service list v2.2（完成E）：1行1ブランド・コンパクト密度（行高40px帯・余白最小・メニューN撤去）。
+             編集は3ペインに集約（行クリック＝openEdit）。行DnDで services.sort を即保存＋8秒Undo。 ── */}
+      <div className="page-anim" style={{ padding: '16px 20px', maxWidth: 720 }}>
         {services.length === 0 ? (
           <p style={{ fontSize: '.8rem', color: 'var(--muted2)' }}>サービスがありません</p>
         ) : (
           <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
             {services.map((svc, si) => {
-              const menuCount = svc.service_menus.reduce((n, sm) => n + (sm.menus?.length ?? 0), 0)
               const category = (svc as { category?: string | null }).category ?? ''
               return (
                 <div key={svc.id} draggable
@@ -719,17 +718,16 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   onDrop={e => { e.preventDefault(); setDragOverBrand(null); const f = dragBrand.current; dragBrand.current = null; if (f != null) reorderBrands(f, si) }}
                   onClick={() => openEdit(svc)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', cursor: 'pointer',
                     borderTop: si === 0 ? 'none' : '0.5px solid var(--line)',
                     background: dragOverBrand === si ? 'var(--blue-bg2)' : 'transparent',
                   }}>
                   <span style={{ color: 'var(--muted)', cursor: 'grab', display: 'flex', flexShrink: 0 }}><GripIcon /></span>
-                  <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={32} icon={svc.icon} color={svc.color} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</div>
-                    {category && <div style={{ fontSize: 11, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{category}</div>}
+                  <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={28} icon={svc.icon} color={svc.color} />
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</span>
+                    {category && <span style={{ fontSize: 11, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{category}</span>}
                   </div>
-                  <span style={{ fontSize: 12, color: 'var(--muted2)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>メニュー {menuCount}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, width: 44 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, background: svc.active ? 'var(--c-blue)' : 'transparent', border: svc.active ? 'none' : '1px solid var(--muted)' }} />
                     <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc.active ? '公開' : '停止'}</span>
