@@ -90,7 +90,7 @@ export async function GET() {
   // owner認証では nested partners.profiles が RLS で null になるため、所有確認済みで service role 読取
   const admin = await createServiceRoleClient()
   const SEL_BASE = `
-      id, customer_name, customer_type, company_name, contact_name, contact_title, channel, source, status, amount, base_amount,
+      id, customer_name, customer_type, company_name, contact_name, contact_title, customer_email, channel, source, status, amount, base_amount,
       fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot, reward_ref, continuous_months,
       service_menus(name, coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, logo_path),
