@@ -57,8 +57,7 @@ function RowItem({ label, desc, children }: { label: string; desc?: string; chil
 }
 
 export default function SettingsPage() {
-  const [calEnabled, setCalEnabled]           = useState(false)
-  const [calUrl, setCalUrl]                   = useState('')
+  // 磨き③: 旧カレンダー連携の死んだ保存関数（saveCal/calEnabled/calUrl＝トースト表示のみ・未レンダ）を撤去。
   const [notifEmail, setNotifEmail]           = useState(true)
   const [notifSlack, setNotifSlack]           = useState(false)
   const [evtNewDeal, setEvtNewDeal]           = useState(true)
@@ -179,7 +178,6 @@ export default function SettingsPage() {
     setTimeout(() => setToast(''), 2200)
   }
 
-  function saveCal() { showToast(calEnabled ? 'カレンダー連携を保存しました' : 'カレンダー連携を無効にしました') }
   async function saveNotif() {
     setNotifSaving(true)
     try {

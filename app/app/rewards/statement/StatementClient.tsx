@@ -13,13 +13,15 @@ type Props = {
   monthlyData: MonthData[]
   annualGross: number; annualWh: number; annualNet: number
   taxType: string
+  initialMode?: 'monthly' | 'annual'   // 磨き③: 「年間集計」ボタンからの深リンク（?mode=annual）
 }
 
 export default function StatementClient({
   partnerName, partnerCode, bankDisplay,
   monthlyData, annualGross, annualWh, annualNet, taxType,
+  initialMode = 'monthly',
 }: Props) {
-  const [mode, setMode] = useState<'monthly' | 'annual'>('monthly')
+  const [mode, setMode] = useState<'monthly' | 'annual'>(initialMode)
   const [selMonth, setSelMonth] = useState(monthlyData[0]?.ym ?? '')
 
   const now = new Date()

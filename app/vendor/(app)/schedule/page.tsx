@@ -68,18 +68,7 @@ export default async function VendorSchedule() {
         )}
       </div>
 
-      {/* カレンダーと連携 */}
-      <div style={{ padding: '16px 20px 28px' }}>
-        <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--bg2)', border: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--muted2)' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4.5" width="18" height="17" rx="2" /><path d="M3 9.5h18M8 3v3M16 3v3" /></svg>
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '.74rem', fontWeight: 500 }}>カレンダーと連携</div>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>納品期限・撮影・打合せをお使いのカレンダーへ自動で取り込めます（近日対応）。</div>
-          </div>
-        </div>
-      </div>
+      {/* 磨き③: 「カレンダーと連携（近日対応）」カードは操作不能の張りぼてのため撤去（実装時に復活） */}
     </div>
   )
 }

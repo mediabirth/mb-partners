@@ -7,10 +7,11 @@ import StatementClient from './StatementClient'
 
 export const runtime = 'edge'
 
-export default async function StatementPage() {
+export default async function StatementPage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   const user = await getCachedUser()
   if (!user) redirect('/login')
   const supabase = await createClient()
+  const { mode } = await searchParams
 
   const [result, profileRes] = await Promise.all([
     getPartnerWithDeals(supabase, user.id),
@@ -78,6 +79,7 @@ export default async function StatementPage() {
       annualWh={annualWh}
       annualNet={annualNet}
       taxType={partner.tax_type ?? 'individual'}
+      initialMode={mode === 'annual' ? 'annual' : 'monthly'}
     />
   )
 }

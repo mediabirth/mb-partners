@@ -60,7 +60,8 @@ export default async function RewardsPage() {
         <Link href="/app/rewards/statement" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
           支払明細
         </Link>
-        <Link href="/app/rewards/statement" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
+        {/* 磨き③: 従来は両ボタンが同一遷移（年間集計を押しても月次で開く偽の選択肢）だった */}
+        <Link href="/app/rewards/statement?mode=annual" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ flex: 1, padding: 11, marginTop: 0, textDecoration: 'none', textAlign: 'center', fontSize: '.7rem' }}>
           年間集計
         </Link>
       </div>

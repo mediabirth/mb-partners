@@ -496,17 +496,6 @@ const btnPrimary: React.CSSProperties = { minHeight: 44, background: 'var(--c-bl
 const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 400, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }
 const sectionTitle: React.CSSProperties = { fontSize: 13, fontWeight: 500, marginBottom: 12 }
 
-function chunk<T>(arr: T[], n: number): T[][] { const out: T[][] = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out }
-function dedupeTasks(list: TaskDetail[]): TaskDetail[] {
-  const seen = new Set<string>(); const out: TaskDetail[] = []
-  for (const t of list) { if (!seen.has(t.label)) { seen.add(t.label); out.push(t) } }
-  return out
-}
-
-function InfoIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01" strokeLinecap="round"/></svg>
-}
-
 // 個人/法人の小セグメント（高さ30px・13px）。選択中＝neutral塗り（紫禁止）。
 function Segment({ value, onChange, options }: { value: string; onChange: (v: any) => void; options: [string, string][] }) {
   return (

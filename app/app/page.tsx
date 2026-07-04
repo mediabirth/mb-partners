@@ -9,6 +9,7 @@ import { dealStatus } from '@/lib/status'
 import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
 import SynapseCrest from './synapse/SynapseCrest'
+import PushOptIn from '@/components/PushOptIn'
 
 export const runtime = 'edge'
 
@@ -280,6 +281,11 @@ export default async function AppPage() {
             )
           })}
         </div>
+      </div>
+
+      {/* 磨き③: Push許可のソフト前置き（許可未判断のときだけ表示・作成済みで未マウントだった張りぼて解消） */}
+      <div style={{ margin: '14px 20px 0' }}>
+        <PushOptIn />
       </div>
 
       <div style={{ height: 12 }} />

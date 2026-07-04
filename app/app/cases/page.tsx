@@ -7,6 +7,7 @@ import { nextPayoutDate } from '@/lib/payout'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import EmptyState from '@/components/ui/EmptyState'
 import RewardPill from '@/components/ui/RewardPill'
+import CasesSearch from '@/components/CasesSearch'
 import { rewardValueText } from '@/lib/reward-format'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -159,6 +160,9 @@ export default async function CasesPage({
         ))}
       </div>
 
+      {/* 磨き③（改善）: 検索（6件以上で表示・クライアント絞り込みのみ） */}
+      <CasesSearch total={filtered.length} />
+
       {/* Deal list */}
       <div style={{ padding: '0 20px' }}>
         {filtered.length === 0 ? (
@@ -187,6 +191,7 @@ export default async function CasesPage({
               const lost = d.status === 'lost'
               return (
                 <Link key={d.id} href={`/app/cases/${d.id}`} className="card-hover lift ui-card"
+                  data-case-search={`${name}${menuName}`.normalize('NFKC').toLowerCase().replace(/\s+/g, '')}
                   style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
                   {/* 上段：ブランドアイコン32px＋名前様/メニュー名＋報酬ピル */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
