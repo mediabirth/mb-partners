@@ -29,7 +29,9 @@ export type SheetReward = {
 
 export type SheetMenuItem = { name: string; reward: SheetReward | null }
 
-type BaseProps = { svc: SheetService; onClose: () => void }
+// inline=true（additive・既定false）：overlay/スライドインなしでシート本体だけを枠内に描画する
+// （コンソールのライブプレビュー用）。APP側（inline未指定）のDOM・スタイル・挙動は従来と完全同一。
+type BaseProps = { svc: SheetService; onClose: () => void; inline?: boolean }
 export type MenuSheetProps = BaseProps & {
   variant?: 'menu'
   menuName: string
@@ -52,7 +54,7 @@ function SheetRewardPill({ reward }: { reward: SheetReward }) {
 }
 
 export default function MenuDetailSheet(props: MenuSheetProps | BrandSheetProps) {
-  const { svc, onClose } = props
+  const { svc, onClose, inline = false } = props
   const isBrand = props.variant === 'brand'
   const [open, setOpen] = useState(false)
   const [reduced, setReduced] = useState(false)
@@ -63,6 +65,7 @@ export default function MenuDetailSheet(props: MenuSheetProps | BrandSheetProps)
   }, [])
   const dur = reduced ? 0 : 220
   function close() {
+    if (inline) return   // インライン描画時は閉じない（プレビュー・見た目の忠実さのためボタンは残す）
     if (reduced) { onClose(); return }
     setOpen(false)
     setTimeout(onClose, dur)
@@ -71,10 +74,9 @@ export default function MenuDetailSheet(props: MenuSheetProps | BrandSheetProps)
   const svcDesc = svc.description || null
   const trigger = !isBrand ? (props.reward?.reward_trigger || null) : null
   const headStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.06em', marginBottom: 6 }
-  return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.34)', opacity: open ? 1 : 0, transition: `opacity ${dur}ms ease-out`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true"
-        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: '18px 18px 0 0', padding: '10px 20px 28px', transform: open ? 'translateY(0)' : 'translateY(100%)', transition: `transform ${dur}ms ease-out` }}>
+  // シート本体（overlay版・inline版で共有。DOM構造は従来のまま）。
+  const body = (
+    <>
         {/* 1. ハンドル */}
         <button type="button" onClick={close} aria-label="閉じる" style={{ display: 'block', width: 38, height: 4, borderRadius: 999, background: 'var(--line)', border: 'none', margin: '2px auto 16px', cursor: 'pointer', padding: 0 }} />
         {/* 2. ヒーロー：image_url／未設定はロゴタイル56pxのフォールバック（全ブランドが視覚アンカーを持つ） */}
@@ -156,6 +158,21 @@ export default function MenuDetailSheet(props: MenuSheetProps | BrandSheetProps)
           style={{ width: '100%', minHeight: 44, marginTop: 24, background: '#fff', color: 'var(--txt)', border: '0.5px solid var(--line)', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
           閉じる
         </button>
+    </>
+  )
+  // inline：overlay・アニメーションなしでシート本体を静的に描画（コンソールのプレビュー枠用）。
+  if (inline) {
+    return (
+      <div style={{ width: '100%', boxSizing: 'border-box', background: '#fff', borderRadius: 18, border: '0.5px solid var(--line)', padding: '10px 20px 28px' }}>
+        {body}
+      </div>
+    )
+  }
+  return (
+    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.34)', opacity: open ? 1 : 0, transition: `opacity ${dur}ms ease-out`, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true"
+        style={{ width: '100%', maxWidth: 440, maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: '18px 18px 0 0', padding: '10px 20px 28px', transform: open ? 'translateY(0)' : 'translateY(100%)', transition: `transform ${dur}ms ease-out` }}>
+        {body}
       </div>
     </div>
   )

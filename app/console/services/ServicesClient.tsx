@@ -2,14 +2,15 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import { SectionHeader } from '@/components/ui/Header'
-import type { ServiceWithMenus, MenuRow, Menu } from '@/lib/supabase/queries'
+import MenuDetailSheet, { type SheetMenuItem, type SheetReward } from '@/components/MenuDetailSheet'
+import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
 import { parseAmount } from '@/lib/num'
-import { rewardPillForMenu } from '@/lib/reward-format'
+import { rewardPillForMenu, rewardValueText } from '@/lib/reward-format'
+import RewardPill from '@/components/ui/RewardPill'
+import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_OPTIONS = ['売上', '粗利', '利益', '受取収入']
 // 是正2：協力タスク6マスタ（全サービス共通の選択肢・メニューごとに使うものを選ぶ）。
 // auto=自動検知（案件進行で達成）／manual=手動（パートナーが実施）。
 const COOP_TASK_MASTER: { label: string; kind: 'auto' | 'manual' }[] = [
@@ -20,21 +21,8 @@ const COOP_TASK_MASTER: { label: string; kind: 'auto' | 'manual' }[] = [
   { label: '価格/条件合意',     kind: 'manual' },
   { label: 'クロージング',      kind: 'manual' },
 ]
-// ⑤ 協力報酬の料率基準は粗利に一本化（新規/編集で選べるのは粗利のみ）。
-// 既存メニューの coop_base 値（売上/利益等）は再編集しない限り保持＝後方互換。coop_base は非money（reward=base_amount×value/100）。
-const COOP_BASE_OPTIONS = ['粗利']
-
-const COVERAGE_DEFAULTS = [
-  { label: 'つなぐ',             included: true  },
-  { label: 'アポイント設定',     included: false },
-  { label: '商談',               included: false },
-  { label: '価格合意',           included: false },
-  { label: 'フォロー・アシスト', included: false },
-]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type CoverageStep = { label: string; included: boolean }
 
 // 確定モック：メニュー＝名前＋報酬(複数)。報酬＝固定/粗利%・トリガー・協力タスク(6マスタ選択)。draft方式（保存で一括反映）。
 type RewardDraft = {
@@ -49,8 +37,12 @@ type MenuDraft = {
   id: string | null            // null=新規メニュー
   service_menu_id: string
   name: string
+  description: string          // menus.description（APP詳細シート「このメニューでは」）
   rewards: RewardDraft[]
 }
+
+// 協力タスクテンプレ行（cooperation_task_templates・reward_id 紐付けの読込/同期に使用）。
+type Tpl = { id: string; service_id: string; menu_id: string | null; reward_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
 
 // 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
 type ServiceForm = {
@@ -65,93 +57,6 @@ type ServiceForm = {
 const defaultServiceForm: ServiceForm = {
   name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', image_url: '', category: '', logo_path: '',
   active: true, icon: 'arrows', color: '#4733e6',
-}
-
-type MenuForm = {
-  name: string
-  ref_enabled: boolean
-  ref_type: 'fixed' | 'rate'
-  ref_value: string
-  ref_base: string
-  ref_trigger: string
-  coverage_steps: CoverageStep[]
-  qualification: string
-  description: string   // menu_context v2：メニュー詳細説明（任意・詳細シート用）
-  ref_months: string
-  // ── 協力（per-menu cooperation） ──
-  coop_enabled: boolean
-  coop_type: 'fixed' | 'rate'
-  coop_value: string
-  coop_base: string
-  coop_coverage: CoverageStep[]
-  coop_condition: string
-}
-
-const defaultMenuForm: MenuForm = {
-  name: '', ref_enabled: true, ref_type: 'fixed', ref_value: '', ref_base: '', ref_trigger: '',
-  coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })),
-  qualification: '',
-  description: '',
-  ref_months: '',
-  coop_enabled: false, coop_type: 'rate', coop_value: '', coop_base: '粗利',
-  coop_coverage: COVERAGE_DEFAULTS.map(s => ({ ...s })),
-  coop_condition: '',
-}
-
-function menuToForm(m: MenuRow): MenuForm {
-  const mm = m as MenuRow & {
-    ref_enabled?: boolean | null
-    coop_enabled?: boolean | null
-    coop_type?: 'fixed' | 'rate' | null
-    coop_value?: number | null
-    coop_base?: string | null
-    coop_coverage?: CoverageStep[] | null
-    coop_condition?: string | null
-  }
-  return {
-    name:           m.name,
-    ref_enabled:    mm.ref_enabled ?? true,
-    ref_type:       m.ref_type,
-    ref_value:      String(m.ref_value ?? ''),
-    ref_base:       m.ref_base ?? '',
-    ref_trigger:    m.ref_trigger ?? '',
-    coverage_steps: Array.isArray(m.coverage_steps) && m.coverage_steps.length === 5
-                    ? m.coverage_steps
-                    : COVERAGE_DEFAULTS.map(s => ({ ...s })),
-    qualification:  m.qualification ?? '',
-    description:    (m as { description?: string | null }).description ?? '',
-    ref_months:     m.ref_months && m.ref_months > 1 ? String(m.ref_months) : '',
-    coop_enabled:   mm.coop_enabled ?? false,
-    coop_type:      mm.coop_type ?? 'rate',
-    coop_value:     mm.coop_value != null ? String(mm.coop_value) : '',
-    coop_base:      mm.coop_base ?? '',
-    coop_coverage:  Array.isArray(mm.coop_coverage) && mm.coop_coverage.length === 5
-                    ? mm.coop_coverage
-                    : COVERAGE_DEFAULTS.map(s => ({ ...s })),
-    coop_condition: mm.coop_condition ?? '',
-  }
-}
-
-function formToMenuPayload(f: MenuForm) {
-  return {
-    name:           f.name,
-    ref_enabled:    f.ref_enabled,
-    ref_type:       f.ref_type,
-    ref_value:      f.ref_value ? Number(f.ref_value) : 0,
-    ref_base:       f.ref_type === 'rate' ? (f.ref_base || null) : null,
-    ref_trigger:    f.ref_trigger || null,
-    coverage_steps: f.coverage_steps,
-    qualification:  f.qualification || null,
-    description:    f.description || null,
-    ref_months:     f.ref_months ? Number(f.ref_months) : null,
-    // ── 協力（per-menu cooperation） ──
-    coop_enabled:   f.coop_enabled,
-    coop_type:      f.coop_enabled ? f.coop_type : null,
-    coop_value:     f.coop_enabled && f.coop_value ? Number(f.coop_value) : null,
-    coop_base:      f.coop_enabled ? (f.coop_base || null) : null,
-    coop_coverage:  f.coop_enabled ? f.coop_coverage : null,
-    coop_condition: f.coop_enabled ? (f.coop_condition || null) : null,
-  }
 }
 
 function svcFormToPayload(f: ServiceForm) {
@@ -215,18 +120,6 @@ function FTextarea({ value, onChange, placeholder, rows = 3 }: {
   value: string; onChange: (v: string) => void; placeholder?: string; rows?: number
 }) {
   return <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{ ...inputStyle, resize: 'vertical' }} />
-}
-
-function FSelect({ value, onChange, options, placeholder }: {
-  value: string; onChange: (v: string) => void
-  options: { v: string | number; l: string }[]; placeholder?: string
-}) {
-  return (
-    <select value={value} onChange={e => onChange(e.target.value)} style={inputStyle}>
-      {placeholder && <option value="">{placeholder}</option>}
-      {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-    </select>
-  )
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -372,168 +265,165 @@ function ImageUpload({ imageUrl, onUpload }: { imageUrl: string; onUpload: (url:
   )
 }
 
-// ─── Coverage steps editor ────────────────────────────────────────────────────
+// ─── APP live preview（ドロワー右ペイン） ──────────────────────────────────────
+// svcForm/menuDrafts から表示を導出するのみ（保存経路・money計算に非接触）。
+// 詳細シートは components/MenuDetailSheet を inline 描画＝APPの実物と同一コンポーネント。
+// 一覧カードは refer/page.tsx の BrandCard の見た目を簡易再現（BrandCard は page 内ローカルのため import 不可）。
 
-function CoverageEditor({ steps, onChange }: {
-  steps: CoverageStep[]
-  onChange: (steps: CoverageStep[]) => void
-}) {
+const noop = () => {}
+
+// draft の先頭報酬（値が入力済みのもの）を表示用 SheetReward へ（表示整形のみ）。
+function draftFirstReward(d: MenuDraft): SheetReward | null {
+  const r = d.rewards.find(x => x.reward_value !== '')
+  if (!r) return null
+  return {
+    reward_type: r.reward_type,
+    reward_value: parseAmount(r.reward_value),
+    reward_trigger: r.reward_trigger.trim() || null,
+    default_months: r.reward_months ? parseAmount(r.reward_months) : null,
+  }
+}
+
+// draft の先頭報酬の協力タスク → APPと同一の解決関数（resolveMenuCoopTasks）を通す。
+function draftTasks(d: MenuDraft): CoopTaskItem[] {
+  const r = d.rewards.find(x => x.reward_value !== '')
+  const items: CoopTaskItem[] = (r?.tasks ?? []).map(label => ({ label, description: null }))
+  return resolveMenuCoopTasks(items, r?.reward_type)
+}
+
+// 報酬ピル（refer の MenuRowPill と同一記法・共通 RewardPill/rewardValueText 再利用）。
+function DraftRewardPill({ reward }: { reward: SheetReward }) {
+  if (reward.reward_type === 'continuous') {
+    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利（税抜）の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
+  }
+  return <RewardPill style={{ flexShrink: 0 }}>{rewardValueText(reward)}</RewardPill>
+}
+
+// 空フィールド → 「入力すると◯◯に表示されます」の点線ヒント。
+function PreviewHint({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {steps.map((step, i) => (
-        <label key={step.label} style={{
-          display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', borderRadius: 7,
-          border: `1.5px solid ${step.included ? 'var(--txt)' : 'var(--line)'}`,
-          background: step.included ? '#F0F0F4' : '#fff',
-          cursor: i === 0 ? 'default' : 'pointer',
-        }}>
-          <input type="checkbox" checked={step.included} disabled={i === 0}
-            onChange={e => {
-              if (i === 0) return
-              onChange(steps.map((s, j) => j === i ? { ...s, included: e.target.checked } : s))
-            }}
-            style={{ accentColor: 'var(--txt)', width: 14, height: 14 }} />
-          <span style={{ fontSize: '.78rem', fontWeight: 500, color: step.included ? 'var(--txt)' : 'var(--muted2)' }}>
-            {step.label}
-            {i === 0 && <span style={{ fontSize: '.58rem', marginLeft: 5, opacity: .55 }}>必須</span>}
+    <div style={{ border: '1px dashed var(--line)', borderRadius: 8, padding: '7px 10px', fontSize: '.62rem', color: 'var(--muted)', lineHeight: 1.6, marginTop: 8, background: '#fff' }}>
+      {children}
+    </div>
+  )
+}
+
+// 一覧カード（BrandCard 展開状態の簡易再現・表示のみ）。
+function PreviewCard({ svcForm, menus }: { svcForm: ServiceForm; menus: MenuDraft[] }) {
+  const audience = svcForm.target_audience.trim()
+  const hasBrandInfo = svcForm.description.trim().length > 0
+  return (
+    <div style={{ background: '#fff', border: '1.5px solid var(--c-blue)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ServiceAvatar logoPath={svcForm.logo_path || null} icon={svcForm.icon} color={svcForm.color} name={svcForm.name || '？'} size={40} />
+          <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: svcForm.name ? 'var(--txt)' : 'var(--muted)' }}>{svcForm.name || 'サービス名'}</div>
+          {hasBrandInfo && (
+            <span style={{ width: 16, height: 16, color: 'var(--muted)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
+            </span>
+          )}
+          <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex', transform: 'rotate(180deg)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9l6 6 6-6" /></svg>
           </span>
-        </label>
-      ))}
-    </div>
-  )
-}
-
-// ─── Coverage tags (display only) ─────────────────────────────────────────────
-
-export function CoverageTags({ steps, accent = false }: {
-  steps: { label: string; included: boolean }[] | null
-  accent?: boolean
-}) {
-  if (!steps) return null
-  const included = steps.filter(s => s.included)
-  if (included.length === 0) return null
-  return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-      {included.map(s => (
-        <span key={s.label} style={{
-          fontSize: '.54rem', fontWeight: 500, padding: '2px 7px', borderRadius: 10,
-          background: accent ? 'var(--blue-bg)' : '#EBEBF0',
-          color: accent ? 'var(--blue)' : 'var(--txt)',
-        }}>{s.label}</span>
-      ))}
-    </div>
-  )
-}
-
-// ─── Referral menu inline edit form ──────────────────────────────────────────
-
-// Header for a reward block (紹介 / 協力) with chip + enable toggle.
-function RewardBlockHead({ chip, title, val, onToggle }: {
-  chip: React.ReactNode; title: string; val: boolean; onToggle: (v: boolean) => void
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {chip}
-      <span style={{ flex: 1, fontSize: '.74rem', fontWeight: 500, color: 'var(--txt)' }}>{title}</span>
-      <div style={{ width: 132, marginBottom: -12 }}>
-        <Toggle2 val={val} onA={() => onToggle(false)} onB={() => onToggle(true)} labelA="なし" labelB="あり" />
+        </div>
+        {audience ? (
+          <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>{audience}</p>
+        ) : (
+          <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, margin: 0, border: '1px dashed var(--line)', borderRadius: 6, padding: '3px 8px' }}>紹介対象を入力するとフック文がここに表示されます</p>
+        )}
+      </div>
+      <div style={{ borderTop: '0.5px solid var(--line)', padding: '0 16px' }}>
+        {menus.length === 0 ? (
+          <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '13px 0', margin: 0 }}>メニューは準備中です。</p>
+        ) : menus.map((d, i) => {
+          const reward = draftFirstReward(d)
+          const tasks = draftTasks(d)
+          return (
+            <div key={d.id ?? `pv-${i}`} style={{ borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', padding: '13px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name.trim() || '（無題）'}</span>
+                {reward && <DraftRewardPill reward={reward} />}
+                <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
+                </span>
+              </span>
+              {tasks.length > 0 && (
+                <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {tasks.map(t => <span key={t.label} style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>)}
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// Segmented type selector (固定額 / 率) — accent: blue for 紹介, dark for 協力.
-function TypeSeg({ value, onChange, accent }: {
-  value: 'fixed' | 'rate'; onChange: (t: 'fixed' | 'rate') => void; accent: 'blue' | 'dark'
-}) {
-  const on  = accent === 'blue' ? 'var(--blue)' : 'var(--txt)'
-  const bg  = accent === 'blue' ? 'var(--blue-bg2)' : '#F0F0F4'
+// プレビュー本体：一覧カード ⇄ 詳細シート（事業概要／各メニュー）。入力の度に再描画＝ライブ同期。
+function DrawerPreview({ svcForm, menuDrafts, isNew }: { svcForm: ServiceForm; menuDrafts: MenuDraft[]; isNew: boolean }) {
+  const [mode, setMode] = useState<'card' | 'sheet'>('card')
+  const [sel, setSel] = useState<number | null>(null)   // 詳細シートの対象：null=事業概要（brand）／n=メニュー
+  // プレビュー対象＝名前か報酬が入っている draft（保存対象と同じ判定）。
+  const menus = menuDrafts.filter(d => d.name.trim() || d.rewards.some(r => r.reward_value))
+  const selDraft = sel != null ? menus[sel] : undefined
+  const sheetSvc = {
+    name: svcForm.name || 'サービス名',
+    logo_path: svcForm.logo_path || null,
+    icon: svcForm.icon,
+    color: svcForm.color,
+    image_url: svcForm.image_url || null,
+    description: svcForm.description.trim() || null,
+  }
+  const sheetMenus: SheetMenuItem[] = menus.map(d => ({ name: d.name.trim() || '（無題）', reward: draftFirstReward(d) }))
+  const segBtn = (active: boolean): React.CSSProperties => ({ flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, border: `1.5px solid ${active ? 'var(--blue)' : 'var(--line)'}`, background: active ? 'var(--blue-bg2)' : '#fff', color: active ? 'var(--blue)' : 'var(--muted2)' })
+  const chip = (active: boolean): React.CSSProperties => ({ fontSize: '.62rem', fontWeight: 500, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${active ? 'var(--blue)' : 'var(--line)'}`, background: active ? 'var(--blue-bg2)' : '#fff', color: active ? 'var(--blue)' : 'var(--muted2)' })
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      {(['fixed', 'rate'] as const).map(t => (
-        <button key={t} type="button" onClick={() => onChange(t)}
-          style={{
-            flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500,
-            border: `1.5px solid ${value === t ? on : 'var(--line)'}`,
-            background: value === t ? bg : '#fff',
-            color: value === t ? on : 'var(--muted2)',
-          }}>
-          {t === 'fixed' ? '固定額（円）' : '率（%）'}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
-  form: MenuForm; onChange: (f: MenuForm) => void
-  onSave: () => void; onCancel: () => void; saving: boolean; error: string
-}) {
-  const f = form
-  const set = (patch: Partial<MenuForm>) => onChange({ ...f, ...patch })
-
-  return (
-    <div style={{ background: '#fff', border: '1.5px solid var(--blue)', borderRadius: 12, padding: 16, marginBottom: 8, boxShadow: '0 4px 16px rgba(71,51,230,.08)' }}>
-
-      {/* BR-C3: 論理セクションを明示（①基本 ②紹介報酬 ③協力報酬）。各報酬ブロックに 対応範囲/任意条件 を内包。保存契約は不変。 */}
-      <SectionHeader title="① 基本" style={{ marginBottom: 8 }} />
-      <Fld label="メニュー名 *">
-        <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例：賃貸成約時" />
-      </Fld>
-
-      {/* 段階6-2b：旧②③（紹介報酬/協力報酬の2セクション編集）は撤去。報酬は「D. メニュー（1報酬）」で設定。
-          旧 service_menus の ref/coop 系カラムは read-only 凍結（既存値はそのまま保持・新規には書かれない・DROPはしない）。 */}
-      <div style={{ marginTop: 12, padding: '11px 13px', background: 'var(--blue-bg2)', border: '1px dashed var(--blue-bg)', borderRadius: 10, fontSize: '.66rem', color: 'var(--blue-dk)', lineHeight: 1.6 }}>
-        報酬は下の<b>「D. メニュー（1報酬）」</b>で設定します（固定◯円 or 粗利◯%・任意数）。旧「紹介報酬／協力報酬」の2区分は廃止しました。
+    <div>
+      <div style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--blue)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6 }}>APPプレビュー</div>
+      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>編集内容はパートナーAPPにこのように表示されます</p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button type="button" onClick={() => setMode('card')} style={segBtn(mode === 'card')}>一覧カード</button>
+        <button type="button" onClick={() => { setMode('sheet'); setSel(null) }} style={segBtn(mode === 'sheet')}>詳細シート</button>
       </div>
-
-      {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', margin: '10px 0 0' }}>{error}</p>}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-        <button type="button" onClick={onCancel}
-          style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
-          キャンセル
-        </button>
-        <button type="button" onClick={onSave} disabled={saving || !f.name}
-          style={{ flex: 2, padding: '8px 0', borderRadius: 7, border: 'none', background: 'var(--blue)', color: '#fff', fontSize: '.74rem', fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving || !f.name ? .5 : 1, fontFamily: 'inherit' }}>
-          {saving ? '保存中…' : '保存'}
-        </button>
-      </div>
+      {mode === 'card' ? (
+        <>
+          <PreviewCard svcForm={svcForm} menus={menus} />
+          {!svcForm.description.trim() && <PreviewHint>事業概要ⓘは説明を入力すると表示されます</PreviewHint>}
+          {menus.length === 0 && (
+            <PreviewHint>{isNew ? '作成後にBでメニューと報酬を追加すると、カードに報酬つきで並びます' : 'Bでメニューと報酬を追加すると、カードに報酬つきで並びます'}</PreviewHint>
+          )}
+        </>
+      ) : (
+        <>
+          {/* 詳細シートの対象：事業概要（ブランドⓘ）／各メニュー（メニュー行タップ） */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            <button type="button" onClick={() => setSel(null)} style={chip(selDraft == null)}>事業概要</button>
+            {menus.map((d, i) => (
+              <button key={d.id ?? `sel-${i}`} type="button" onClick={() => setSel(i)} style={chip(sel === i && !!selDraft)}>{d.name.trim() || '（無題）'}</button>
+            ))}
+          </div>
+          {selDraft ? (
+            <>
+              <MenuDetailSheet inline svc={sheetSvc} menuName={selDraft.name.trim() || '（無題）'}
+                menuDescription={selDraft.description.trim() || null}
+                reward={draftFirstReward(selDraft)} tasks={draftTasks(selDraft)} onClose={noop} />
+              {!selDraft.description.trim() && <PreviewHint>「このメニューでは」はメニュー詳細説明を入力すると表示されます</PreviewHint>}
+              {!draftFirstReward(selDraft)?.reward_trigger && <PreviewHint>「◯◯に確定」は報酬のトリガーを入力すると表示されます</PreviewHint>}
+            </>
+          ) : (
+            <>
+              <MenuDetailSheet inline variant="brand" svc={sheetSvc}
+                audience={svcForm.target_audience.trim() || null} menus={sheetMenus} onClose={noop} />
+              {!svcForm.image_url && <PreviewHint>イメージ画像を設定すると上部に表示されます（未設定はロゴ）</PreviewHint>}
+              {!svcForm.description.trim() && <PreviewHint>「{svcForm.name || 'サービス名'}とは」は説明を入力すると表示されます</PreviewHint>}
+              {!svcForm.target_audience.trim() && <PreviewHint>フック文は紹介対象を入力すると表示されます</PreviewHint>}
+            </>
+          )}
+        </>
+      )}
     </div>
-  )
-}
-
-// ─── Chips ────────────────────────────────────────────────────────────────────
-
-// Compact reward chip for the service list summary（是正2：区分語ラベルなし・報酬のみ）。
-function RewardChip({ kind, text }: { kind: 'ref' | 'coop'; text: string }) {
-  const ref = kind === 'ref'
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20,
-      fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums',
-      background: ref ? 'var(--blue-bg)' : '#EBEBF0',
-      color: ref ? 'var(--blue)' : 'var(--txt)',
-    }}>
-      {text}
-    </span>
-  )
-}
-
-function fmtRef(menu: MenuRow) {
-  return menu.ref_type === 'fixed'
-    ? `¥${Number(menu.ref_value).toLocaleString()}`
-    : `${menu.ref_value}%${menu.ref_base ? `・${menu.ref_base}` : ''}`
-}
-
-function Btn2({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} style={{
-      fontSize: '.6rem', fontWeight: 500, padding: '4px 8px', borderRadius: 5,
-      border: '0.5px solid var(--line)', background: danger ? '#FBE9E9' : '#fff',
-      color: danger ? 'var(--red)' : 'var(--muted2)', cursor: 'pointer', fontFamily: 'inherit',
-    }}>{label}</button>
   )
 }
 
@@ -565,80 +455,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [longDraft, setLongDraft]       = useState('')
   const [editMemberFor, setEditMemberFor] = useState<string | null>(null) // 担当プルダウンを開いている対象キー（brand:<id> / menu:<id>）
 
-  const [menuEditId, setMenuEditId] = useState<string | null>(null)
-  const [menuForm, setMenuForm]     = useState<MenuForm>(defaultMenuForm)
-  const [menuSaving, setMenuSaving] = useState(false)
-  const [menuError, setMenuError]   = useState('')
-  const [liveMenus, setLiveMenus]   = useState<MenuRow[]>([])
-
-  // 段階5：新「メニュー（1報酬）」CRUD。service_menu_id ごとに menus 行を管理（旧②③は併走温存）。
-  const [menuRows, setMenuRows] = useState<Record<string, Menu[]>>({})
-  const [nmParent, setNmParent] = useState<string | null>(null)   // 追加対象 service_menu_id
-  const [nmName, setNmName] = useState('')
-  const [nmType, setNmType] = useState<'fixed' | 'rate'>('fixed')
-  const [nmValue, setNmValue] = useState('')
-  const [nmTrigger, setNmTrigger] = useState('')
-  const [mnBusy, setMnBusy] = useState(false)
-  async function loadMenus(ids: string[]) {
-    const entries = await Promise.all(ids.map(async smId => {
-      const d = await fetch(`/api/console/menus?service_menu_id=${smId}`).then(r => r.json()).catch(() => ({ menus: [] }))
-      return [smId, (d.menus ?? []) as Menu[]] as const
-    }))
-    setMenuRows(Object.fromEntries(entries))
-  }
-  async function addMenu(serviceMenuId: string) {
-    if (!nmName.trim()) return
-    setMnBusy(true)
-    try {
-      const body = { service_menu_id: serviceMenuId, name: nmName.trim(), reward_type: nmType, reward_value: Number(nmValue) || 0, reward_base: nmType === 'rate' ? '粗利' : null, reward_trigger: nmTrigger || null, sort: (menuRows[serviceMenuId]?.length ?? 0) }
-      const r = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      const d = await r.json()
-      if (d.menu) { await loadMenus(liveMenus.map(m => m.id)); setNmName(''); setNmValue(''); setNmTrigger(''); setNmParent(null) }
-      else showToast(d.error ?? '追加に失敗しました')
-    } finally { setMnBusy(false) }
-  }
-  async function patchMenu(id: string, patch: Record<string, unknown>) {
-    const r = await fetch(`/api/console/menus/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
-    if (r.ok) await loadMenus(liveMenus.map(m => m.id)); else { const d = await r.json().catch(() => ({})); showToast(d.error ?? '更新に失敗しました') }
-  }
-  async function delMenu(id: string) {
-    if (!confirm('このメニューを削除しますか？')) return
-    const r = await fetch(`/api/console/menus/${id}`, { method: 'DELETE' })
-    if (r.ok) await loadMenus(liveMenus.map(m => m.id)); else { const d = await r.json().catch(() => ({})); showToast(d.error ?? '削除に失敗しました') }
-  }
-
-  // 是正：協力タスクをメニュー単位で設定（cooperation_task_templates.menu_id=該当 menus.id）。
-  // 既存 task-templates API を menu_id 付きで再利用。メニューごとに固有タスク（menu_id分離）。
-  const [menuTasks, setMenuTasks] = useState<Record<string, Tpl[]>>({})   // menus.id → tasks
-  const [mtLabel, setMtLabel] = useState<Record<string, string>>({})       // menus.id → 入力中ラベル
-  async function loadMenuTasks() {
-    const d = await fetch('/api/console/task-templates').then(r => r.json()).catch(() => ({ templates: [] }))
-    const byMenu: Record<string, Tpl[]> = {}
-    for (const t of (d.templates ?? []) as Tpl[]) if (t.menu_id) { (byMenu[t.menu_id] ??= []).push(t) }
-    for (const k of Object.keys(byMenu)) byMenu[k].sort((a, b) => a.sort - b.sort)
-    setMenuTasks(byMenu)
-  }
-  async function addMenuTask(serviceId: string, menuId: string) {
-    const label = (mtLabel[menuId] ?? '').trim()
-    if (!label) return
-    const r = await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: serviceId, menu_id: menuId, label, kind: 'manual', required: true, sort: (menuTasks[menuId]?.length ?? 0) }) })
-    const d = await r.json()
-    if (d.template) { await loadMenuTasks(); setMtLabel(p => ({ ...p, [menuId]: '' })) }
-    else showToast(d.needsMigration ? 'タスクのDB適用が必要です' : (d.error ?? '追加に失敗しました'))
-  }
-  async function delMenuTask(id: string) {
-    const r = await fetch(`/api/console/task-templates/${id}`, { method: 'DELETE' })
-    if (r.ok) await loadMenuTasks(); else showToast('削除に失敗しました')
-  }
-  // 6マスタのチェック切替：未選択→作成（menu_id紐付け）／選択済→削除。
-  async function toggleMasterTask(serviceId: string, menuId: string, m: { label: string; kind: 'auto' | 'manual' }) {
-    const existing = (menuTasks[menuId] ?? []).find(t => t.label === m.label)
-    if (existing) { await delMenuTask(existing.id); return }
-    const r = await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: serviceId, menu_id: menuId, label: m.label, kind: m.kind, required: true, trigger_key: m.kind === 'auto' ? 'in_progress' : null, sort: COOP_TASK_MASTER.findIndex(x => x.label === m.label) }) })
-    const d = await r.json()
-    if (d.template) await loadMenuTasks(); else showToast(d.needsMigration ? 'タスクのDB適用が必要です' : (d.error ?? '追加に失敗しました'))
-  }
-
   // ── メニュー編集（確定モック menu_edit_simplified_final・draft方式・保存で一括反映） ──
   const [menuDrafts, setMenuDrafts] = useState<MenuDraft[]>([])
   const [origMenuIds, setOrigMenuIds] = useState<string[]>([])
@@ -666,12 +482,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     const rewardParent: Record<string, string> = {}
     for (const sm of svc.service_menus) {
       const md = await fetch(`/api/console/menus?service_menu_id=${sm.id}`).then(r => r.json()).catch(() => ({ menus: [] }))
-      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number }[]).sort((a, b) => a.sort - b.sort)) {
+      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; description?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
         origMids.push(mn.id)
         const rd = await fetch(`/api/console/menu-rewards?menu_id=${mn.id}`).then(r => r.json()).catch(() => ({ rewards: [] }))
         const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: number; reward_trigger: string | null; default_months: number | null }[])
           .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_months: r.default_months != null ? String(r.default_months) : '', reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
-        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, rewards })
+        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, description: mn.description ?? '', rewards })
       }
     }
     setMenuDrafts(drafts); setOrigMenuIds(origMids); setOrigRewardParent(rewardParent); setOrigTasks(origT)
@@ -679,7 +495,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function addMenuDraft() {
     const defaultSm = editing?.service_menus[0]?.id
     if (!defaultSm) { showToast('先にサービスを保存してください'); return }
-    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
+    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', description: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
   }
   function removeMenuDraft(i: number) {
     const d = menuDrafts[i]
@@ -687,8 +503,13 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     setMenuDrafts(p => p.filter((_, j) => j !== i))
   }
   // 保存：draft を menus＋menu_rewards＋報酬単位タスク(reward_id)に反映。money計算式には触れない。
-  async function reconcileMenus() {
-    if (!editing) return
+  // 戻り値＝反映後のメニュー（service_menu_id別・一覧の即時更新用の表示構築のみ。DBの正はサーバ）。
+  async function reconcileMenus(): Promise<Record<string, Menu[]>> {
+    const rebuilt: Record<string, Menu[]> = {}
+    if (!editing) return rebuilt
+    // 一覧の即時更新用：既存メニューの sort/short_description を id で引けるように（表示のみ・保存対象外）。
+    const origMenuById = new Map<string, Menu>()
+    for (const sm of editing.service_menus) for (const m of (sm.menus ?? [])) origMenuById.set(m.id, m)
     const keepMenus = new Set(menuDrafts.filter(d => d.id).map(d => d.id as string))
     const keepRewards = new Set(menuDrafts.flatMap(d => d.rewards).filter(r => r.id).map(r => r.id as string))
     // 削除（メニュー＝CASCADEで報酬/タスクも消える・報酬＝CASCADEでタスクも消える）
@@ -696,15 +517,25 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     for (const [rid, parentMenu] of Object.entries(origRewardParent)) if (keepMenus.has(parentMenu) && !keepRewards.has(rid)) await fetch(`/api/console/menu-rewards/${rid}`, { method: 'DELETE' }).catch(() => {})
     // メニュー upsert → 報酬 upsert → タスク同期
     for (const d of menuDrafts) {
-      if (!d.name.trim() && d.rewards.every(r => !r.reward_value)) continue
+      if (!d.name.trim() && d.rewards.every(r => !r.reward_value)) {
+        // 空draftは保存スキップ（既存idを持つ場合、DB行は残る＝一覧にも従来値のまま残す）
+        if (d.id && origMenuById.has(d.id)) { const om = origMenuById.get(d.id) as Menu; (rebuilt[om.service_menu_id] ??= []).push(om) }
+        continue
+      }
+      const desc = d.description.trim() || null   // menus.description（詳細シート「このメニューでは」）
       let menuId = d.id
-      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）' }) }).catch(() => {})
+      let menuSort = menuId ? (origMenuById.get(menuId)?.sort ?? 0) : 0
+      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）', description: desc }) }).catch(() => {})
       else {
+        // POST /api/console/menus は name のみ受理（API変更は最小）→ description は POST 後に PATCH で反映。
         const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）' }) })
         const jd = await res.json().catch(() => ({}))
         menuId = jd?.menu?.id ?? null
         if (!menuId) { showToast(`メニュー保存に失敗: ${jd?.error ?? res.status}`); continue }
+        menuSort = jd?.menu?.sort ?? 0
+        if (desc) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc }) }).catch(() => {})
       }
+      const builtRewards: MenuReward[] = []
       for (let k = 0; k < d.rewards.length; k++) {
         const r = d.rewards[k]
         const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'fixed' ? null : '粗利', reward_trigger: r.reward_trigger.trim() || null, default_months: r.reward_type === 'continuous' ? (parseAmount(r.reward_months) || null) : null, sort: k }
@@ -716,6 +547,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           rewardId = jd?.reward?.id ?? null
           if (!rewardId) { showToast(`報酬保存に失敗: ${jd?.error ?? res.status}`); continue }
         }
+        builtRewards.push({ id: rewardId, menu_id: menuId, active: true, ...payload })
         const existing = origTasks[r.id ?? ''] ?? []
         const existingLabels = new Set(existing.map(t => t.label))
         for (const mt of COOP_TASK_MASTER) {
@@ -724,59 +556,22 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           else if (!want && have) { const tid = existing.find(t => t.label === mt.label)?.id; if (tid) await fetch(`/api/console/task-templates/${tid}`, { method: 'DELETE' }).catch(() => {}) }
         }
       }
+      ;(rebuilt[d.service_menu_id] ??= []).push({
+        id: menuId, service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）', sort: menuSort, active: true,
+        calendar_member_id: d.id ? origMenuById.get(d.id)?.calendar_member_id ?? null : null,
+        short_description: d.id ? origMenuById.get(d.id)?.short_description ?? null : null,
+        description: desc, rewards: builtRewards,
+      })
     }
+    return rebuilt
   }
-
-  // Batch2: 追加ドロワー（新規作成時のみ）の「最初のメニュー（任意）」インライン入力。
-  const [addMenuName, setAddMenuName] = useState('')
-  const [addRefValue, setAddRefValue] = useState('') // 紹介報酬（固定額・円）
-  const [addCoopPct, setAddCoopPct]   = useState('') // 協力報酬（粗利の%・基準は粗利固定＝Batch1⑤準拠）
-
-  // C. 対応範囲（協力タスク）= cooperation_task_templates。サービス編集に統合（旧 /console/tasks）。
-  type Tpl = { id: string; service_id: string; menu_id: string | null; reward_id: string | null; label: string; kind: string; required: boolean; trigger_key: string | null; sort: number; active: boolean }
-  const [taskTpls, setTaskTpls] = useState<Tpl[]>([])
-  const [tLabel, setTLabel] = useState('')
-  const [tKind, setTKind] = useState<'manual' | 'auto'>('manual')
-  const [tRequired, setTRequired] = useState(true)
-  const [tTrigger, setTTrigger] = useState('')
-  const [tBusy, setTBusy] = useState(false)
-  const selSm: React.CSSProperties = { border: '1.5px solid var(--line)', borderRadius: 8, padding: '6px 8px', fontFamily: 'inherit', fontSize: '.7rem', background: '#fff' }
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 2500) }
-
-  async function addTask() {
-    if (!editing || !tLabel.trim()) return
-    setTBusy(true)
-    try {
-      const r = await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: editing.id, label: tLabel.trim(), kind: tKind, required: tRequired, trigger_key: tKind === 'auto' ? (tTrigger || null) : null, sort: taskTpls.length }) })
-      const d = await r.json()
-      if (d.template) { setTaskTpls(p => [...p, d.template]); setTLabel(''); setTTrigger('') }
-      else showToast(d.needsMigration ? '協力タスクのDB適用が必要です（batchP DDL）' : (d.error ?? '追加に失敗しました'))
-    } finally { setTBusy(false) }
-  }
-  async function patchTask(id: string, body: Partial<Tpl>) {
-    const r = await fetch(`/api/console/task-templates/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const d = await r.json(); if (d.template) setTaskTpls(p => p.map(t => t.id === id ? d.template : t))
-  }
-  async function delTask(id: string) {
-    if (!confirm('この対応項目を削除しますか？')) return
-    const r = await fetch(`/api/console/task-templates/${id}`, { method: 'DELETE' })
-    if (r.ok) setTaskTpls(p => p.filter(t => t.id !== id))
-  }
 
   function openEdit(svc: ServiceWithMenus) {
     setSvcForm(svcToForm(svc))
     setEditing(svc); setShowAdd(false)
-    setLiveMenus([...svc.service_menus].sort((a, b) => a.sort - b.sort))
-    setMenuEditId(null); setSvcError('')
-    // 対応範囲（協力タスク）を読み込み（best-effort）
-    setTaskTpls([]); setTLabel(''); setTTrigger('')
-    fetch('/api/console/task-templates').then(r => r.json()).then(d => setTaskTpls((d.templates ?? []).filter((t: Tpl) => t.service_id === svc.id))).catch(() => {})
-    // 段階5：新メニュー(1報酬)を seed（attachMenus 由来）＋最新を再取得
-    const seed: Record<string, Menu[]> = {}
-    for (const sm of svc.service_menus) seed[sm.id] = (sm.menus ?? [])
-    setMenuRows(seed); setNmParent(null); setNmName(''); setNmValue(''); setNmTrigger('')
-    setMenuTasks({}); setMtLabel({})
+    setSvcError('')
     setMenuDrafts([]); setOrigMenuIds([]); setOrigRewardParent({}); setOrigTasks({})
     loadMenuEditor(svc).catch(() => {})   // 確定モックのメニュー編集に seed
   }
@@ -784,28 +579,24 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function openAdd() {
     setSvcForm({ ...defaultServiceForm })
     setEditing(null); setShowAdd(true)
-    setLiveMenus([]); setMenuEditId(null); setSvcError('')
-    setAddMenuName(''); setAddRefValue(''); setAddCoopPct('')
+    setSvcError('')
+    setMenuDrafts([]); setOrigMenuIds([]); setOrigRewardParent({}); setOrigTasks({})
   }
 
   function closeDrawer() {
-    setEditing(null); setShowAdd(false); setMenuEditId(null); setSvcError('')
-    setAddMenuName(''); setAddRefValue(''); setAddCoopPct('')
+    setEditing(null); setShowAdd(false); setSvcError('')
   }
 
   const setF = (patch: Partial<ServiceForm>) => setSvcForm(f => ({ ...f, ...patch }))
 
   // ── Service save ──────────────────────────────────────────────────────────
-  // Batch2: 新規作成時は withMenu=true で「最初のメニュー（任意）」も同時作成（報酬入力がある時のみ）。
-  // 「名前だけで作る」は withMenu=false。編集時(editing)は従来どおり（インラインメニューは無関係）。
-  function submitService(e: React.FormEvent | undefined, withMenu: boolean) {
+  // 編集＝サービスPATCH → reconcileMenus（メニュー＋報酬＋協力タスク一括反映）→ 一覧を即時更新して閉じる。
+  // 新規＝サービスPOST → そのまま編集モードへ遷移（実装3の設計判断：最小実装として「create後にeditingへ遷移」を採用。
+  //   新規でも同じドロワーの B（メニューと報酬）を続けて使える）。menus の親となる service_menus 行（バックボーン）を
+  //   1行だけ作成する（旧ref/coop値は0＝一覧/APPの表示には使われない。既存 POST /services/[id]/menus を流用＝新APIなし）。
+  function submitService(e: React.FormEvent | undefined) {
     e?.preventDefault?.()
     if (!svcForm.name) { setSvcError('サービス名を入力してください'); return }
-    // インラインメニューの軽い検証（新規・withMenu・報酬入力時のみ）。
-    if (!editing && withMenu) {
-      if (addRefValue && !(parseAmount(addRefValue) > 0)) { setSvcError('固定報酬（円）は0より大きい数値で入力してください'); return }
-      if (addCoopPct && !(parseAmount(addCoopPct) > 0 && parseAmount(addCoopPct) <= 100)) { setSvcError('報酬（粗利の%）は 0〜100 で入力してください'); return }
-    }
     setSvcError('')
     startTrans(async () => {
       const url    = editing ? `/api/console/services/${editing.id}` : '/api/console/services'
@@ -814,42 +605,26 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       if (!res.ok) { setSvcError(await res.text()); return }
       const data = await res.json()
       if (editing) {
-        await reconcileMenus()   // 確定モック：メニュー＋協力タスク紐付けを一括反映
-        setServices(prev => prev.map(s => s.id === editing.id ? { ...s, ...data.service, service_menus: liveMenus } : s))
+        const rebuilt = await reconcileMenus()   // 確定モック：メニュー＋協力タスク紐付けを一括反映
+        setServices(prev => prev.map(s => s.id === editing.id
+          ? { ...s, ...data.service, service_menus: s.service_menus.map(sm => ({ ...sm, menus: rebuilt[sm.id] ?? [] })) }
+          : s))
         showToast('保存しました — パートナー画面へ反映')
+        closeDrawer()
       } else {
-        // 最初のメニュー（任意）：報酬入力があれば1メニューを同時作成（紹介=固定額 / 協力=rate・基準=粗利）。
-        let createdMenus: MenuRow[] = []
-        const hasReward = !!addRefValue || !!addCoopPct
-        if (withMenu && hasReward) {
-          const payload = {
-            name:           addMenuName.trim() || svcForm.name,
-            ref_enabled:    !!addRefValue,
-            ref_type:       'fixed',
-            ref_value:      addRefValue ? parseAmount(addRefValue) : 0,
-            ref_base:       null,
-            ref_trigger:    null,
-            coverage_steps: null,
-            qualification:  null,
-            ref_months:     null,
-            coop_enabled:   !!addCoopPct,
-            coop_type:      addCoopPct ? 'rate' : null,
-            coop_value:     addCoopPct ? parseAmount(addCoopPct) : null,
-            coop_base:      addCoopPct ? '粗利' : null,
-            coop_coverage:  null,
-            coop_condition: null,
-          }
-          try {
-            const mres = await fetch(`/api/console/services/${data.service.id}/menus`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-            })
-            if (mres.ok) { const { menu } = await mres.json(); createdMenus = [menu] }
-          } catch { /* メニュー作成失敗してもサービスは作成済み（後から編集で追加可） */ }
-        }
-        setServices(prev => [...prev, { ...data.service, service_menus: createdMenus }])
-        showToast(createdMenus.length ? 'サービスとメニューを追加しました' : 'サービスを追加しました')
+        let backbone: MenuRow | null = null
+        try {
+          const mres = await fetch(`/api/console/services/${data.service.id}/menus`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: svcForm.name, ref_enabled: false, ref_value: 0 }),
+          })
+          if (mres.ok) backbone = (await mres.json()).menu
+        } catch { /* バックボーン作成に失敗してもサービスは作成済み（再度編集を開けば再試行できる） */ }
+        const created: ServiceWithMenus = { ...data.service, service_menus: backbone ? [{ ...backbone, menus: [] }] : [] }
+        setServices(prev => [...prev, created])
+        openEdit(created)   // 作成→即メニュー追加（ドロワーは編集モードのまま継続）
+        showToast('サービスを追加しました。続けてメニューと報酬を設定できます')
       }
-      closeDrawer()
     })
   }
 
@@ -949,75 +724,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       .then(() => showToast('詳細説明を保存しました')).catch(() => {})
   }
 
-  // ── Menu CRUD ─────────────────────────────────────────────────────────────
-  function startAddMenu() {
-    setMenuForm({ ...defaultMenuForm, coverage_steps: COVERAGE_DEFAULTS.map(s => ({ ...s })) })
-    setMenuEditId('new'); setMenuError('')
-  }
-  function startEditMenu(m: MenuRow) { setMenuForm(menuToForm(m)); setMenuEditId(m.id); setMenuError('') }
-
-  async function saveMenu() {
-    if (!menuForm.name) { setMenuError('メニュー名を入力してください'); return }
-    if (!menuForm.ref_enabled && !menuForm.coop_enabled) {
-      setMenuError('報酬を設定してください'); return
-    }
-    if (menuForm.ref_enabled && menuForm.ref_type === 'rate') {
-      const v = Number(menuForm.ref_value)
-      if (!v || v <= 0 || v > 100) { setMenuError('率は 0〜100% の範囲で入力してください'); return }
-      if (!menuForm.ref_base) { setMenuError('率タイプでは基準を選択してください'); return }
-    }
-    if (menuForm.coop_enabled && menuForm.coop_type === 'rate') {
-      const v = Number(menuForm.coop_value)
-      if (!v || v <= 0 || v > 100) { setMenuError('料率は 0〜100% の範囲で入力してください'); return }
-      if (!menuForm.coop_base) { setMenuError('料率では基準を選択してください'); return }
-    }
-    if (!editing) return
-    setMenuSaving(true); setMenuError('')
-    try {
-      const payload = formToMenuPayload(menuForm)
-      if (menuEditId === 'new') {
-        const res = await fetch(`/api/console/services/${editing.id}/menus`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-        })
-        if (!res.ok) { setMenuError(await res.text()); return }
-        const { menu } = await res.json()
-        setLiveMenus(prev => [...prev, menu])
-        showToast('メニューを追加しました')
-      } else {
-        const res = await fetch(`/api/console/services/${editing.id}/menus/${menuEditId}`, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-        })
-        if (!res.ok) { setMenuError(await res.text()); return }
-        const { menu } = await res.json()
-        setLiveMenus(prev => prev.map(m => m.id === menuEditId ? menu : m))
-        showToast('メニューを更新しました')
-      }
-      setMenuEditId(null)
-    } finally { setMenuSaving(false) }
-  }
-
-  async function deleteMenu(mid: string) {
-    if (!editing || !confirm('このメニューを削除しますか？')) return
-    const res = await fetch(`/api/console/services/${editing.id}/menus/${mid}`, { method: 'DELETE' })
-    if (res.ok) { setLiveMenus(prev => prev.filter(m => m.id !== mid)); showToast('削除しました') }
-  }
-
-  async function moveMenu(mid: string, dir: -1 | 1) {
-    if (!editing) return
-    const idx = liveMenus.findIndex(m => m.id === mid)
-    if (idx < 0) return
-    const swapIdx = idx + dir
-    if (swapIdx < 0 || swapIdx >= liveMenus.length) return
-    const next = [...liveMenus]
-    ;[next[idx], next[swapIdx]] = [next[swapIdx], next[idx]]
-    const updated = next.map((m, i) => ({ ...m, sort: i }))
-    setLiveMenus(updated)
-    await Promise.all([
-      fetch(`/api/console/services/${editing.id}/menus/${updated[idx].id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: updated[idx].sort }) }),
-      fetch(`/api/console/services/${editing.id}/menus/${updated[swapIdx].id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sort: updated[swapIdx].sort }) }),
-    ])
-  }
-
   const drawerOpen = !!editing || showAdd
 
   return (
@@ -1058,6 +764,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       color: svc.active ? 'var(--green)' : 'var(--muted2)',
                     }}>
                       {svc.active ? '公開中' : '停止中'}
+                    </span>
+                    {/* 結果予告：この状態がAPPにどう映るか（トグルの隣・常時） */}
+                    <span style={{ fontSize: '.58rem', color: 'var(--muted)', flexShrink: 0 }}>
+                      {svc.active ? 'APPの紹介一覧に表示中' : '停止中はAPPに出ません'}
                     </span>
                   </div>
                   {/* 紹介対象＝商売の顔（ブランド名直下・常時表示＋インライン編集・APP STEP1と同一データ） */}
@@ -1198,14 +908,17 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           onClick={closeDrawer} />
       )}
 
-      {/* ── Drawer ── */}
+      {/* ── Drawer（2ペイン：左=編集フォーム／右=APPライブプレビュー） ── */}
+      {/* 狭幅ではプレビューを隠す（編集操作を優先） */}
+      <style>{`@media (max-width: 760px) { .svc-drawer-preview { display: none } }`}</style>
       <div style={{
-        position: 'fixed', right: drawerOpen ? 0 : '-520px', top: 0, height: '100vh', width: 500,
+        position: 'fixed', right: drawerOpen ? 0 : 'calc(-1 * min(880px, 94vw) - 60px)', top: 0, height: '100vh', width: 'min(880px, 94vw)',
         background: '#fff', borderLeft: '0.5px solid var(--line)', boxShadow: '-8px 0 40px rgba(14,14,20,.12)',
-        zIndex: 50, overflowY: 'auto', transition: 'right .3s cubic-bezier(.4,0,.2,1)',
+        zIndex: 50, overflow: 'hidden', transition: 'right .3s cubic-bezier(.4,0,.2,1)',
       }}>
         {drawerOpen && (
-          <form key={editing?.id ?? 'new'} onSubmit={e => submitService(e, true)} className="cascade" style={{ padding: '24px 26px 88px' }}>
+          <div key={editing?.id ?? 'new'} style={{ display: 'flex', height: '100%' }}>
+          <form onSubmit={e => submitService(e)} className="cascade" style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 26px 88px' }}>
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
@@ -1219,15 +932,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             {/* ── A. 基本情報 ── */}
             <SectionLabel>A. 基本情報</SectionLabel>
 
-            <Fld label="ロゴ画像（推奨）">
+            <Fld label="ロゴ画像（推奨・APPの紹介一覧カードと詳細シートに表示）">
               <LogoUpload logoPath={svcForm.logo_path} name={svcForm.name} onUpload={v => setF({ logo_path: v })} />
             </Fld>
 
-            <Fld label="イメージ画像（任意・メニュー詳細シートに表示）">
+            <Fld label="イメージ画像（任意・APPの詳細シート上部に表示・未設定はロゴ）">
               <ImageUpload imageUrl={svcForm.image_url} onUpload={v => setF({ image_url: v })} />
             </Fld>
 
-            <Fld label="サービス名 *">
+            <Fld label="サービス名（必須）">
               <FInput value={svcForm.name} onChange={v => setF({ name: v })} placeholder="MOOM" />
             </Fld>
 
@@ -1235,11 +948,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <FInput value={svcForm.subtitle} onChange={v => setF({ subtitle: v })} placeholder="賃貸仲介プラットフォーム" />
             </Fld>
 
-            <Fld label="紹介対象（パートナーのリファラル画面で太字表示）">
+            <Fld label="紹介対象（APPの紹介一覧カードでフック文として表示）">
               <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例：引越し・お部屋探しをしたい人" />
             </Fld>
 
-            <Fld label="カテゴリ（任意・リファラル一覧の絞り込みチップに使用）">
+            <Fld label="カテゴリ（任意・APPの紹介一覧の絞り込みチップに使用）">
               <FInput value={svcForm.category} onChange={v => setF({ category: v })} placeholder="例：不動産 / 人材 / 制作" />
             </Fld>
 
@@ -1247,7 +960,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <FInput value={svcForm.url} onChange={v => setF({ url: v })} placeholder="https://example.com" />
             </Fld>
 
-            <Fld label="説明">
+            <Fld label="説明（APPの事業概要ⓘと詳細シート「◯◯とは」に表示）">
               <FTextarea value={svcForm.description} onChange={v => setF({ description: v })} placeholder="サービスの概要を記載" />
             </Fld>
 
@@ -1255,82 +968,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               <FInput value={svcForm.who} onChange={v => setF({ who: v })} placeholder="不動産業に従事する方、物件を探している方" />
             </Fld>
 
-            <Fld label="公開状態">
-              <Toggle2
-                val={svcForm.active}
-                onA={() => setF({ active: false })}
-                onB={() => setF({ active: true })}
-                labelA="停止中"
-                labelB="公開中"
-              />
-            </Fld>
-
-            {/* B撤去：メニュー編集は下の確定モック単一セクションに統合（旧UIは描画しない） */}
-            {false && (
-              <>
-                <SectionLabel>B. メニューと報酬</SectionLabel>
-
-                {liveMenus.map((menu, i, arr) => (
-                  <div key={menu.id}>
-                    {menuEditId === menu.id ? (
-                      <MenuEditForm
-                        form={menuForm} onChange={setMenuForm}
-                        onSave={saveMenu} onCancel={() => setMenuEditId(null)}
-                        saving={menuSaving} error={menuError}
-                      />
-                    ) : (
-                      <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 10, marginBottom: 6 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px' }}>
-                          <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
-                          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                            {i > 0 && <Btn2 label="↑" onClick={() => moveMenu(menu.id, -1)} />}
-                            {i < arr.length - 1 && <Btn2 label="↓" onClick={() => moveMenu(menu.id, 1)} />}
-                            <Btn2 label="編集" onClick={() => startEditMenu(menu)} />
-                            <Btn2 label="削除" onClick={() => deleteMenu(menu.id)} danger />
-                          </div>
-                        </div>
-                        {(() => {
-                          const mm = menu as MenuRow & {
-                            ref_enabled?: boolean | null
-                            coop_enabled?: boolean | null; coop_type?: 'fixed' | 'rate' | null
-                            coop_value?: number | null; coop_base?: string | null
-                          }
-                          const showRef  = (mm.ref_enabled ?? true)
-                          const showCoop = mm.coop_enabled && mm.coop_value != null
-                          const coopText = mm.coop_type === 'fixed'
-                            ? `¥${Number(mm.coop_value).toLocaleString()}`
-                            : `${mm.coop_value}%${mm.coop_base ? `・${mm.coop_base}` : ''}`
-                          return (
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 12px 10px' }}>
-                              {showRef && <RewardChip kind="ref" text={fmtRef(menu)} />}
-                              {showCoop && <RewardChip kind="coop" text={coopText} />}
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {menuEditId === 'new' ? (
-                  <MenuEditForm
-                    form={menuForm} onChange={setMenuForm}
-                    onSave={saveMenu} onCancel={() => setMenuEditId(null)}
-                    saving={menuSaving} error={menuError}
-                  />
-                ) : (
-                  <button type="button" onClick={startAddMenu}
-                    style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: 'var(--blue-bg2)', color: 'var(--blue)', fontSize: '.74rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
-                    ＋ メニューを追加
-                  </button>
-                )}
-              </>
+            {/* ── B. メニューと報酬（確定モック menu_edit_reward_with_trigger_tasks_console・メニュー＞報酬複数） ── */}
+            <SectionLabel>B. メニューと報酬</SectionLabel>
+            {!editing && (
+              <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>
+                サービスを作成すると、続けてこの画面でメニューと報酬を追加できます
+              </p>
             )}
-
-            {/* ── メニュー（確定モック menu_edit_reward_with_trigger_tasks_console・メニュー＞報酬複数） ── */}
             {editing && (
               <>
-                <SectionLabel>メニュー</SectionLabel>
 
                 {menuDrafts.map((d, i) => (
                   <div key={d.id ?? `new-${i}`} style={{ border: '0.5px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 12, background: '#fff' }}>
@@ -1340,6 +986,15 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.84rem', fontWeight: 500 }} />
                       <button type="button" onClick={() => removeMenuDraft(i)}
                         style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, padding: '8px 2px', flexShrink: 0, whiteSpace: 'nowrap' }}>メニューを削除</button>
+                    </div>
+
+                    {/* メニュー詳細説明（menus.description）＝APP詳細シート「このメニューでは」。
+                        一覧のインライン✎編集と同一データ（ドロワーが正の編集口・プレビュー連動） */}
+                    <div style={{ marginTop: 10 }}>
+                      <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>メニュー詳細説明（任意・APPの詳細シート「このメニューでは」に表示）</label>
+                      <textarea value={d.description} onChange={e => setMenuField(i, { description: e.target.value })} rows={3}
+                        placeholder="例：お客さまの状況を伺い、最適なプランをご提案します"
+                        style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', resize: 'vertical', background: '#fff' }} />
                     </div>
 
                     {/* 報酬ブロック（複数） */}
@@ -1418,28 +1073,20 @@ export default function ServicesClient({ initialServices }: { initialServices: S
               </>
             )}
 
-            {false && (
-              <>
-                <SectionLabel>B. 最初のメニュー（任意）</SectionLabel>
-                <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.6 }}>
-                  報酬を1つだけ先に設定できます。<b>協力タスク・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
-                </p>
-                <Fld label="メニュー名（任意）">
-                  <FInput value={addMenuName} onChange={setAddMenuName} placeholder="例：賃貸成約時" />
-                </Fld>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Fld label="固定報酬（円）">
-                    <FInput value={addRefValue} onChange={setAddRefValue} placeholder="30000" type="number" />
-                  </Fld>
-                  <Fld label="成果報酬（粗利の%）">
-                    <FInput value={addCoopPct} onChange={setAddCoopPct} placeholder="50" type="number" />
-                  </Fld>
-                </div>
-                <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '2px 2px 0', lineHeight: 1.5 }}>
-                  成果報酬の基準は<b>粗利</b>に固定です。空欄なら「名前だけ」で作成します。
-                </p>
-              </>
-            )}
+            {/* ── C. 公開状態 ── */}
+            <SectionLabel>C. 公開状態</SectionLabel>
+            <Fld label="公開状態">
+              <Toggle2
+                val={svcForm.active}
+                onA={() => setF({ active: false })}
+                onB={() => setF({ active: true })}
+                labelA="停止中"
+                labelB="公開中"
+              />
+            </Fld>
+            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '-6px 0 0', lineHeight: 1.6 }}>
+              停止するとAPPの紹介一覧から非表示になります
+            </p>
 
             {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{svcError}</p>}
 
@@ -1449,14 +1096,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                 {submitting ? '保存中…' : editing ? '保存してパートナー画面へ反映' : '作成してパートナー画面へ公開'}
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }} />
               </button>
-              {!editing && (addRefValue || addCoopPct) && (
-                <button type="button" onClick={() => submitService(undefined, false)} disabled={submitting || !svcForm.name}
-                  style={{ width: '100%', padding: '8px 0', borderRadius: 7, border: '1.5px solid var(--line)', background: '#fff', color: 'var(--muted2)', fontSize: '.74rem', fontWeight: 500, cursor: submitting || !svcForm.name ? 'not-allowed' : 'pointer', opacity: submitting || !svcForm.name ? .5 : 1, fontFamily: 'inherit' }}>
-                  名前だけで作る（報酬は後で）
-                </button>
-              )}
+              {/* 結果予告：保存がどこに映るか（1行） */}
+              <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: 0, textAlign: 'center' }}>
+                保存するとAPPの紹介一覧・詳細シートに即時反映されます
+              </p>
             </div>
           </form>
+
+          {/* ── 右ペイン：APPライブプレビュー（svcForm/menuDrafts と同期） ── */}
+          <aside className="svc-drawer-preview" style={{ width: 336, flexShrink: 0, borderLeft: '0.5px solid var(--line)', background: 'var(--bg2)', overflowY: 'auto', padding: '20px 18px 40px' }}>
+            <DrawerPreview svcForm={svcForm} menuDrafts={menuDrafts} isNew={!editing} />
+          </aside>
+          </div>
         )}
       </div>
 
