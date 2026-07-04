@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import StatusPill from '@/components/ui/StatusPill'
 import RewardHero from '@/components/ui/RewardHero'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { paymentState } from '@/lib/status'
@@ -18,19 +17,19 @@ export default async function VendorRewards() {
 
   return (
     <div className="page-anim">
-      {/* 委託費ヒーロー（app と同一の見え方・共有RewardHero）。ベンダーの金銭は全面「委託費」言語。 */}
-      <RewardHero
-        label="委託費 合計"
-        amount={total}
-        items={[
-          { key: 'unpaid', label: '未払い', value: unpaid, format: 'yen' },
-          { key: 'paid', label: '支払済', value: paid, format: 'yen' },
-          { key: 'count', label: '明細', value: b.payouts.length, suffix: '件' },
-        ]}
-      />
-
-      {/* 委託費は「完了したプロジェクトの結果」という位置づけを明示（見た目は app と共通）。 */}
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '12px 20px 0' }}>完了したプロジェクトの委託費・承認済経費が、確定後にここへ反映されます。</p>
+      {/* 委託費ヒーロー（app と同一の見え方・共有RewardHero）。ベンダーの金銭は全面「委託費」言語。
+          ★v2.2: APP と同じく .rh-q でラップし RewardHero の内蔵 weight(800/600/700) を 500 に静音化。 */}
+      <div className="rh-q">
+        <RewardHero
+          label="委託費 合計"
+          amount={total}
+          items={[
+            { key: 'unpaid', label: '未払い', value: unpaid, format: 'yen' },
+            { key: 'paid', label: '支払済', value: paid, format: 'yen' },
+            { key: 'count', label: '明細', value: b.payouts.length, suffix: '件' },
+          ]}
+        />
+      </div>
 
       <div style={{ padding: '18px 20px 6px' }}><h2 className="ty-h2">委託費の明細</h2></div>
       <div style={{ padding: '0 20px 8px' }}>
@@ -51,7 +50,13 @@ export default async function VendorRewards() {
                   <div style={{ fontSize: '.8rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(p) || monthLabel(p.period)}</div>
                   <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{monthLabel(p.period)}{p.paid_at ? ` ・ 支払 ${new Date(p.paid_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}` : ''}</div>
                 </div>
-                <StatusPill size="sm" {...paymentState(p.status)} />
+                {/* v2.2: 塗りピル廃止＝dot+text（ベンダー面の状態表現を全面統一） */}
+                {(() => { const ps = paymentState(p.status); return (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${ps.tone})`, display: 'inline-block' }} />
+                    <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>{ps.children}</span>
+                  </span>
+                ) })()}
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 11, paddingTop: 11, borderTop: '0.5px solid var(--line)' }}>
                 {/* 内訳は経費がある月のみ展開（無ければ委託費＝総額で重複を出さない） */}

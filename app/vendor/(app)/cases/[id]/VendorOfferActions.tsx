@@ -26,7 +26,7 @@ export default function VendorOfferActions({ assignmentId, baseFee }: { assignme
   }
 
   return (
-    <div style={{ margin: '12px 20px 4px', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', background: 'var(--amber-bg)' }}>
+    <div style={{ margin: '12px 20px 4px', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', background: '#fff' }}>
       <p style={{ fontSize: '.78rem', fontWeight: 500 }}>この案件の委託のご提案です</p>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
         <span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>委託費</span>

@@ -53,14 +53,14 @@ export default function InstallHint() {
       position: 'fixed', left: 12, right: 12,
       bottom: `calc(12px + env(safe-area-inset-bottom))`,
       zIndex: 200, maxWidth: 460, margin: '0 auto',
-      background: '#fff', border: '1px solid var(--line)', borderRadius: 14,
-      boxShadow: '0 8px 30px rgba(14,14,20,.18)', padding: '12px 14px',
+      background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14,
+      boxShadow: '0 8px 30px rgba(14,14,20,.14)', padding: '12px 14px',
       display: 'flex', alignItems: 'center', gap: 12,
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon-192.png" alt="" width={36} height={36} style={{ borderRadius: 9, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '.76rem', fontWeight: 800 }}>ホーム画面に追加</div>
+        <div style={{ fontSize: '.76rem', fontWeight: 500 }}>ホーム画面に追加</div>
         <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 1, lineHeight: 1.5 }}>
           {isIOS
             ? '共有ボタン → 「ホーム画面に追加」でアプリのように使えます。'
@@ -68,7 +68,7 @@ export default function InstallHint() {
         </div>
       </div>
       {!isIOS && deferred && (
-        <button onClick={install} className="btn btn-p" style={{ fontSize: '.72rem', padding: '8px 14px', flexShrink: 0 }}>追加</button>
+        <button onClick={install} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '8px 14px', flexShrink: 0 }}>追加</button>
       )}
       <button onClick={dismiss} aria-label="閉じる" style={{
         flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: 'none',

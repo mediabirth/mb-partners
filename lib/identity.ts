@@ -12,15 +12,10 @@
  *
  * すべての accept 経路（/api/invite/accept・/api/vendor/accept）はここを通し、profiles への role 書込を集中させる。
  */
-type QueryResult<T> = Promise<{ data: T | null; error: { message: string } | null }>
-type Filter = { eq: (col: string, val: string) => { maybeSingle: () => QueryResult<{ id: string; role?: string }> } }
-type Service = {
-  from: (t: string) => {
-    select: (cols: string) => Filter
-    insert: (row: Record<string, unknown>) => QueryResult<unknown>
-    update: (patch: Record<string, unknown>) => { eq: (col: string, val: string) => QueryResult<unknown> }
-  }
-}
+import type { SupabaseClient } from '@supabase/supabase-js'
+// service_role クライアント（createServiceRoleClient の戻り値）。型は supabase-js 由来（eslint の認証封鎖は
+// @supabase/ssr の createBrowser/ServerClient を対象とする規則で、型 import は対象外＝ここは適合）。
+type Service = SupabaseClient
 
 export type AttachResult = {
   created: boolean          // 新規プロフィールを作ったか

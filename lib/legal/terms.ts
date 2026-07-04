@@ -6,7 +6,7 @@
 // v2: 第4条に報酬の税定義（税抜粗利基準・税抜表示・消費税はインボイス登録の有無に応じ支払時に別途）を明記。
 export const TERMS_VERSION = 'v2-2026-07-04'
 
-export type TermsKind = 'partner' | 'frontier'
+export type TermsKind = 'partner' | 'frontier' | 'vendor'
 
 const BODY_V1 = `MB Partners 利用規約（簡易版）
 
@@ -35,7 +35,9 @@ const BODY_V1 = `MB Partners 利用規約（簡易版）
 制定日：2026年6月17日　株式会社Media Birth`
 
 export function getTerms(kind: TermsKind = 'partner'): { version: string; title: string; body: string } {
-  const title = kind === 'frontier' ? 'MB Partners 利用規約（フロンティア）' : 'MB Partners 利用規約'
-  // 当面は partner / frontier 同一本文。将来はここで kind により本文を切替。
+  const title = kind === 'frontier' ? 'MB Partners 利用規約（フロンティア）'
+    : kind === 'vendor' ? 'MB Partners 業務委託規約'
+    : 'MB Partners 利用規約'
+  // 当面は partner / frontier / vendor 同一本文。将来はここで kind により本文を切替。
   return { version: TERMS_VERSION, title, body: BODY_V1 }
 }

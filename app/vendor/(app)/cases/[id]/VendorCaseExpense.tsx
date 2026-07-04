@@ -19,7 +19,7 @@ export default function VendorCaseExpense({ assignmentId, label, initial }: { as
         <span style={{ fontSize: '.62rem', color: 'var(--muted)' }}>承認済 ¥{approved.toLocaleString()}</span>
       </div>
 
-      <button onClick={() => setOpen(true)} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>＋ 経費を申請</button>
+      <button onClick={() => setOpen(true)} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>経費を申請</button>
 
       <div style={{ marginTop: 14 }}>
         {initial.length === 0 ? (

@@ -3,7 +3,7 @@ import { getTerms, type TermsKind } from '@/lib/legal/terms'
 // 公開ページ（登録フローの未認証ユーザーも閲覧可）。?kind=partner|frontier で本文出し分け。
 export default async function LegalTermsPage({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
   const { kind } = await searchParams
-  const k: TermsKind = kind === 'frontier' ? 'frontier' : 'partner'
+  const k: TermsKind = kind === 'frontier' ? 'frontier' : kind === 'vendor' ? 'vendor' : 'partner'
   const terms = getTerms(k)
 
   return (

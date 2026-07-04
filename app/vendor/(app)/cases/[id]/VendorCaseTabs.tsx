@@ -33,15 +33,15 @@ export default function VendorCaseTabs({ assignmentId, customerLabel, baseFee, t
       {/* 次にやること（上部固定の強調カード・完了ボタン付き） */}
       {nextTask && <NextTaskCard task={nextTask} onChange={() => router.refresh()} onError={show} />}
 
-      {/* タブバー（active=青地白文字） */}
+      {/* タブバー（v2.2: APP のセグメント同様 active=白地+影・塗り廃止） */}
       <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)', padding: '10px 20px 6px' }}>
         <div style={{ display: 'flex', gap: 6, background: 'var(--bg2)', borderRadius: 12, padding: 4 }}>
           {TABS.map(t => {
             const on = tab === t.k
             return (
-              <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: on ? 500 : 400, background: on ? 'var(--c-blue)' : 'transparent', color: on ? '#fff' : 'var(--muted2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'background .15s' }}>
+              <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, background: on ? '#fff' : 'transparent', color: on ? 'var(--txt)' : 'var(--muted2)', boxShadow: on ? '0 2px 8px rgba(14,14,20,.08)' : 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all .2s' }}>
                 {t.label}
-                {t.badge != null && <span style={{ fontSize: '.56rem', fontWeight: 500, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999, background: on ? 'rgba(255,255,255,.25)' : 'var(--line)', color: on ? '#fff' : 'var(--muted2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{t.badge}</span>}
+                {t.badge != null && <span style={{ fontSize: '.56rem', fontWeight: 500, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999, background: on ? 'var(--c-blue)' : 'var(--line)', color: on ? '#fff' : 'var(--muted2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{t.badge}</span>}
               </button>
             )
           })}
@@ -120,7 +120,7 @@ function TodoTab({ assignmentId, doTasks, nextId, deliverables, onChange, onErro
       {/* 成果物：押した時だけフォーム展開 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '20px 0 8px' }}>
         <h2 style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)' }}>成果物</h2>
-        <button onClick={() => setShowForm(v => !v)} style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)', background: 'transparent', border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>{showForm ? '閉じる' : '＋ 提出する'}</button>
+        <button onClick={() => setShowForm(v => !v)} style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)', background: 'transparent', border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>{showForm ? '閉じる' : '提出する'}</button>
       </div>
       {showForm && <DeliverableUploader assignmentId={assignmentId} tasks={doTasks.filter(t => t.needs_deliverable)} onDone={() => { setShowForm(false); onChange() }} onError={onError} />}
       <div style={{ marginTop: showForm ? 10 : 0 }}>
@@ -203,7 +203,6 @@ function MoneyTab({ assignmentId, customerLabel, baseFee, delivered, expenses }:
         </span>
         <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 500 }}>¥{baseFee.toLocaleString()}</span>
       </div>
-      <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '7px 2px 0', lineHeight: 1.6 }}>委託費＋承認済の経費は「委託費」タブにまとまります。</p>
       <VendorCaseExpense assignmentId={assignmentId} label={customerLabel} initial={expenses} />
     </div>
   )

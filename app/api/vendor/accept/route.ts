@@ -13,7 +13,12 @@ export const runtime = 'edge'
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
-  const { token, email: clientEmail, password, name } = body
+  // partner 登録と同等のフルフィールド（住所・電話・税区分・振込先・インボイス・規約同意）を受理・永続化。
+  const {
+    token, email: clientEmail, password, name,
+    phone, address, taxType, bankName, branchName, accountType, accountNumber, accountHolder, invoiceNumber,
+    agreeTerms, agreePrivacy,
+  } = body
   if (!token) return NextResponse.json({ error: 'token は必須です' }, { status: 400 })
   if (!name?.trim()) return NextResponse.json({ error: 'お名前を入力してください' }, { status: 400 })
   if (!password || password.length < 8) return NextResponse.json({ error: 'パスワードは8文字以上で設定してください' }, { status: 400 })
@@ -71,12 +76,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: (e as Error).message, detail: 'profiles attach failed' }, { status: 500 })
   }
 
-  // ── deliveries に紐付け（＝vendor としての本人性の真実）──
-  const { error: linkErr } = await service.from('deliveries').update({ auth_user_id: userId }).eq('id', invite.delivery_id)
+  // ── deliveries に紐付け＋KYC/振込情報を永続化（partner 登録と同等）──
+  //   auth_user_id が vendor の本人性の真実。name（お名前/屋号）＋KYC項目を deliveries に確定する。
+  //   bank_account は「種別+番号」を結合（deliveries は単一列・mypage表示「普通1234567」に一致）。
+  //   税区分は日本語ラベルで保存（mypage の lock 行がそのまま表示）。money 列（base_fee 等）には非接触。
+  const nowIso = new Date().toISOString()
+  const acctType = (accountType === '当座' ? '当座' : '普通')
+  const bankAccount = accountNumber?.trim() ? `${acctType}${accountNumber.trim()}` : null
+  const deliveryPatch: Record<string, unknown> = {
+    auth_user_id: userId,
+    name: name.trim(),
+    phone: (typeof phone === 'string' ? phone.trim() : '') || null,
+    address: (typeof address === 'string' ? address.trim() : '') || null,
+    tax_type: taxType === 'corporate' ? '法人' : taxType === 'individual' ? '個人' : (taxType || null),
+    bank_name: (typeof bankName === 'string' ? bankName.trim() : '') || null,
+    bank_branch: (typeof branchName === 'string' ? branchName.trim() : '') || null,
+    bank_account: bankAccount,
+    bank_holder_kana: (typeof accountHolder === 'string' ? accountHolder.trim() : '') || null,
+    invoice_number: (typeof invoiceNumber === 'string' ? invoiceNumber.trim() : '') || null,
+    terms_agreed_at: agreeTerms ? nowIso : null,
+    privacy_agreed_at: agreePrivacy ? nowIso : null,
+    updated_at: nowIso,
+  }
+  const { error: linkErr } = await service.from('deliveries').update(deliveryPatch).eq('id', invite.delivery_id)
   if (linkErr) return NextResponse.json({ error: linkErr.message, detail: 'deliveries link failed' }, { status: 500 })
 
   // ── 招待を使用済みに ──
-  await service.from('invites').update({ used_at: new Date().toISOString(), name: name.trim() }).eq('token', token)
+  await service.from('invites').update({ used_at: nowIso, name: name.trim() }).eq('token', token)
 
   return NextResponse.json({ ok: true }, { status: 200 })
 }
