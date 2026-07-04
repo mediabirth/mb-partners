@@ -5,21 +5,11 @@
  * - fallback: 既存の凝ったHTML（招待・受付等）を使う場合に呼び出し側から渡す（DB上書きが無いときのみ使用）
  * - 送信結果は mail_log へ必ず記録（best-effort・送信自体は阻害しない）
  */
-import { sendEmail, brandedEmailHtml } from '@/lib/notify'
+import { sendEmail } from '@/lib/notify'
+import { bodyToBrandedHtml } from '@/lib/mail-render'
 import { MAIL_REGISTRY_BY_KEY, fillVars, type MailAudience } from '@/lib/mail-registry'
 
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-/** 本文テキスト（複数行）→ ブランドHTML（改行保持・URLはリンク化しない＝ボタンで誘導） */
-export function bodyToBrandedHtml(body: string, buttons?: { label: string; url: string }[]): string {
-  const validButtons = (buttons ?? []).filter(b => b?.label && /^https?:\/\//i.test(b?.url ?? '')).slice(0, 3)
-  const btnHtml = validButtons.length
-    ? `<div style="margin:18px 0 2px">${validButtons.map(b => `<a href="${esc(b.url)}" style="display:inline-block;background:#4733E6;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:9px;margin:0 8px 8px 0">${esc(b.label)}</a>`).join('')}</div>`
-    : ''
-  return brandedEmailHtml({ blocksHtml: `<p style="white-space:pre-wrap;margin:0;font-size:14px;line-height:1.8">${esc(body)}</p>${btnHtml}` })
-}
+export { bodyToBrandedHtml }
 
 export async function logMail(entry: {
   template_key?: string | null; event?: string | null

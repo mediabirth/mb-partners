@@ -224,9 +224,20 @@ export default function SettingsPage() {
             <MembersSection />
           </SectionCard>
 
-          {/* メッセージ（テンプレート／自動メッセージ）— Phase3-D②b 入口カード（件数動的） */}
+          {/* メッセージ（メール管理／テンプレート／自動メッセージ）入口カード */}
           <div style={{ marginBottom: 20 }}>
             <b style={{ fontSize: '.84rem', display: 'block', marginBottom: 10 }}>メッセージ</b>
+            {/* 磨き①: メール管理（全テンプレ一覧・プレビュー・編集・送信履歴・マトリクス） */}
+            <a href="/console/settings/mail" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 10, textDecoration: 'none', color: 'inherit' }}>
+              <span style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--blue-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.84rem', fontWeight: 500 }}>メール</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500, marginTop: 4 }}>自動送信の全テンプレ・プレビュー・編集・送信履歴</div>
+              </div>
+              <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
+            </a>
             <a href="/console/settings/templates" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginBottom: 10, textDecoration: 'none', color: 'inherit' }}>
               <span style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--c-ghost-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3v4a1 1 0 001 1h4" /><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" /><path d="M9 9h1M9 13h6M9 17h6" /></svg>
