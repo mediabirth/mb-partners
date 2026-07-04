@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/client'
 
 export default function MagicCallbackPage() {
   const router = useRouter()
@@ -18,12 +18,11 @@ export default function MagicCallbackPage() {
       return
     }
 
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    // ★以前は生の createBrowserClient（cookieOptions.name 無し）でデフォルト cookie に書いており、
+    //   surface 分離をバイパスしていた（再発の温床）。surface-aware factory 経由へ統一。
+    const supabase = createClient()
 
-    supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+    supabase.auth.setSession({ access_token, refresh_token }).then(({ error }: { error: unknown }) => {
       if (error) {
         router.replace('/login?error=session_failed')
       } else {

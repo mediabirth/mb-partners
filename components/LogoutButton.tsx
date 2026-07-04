@@ -8,7 +8,8 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     const supabase = createClient()
-    await supabase.auth.signOut()
+    // scope:'local'＝この面の cookie だけを消す（他面のセッションを巻き添えにしない）。
+    await supabase.auth.signOut({ scope: 'local' })
     router.push('/login')
     router.refresh()
   }

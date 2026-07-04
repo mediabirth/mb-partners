@@ -22,7 +22,9 @@ export default function SettingsPage() {
   }, [])
   async function logout() {
     const sb = createClient()
-    await sb.auth.signOut()
+    // scope:'local'＝この面の cookie だけを消す。既定(global)はユーザーの全リフレッシュトークンを失効させ、
+    // 同一アカウントが別面/別端末で持つセッションまで巻き添えにする（＝別面が突然ログアウトする再発経路）。
+    await sb.auth.signOut({ scope: 'local' })
     router.push('/login')
   }
   return (

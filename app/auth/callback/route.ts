@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { makeSurfaceServerClient, surfaceOf } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -12,22 +12,14 @@ export async function GET(request: NextRequest) {
   }
 
   const cookieStore = await cookies()
-  // partner マジックリンクのコールバック＝app サーフェス。app 専用 cookie に書き込む。
-  const { surfaceFor, cookieNameFor } = await import('@/lib/supabase/surface')
-  const name = cookieNameFor(surfaceFor(request.headers.get('host'), new URL(request.url).pathname))
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieOptions: { name },
-      cookies: {
-        getAll:  () => cookieStore.getAll(),
-        setAll:  (list) => list.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options)
-        ),
-      },
-    }
-  )
+  // partner マジックリンクのコールバック＝host+path から surface を解決し、その専用 cookie に書き込む（中央の門を通す）。
+  const surface = surfaceOf(request.headers.get('host'), new URL(request.url).pathname)
+  const supabase = makeSurfaceServerClient(surface, {
+    getAll:  () => cookieStore.getAll(),
+    setAll:  (list) => list.forEach(({ name, value, options }) =>
+      cookieStore.set(name, value, options)
+    ),
+  })
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {

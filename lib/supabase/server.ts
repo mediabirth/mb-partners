@@ -3,34 +3,47 @@ import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 import { surfaceFor, cookieNameFor, SURFACE_HEADER, UID_HEADER, type Surface } from './surface'
 
+type CookieAdapter = Parameters<typeof createServerClient>[2]['cookies']
+
+/**
+ * ★セッション分離の単一の門（サーバ側）。auth cookie を持つ createServerClient は必ずこの関数を通す。
+ * surface→cookie名（cookieNameFor）を強制注入するため、呼び出し側が cookie 名前空間を取り違えられない。
+ * （@supabase/ssr の createServerClient 直接importは eslint で lib/supabase/** と proxy.ts に限定＝新規パスがバイパス不可）。
+ * cookieAdapter は文脈依存（Server Component=read-only cookies / Route Handler=書込可）なので呼び出し側が渡す。
+ */
+export function makeSurfaceServerClient(surface: Surface, cookieAdapter: CookieAdapter) {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookieOptions: { name: cookieNameFor(surface) }, cookies: cookieAdapter }
+  )
+}
+
+/** host+pathname から surface を解決（Route Handler 用の薄いre-export）。 */
+export function surfaceOf(host: string | null | undefined, pathname: string | null | undefined): Surface {
+  return surfaceFor(host, pathname)
+}
+
 export async function createClient() {
   const cookieStore = await cookies()
   const hdrs = await headers()
   // middleware が注入した x-mb-surface を優先。無い場合は host から推定（fallback）。
   const surface = (hdrs.get(SURFACE_HEADER) as Surface | null) ?? surfaceFor(hdrs.get('host'), '/')
-  const name = cookieNameFor(surface)
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieOptions: { name },
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Server Component context: cookies are read-only
-          }
-        },
-      },
-    }
-  )
+  return makeSurfaceServerClient(surface, {
+    getAll() {
+      return cookieStore.getAll()
+    },
+    setAll(cookiesToSet) {
+      try {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          cookieStore.set(name, value, options)
+        )
+      } catch {
+        // Server Component context: cookies are read-only
+      }
+    },
+  })
 }
 
 // Deduplicated per-request: layout + page share one auth round-trip

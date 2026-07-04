@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { cookieNameFor } from '@/lib/supabase/surface'
+import { createServiceRoleClient, makeSurfaceServerClient } from '@/lib/supabase/server'
 import { verifyLoginState, safeAppRedirect, LINE_LOGIN_REDIRECT_URI } from '@/lib/line-auth'
 
 // LINE Login 認証の callback（新規・独立フロー）。
@@ -68,13 +66,11 @@ export async function GET(req: NextRequest) {
 
     // 7) app サーフェス cookie（mb-auth-app）へ書き込む server client で verifyOtp→セッション確立。
     const res = NextResponse.redirect(`https://mb-partners.app${redirect}`)
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookieOptions: { name: cookieNameFor('app') },
-        cookies: { getAll: () => req.cookies.getAll(), setAll: (toSet) => toSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options)) },
-      },
-    )
+    // LINEログインは常に app サーフェス（mb-auth-app）＝中央の門を通す。
+    const supabase = makeSurfaceServerClient('app', {
+      getAll: () => req.cookies.getAll(),
+      setAll: (toSet) => toSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),
+    })
     const { error: vErr } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' })
     if (vErr) return fail('line')
     return res   // mb-auth-app セッション cookie 付きで目的ページ（/app配下）へ
