@@ -18,7 +18,8 @@ export const PHASE_STYLE: Record<Phase, { c: string; bg: string }> = {
   shodan: { c: 'var(--amber)', bg: 'var(--amber-bg)' },
   project: { c: 'var(--blue)', bg: 'var(--blue-bg)' },
 }
-export const INTAKE_LABEL: Record<string, string> = { referral_coop: '紹介・協力', direct: '直営業' }
+// 静音化v2.1: 単一「紹介」正典（区分チャネル語としての「協力」を全廃）
+export const INTAKE_LABEL: Record<string, string> = { referral_coop: '紹介', direct: '直営業' }
 
 // プロジェクト実行ステータス（未着手 → 進行中 → 確認待ち → 修正対応 → 納品完了 ＋ 保留）
 export const PROJECT_STATUSES = ['未着手', '進行中', '確認待ち', '修正対応', '納品完了', '保留'] as const

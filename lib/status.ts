@@ -86,7 +86,7 @@ export function partnerKind(kind: string): { tone: Tone; children: string } {
   return { tone: p.tone, children: p.label }
 }
 
-// ── 流入経路（紹介・協力/直営業）──
+// ── 流入経路（紹介/直営業）──
 export function intakeType(intake: string | null | undefined): { tone: Tone; children: string } {
   const key = intake ?? 'referral_coop'
   return { tone: key === 'direct' ? 'neutral' : 'progress', children: INTAKE_LABEL[key] ?? key }

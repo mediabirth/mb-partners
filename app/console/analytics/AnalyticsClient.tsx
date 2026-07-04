@@ -71,7 +71,7 @@ export default function AnalyticsClient() {
   const byService = useMemo(() => segment(r => r.service_id, r => r.service_name).sort((a, b) => b.revenue - a.revenue), [view])
   const byPartner = useMemo(() => segment(r => r.intake === 'direct' ? null : (r.partner_code ?? null), r => r.partner_name ?? r.partner_code ?? '—').sort((a, b) => b.revenue - a.revenue), [view])
   const byDirector = useMemo(() => segment(r => r.director_id ?? '__none__', r => r.director_name ?? '未割当').sort((a, b) => b.revenue - a.revenue), [view])
-  const byIntake = useMemo(() => segment(r => r.intake, r => r.intake === 'direct' ? '直営業' : '紹介・協力'), [view])
+  const byIntake = useMemo(() => segment(r => r.intake, r => r.intake === 'direct' ? '直営業' : '紹介'), [view])
   // 弱点：成約率が最も低いサービス（サンプル3件以上）。
   const weakService = useMemo(() => byService.filter(s => s.total >= 3).sort((a, b) => a.rate - b.rate)[0] ?? null, [byService])
 
