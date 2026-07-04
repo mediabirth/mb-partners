@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { attachSurfaceProfile } from '@/lib/identity'
 
 const VENDOR_COLORS = ['#15917E', '#4733E6', '#D98914', '#C2479E', '#2A7DE1', '#9333EA']
 
@@ -56,17 +57,21 @@ export async function POST(req: NextRequest) {
     if (upErr) return NextResponse.json({ error: 'パスワード更新に失敗しました', detail: upErr.message }, { status: 500 })
   }
 
-  // ── profiles 作成/更新（role='vendor'）──
-  const { data: existingProfile } = await service.from('profiles').select('id').eq('id', userId).maybeSingle()
-  if (!existingProfile) {
-    const color = VENDOR_COLORS[Math.floor(Math.random() * VENDOR_COLORS.length)]
-    const { error: pErr } = await service.from('profiles').insert({ id: userId, name: name.trim(), role: 'vendor', email, color })
-    if (pErr) return NextResponse.json({ error: pErr.message, detail: 'profiles insert failed' }, { status: 500 })
-  } else {
-    await service.from('profiles').update({ name: name.trim(), role: 'vendor' }).eq('id', userId)
+  // ── profiles 付与（中央の門）──
+  // ★既存プロフィール（別メール用途＝partner 等）の role は絶対に上書きしない。
+  //   vendor としての「本人性」は下の deliveries.auth_user_id 紐づけで担保する（resolveVendor が linkage で判定）。
+  //   これにより同一メールが partner と vendor を安全に兼任できる（アイデンティティ入れ替わりの構造的封鎖）。
+  //   なお vendor の表示名は deliveries.name/nickname 側が正（profiles.name は上書きせず既存面の表示を保全）。
+  const color = VENDOR_COLORS[Math.floor(Math.random() * VENDOR_COLORS.length)]
+  try {
+    const r = await attachSurfaceProfile(service, { userId, email, name: name.trim(), role: 'vendor', color })
+    // 既存が partner 等でも role は保全（keptRole）。新規なら role='vendor' で作成済み。
+    void r
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message, detail: 'profiles attach failed' }, { status: 500 })
   }
 
-  // ── deliveries に紐付け ──
+  // ── deliveries に紐付け（＝vendor としての本人性の真実）──
   const { error: linkErr } = await service.from('deliveries').update({ auth_user_id: userId }).eq('id', invite.delivery_id)
   if (linkErr) return NextResponse.json({ error: linkErr.message, detail: 'deliveries link failed' }, { status: 500 })
 

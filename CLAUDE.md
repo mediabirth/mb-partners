@@ -28,7 +28,10 @@
 2. **3面到達**: 未認証で `/app`・`/console`・`/vendor` が 307（ログインへ）
 3. **webhook**: 無署名 POST `/api/line/webhook` が 401
 4. **page errors []**: 主要画面の実ブラウザで JS エラーゼロ
-5. **money 証明**: `menu_rewards` 16行 sum=340,100・deals 報酬ハッシュ `6e4c6047f6780bdb7497864b10db90a2` 不変・確定ガード/reward_snapshot 非接触・勝彦deals 3件残置
+5. **money 証明**: 恒久不変＝`menu_rewards` 16行 sum=340,100・報酬計算式の意味・確定ガード・reward_snapshot 非接触・勝彦deals（created_by=bfb3c027）3件。
+   deals 報酬ハッシュ（`select md5(string_agg(reward_snapshot::text||amount::text, ',' order by id)) from deals`）は
+   **バッチ開始時にスナップショットし、CC の作業でそれが変わっていないこと**を確認する（＝CCが金額を勝手に触っていない証明）。
+   ※固定値の絶対pinはしない——勝彦/米井が製品を正当に使えば（成約・起票等で）自然に変わるため。変化を見たら「誰の操作か」を必ず突合する。
 6. **canon**: `pnpm test:canon`（status-effects 61 assertion）green
 7. **★セッション独立（本丸・恒久）**: `pnpm test:session`（`scripts/session-isolation.e2e.mjs`）green。
    3面に同一ブラウザでログイン→1面のセッション期限切れ→再ログインで**他2面のセッションが生存**することを実測する。

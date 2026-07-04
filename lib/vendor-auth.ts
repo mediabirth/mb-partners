@@ -18,7 +18,11 @@ export const resolveVendor = cache(async (): Promise<{ userId: string; deliveryI
     getCachedProfile(),
     admin.from('deliveries').select('id, name').eq('auth_user_id', uid).maybeSingle(),
   ])
-  if (!profile || profile.role !== 'vendor') return null
+  // ★vendor としての本人性は「自分の auth_user に紐づく delivery があること」で判定する（linkage）。
+  //   profiles.role==='vendor' は要求しない＝同一メールが partner(role=partner) と vendor を兼任できる
+  //   （アイデンティティ入れ替わりの根本修正：面ごとの本人性を単一 role 列でなく面固有テーブルで持つ）。
+  //   隔離は不変：返すのは本人の delivery のみ。profile は表示等のため存在は必要。
+  if (!profile) return null
   if (!delivery) return null
   return { userId: uid, deliveryId: delivery.id, deliveryName: delivery.name }
 })

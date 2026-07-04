@@ -27,8 +27,36 @@ const ACC = {
   vendor: { email: 'cc-sess-vendor-throwaway@mb-system.internal', role: 'vendor', name: '検証セッションV' },
   console: { email: 'cc-sess-admin-throwaway@mb-system.internal', role: 'owner', name: '検証セッションA' },
 }
+// 二重ロール（同一メールで partner+vendor）テスト用アカウント
+const DUAL = { email: 'cc-dual-throwaway@mb-system.internal', name: '二重テスト太郎', deliveryName: '二重テスト委託先（throwaway）' }
 let pass = 0, fail = 0
 const ok = (c, n, d = '') => { if (c) { pass++; console.log('  ✓', n) } else { fail++; console.log('  ✗', n, String(d).slice(0, 200)) } }
+
+// 同一メールに partner を先に作り、その後 vendor accept を通しても partner の role/name が保全されるか（構造ガードの回帰検出）。
+async function dualIdentityCheck() {
+  // 1) partner 側の既存アカウントを用意（auth+profile role=partner+partners行）
+  const { data: list } = await admin.auth.admin.listUsers()
+  let u = (list?.users || []).find(x => x.email === DUAL.email)
+  if (!u) { const c = await admin.auth.admin.createUser({ email: DUAL.email, password: PW, email_confirm: true, app_metadata: { role: 'partner' } }); u = c.data?.user }
+  const uid = u.id
+  await admin.from('profiles').upsert({ id: uid, name: DUAL.name, role: 'partner', email: DUAL.email, color: '#888888' })
+  await admin.from('partners').upsert({ profile_id: uid, code: 'CCDUAL', status: 'active' }, { onConflict: 'profile_id' }).then(() => {}, () => {})
+  // 2) 同一メール宛の vendor 招待＋delivery を用意し、実 API /api/vendor/accept を叩く（本番コードパス）
+  const dl = await admin.from('deliveries').insert({ name: DUAL.deliveryName, kind: 'エンジニア', active: true, service_id: 'dx' }).select('id').single()
+  const token = 'cc-dual-tok-' + uid.slice(0, 8)
+  await admin.from('invites').insert({ token, email: DUAL.email, role: 'vendor', kind: 'vendor', delivery_id: dl.data.id, expires_at: new Date(Date.now() + 864e5).toISOString() }).then(() => {}, () => {})
+  const res = await fetch(APP + '/api/vendor/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, email: DUAL.email, password: PW, name: DUAL.deliveryName }) })
+  const j = await res.json().catch(() => ({}))
+  ok(res.ok, 'vendor accept（同一メール既存partner）が成功', JSON.stringify(j))
+  // 3) partner アイデンティティが保全されているか
+  const { data: prof } = await admin.from('profiles').select('role, name').eq('id', uid).single()
+  ok(prof?.role === 'partner', '★partner の role が保全（vendorに上書きされない）', JSON.stringify(prof))
+  ok(prof?.name === DUAL.name, '★partner の name が保全（会社名に上書きされない）', JSON.stringify(prof))
+  const { data: pr } = await admin.from('partners').select('id').eq('profile_id', uid).maybeSingle()
+  ok(!!pr, 'partners 行が生存')
+  const { data: dv } = await admin.from('deliveries').select('auth_user_id').eq('id', dl.data.id).single()
+  ok(dv?.auth_user_id === uid, 'vendor delivery が同一auth_userに紐づく（linkageで vendor 本人性）')
+}
 
 // 各面: login URL / 認証後URL / 「ログイン済みか」の判定（loginへ飛ばされていない かつ 認証後pathに居る）
 const SURF = {
@@ -54,8 +82,12 @@ async function ensureFixtures() {
 }
 async function teardownFixtures() {
   const { data: list } = await admin.auth.admin.listUsers()
-  for (const k of Object.keys(ACC)) {
-    const u = (list?.users || []).find(x => x.email === ACC[k].email)
+  const emails = [...Object.keys(ACC).filter(k => ACC[k]).map(k => ACC[k].email), DUAL.email]
+  // dual の delivery/invite（auth_user 未紐づけ経路も）を掃除
+  await admin.from('deliveries').delete().eq('name', DUAL.deliveryName).then(() => {}, () => {})
+  await admin.from('invites').delete().ilike('token', 'cc-dual-tok-%').then(() => {}, () => {})
+  for (const email of emails) {
+    const u = (list?.users || []).find(x => x.email === email)
     if (!u) continue
     await admin.from('deliveries').delete().eq('auth_user_id', u.id).then(() => {}, () => {})
     await admin.from('partners').delete().eq('profile_id', u.id).then(() => {}, () => {})
@@ -143,6 +175,33 @@ async function main() {
     ok(cookies.some(c => c.name.startsWith('mb-auth-console')), 'mb-auth-console cookie 存在')
 
     await ctx.close()
+
+    console.log('[5] 同一メール二重ロール共存（アイデンティティ入れ替わりの回帰検出）')
+    // 既存 partner に、同一メールで vendor accept を通しても partner の role/name が保全されることを実測。
+    await dualIdentityCheck()
+
+    console.log('[6] 二重ロールの両面ログイン共存（partner と vendor が同一ブラウザで同時生存）')
+    const dctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    const dpage = await dctx.newPage()
+    // partner としてログイン → app 生存
+    await dpage.goto(APP + '/login', { waitUntil: 'domcontentloaded' }); await dpage.waitForTimeout(600)
+    await dpage.locator('input[type="email"]').fill(DUAL.email)
+    await dpage.locator('input[type="password"]').fill(PW)
+    await dpage.locator('button[type="submit"], button:has-text("ログイン")').first().click()
+    await dpage.waitForURL(u => !/\/login(\?|$)/.test(new URL(u).pathname), { timeout: 20000 }).catch(() => {})
+    ok(await isAlive(dpage, 'app'), 'dual: partner面(app) ログイン成立')
+    // 同一ブラウザで vendor としてログイン（同一メール・delivery linkage 経由）→ vendor 生存
+    await dpage.goto(APP + '/vendor/login', { waitUntil: 'domcontentloaded' }); await dpage.waitForTimeout(600)
+    const vHasForm = await dpage.locator('input[type="email"]').count().catch(() => 0)
+    if (vHasForm) {
+      await dpage.locator('input[type="email"]').fill(DUAL.email)
+      await dpage.locator('input[type="password"]').fill(PW)
+      await dpage.locator('button[type="submit"], button:has-text("ログイン")').first().click()
+      await dpage.waitForURL(u => !/\/vendor\/login(\?|$)/.test(new URL(u).pathname), { timeout: 20000 }).catch(() => {})
+    }
+    ok(await isAlive(dpage, 'vendor'), '★dual: vendor面 も生存（delivery linkageで本人性・role非依存）')
+    ok(await isAlive(dpage, 'app'), '★dual: partner面 も同時生存（vendorログインが上書きしない）')
+    await dctx.close()
   } catch (e) { fatal = e } finally {
     await browser.close().catch(() => {})
     if (!OWN) await teardownFixtures()

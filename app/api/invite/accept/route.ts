@@ -11,6 +11,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { attachSurfaceProfile } from '@/lib/identity'
 
 const PARTNER_COLORS = ['#4733E6', '#C2479E', '#15917E', '#D98914', '#E64733', '#9333EA']
 
@@ -172,21 +173,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── profiles 作成/更新 ────────────────────────────────────────────────────
+  // ── profiles 付与（中央の門）──
+  // ★既存プロフィール（別メール用途＝vendor 等）があっても role/name を上書きしない＝面をまたぐ入れ替わりの構造的封鎖。
+  //   partner としての本人性は下の partners.profile_id 紐づけで担保する（getPartnerByUserId）。
   const nick = (nickname ?? '').trim() || null
-  const { data: existingProfile } = await service
-    .from('profiles').select('id').eq('id', userId).maybeSingle()
-
-  if (!existingProfile) {
-    const color = PARTNER_COLORS[Math.floor(Math.random() * PARTNER_COLORS.length)]
-    const { error: profErr } = await service.from('profiles').insert({
-      id: userId, name, role, email, color, nickname: nick,
-    })
-    if (profErr) {
-      return NextResponse.json({ error: profErr.message, detail: 'profiles insert failed' }, { status: 500 })
-    }
-  } else {
-    await service.from('profiles').update({ name, nickname: nick }).eq('id', userId)
+  const color = PARTNER_COLORS[Math.floor(Math.random() * PARTNER_COLORS.length)]
+  try {
+    await attachSurfaceProfile(service, { userId, email, name, role, nickname: nick, color })
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message, detail: 'profiles attach failed' }, { status: 500 })
   }
 
   // ── partners 作成/更新（role=partner）──────────────────────────────────────
