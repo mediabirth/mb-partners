@@ -7,6 +7,7 @@ import CountUp from '@/components/CountUp'
 import RewardHero from '@/components/ui/RewardHero'
 import { withholdingTax } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
+import { DEAL_STATUS } from '@/lib/status'
 
 export const runtime = 'edge'
 
@@ -49,7 +50,7 @@ export default async function RewardsPage() {
         amount={totalGross}
         items={[
           { key: 'paid', label: '支払済', value: paidGross, format: 'yen' },
-          { key: 'confirmed', label: '未払(確定)', value: confirmedGross, format: 'yen' },
+          { key: 'confirmed', label: '未払い（確定）', value: confirmedGross, format: 'yen' },
           { key: 'count', label: '成約数', value: totalDeals, suffix: '件' },
         ]}
       />
@@ -73,7 +74,7 @@ export default async function RewardsPage() {
 
       {months.length === 0 ? (
         <p style={{ padding: '0 20px', fontSize: '.7rem', color: 'var(--muted2)' }}>
-          まだ確定・支払済みの報酬がありません。
+          まだ確定・支払済の報酬がありません。
         </p>
       ) : months.map(ym => {
         const monthDeals = byMonth[ym]
@@ -87,7 +88,7 @@ export default async function RewardsPage() {
           <MonthAccordion
             key={ym}
             title={`${y}年${m}月`}
-            subtitle={paid ? `支払済 · ${monthDeals.length}件` : `振込予定 · ${monthDeals.length}件`}
+            subtitle={paid ? `支払済 ・ ${monthDeals.length}件` : `振込予定 ・ ${monthDeals.length}件`}
             net={net}
           >
             {monthDeals.map(d => (
@@ -99,7 +100,7 @@ export default async function RewardsPage() {
                       <span style={{ fontWeight: 500 }}>{customerHonorific(d)}</span>
                     </div>
                     <div style={{ fontSize: '.59rem', color: 'var(--muted)', marginTop: 1 }}>
-                      {d.services?.name} · {d.status === 'paid' ? '支払済' : d.status === 'confirmed' ? '成約' : d.status === 'lost' ? '不成立' : d.status === 'in_progress' ? '対応中' : '受付'}
+                      {d.services?.name} ・ {DEAL_STATUS[d.status]?.label ?? d.status}
                     </div>
                   </div>
                 </div>
@@ -110,7 +111,7 @@ export default async function RewardsPage() {
             ))}
             {wh > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 6px', fontSize: '.73rem' }}>
-                <span style={{ color: 'var(--muted2)' }}>源泉所得税(10.21%)</span>
+                <span style={{ color: 'var(--muted2)' }}>源泉所得税（10.21%）</span>
                 <span style={{ fontFamily: 'Inter', fontWeight: 500, color: 'var(--red)' }}>−¥{wh.toLocaleString()}</span>
               </div>
             )}

@@ -164,14 +164,14 @@ export default function SupportPage() {
             cursor: sending ? 'not-allowed' : 'pointer',
           }}
         >
-          {sending ? '送信中...' : '送信する'}
+          {sending ? '送信中…' : '送信する'}
         </button>
       </form>
 
       {/* Past inquiries */}
       <h2 style={{ fontSize: '.9rem', fontWeight: 500, marginBottom: 12 }}>過去のお問い合わせ</h2>
       {loading ? (
-        <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>読み込み中...</p>
+        <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>読み込み中…</p>
       ) : inquiries.length === 0 ? (
         <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>過去のお問い合わせはありません。</p>
       ) : (
@@ -187,7 +187,7 @@ export default function SupportPage() {
                   {inq.subject}
                 </div>
                 <div style={{ fontSize: '.64rem', color: 'var(--muted2)' }}>
-                  {CATEGORY_OPTIONS.find(c => c.value === inq.category)?.label} · {new Date(inq.updated_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}
+                  {CATEGORY_OPTIONS.find(c => c.value === inq.category)?.label} ・ {new Date(inq.updated_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}
                 </div>
               </div>
               <span style={{

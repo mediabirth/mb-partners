@@ -31,7 +31,7 @@ function norm(s: string | null | undefined): string {
 function rewardLabelFromReward(r: MenuReward | null): string { return r ? rewardValueText(r) : '' }
 function rewardPill(r: MenuReward): string { return rewardPillText(r) }
 function confirmTrailing(r: MenuReward): string {
-  // 決定①: 報酬は税抜統一。率報酬はラベル自体が「粗利(税抜)」を含むため、固定額のみ（税抜）を付す。
+  // 決定①: 報酬は税抜統一。率報酬はラベル自体が「粗利（税抜）」を含むため、固定額のみ（税抜）を付す。
   const tax = r.reward_type === 'fixed' ? '（税抜）' : ''
   return `${rewardLabelFromReward(r)}${tax} ・ 成約時、翌月末払い`
 }
@@ -136,8 +136,8 @@ export default function ReferPage() {
     if (!nm) { setError('お名前を入力してください'); return }
     // ① 法人＝メール必須／個人＝電話orメールいずれか必須。
     if (customerType === 'corporate') {
-      if (!customerEmail.trim()) { setError('メールアドレスをご入力ください'); return }
-    } else if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかをご入力ください'); return }
+      if (!customerEmail.trim()) { setError('メールアドレスを入力してください'); return }
+    } else if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかを入力してください'); return }
     if (!allTasksChecked) { setError('担当する内容をすべてご確認ください'); return }
     if (!consent) { setError('お客さまの了承の確認が必要です'); return }
     const fd = new FormData()
@@ -163,7 +163,7 @@ export default function ReferPage() {
     e.preventDefault(); setError('')
     const nm = (customerType === 'corporate' ? companyName : customerName).trim()
     if (!nm) { setError('お名前を入力してください'); return }
-    if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかをご入力ください'); return }
+    if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかを入力してください'); return }
     if (!consent) { setError('お客さまの了承の確認が必要です'); return }
     const fd = new FormData()
     fd.set('serviceId', ''); fd.set('menuId', '')
@@ -464,7 +464,7 @@ export default function ReferPage() {
               <input style={C.input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" /></div>
             <div style={{ marginBottom: 8 }}><label style={C.label}>メールアドレス（任意）</label>
               <input style={C.input} type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
-            <p style={{ ...C.note, marginBottom: 16 }}>電話番号とメールアドレスのどちらか一方は必ずご入力ください。</p>
+            <p style={{ ...C.note, marginBottom: 16 }}>電話番号とメールアドレスのどちらか一方は必ず入力してください。</p>
             <label htmlFor="cconsent" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20, cursor: 'pointer' }}>
               <input type="checkbox" id="cconsent" checked={consent} onChange={e => setConsent(e.target.checked)}
                 style={{ width: 16, height: 16, marginTop: 1, accentColor: 'var(--c-blue)', flexShrink: 0 }} />
@@ -615,7 +615,7 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
 // メニュー行の報酬ピル（共通 RewardPill・継続は「粗利X%」500＋「/月」400）。
 function MenuRowPill({ reward }: { reward: MenuReward }) {
   if (reward.reward_type === 'continuous') {
-    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利(税抜)の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
+    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利（税抜）の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
   }
   return <RewardPill style={{ flexShrink: 0 }}>{rewardLabelFromReward(reward)}</RewardPill>
 }

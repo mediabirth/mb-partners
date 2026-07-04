@@ -40,7 +40,7 @@ export default function MemberAcceptForm({ email, defaultName, token }: { email:
         <p style={{ fontSize: '.72rem', color: 'var(--muted2)', marginBottom: 20 }}>{email} 宛の招待です。パスワードを設定してください。</p>
         <form onSubmit={submit}>
           <label style={lbl}>お名前</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="例: 田中 太郎" style={input} />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="例：田中 太郎" style={input} />
           <label style={lbl}>パスワード（8文字以上）</label>
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={input} />
           <label style={lbl}>パスワード（確認）</label>

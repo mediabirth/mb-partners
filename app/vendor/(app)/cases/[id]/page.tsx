@@ -48,7 +48,7 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
               <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>{st.label}</span>
             </span>
           </div>
-          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{cust || '顧客'} · {svc?.name ?? 'サービス'}</div>
+          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{cust || 'お客さま'} ・ {svc?.name ?? 'サービス'}</div>
         </div>
       </div>
 

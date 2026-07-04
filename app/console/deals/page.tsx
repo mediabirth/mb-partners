@@ -96,11 +96,16 @@ function menuLabelOf(d: Deal): string | null {
   return d._menu_name ?? d.service_menus?.name ?? null
 }
 
+// 失注理由の表示ラベル（'お客様都合' はDB保存値のため値は変えず、表示のみ規範「お客さま」に揃える）。
+function lostReasonLabel(r: string): string {
+  return r === 'お客様都合' ? 'お客さま都合' : r
+}
+
 // v2.2：列ヘッダの塗り分け（accentBg）は撤去。ヘッダは 6pxドット（--st-* 意味色）＋テキストで示す。
 const COLS = [
   { key: 'received',    label: '受付' },
   { key: 'in_progress', label: '対応中' },
-  { key: 'confirmed',   label: '成約・確定' },
+  { key: 'confirmed',   label: '成約' },
   { key: 'paid',        label: '支払済' },
   { key: 'lost',        label: '不成立' },
 ] as const
@@ -197,7 +202,7 @@ function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDelete, o
   return (
     <div style={{ marginTop: 6, marginLeft: 10, paddingLeft: 8, borderLeft: '2px solid var(--blue-bg)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 500 }}>経費（承認済 ¥{approved.toLocaleString()}）</span>
+        <span style={{ fontSize: '.54rem', color: 'var(--muted2)', fontWeight: 500 }}>経費（¥{approved.toLocaleString()}）</span>
       </div>
       {exps.map(e => {
         const b = badge(e.status)
@@ -353,7 +358,7 @@ export default function DealsPage() {
   }
   // F-3a: 直営業プロジェクト起票（intake=direct → API が MB直営・confirmed・amount=0・未着手 で作成）。
   async function createDirectProject() {
-    if (!directForm.customer_name.trim() || !directForm.service_id) { showToast('お客様名とサービスを入力してください'); return }
+    if (!directForm.customer_name.trim() || !directForm.service_id) { showToast('お客さま名とサービスを入力してください'); return }
     setDirectBusy(true)
     try {
       const revenue = Math.max(0, Number((directForm.revenue || '').replace(/[,，\s]/g, '')) || 0)
@@ -623,7 +628,7 @@ export default function DealsPage() {
   }
 
   function cancelDeal(deal: Deal) {
-    if (!confirm(`「${deal.customer_name}」の案件を取り消しますか?`)) return
+    if (!confirm(`「${deal.customer_name}」の案件を取り消しますか？`)) return
     startTransition(async () => {
       const res = await fetch(`/api/console/deals/${deal.id}`, { method: 'DELETE' })
       if (res.ok) {
@@ -775,7 +780,7 @@ export default function DealsPage() {
             <input
               value={archiveSearch}
               onChange={e => setArchiveSearch(e.target.value)}
-              placeholder="お客様名で検索…"
+              placeholder="お客さま名で検索…"
               className="ui-field"
               style={{ maxWidth: 360, fontSize: '.8rem', marginBottom: 16 }}
             />
@@ -795,7 +800,7 @@ export default function DealsPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '.78rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</div>
                         <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>
-                          {d.services?.name}{menuLabelOf(d) ? ` ─ ${menuLabelOf(d)}` : ''}{d.status === 'lost' && d.lost_reason ? ` · 理由: ${d.lost_reason}` : ''}
+                          {d.services?.name}{menuLabelOf(d) ? ` ─ ${menuLabelOf(d)}` : ''}{d.status === 'lost' && d.lost_reason ? ` ・ 理由: ${lostReasonLabel(d.lost_reason)}` : ''}
                         </div>
                       </div>
                       <ChannelMark channel={d.channel} showLabel={false} />
@@ -877,7 +882,7 @@ export default function DealsPage() {
                       const revenueMissing = (d._phase ?? phaseOf(d)) === 'project' && (d.deal_items?.length ?? 0) > 0 && (d.deal_items ?? []).every(it => it.revenue == null)
                       const attention = needsBase(d) || rejectedExp || revenueMissing
                       {/* C: ボードカードでメニュー名が分かるように（サービス名はアイコンで判別可のためメニュー名を先頭に） */}
-                      const meta = [menuLabelOf(d), directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel ? partnerKindLabel + ' ' : ''}${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('　·　')
+                      const meta = [menuLabelOf(d), directorName && `担当 ${directorName}`, partnerName && `${partnerKindLabel ? partnerKindLabel + ' ' : ''}${partnerName}`, deliveryName && `委託 ${deliveryName}`].filter(Boolean).join('　・　')
                       return (
                         <div
                           key={d.id}
@@ -1049,7 +1054,7 @@ export default function DealsPage() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.services?.name ?? it.service_id}</div>
                               <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 1 }}>
-                                {it.kind === 'rate' ? `率・実績 ${it.base_amount != null ? `¥${it.base_amount.toLocaleString()}` : '未入力'}` : '固定'} · 報酬
+                                {it.kind === 'rate' ? `率・実績 ${it.base_amount != null ? `¥${it.base_amount.toLocaleString()}` : '未入力'}` : '固定'} ・ 報酬
                               </div>
                             </div>
                             {editable && it.kind === 'rate' && (
@@ -1159,7 +1164,7 @@ export default function DealsPage() {
                           <Row label="フロンティアoverride" val={pnl.frontierOverride} minus />
                           <Row label="その他原価" val={pnl.otherCost} minus />
                           <Row label="デリバリー委託費" val={pnl.deliveryCost} minus />
-                          <Row label="デリバリー経費（承認済）" val={pnl.deliveryExpense} minus />
+                          <Row label="デリバリー経費" val={pnl.deliveryExpense} minus />
                           <Row label="MB粗利" val={pnl.mbMargin} strong />
                           {pnl.revenue === 0 && <p style={{ fontSize: '.56rem', color: 'var(--muted)', marginTop: 6 }}>※受注額未入力（固定明細は売上が未知のため各明細で入力してください）</p>}
                         </div>
@@ -1270,7 +1275,7 @@ export default function DealsPage() {
                         value={baseEdit}
                         onChange={e => setBaseEdit(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') saveBase() }}
-                        placeholder={`${rateInfo(selected).baseLabel}の実額（例: 300000）`}
+                        placeholder={`${rateInfo(selected).baseLabel}の実額（例：300000）`}
                         style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'Inter', fontSize: '.85rem' }}
                       />
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
@@ -1281,7 +1286,7 @@ export default function DealsPage() {
                       </div>
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                         <button onClick={() => setEditingBase(false)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '7px 12px' }}>キャンセル</button>
-                        <button onClick={saveBase} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存</button>
+                        <button onClick={saveBase} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '7px 14px' }}>保存する</button>
                       </div>
                     </div>
                   )}
@@ -1299,7 +1304,7 @@ export default function DealsPage() {
                 <div style={{ marginTop: 18 }}>
                   <div style={{ padding: '13px 15px', background: 'var(--red-bg)', borderRadius: 12 }}>
                     <p style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--red)' }}>不成立（見送り）</p>
-                    <p style={{ fontSize: '.7rem', color: 'var(--txt)', marginTop: 6 }}>理由：{selected.lost_reason ?? '—'}</p>
+                    <p style={{ fontSize: '.7rem', color: 'var(--txt)', marginTop: 6 }}>理由：{selected.lost_reason ? lostReasonLabel(selected.lost_reason) : '—'}</p>
                     {selected.lost_note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>メモ：{selected.lost_note}</p>}
                     {selected.lost_at && <p style={{ fontSize: '.58rem', color: 'var(--muted)', marginTop: 6 }}>{new Date(selected.lost_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo' })}</p>}
                   </div>
@@ -1309,7 +1314,7 @@ export default function DealsPage() {
                     const canReopen = days != null && days <= 90
                     return canReopen ? (
                       <button onClick={() => reopenDeal(selected)} disabled={pending} className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '9px 14px', marginTop: 12 }}>
-                        対応中に戻す（復活）{days != null && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>· 残り{90 - days}日</span>}
+                        対応中に戻す（復活）{days != null && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>・ 残り{90 - days}日</span>}
                       </button>
                     ) : (
                       <p style={{ fontSize: '.62rem', color: 'var(--muted)', marginTop: 12, lineHeight: 1.6 }}>
@@ -1378,7 +1383,7 @@ export default function DealsPage() {
                 value={baseInput}
                 onChange={e => setBaseInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') confirmWithBase() }}
-                placeholder="例: 300000"
+                placeholder="例：300000"
                 style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'Inter', fontSize: '.9rem' }}
               />
               <div style={{ marginTop: 12, padding: '11px 14px', background: 'var(--blue-bg2)', borderRadius: 10, fontSize: '.74rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1410,7 +1415,7 @@ export default function DealsPage() {
                   style={{ fontSize: '.7rem', padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
                     border: `1.5px solid ${lostReason === r ? 'var(--red)' : 'var(--line)'}`,
                     background: lostReason === r ? 'var(--red-bg)' : '#fff', color: lostReason === r ? 'var(--red)' : 'var(--txt)' }}>
-                  {r}
+                  {lostReasonLabel(r)}
                 </button>
               ))}
             </div>
@@ -1443,8 +1448,8 @@ export default function DealsPage() {
         <div onClick={() => !directBusy && setDirectModal(false)} className="modal-fade" style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 430, maxWidth: '92vw', background: '#fff', borderRadius: 16, padding: '22px 24px', boxShadow: '0 24px 64px rgba(14,14,20,.24)' }}>
             <b style={{ fontSize: '.92rem' }}>直営業プロジェクトを起票</b>
-            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>お客様名</label>
-            <input value={directForm.customer_name} disabled={directBusy} autoFocus onChange={e => setDirectForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="お客様名 / 企業名"
+            <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>お客さま名</label>
+            <input value={directForm.customer_name} disabled={directBusy} autoFocus onChange={e => setDirectForm(f => ({ ...f, customer_name: e.target.value }))} placeholder="お客さま名 / 企業名"
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.8rem', margin: '5px 0 14px' }} />
             <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>サービス</label>
             <select value={directForm.service_id} disabled={directBusy} onChange={e => setDirectForm(f => ({ ...f, service_id: e.target.value }))}
@@ -1453,7 +1458,7 @@ export default function DealsPage() {
               {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <label style={{ fontSize: '.64rem', color: 'var(--muted2)', fontWeight: 500 }}>受注額（任意・MB粗利の売上）</label>
-            <input value={directForm.revenue} disabled={directBusy} inputMode="numeric" onChange={e => setDirectForm(f => ({ ...f, revenue: e.target.value }))} placeholder="例) 300000"
+            <input value={directForm.revenue} disabled={directBusy} inputMode="numeric" onChange={e => setDirectForm(f => ({ ...f, revenue: e.target.value }))} placeholder="例：300000"
               style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '9px 12px', fontFamily: 'Inter', fontSize: '.8rem', margin: '5px 0 18px', textAlign: 'right' }} />
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setDirectModal(false)} disabled={directBusy} style={{ border: '1.5px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '8px 16px', borderRadius: 8, color: 'var(--muted2)' }}>キャンセル</button>

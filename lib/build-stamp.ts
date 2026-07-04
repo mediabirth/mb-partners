@@ -10,4 +10,4 @@ const SHA =
   '743cfb7'
 const TIME = process.env.NEXT_PUBLIC_BUILD_TIME || '2026-06-19 01:58 JST'
 
-export const BUILD_STAMP = `${SHA} · ${TIME}`
+export const BUILD_STAMP = `${SHA} ・ ${TIME}`

@@ -96,7 +96,7 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <input type="month" value={period} onChange={e => setPeriod(e.target.value)}
             style={{ border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: '.76rem' }} />
-          <input value={gross} onChange={e => setGross(e.target.value)} inputMode="numeric" placeholder={`今月の${baseLabel}（例: 300000）`}
+          <input value={gross} onChange={e => setGross(e.target.value)} inputMode="numeric" placeholder={`今月の${baseLabel}（例：300000）`}
             style={{ flex: 1, minWidth: 130, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'Inter', fontSize: '.78rem', textAlign: 'right' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0', fontSize: '.72rem' }}>
@@ -137,7 +137,7 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
             <input value={monthsEdit} onChange={e => setMonthsEdit(e.target.value)} inputMode="numeric" placeholder="12"
               style={{ width: 64, border: '1.5px solid var(--line)', borderRadius: 7, padding: '5px 8px', fontFamily: 'Inter', fontSize: '.74rem', textAlign: 'right' }} />
             <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>ヶ月</span>
-            <button onClick={saveMonths} disabled={busy} className="ui-btn ui-btn--primary" style={{ fontSize: '.64rem', padding: '5px 10px', marginLeft: 'auto' }}>保存</button>
+            <button onClick={saveMonths} disabled={busy} className="ui-btn ui-btn--primary" style={{ fontSize: '.64rem', padding: '5px 10px', marginLeft: 'auto' }}>保存する</button>
             <button onClick={() => { setEditingMonths(false); setMonthsEdit(months != null ? String(months) : '') }} className="ui-btn ui-btn--secondary" style={{ fontSize: '.64rem', padding: '5px 10px' }}>取消</button>
           </>
         ) : (

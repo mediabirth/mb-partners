@@ -30,7 +30,7 @@ export default async function VendorSchedule() {
         <div style={{ padding: '14px 20px 4px' }}>
           <h3 style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 9 }}>日程の確定待ち</h3>
           {pending.map(s => (
-            <SchedulePicker key={s.id} id={s.id} label={`${s.label ?? '日程'} · ${labelOf(s.assignment_id)}`} dates={s.proposed_dates ?? []} />
+            <SchedulePicker key={s.id} id={s.id} label={`${s.label ?? '日程'} ・ ${labelOf(s.assignment_id)}`} dates={s.proposed_dates ?? []} />
           ))}
         </div>
       )}
@@ -52,7 +52,7 @@ export default async function VendorSchedule() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '.76rem', fontWeight: 500 }}>{s.label ?? s.event_type}</div>
-                    <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{labelOf(s.assignment_id)}{s.event_date ? ` · ${fmtFull(s.event_date)}` : ''}</div>
+                    <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{labelOf(s.assignment_id)}{s.event_date ? ` ・ ${fmtFull(s.event_date)}` : ''}</div>
                   </div>
                   {/* 種別＝6pxドット+テキスト（塗りピル廃止・色は単一ソース） */}
                   {s.event_type && (

@@ -46,7 +46,7 @@ export type BrandSheetProps = BaseProps & {
 // 報酬ピル（共通 RewardPill・継続は「粗利X%」500＋「/月」400）。refer の MenuRowPill と同一記法。
 function SheetRewardPill({ reward }: { reward: SheetReward }) {
   if (reward.reward_type === 'continuous') {
-    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利(税抜)の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
+    return <RewardPill style={{ flexShrink: 0 }}><span style={{ fontWeight: 500 }}>粗利（税抜）の{Number(reward.reward_value)}%</span><span style={{ fontWeight: 400 }}>/月</span></RewardPill>
   }
   return <RewardPill style={{ flexShrink: 0 }}>{rewardValueText(reward)}</RewardPill>
 }

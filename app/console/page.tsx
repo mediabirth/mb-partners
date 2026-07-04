@@ -155,7 +155,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
     { label: 'パートナー報酬', val: cur.partnerReward, color: 'var(--c-blue)' },
     { label: 'フロンティア報酬', val: cur.frontierOverride, color: 'var(--blue-dk)' },
     { label: 'デリバリー委託費', val: cur.deliveryCost, color: 'var(--amber)' },
-    { label: 'デリバリー経費（承認済）', val: cur.deliveryExpense, color: 'var(--amber)' },
+    { label: 'デリバリー経費', val: cur.deliveryExpense, color: 'var(--amber)' },
     { label: 'その他原価', val: cur.otherCost, color: 'var(--muted2)' },
   ]
   const totalCost = costLines.reduce((s, c) => s + c.val, 0)
@@ -360,7 +360,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               )}
               {/* 停滞中（7日以上動きなし） */}
               <div style={{ padding: '12px 18px 6px', borderTop: '0.5px solid var(--line)' }}>
-                <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>停滞中（7日以上動きなし）{stalled.length > 0 && <span style={{ color: 'var(--amber)' }}> · {stalled.length}件</span>}</div>
+                <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>停滞中（7日以上動きなし）{stalled.length > 0 && <span style={{ color: 'var(--amber)' }}> ・ {stalled.length}件</span>}</div>
                 {stalled.length === 0 ? (
                   <EmptyState title="停滞している案件はありません" compact />
                 ) : stalled.slice(0, 3).map(d => {

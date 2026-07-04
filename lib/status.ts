@@ -8,11 +8,11 @@ import { PROJECT_STATUS_STYLE, INTAKE_LABEL } from '@/lib/phase'
 
 type Pill = { tone: Tone; label: string }
 
-// ── 案件ステータス（受付→対応中→成約・確定→支払済／不成立）。app/console/vendor 共通 ──
+// ── 案件ステータス（受付→対応中→成約→支払済／不成立）。app/console/vendor 共通 ──
 export const DEAL_STATUS: Record<string, Pill> = {
   received:    { tone: 'warn',     label: '受付' },
   in_progress: { tone: 'progress', label: '対応中' },
-  confirmed:   { tone: 'success',  label: '成約・確定' },
+  confirmed:   { tone: 'success',  label: '成約' },
   paid:        { tone: 'neutral',  label: '支払済' },
   lost:        { tone: 'neutral',  label: '不成立' },
 }

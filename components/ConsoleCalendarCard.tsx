@@ -84,7 +84,7 @@ export default function ConsoleCalendarCard() {
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '18px 20px', marginBottom: 18 }}>
       <b style={{ fontSize: '.86rem', display: 'block', marginBottom: 4 }}>商談カレンダー（MB運営）</b>
       <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '0 0 14px', lineHeight: 1.6 }}>
-        営業時間と連携Googleの予定（busy）から、パートナー／顧客の予約画面に表示する空き枠を算出します。
+        営業時間と連携Googleの予定（busy）から、パートナー／お客さまの予約画面に表示する空き枠を算出します。
       </p>
 
       {/* ② 連携中のアカウント＝MBメンバー×各自のカレンダー連携状況。本人のみ「連携/解除」。 */}

@@ -42,7 +42,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!(await requireWrite(supabase))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
   const { data: row } = await admin.from('delivery_payout_items').select('status').eq('id', id).single()
-  if (row?.status === 'paid') return NextResponse.json({ error: '支払済みの明細は取り消せません' }, { status: 409 })
+  if (row?.status === 'paid') return NextResponse.json({ error: '支払済の明細は取り消せません' }, { status: 409 })
   const { error } = await admin.from('delivery_payout_items').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

@@ -51,7 +51,7 @@ export default function ReferralLandingPage() {
     const company = companyName.trim()
     if (!person) { setError('ご担当者名（お名前）を入力してください'); return }
     // Batch B（クライアント送信gateの追加のみ・payload/サーバ insert は不変）：メールか電話のどちらか必須。
-    if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかをご入力ください'); return }
+    if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかを入力してください'); return }
     if (!consent) { setError('同意確認が必要です'); return }
     setSubmitting(true)
     try {
@@ -74,7 +74,7 @@ export default function ReferralLandingPage() {
       if (!res.ok) { setError(data.error ?? '送信に失敗しました'); return }
       setDone(true)
     } catch {
-      setError('送信に失敗しました。時間をおいて再試行してください。')
+      setError('送信に失敗しました。時間をおいて再度お試しください')
     } finally {
       setSubmitting(false)
     }
@@ -225,7 +225,7 @@ export default function ReferralLandingPage() {
           </form>
 
           <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 16, lineHeight: 1.7, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-            Media Birth株式会社 · パートナープログラム
+            Media Birth株式会社 ・ パートナープログラム
           </p>
         </div>
       </div>

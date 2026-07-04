@@ -116,10 +116,10 @@ export default function PayoutsPage() {
 
   // ── 既存ハンドラ（処理ロジック不変・ラベルのみプレーン化） ──
   function markPaid(month: string) {
-    if (!confirm(`${monthLabel(month)} 分のパートナー報酬をすべて「支払済み」にしますか？`)) return
+    if (!confirm(`${monthLabel(month)} 分のパートナー報酬をすべて「支払済」にしますか？`)) return
     startTransition(async () => {
       const res = await fetch(`/api/console/payouts/${month.substring(0, 7)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'mark_paid' }) })
-      if (res.ok) { await mutate(); show('支払済みにしました') } else { const d = await res.json().catch(() => ({})); show(d.error ?? 'エラーが発生しました') }
+      if (res.ok) { await mutate(); show('支払済にしました') } else { const d = await res.json().catch(() => ({})); show(d.error ?? '支払済にできませんでした。時間をおいて再度お試しください') }
     })
   }
   async function freeze(p: Pending) {
@@ -137,7 +137,7 @@ export default function PayoutsPage() {
     setBusy(true)
     try {
       const r = await fetch(`/api/console/delivery-payouts/${item.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paid }) })
-      if (r.ok) { await loadDelivery(); show(paid ? '支払済みにしました' : '未払いに戻しました') } else show('更新に失敗しました')
+      if (r.ok) { await loadDelivery(); show(paid ? '支払済にしました' : '未払いに戻しました') } else show('更新に失敗しました')
     } catch { show('更新に失敗しました') } finally { setBusy(false) }
   }
   async function undo(item: Frozen) {
@@ -157,24 +157,24 @@ export default function PayoutsPage() {
     key: `p-${b.id}-${it.partner_id}`,
     kind: (it.override_gross ?? 0) > 0 ? 'frontier' : 'referral',
     name: it.partners?.profiles?.name ?? it.partners?.code ?? '—', color: it.partners?.profiles?.color ?? null,
-    sub: `${monthLabel(b.month)} · ${it.synthetic ? 'チーム報酬' : `${it.statement?.deal_count ?? 0}件`}`,
+    sub: `${monthLabel(b.month)} ・ ${it.synthetic ? 'チーム報酬' : `${it.statement?.deal_count ?? 0}件`}`,
     amount: pNet(it), csvYm: b.month.substring(0, 7),
     breakdown: [{ label: '報酬合計', value: pGross(it) }, { label: '源泉徴収', value: pWh(it), op: '−' }, { label: 'お支払い', value: pNet(it), op: '=' }],
-    primary: withPay ? { label: '支払済みにする', onClick: () => markPaid(b.month), tone: 'green' } : undefined,
+    primary: withPay ? { label: '支払済にする', onClick: () => markPaid(b.month), tone: 'green' } : undefined,
   })
   const deliveryRow = (f: Frozen, withPay: boolean): Row => ({
     key: `d-${f.id}`, kind: 'delivery', name: dname[f.delivery_id] ?? '委託先', color: null,
-    sub: `${monthLabel(f.period)} · 委託費＋経費`,
+    sub: `${monthLabel(f.period)} ・ 委託費＋経費`,
     amount: f.amount,
-    breakdown: [{ label: '委託費', value: f.base_fee }, { label: '承認済み経費', value: f.expense_total, op: '＋' }, { label: 'お支払い', value: f.amount, op: '=' }],
-    primary: withPay ? { label: '支払済みにする', onClick: () => setPaid(f, true), tone: 'green' } : undefined,
+    breakdown: [{ label: '委託費', value: f.base_fee }, { label: '承認済経費', value: f.expense_total, op: '＋' }, { label: 'お支払い', value: f.amount, op: '=' }],
+    primary: withPay ? { label: '支払済にする', onClick: () => setPaid(f, true), tone: 'green' } : undefined,
     secondary: withPay ? { label: '確定を取り消す', onClick: () => undo(f) } : { label: '未払いに戻す', onClick: () => setPaid(f, false) },
   })
   const pendingRow = (p: Pending): Row => ({
     key: `pend-${p.delivery_id}-${p.period}`, kind: 'delivery', name: dname[p.delivery_id] ?? '委託先', color: null,
-    sub: `${monthLabel(p.period)} · ${p.count}件（集計中）`,
+    sub: `${monthLabel(p.period)} ・ ${p.count}件（集計中）`,
     amount: p.amount,
-    breakdown: [{ label: '委託費', value: p.baseFee }, { label: '承認済み経費', value: p.expenseTotal, op: '＋' }, { label: '見込み額', value: p.amount, op: '=' }],
+    breakdown: [{ label: '委託費', value: p.baseFee }, { label: '承認済経費', value: p.expenseTotal, op: '＋' }, { label: '見込み額', value: p.amount, op: '=' }],
     primary: { label: '今月分を確定する', onClick: () => freeze(p), tone: 'blue' },
   })
 
@@ -255,7 +255,7 @@ export default function PayoutsPage() {
                 </span>
               </div>
               <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 500, color: 'var(--c-blue)', lineHeight: 1.1 }}>{yen(thisMonthNet)}</div>
-              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>対象 {thisMonthPartners} 名{!thisMonthConfirmed && ' · 確定済み案件の見込み（締めで確定）'}</div>
+              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>対象 {thisMonthPartners} 名{!thisMonthConfirmed && ' ・ 確定済み案件の見込み（締めで確定）'}</div>
             </div>
             {/* 要支払い（即振込）＋延滞 */}
             <div style={{ background: '#fff', border: `0.5px solid ${overdue ? 'var(--red)' : 'var(--line)'}`, borderRadius: 16, padding: '18px 20px' }}>
@@ -317,7 +317,7 @@ export default function PayoutsPage() {
             </div>
             <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
               {due.length === 0
-                ? <p style={{ padding: '20px', fontSize: '.74rem', color: 'var(--muted2)', textAlign: 'center' }}>支払うべきものはありません。すべて支払済みです。</p>
+                ? <p style={{ padding: '20px', fontSize: '.74rem', color: 'var(--muted2)', textAlign: 'center' }}>支払うべきものはありません。すべて支払済です。</p>
                 : due.map(r => <PayRow key={r.key} row={r} busy={busy} />)}
             </div>
           </div>
@@ -327,8 +327,8 @@ export default function PayoutsPage() {
             {collecting.map(r => <PayRow key={r.key} row={r} busy={busy} />)}
           </Section>
 
-          {/* ③ 支払済み（履歴・副） */}
-          <Section title="支払済み" count={paidRows.length} defaultOpen={false} accent="var(--muted2)">
+          {/* ③ 支払済（履歴・副） */}
+          <Section title="支払済" count={paidRows.length} defaultOpen={false} accent="var(--muted2)">
             {paidRows.map(r => <PayRow key={r.key} row={r} busy={busy} />)}
           </Section>
           </>)}

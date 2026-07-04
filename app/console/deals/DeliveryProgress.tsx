@@ -81,7 +81,7 @@ export default function DeliveryProgress({ deal, onRefresh }: { deal: Deal; onRe
         const openFlags = updates.filter(u => u.kind === 'flag' && u.status === 'open')
         return (
           <div key={a.id} style={{ border: '0.5px solid var(--line)', borderRadius: 12, padding: '12px 14px', marginBottom: 12, background: '#fff' }}>
-            <div style={{ fontSize: '.74rem', fontWeight: 500, marginBottom: 8 }}>{a.deliveries?.name ?? '委託先'} <span style={{ fontSize: '.56rem', color: 'var(--muted2)', fontWeight: 400 }}>· {a.deliveries?.kind ?? ''}</span></div>
+            <div style={{ fontSize: '.74rem', fontWeight: 500, marginBottom: 8 }}>{a.deliveries?.name ?? '委託先'} <span style={{ fontSize: '.56rem', color: 'var(--muted2)', fontWeight: 400 }}>・ {a.deliveries?.kind ?? ''}</span></div>
 
             {/* b. 公式タスク/マイルストーン */}
             {tasks.length === 0 ? <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 8 }}>タスク/マイルストーン未設定。</p> : (
@@ -110,7 +110,7 @@ export default function DeliveryProgress({ deal, onRefresh }: { deal: Deal; onRe
                   {deliverables.map(dl => (
                     <div key={dl.id} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', fontSize: '.64rem' }}>
                       <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--muted2)', width: 30 }}>成果物</span>
-                      <span style={{ flex: 1, minWidth: 0 }}>{dl.file_name ?? '成果物'}{dl.note ? ` · ${dl.note}` : ''}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>{dl.file_name ?? '成果物'}{dl.note ? ` ・ ${dl.note}` : ''}</span>
                     </div>
                   ))}
                   {updates.map(u => (

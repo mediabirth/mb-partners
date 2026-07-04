@@ -51,7 +51,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
     })
     const deals: Entry[] = referred.map(r => {
       const corp = r.entity === 'corporate'
-      const main = stripDemo((corp ? (r.company || r.name) : (r.name || r.company))) || '紹介した顧客'
+      const main = stripDemo((corp ? (r.company || r.name) : (r.name || r.company))) || '紹介したお客さま'
       const sub = [corp ? r.person : null, r.service].map(stripDemo).filter(Boolean).join('・') || '紹介済み'
       return { key: 'd' + r.id, main, entity: r.entity, sub, href: `/app/synapse/deal-${r.id}`, date: r.date, lazy: true }
     })

@@ -112,7 +112,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
       <main className="page-anim" style={{ marginLeft: 230, flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100vh' }}>
         {loading ? (
           <div style={{ padding: '32px' }}>
-            <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中...</p>
+            <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中…</p>
           </div>
         ) : !inquiry ? (
           <div style={{ padding: '32px' }}>
@@ -259,7 +259,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                   <textarea
                     value={replyBody}
                     onChange={e => setReplyBody(e.target.value)}
-                    placeholder="返信内容を入力..."
+                    placeholder="返信内容を入力…"
                     rows={2}
                     style={{
                       flex: 1, padding: '10px 14px', borderRadius: 22,
@@ -279,7 +279,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                       cursor: (sending || !replyBody.trim()) ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {sending ? '送信中...' : '送信'}
+                    {sending ? '送信中…' : '送信'}
                   </button>
                 </form>
               </div>

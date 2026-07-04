@@ -50,7 +50,7 @@ export default function BroadcastPreviewPage() {
         setToast(`配信しました（${data.sent_to}名）`)
         setTimeout(() => router.push(`/console/broadcasts/${id}`), 1500)
       } else {
-        setToast(data.error ?? 'エラーが発生しました')
+        setToast(data.error ?? '配信できませんでした。時間をおいて再度お試しください')
       }
     })
   }

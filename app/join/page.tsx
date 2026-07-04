@@ -31,8 +31,8 @@ export default function JoinPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (!name.trim()) { setError('お名前をご入力ください'); return }
-    if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかをご入力ください'); return }
+    if (!name.trim()) { setError('お名前を入力してください'); return }
+    if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかを入力してください'); return }
     if (!consent) { setError('ご連絡への同意確認が必要です'); return }
     setSubmitting(true)
     try {
@@ -45,7 +45,7 @@ export default function JoinPage() {
       if (!res.ok) { setError(data.error ?? '送信に失敗しました'); return }
       setDone(true)
     } catch {
-      setError('送信に失敗しました。時間をおいて再度お試しください。')
+      setError('送信に失敗しました。時間をおいて再度お試しください')
     } finally {
       setSubmitting(false)
     }
@@ -72,7 +72,7 @@ export default function JoinPage() {
           <div style={{ fontSize: '.6rem', fontWeight: 700, letterSpacing: '.14em', opacity: .85, marginBottom: 10 }}>MB PARTNERS 紹介パートナー制度</div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 900, lineHeight: 1.4, letterSpacing: '-.01em' }}>顧問先・人脈を、<br />“紹介するだけ”で成果に。</h1>
           <p style={{ fontSize: '.74rem', color: 'rgba(255,255,255,.9)', lineHeight: 1.9, marginTop: 14 }}>
-            士業・コンサルの先生方が日々受ける“専門外のご相談”を、Media Birthが商談から成約・納品まで一貫してお引き受けします。先生は紹介するだけ。顧客との信頼関係はそのままに、新しい価値と報酬を。
+            士業・コンサルの先生方が日々受ける“専門外のご相談”を、Media Birthが商談から成約・納品まで一貫してお引き受けします。先生は紹介するだけ。お客さまとの信頼関係はそのままに、新しい価値と報酬を。
           </p>
           <a href="#apply" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: 50, marginTop: 22, background: '#fff', color: 'var(--blue-dk)', borderRadius: 12, fontWeight: 800, fontSize: '.92rem', textDecoration: 'none', boxShadow: '0 8px 22px rgba(0,0,0,.18)' }}>パートナーに応募する</a>
           <a href="#how" style={{ display: 'block', textAlign: 'center', marginTop: 12, fontSize: '.7rem', color: 'rgba(255,255,255,.9)', textDecoration: 'none', fontWeight: 600 }}>制度の詳細を見る ↓</a>
@@ -85,9 +85,9 @@ export default function JoinPage() {
             <h2 style={sectionTitle}>こんな先生方へ</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                '顧客からDX/AI・採用・資金など専門外の相談を受けるが、受け皿がない',
+                'お客さまからDX/AI・採用・資金など専門外の相談を受けるが、受け皿がない',
                 '信頼できる紹介先がなく、“わからない”で終わってしまう',
-                '顧客との関係を活かして、新しい収益の柱をつくりたい',
+                'お客さまとの関係を活かして、新しい収益の柱をつくりたい',
               ].map((t, i) => (
                 <div key={i} style={{ ...card, display: 'flex', gap: 11, alignItems: 'flex-start', padding: '14px 16px' }}>
                   <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--c-blue)', fontSize: '.7rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>✓</span>
@@ -102,7 +102,7 @@ export default function JoinPage() {
             <h2 style={sectionTitle}>仕組み（3ステップ）</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { n: '1', t: '紹介する', d: '顧客の課題をMBにつなぐだけ。' },
+                { n: '1', t: '紹介する', d: 'お客さまの課題をMBにつなぐだけ。' },
                 { n: '2', t: 'MBが対応', d: '商談・提案・成約・納品まで一貫してMBが実行します。' },
                 { n: '3', t: '成果に応じた報酬', d: '成約に応じてパートナー報酬。※具体条件は面談で個別にご案内します。' },
               ].map(s => (
@@ -137,7 +137,7 @@ export default function JoinPage() {
             <div style={{ ...card, padding: '16px 18px' }}>
               {[
                 '紹介後の対応はすべてMBが担当。先生の手間は増えません。',
-                '顧客との関係はそのまま。信頼を損なう対応はしません。',
+                'お客さまとの関係はそのまま。信頼を損なう対応はしません。',
                 '専門外の相談も、“つなげる先がある”状態に。',
               ].map((t, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: i < 2 ? '1px solid #F2F2F6' : 'none' }}>

@@ -44,7 +44,7 @@ export default function StatusControl({ partnerId, currentStatus }: { partnerId:
             cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? '処理中...' : '✓ 停止を解除して稼働に戻す'}
+          {loading ? '処理中…' : '停止を解除して稼働に戻す'}
         </button>
       ) : isActive ? (
         <button
@@ -56,7 +56,7 @@ export default function StatusControl({ partnerId, currentStatus }: { partnerId:
             cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? '処理中...' : 'アカウントを一時停止'}
+          {loading ? '処理中…' : 'アカウントを一時停止'}
         </button>
       ) : null}
       {error && <p style={{ fontSize: '.68rem', color: 'var(--red)', marginTop: 8, marginBottom: 0 }}>{error}</p>}

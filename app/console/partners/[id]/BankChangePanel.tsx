@@ -120,7 +120,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
                   disabled={loading === req.id + 'reject'}
                   style={{ flex: 1, padding: '9px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.72rem', fontWeight: 500, cursor: 'pointer' }}
                 >
-                  {loading === req.id + 'reject' ? '処理中...' : '却下を確定'}
+                  {loading === req.id + 'reject' ? '処理中…' : '却下を確定'}
                 </button>
                 <button
                   onClick={() => { setRejectTarget(null); setRejectReason('') }}
@@ -137,13 +137,13 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
                 disabled={loading === req.id + 'approve'}
                 style={{ flex: 1, padding: '9px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '.72rem', fontWeight: 500, cursor: 'pointer' }}
               >
-                {loading === req.id + 'approve' ? '処理中...' : '✓ 承認する'}
+                {loading === req.id + 'approve' ? '処理中…' : '承認する'}
               </button>
               <button
                 onClick={() => setRejectTarget(req.id)}
                 style={{ flex: 1, padding: '9px', background: 'none', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 8, fontSize: '.72rem', fontWeight: 500, cursor: 'pointer' }}
               >
-                ✕ 却下する
+                却下する
               </button>
             </div>
           )}
@@ -170,7 +170,7 @@ export default function BankChangePanel({ requests }: { requests: BankRequest[] 
                   fontSize: '.66rem', fontWeight: 500,
                   color: req.status === 'approved' ? 'var(--green)' : 'var(--red)',
                 }}>
-                  {req.status === 'approved' ? '✓ 承認済み' : '✕ 却下済み'}
+                  {req.status === 'approved' ? '承認済' : '却下'}
                 </span>
                 <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>
                   {req.reviewed_at && new Date(req.reviewed_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}

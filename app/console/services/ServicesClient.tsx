@@ -478,7 +478,7 @@ function MenuEditForm({ form, onChange, onSave, onCancel, saving, error }: {
       {/* BR-C3: 論理セクションを明示（①基本 ②紹介報酬 ③協力報酬）。各報酬ブロックに 対応範囲/任意条件 を内包。保存契約は不変。 */}
       <SectionHeader title="① 基本" style={{ marginBottom: 8 }} />
       <Fld label="メニュー名 *">
-        <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例: 賃貸成約時" />
+        <FInput value={f.name} onChange={v => set({ name: v })} placeholder="例：賃貸成約時" />
       </Fld>
 
       {/* 段階6-2b：旧②③（紹介報酬/協力報酬の2セクション編集）は撤去。報酬は「D. メニュー（1報酬）」で設定。
@@ -997,7 +997,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   }
 
   async function deleteMenu(mid: string) {
-    if (!editing || !confirm('このメニューを削除しますか?')) return
+    if (!editing || !confirm('このメニューを削除しますか？')) return
     const res = await fetch(`/api/console/services/${editing.id}/menus/${mid}`, { method: 'DELETE' })
     if (res.ok) { setLiveMenus(prev => prev.filter(m => m.id !== mid)); showToast('削除しました') }
   }
@@ -1065,9 +1065,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     <div style={{ display: 'flex', gap: 6, marginTop: 5, alignItems: 'center' }}>
                       <input autoFocus value={audDraft} onChange={e => setAudDraft(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') saveBrandAudience(svc.id, audDraft); if (e.key === 'Escape') setEditAudSvc(null) }}
-                        placeholder="例）引越し・お部屋探しをしたい人"
+                        placeholder="例：引越し・お部屋探しをしたい人"
                         style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 7, padding: '4px 9px', fontFamily: 'inherit', fontSize: '.74rem' }} />
-                      <button onClick={() => saveBrandAudience(svc.id, audDraft)} style={{ fontSize: '.62rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                      <button onClick={() => saveBrandAudience(svc.id, audDraft)} style={{ fontSize: '.62rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '5px 11px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
                       <button onClick={() => setEditAudSvc(null)} style={{ fontSize: '.66rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '5px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                     </div>
                   ) : (
@@ -1131,9 +1131,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <input autoFocus value={descDraft} onChange={e => setDescDraft(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') saveMenuDesc(svc.id, mn.id, descDraft); if (e.key === 'Escape') setEditDescMenu(null) }}
-                              placeholder="例）お部屋を探している人を紹介するだけ。物件紹介はMBが対応。"
+                              placeholder="例：お部屋を探している人を紹介するだけ。物件紹介はMBが対応。"
                               style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '3px 8px', fontFamily: 'inherit', fontSize: '.64rem' }} />
-                            <button onClick={() => saveMenuDesc(svc.id, mn.id, descDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                            <button onClick={() => saveMenuDesc(svc.id, mn.id, descDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
                             <button onClick={() => setEditDescMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                           </div>
                         ) : (
@@ -1148,11 +1148,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                             <textarea autoFocus value={longDraft} onChange={e => setLongDraft(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Escape') setEditLongMenu(null) }}
-                              placeholder="例）このメニューでは、お客さまの状況を伺い最適なプランをご提案します。"
+                              placeholder="例：このメニューでは、お客さまの状況を伺い最適なプランをご提案します。"
                               rows={3}
                               style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', resize: 'vertical' }} />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <button onClick={() => saveMenuLongDesc(svc.id, mn.id, longDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存</button>
+                              <button onClick={() => saveMenuLongDesc(svc.id, mn.id, longDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
                               <button onClick={() => setEditLongMenu(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                             </div>
                           </div>
@@ -1236,11 +1236,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
             </Fld>
 
             <Fld label="紹介対象（パートナーのリファラル画面で太字表示）">
-              <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例: 引越し・お部屋探しをしたい人" />
+              <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例：引越し・お部屋探しをしたい人" />
             </Fld>
 
             <Fld label="カテゴリ（任意・リファラル一覧の絞り込みチップに使用）">
-              <FInput value={svcForm.category} onChange={v => setF({ category: v })} placeholder="例: 不動産 / 人材 / 制作" />
+              <FInput value={svcForm.category} onChange={v => setF({ category: v })} placeholder="例：不動産 / 人材 / 制作" />
             </Fld>
 
             <Fld label="サービスサイト URL">
@@ -1380,7 +1380,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         {/* トリガー */}
                         <div style={{ marginTop: 10 }}>
                           <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>トリガー（成果地点）</label>
-                          <input value={r.reward_trigger} onChange={e => setRewardField(i, ri, { reward_trigger: e.target.value })} placeholder="例: 賃貸成約で確定"
+                          <input value={r.reward_trigger} onChange={e => setRewardField(i, ri, { reward_trigger: e.target.value })} placeholder="例：賃貸成約で確定"
                             style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', boxSizing: 'border-box', background: '#fff' }} />
                         </div>
                         {/* 協力タスク（この報酬で必要なもの） */}
@@ -1425,7 +1425,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   報酬を1つだけ先に設定できます。<b>協力タスク・ロゴ・複数メニュー等の詳細は、作成後の編集画面</b>で追加できます。
                 </p>
                 <Fld label="メニュー名（任意）">
-                  <FInput value={addMenuName} onChange={setAddMenuName} placeholder="例: 賃貸成約時" />
+                  <FInput value={addMenuName} onChange={setAddMenuName} placeholder="例：賃貸成約時" />
                 </Fld>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <Fld label="固定報酬（円）">

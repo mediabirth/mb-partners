@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const custom = await resolveTemplateMedia('deal-won', { customer })
   const body = custom?.body ?? defaultBody
   const payload = {
-    title: '🎉 成約しました！',
+    title: '成約のお知らせ',
     body,
     url: '/app/rewards',
     tag: `deal-won-${dealId}`,

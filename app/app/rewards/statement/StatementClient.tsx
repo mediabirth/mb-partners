@@ -121,7 +121,7 @@ export default function StatementClient({
                 {md.wh > 0 && (
                   <tr>
                     <td style={{ borderBottom: '1px solid var(--line)', padding: '8px 4px' }}>—</td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '8px 4px' }}>源泉所得税(対象報酬分)</td>
+                    <td style={{ borderBottom: '1px solid var(--line)', padding: '8px 4px' }}>源泉所得税（対象報酬分）</td>
                     <td style={{ borderBottom: '1px solid var(--line)', padding: '8px 4px' }}>—</td>
                     <td style={{ borderBottom: '1px solid var(--line)', padding: '8px 4px', textAlign: 'right', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', color: 'var(--red)' }}>−¥{md.wh.toLocaleString()}</td>
                   </tr>
@@ -198,12 +198,12 @@ export default function StatementClient({
               </tbody>
             </table>
             <div style={{ fontSize: '.58rem', color: 'var(--muted)', lineHeight: 1.8, marginTop: 14 }}>
-              本集計は確定申告(雑所得/事業所得)の参考資料です。支払調書は対象者へ翌年1月に発行します。
+              本集計は確定申告（雑所得/事業所得）の参考資料です。支払調書は対象者へ翌年1月に発行します。
             </div>
           </div>
         ) : (
           <p style={{ padding: '40px 20px', fontSize: '.74rem', color: 'var(--muted2)', textAlign: 'center' }}>
-            確定・支払済みの明細がありません。
+            確定・支払済の明細がありません。
           </p>
         )}
       </div>

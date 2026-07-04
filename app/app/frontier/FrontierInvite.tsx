@@ -41,7 +41,7 @@ export default function FrontierInvite() {
         <div style={{ marginTop: 12, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 10, padding: 12 }}>
           <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 7, padding: '9px 10px', fontSize: '.62rem', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 8 }}>{url}</div>
           <button onClick={() => { navigator.clipboard?.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800) }} className="btn btn-g" style={{ fontSize: '.72rem', padding: '8px 16px' }}>
-            {copied ? 'コピーしました ✓' : 'リンクをコピー'}
+            {copied ? 'コピーしました' : 'リンクをコピー'}
           </button>
           <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 2px 0', lineHeight: 1.6 }}>
             {emailed ? '招待メールを送信しました。リンクの共有も可能です。' : 'メールを送信できませんでした。このリンクを共有してください。'}

@@ -30,7 +30,7 @@ export default async function VendorRewards() {
       />
 
       {/* 委託費は「完了したプロジェクトの結果」という位置づけを明示（見た目は app と共通）。 */}
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '12px 20px 0' }}>完了したプロジェクトの委託費・承認済み経費が、確定後にここへ反映されます。</p>
+      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '12px 20px 0' }}>完了したプロジェクトの委託費・承認済経費が、確定後にここへ反映されます。</p>
 
       <div style={{ padding: '18px 20px 6px' }}><h2 className="ty-h2">委託費の明細</h2></div>
       <div style={{ padding: '0 20px 8px' }}>
@@ -49,7 +49,7 @@ export default async function VendorRewards() {
                 {svc ? <ServiceAvatar logoPath={svc.logo_path} icon={svc.icon} color={svc.color} name={svc.name} size={38} /> : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="案件" size={38} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '.8rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(p) || monthLabel(p.period)}</div>
-                  <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{monthLabel(p.period)}{p.paid_at ? ` · 支払 ${new Date(p.paid_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}` : ''}</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{monthLabel(p.period)}{p.paid_at ? ` ・ 支払 ${new Date(p.paid_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })}` : ''}</div>
                 </div>
                 <StatusPill size="sm" {...paymentState(p.status)} />
               </div>

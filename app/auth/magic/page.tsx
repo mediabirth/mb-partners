@@ -34,7 +34,7 @@ export default function MagicCallbackPage() {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <p>ログイン中...</p>
+      <p>ログイン中…</p>
     </div>
   )
 }

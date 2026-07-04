@@ -133,7 +133,7 @@ function TodoTab({ assignmentId, doTasks, nextId, deliverables, onChange, onErro
                 <FileThumb id={d.id} hasFile={d.has_file} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '.74rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.file_name ?? '成果物'}</div>
-                  <div suppressHydrationWarning style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{d.created_at ? new Date(d.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' }) : ''}{d.note ? ` · ${d.note}` : ''}</div>
+                  <div suppressHydrationWarning style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{d.created_at ? new Date(d.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' }) : ''}{d.note ? ` ・ ${d.note}` : ''}</div>
                 </div>
                 <span style={{ fontSize: '.5rem', fontWeight: 500, color: 'var(--green)', border: '0.5px solid var(--line)', borderRadius: 20, padding: '2px 8px', flexShrink: 0 }}>納品済</span>
               </div>

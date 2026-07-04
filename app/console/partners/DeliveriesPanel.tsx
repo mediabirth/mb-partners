@@ -58,7 +58,7 @@ export default function DeliveriesPanel() {
         </div>
       )}
       <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 12, padding: '14px 16px', marginBottom: 22, display: 'flex', flexWrap: 'wrap', gap: 9, alignItems: 'center' }}>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="名称（例: 田中フォト）" style={{ ...inp, flex: 1, minWidth: 160 }} />
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="名称（例：田中フォト）" style={{ ...inp, flex: 1, minWidth: 160 }} />
         <input value={kind} onChange={e => setKind(e.target.value)} placeholder="種別（カメラマン等）" style={{ ...inp, width: 160 }} />
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="連絡先メール（任意）" style={{ ...inp, width: 180 }} />
         <button onClick={add} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '8px 16px' }}>追加</button>
@@ -71,7 +71,7 @@ export default function DeliveriesPanel() {
             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: i < list.length - 1 ? '0.5px solid var(--line)' : 'none', opacity: d.active ? 1 : .5 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.78rem', fontWeight: 500 }}>{d.name}</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{d.kind ?? '—'}{d.contact_email ? ` · ${d.contact_email}` : ''}</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{d.kind ?? '—'}{d.contact_email ? ` ・ ${d.contact_email}` : ''}</div>
               </div>
               {d.auth_user_id
                 ? <span title="ポータル連携済み" style={{ fontSize: '.56rem', fontWeight: 500, borderRadius: 20, padding: '2px 9px', color: 'var(--green)', background: 'var(--green-bg)' }}>連携済み</span>

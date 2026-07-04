@@ -40,11 +40,11 @@ export default function InviteForm() {
       } else {
         const res = await fetch('/api/console/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, role: 'partner', frontier: kind === 'frontier' }) })
         const data = await res.json().catch(() => ({}))
-        if (!res.ok) { setError(data.error || 'エラーが発生しました'); setLoading(false); return }
+        if (!res.ok) { setError(data.error || '招待リンクを発行できませんでした。時間をおいて再度お試しください'); setLoading(false); return }
         setInviteUrl(data.invite_url); setEmailed(!!data.emailed); setName('')
       }
       setEmail('')
-    } catch { setError('エラーが発生しました') } finally { setLoading(false) }
+    } catch { setError('招待リンクを発行できませんでした。時間をおいて再度お試しください') } finally { setLoading(false) }
   }
   async function handleCopy() { await navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const cur = KINDS.find(k => k.id === kind)!
@@ -78,7 +78,7 @@ export default function InviteForm() {
 
           <div className="fld" style={{ marginBottom: 14 }}>
             <label htmlFor="inv-name">{kind === 'delivery' ? '名称 / 屋号' : 'お名前（任意・フォームに事前入力）'} {kind === 'delivery' && <span style={{ color: 'var(--red)' }}>*</span>}</label>
-            <input id="inv-name" type="text" placeholder={kind === 'delivery' ? '例: 田中フォト' : '山田 太郎'} value={name} onChange={e => setName(e.target.value)} />
+            <input id="inv-name" type="text" placeholder={kind === 'delivery' ? '例：田中フォト' : '山田 太郎'} value={name} onChange={e => setName(e.target.value)} />
           </div>
 
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>}

@@ -102,10 +102,10 @@ export default async function FrontierPage() {
             <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
             <div style={{ position: 'absolute', inset: 30, border: '1.5px solid rgba(255,255,255,.2)', borderRadius: '50%' }} />
           </div>
-          <div style={{ fontSize: '.92rem', fontWeight: 500, letterSpacing: '-.01em', position: 'relative' }}>あなたのチーム収入は、ここから育ちます</div>
+          <div style={{ fontSize: '.92rem', fontWeight: 500, letterSpacing: '-.01em', position: 'relative' }}>チームの成果は、ここから積み上がります</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10, position: 'relative' }}>
             <span style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '2.1rem', letterSpacing: '-.02em' }}>¥0</span>
-            <span style={{ fontSize: '.66rem', opacity: .85 }}>→ 育てる</span>
+            <span style={{ fontSize: '.66rem', opacity: .85 }}>まずは仲間の招待から</span>
           </div>
           <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative' }}>
             <div style={{ fontSize: '.6rem', opacity: .85 }}>チーム<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{teamN}名</span></div>
@@ -114,14 +114,13 @@ export default async function FrontierPage() {
           </div>
         </div>
 
-        {/* ② 知っていますか？＝オーバーライドの仕組み */}
+        {/* ② オーバーライドの仕組み */}
         <div style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
-          <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', letterSpacing: '.06em', marginBottom: 7 }}>知っていますか？</div>
+          <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', letterSpacing: '.06em', marginBottom: 7 }}>オーバーライドとは</div>
           <p style={{ fontSize: '.74rem', lineHeight: 1.7, margin: 0 }}>
             あなたが招待した仲間が成約すると、その<span style={{ fontWeight: 500 }}>{ratePct}%</span>が<span style={{ fontWeight: 500 }}>12ヶ月間</span>あなたのオーバーライド収入になります。
           </p>
           <div style={{ marginTop: 12, background: 'var(--blue-bg2)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: '1.1rem' }} aria-hidden>📈</span>
             <div style={{ fontSize: '.7rem', lineHeight: 1.6 }}>
               例えば <span style={{ fontWeight: 500 }}>{ZERO_INVITE}名</span>招いてフル稼働なら、月 <span className="tnum" style={{ fontWeight: 500, color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{zeroProj.toLocaleString()}</span> の見込み
               <span style={{ display: 'block', fontSize: '.54rem', color: 'var(--muted2)', marginTop: 2 }}>※ イメージの試算です</span>
@@ -149,7 +148,7 @@ export default async function FrontierPage() {
 
         {/* ④ 招待CTA */}
         <div style={{ padding: '8px 20px 6px' }}>
-          <div style={{ fontSize: '.74rem', fontWeight: 500, textAlign: 'center', marginBottom: 10 }}>さあ、最初の仲間を招待しよう</div>
+          <div style={{ fontSize: '.74rem', fontWeight: 500, textAlign: 'center', marginBottom: 10 }}>最初の仲間を招待しませんか</div>
           <FrontierInvite />
         </div>
         <div style={{ height: 16 }} />
@@ -173,7 +172,6 @@ export default async function FrontierPage() {
         {/* 前月比（先月データがある時のみ・トレンドアイコン） */}
         {(lastMonthOverride > 0 || momDelta !== 0) && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: '.66rem', background: 'rgba(255,255,255,.16)', borderRadius: 999, padding: '3px 10px', position: 'relative' }}>
-            <span aria-hidden>{momDelta >= 0 ? '▲' : '▼'}</span>
             先月より {momDelta >= 0 ? '+' : '−'}¥{Math.abs(momDelta).toLocaleString()}
           </div>
         )}
@@ -200,7 +198,6 @@ export default async function FrontierPage() {
 
       {/* ③ フル稼働したら */}
       <div style={{ margin: '14px 20px 0', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: '1.3rem' }} aria-hidden>🚀</span>
         <div style={{ fontSize: '.72rem', lineHeight: 1.6 }}>
           今のチーム <span style={{ fontWeight: 500 }}>{teamN}名</span> が毎月成約すると、月 <span className="tnum" style={{ fontWeight: 500, color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{projFull.toLocaleString()}</span> のオーバーライド見込み
           <span style={{ display: 'block', fontSize: '.54rem', color: 'var(--muted2)', marginTop: 2 }}>※ イメージの試算です</span>
@@ -213,9 +210,9 @@ export default async function FrontierPage() {
         <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
           {subList.map(s => {
             const st = perSub[s.id] ?? { override: 0, count: 0, gross: 0 }
-            const status = st.count >= 2 ? { t: '絶好調', e: '🔥', c: 'var(--red)', bg: 'var(--red-bg)' }
-              : st.count === 1 ? { t: '好調', e: '⚡', c: 'var(--amber)', bg: 'var(--amber-bg)' }
-              : { t: 'これから', e: '🌱', c: 'var(--muted2)', bg: 'var(--bg2)' }
+            const status = st.count >= 2 ? { t: '活発', c: 'var(--green)' }
+              : st.count === 1 ? { t: '順調', c: 'var(--c-blue)' }
+              : { t: 'これから', c: 'var(--muted2)' }
             return (
               <div key={s.id} className="card-hover ui-card" style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 13, padding: '13px 15px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -224,8 +221,9 @@ export default async function FrontierPage() {
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '.82rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(s as any).profiles?.name ?? s.code}</div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 3, fontSize: '.54rem', fontWeight: 500, color: status.c, background: status.bg, borderRadius: 20, padding: '2px 8px' }}>
-                      <span aria-hidden>{status.e}</span>{status.t}・今月成約 {st.count}件
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 3, fontSize: '.54rem', fontWeight: 500, color: 'var(--muted2)' }}>
+                      <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: status.c, flexShrink: 0 }} />
+                      {status.t}・今月成約 {st.count}件
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -240,7 +238,7 @@ export default async function FrontierPage() {
 
         {/* ⑤ 招待CTA */}
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '15px 16px', textAlign: 'center', marginBottom: 4 }}>
-          <div style={{ fontSize: '.78rem', fontWeight: 500, marginBottom: 3 }}>仲間を増やすほど、収入が増える</div>
+          <div style={{ fontSize: '.78rem', fontWeight: 500, marginBottom: 3 }}>チームの成約が、あなたの報酬になります</div>
           <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginBottom: 12 }}>新しい仲間の成約 {ratePct}% が 12ヶ月あなたの収入に</div>
           <FrontierInvite />
         </div>

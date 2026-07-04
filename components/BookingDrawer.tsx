@@ -105,13 +105,13 @@ export default function BookingDrawer({ dealId, createDeal, defaultCustomerEmail
             />
             {/* 顧客メール（任意）— 入力すると確認・リマインドをお客様にも送信。未入力ならスキップ。 */}
             <div style={{ marginTop: 14 }}>
-              <label style={{ display: 'block', fontSize: '.64rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>顧客メールアドレス（任意）</label>
+              <label style={{ display: 'block', fontSize: '.64rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }}>お客さまのメールアドレス（任意）</label>
               <input
                 type="email" value={custEmail} onChange={e => setCustEmail(e.target.value)}
                 placeholder="customer@example.com" autoComplete="off"
                 style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.82rem' }}
               />
-              <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '4px 2px 0', lineHeight: 1.5 }}>入力すると、予約確認・前日/直前のリマインドをお客様にもお送りします。</p>
+              <p style={{ fontSize: '.58rem', color: 'var(--muted2)', margin: '4px 2px 0', lineHeight: 1.5 }}>入力すると、予約確認・前日/直前のリマインドをお客さまにもお送りします。</p>
             </div>
             {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 12 }}>{error}</p>}
             {/* 確定 */}

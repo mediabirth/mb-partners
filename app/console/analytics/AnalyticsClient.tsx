@@ -162,7 +162,7 @@ export default function AnalyticsClient() {
             <button onClick={() => openDrill(`${weakService.label}（成約率 ${weakService.rate}%）`, view.cur.filter(r => r.service_id === weakService.key))} className="lift" style={{ display: 'block', width: '100%', textAlign: 'left', border: '1px solid var(--red-bg)', background: 'var(--red-bg)', borderRadius: 12, padding: '14px', cursor: 'pointer', marginTop: 12, fontFamily: 'inherit' }}>
               <div style={{ fontSize: '.62rem', color: 'var(--red)', fontWeight: 500, marginBottom: 4 }}>最も成約率が低いサービス</div>
               <div style={{ fontSize: '.86rem', fontWeight: 500 }}>{weakService.label}</div>
-              <div style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 3 }}>成約率 <b style={{ color: 'var(--red)' }}>{weakService.rate}%</b>（{weakService.won}/{weakService.total}件）· 改善の起点</div>
+              <div style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 3 }}>成約率 <b style={{ color: 'var(--red)' }}>{weakService.rate}%</b>（{weakService.won}/{weakService.total}件）・ 改善の起点</div>
             </button>
           ) : <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 12 }}>十分なサンプルがありません（3件以上で判定）。</p>}
         </div>
@@ -217,7 +217,7 @@ export default function AnalyticsClient() {
         <div onClick={() => setDrill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', zIndex: 90, display: 'flex', justifyContent: 'flex-end' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 440, maxWidth: '94vw', height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '-18px 0 48px rgba(14,14,20,.12)' }}>
             <div style={{ padding: '18px 22px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <b style={{ fontSize: '.86rem' }}>{drill.label} · {drill.rows.length}件</b>
+              <b style={{ fontSize: '.86rem' }}>{drill.label} ・ {drill.rows.length}件</b>
               <button onClick={() => setDrill(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div className="cascade" style={{ flex: 1, overflowY: 'auto' }}>
@@ -225,7 +225,7 @@ export default function AnalyticsClient() {
                 <Link key={r.id} href={`/console/deals?deal=${r.id}`} className="row-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', borderBottom: '0.5px solid var(--line)', textDecoration: 'none', color: 'var(--txt)' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '.76rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-                    <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{r.service_name}{r.revenue > 0 && ` · ${yen(r.revenue)}`}</div>
+                    <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 1 }}>{r.service_name}{r.revenue > 0 && ` ・ ${yen(r.revenue)}`}</div>
                   </div>
                   {r.intake === 'direct' ? <StatusDot {...intakePill('direct')} /> : <StatusDot {...dealStatus(r.status)} />}
                   <span style={{ color: 'var(--muted)', fontSize: '.72rem' }}>›</span>

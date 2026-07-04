@@ -136,15 +136,15 @@ export function deriveVendorNotifs(b: VendorBundle): VNotif[] {
   const labelOf = (assignId: string) => { const d = b.assignments.find(a => a.id === assignId)?.deal; return (d && customerHonorific(d)) || '案件' }
   const out: VNotif[] = []
   for (const e of b.expenses) {
-    if (e.status === 'approved') out.push({ id: 'e' + e.id, icon: 'ok', title: '経費が承認されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} · ${labelOf(e.assignment_id)}`, at: e.approved_at ?? e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
-    else if (e.status === 'rejected') out.push({ id: 'e' + e.id, icon: 'ng', title: '経費が却下されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} · ${labelOf(e.assignment_id)}`, at: e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
+    if (e.status === 'approved') out.push({ id: 'e' + e.id, icon: 'ok', title: '経費が承認されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} ・ ${labelOf(e.assignment_id)}`, at: e.approved_at ?? e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
+    else if (e.status === 'rejected') out.push({ id: 'e' + e.id, icon: 'ng', title: '経費が却下されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} ・ ${labelOf(e.assignment_id)}`, at: e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
   }
   for (const p of b.payouts) {
-    if (p.status === 'paid') out.push({ id: 'p' + p.id, icon: 'pay', title: '支払が完了しました', sub: `${p.period} · ¥${p.amount.toLocaleString()}`, at: p.paid_at ?? p.frozen_at ?? '', href: '/vendor/rewards' })
-    else out.push({ id: 'p' + p.id, icon: 'freeze', title: '支払予定が確定しました', sub: `${p.period} · ¥${p.amount.toLocaleString()}（未払い）`, at: p.frozen_at ?? '', href: '/vendor/rewards' })
+    if (p.status === 'paid') out.push({ id: 'p' + p.id, icon: 'pay', title: '支払が完了しました', sub: `${p.period} ・ ¥${p.amount.toLocaleString()}`, at: p.paid_at ?? p.frozen_at ?? '', href: '/vendor/rewards' })
+    else out.push({ id: 'p' + p.id, icon: 'freeze', title: '支払予定が確定しました', sub: `${p.period} ・ ¥${p.amount.toLocaleString()}（未払い）`, at: p.frozen_at ?? '', href: '/vendor/rewards' })
   }
   for (const a of b.assignments) {
-    out.push({ id: 'a' + a.id, icon: 'assign', title: '案件にアサインされました', sub: `${(a.deal && customerHonorific(a.deal)) || '案件'} · 委託費 ¥${a.base_fee.toLocaleString()}`, at: a.assigned_at ?? '', href: `/vendor/cases/${a.id}` })
+    out.push({ id: 'a' + a.id, icon: 'assign', title: '案件にアサインされました', sub: `${(a.deal && customerHonorific(a.deal)) || '案件'} ・ 委託費 ¥${a.base_fee.toLocaleString()}`, at: a.assigned_at ?? '', href: `/vendor/cases/${a.id}` })
   }
   return out.filter(n => n.at).sort((x, y) => (y.at).localeCompare(x.at))
 }

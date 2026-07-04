@@ -27,7 +27,7 @@ export default function ApprovalPanel({ partners: initial }: { partners: Partner
   }
 
   function reject(id: string, name: string) {
-    if (!confirm(`「${name}」の申請を却下しますか?`)) return
+    if (!confirm(`「${name}」の申請を却下しますか？`)) return
     startTransition(async () => {
       const res = await fetch(`/api/console/partners/${id}`, {
         method: 'PATCH',
@@ -64,7 +64,7 @@ export default function ApprovalPanel({ partners: initial }: { partners: Partner
                 <span style={{ fontFamily: 'Inter', fontSize: '.62rem', color: 'var(--muted2)' }}>{p.code}</span>
               </div>
               <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3 }}>
-                {p.profiles?.email} · {new Date(p.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })} 申請
+                {p.profiles?.email} ・ {new Date(p.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })} 申請
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>

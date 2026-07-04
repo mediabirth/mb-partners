@@ -45,7 +45,7 @@ export default function NewBroadcastPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? 'エラーが発生しました')
+        setError(data.error ?? '配信を作成できませんでした。時間をおいて再度お試しください')
         return
       }
 
@@ -127,7 +127,7 @@ export default function NewBroadcastPage() {
               <textarea
                 value={body}
                 onChange={e => setBody(e.target.value)}
-                placeholder="本文を入力（省略可）"
+                placeholder="本文を入力（任意）"
                 rows={8}
                 style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.7 }}
               />
@@ -149,7 +149,7 @@ export default function NewBroadcastPage() {
 
             {/* Hero image */}
             <div style={fieldStyle}>
-              <label style={labelStyle}>ヒーロー画像（省略可）</label>
+              <label style={labelStyle}>ヒーロー画像（任意）</label>
               <input
                 type="file"
                 accept="image/*"

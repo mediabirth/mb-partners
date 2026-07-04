@@ -19,7 +19,7 @@ const fmtConfirm = (date: string, iso: string) => {
 
 /**
  * 協力予約リンク（公開・ログイン不要）。partner_id を URL で受ける。
- * 1ページ完結：共通 SlotPicker（範囲取得した days[]・nextDay 初期表示）＋ お客様情報入力 ＋ 確定。
+ * 1ページ完結：共通 SlotPicker（範囲取得した days[]・nextDay 初期表示）＋ お客さま情報入力 ＋ 確定。
  * 確定＝POST /api/meetings（新規deal＋meeting＋GCal＋帰属）byte-unchanged。
  * SlotPicker は選んだ slot を親に返すだけ。確定はこのラッパーが従来通り /api/meetings を叩く。
  */
@@ -149,7 +149,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               />
             </div>
 
-            {/* お客様情報（現状の項目を維持） */}
+            {/* お客さま情報（現状の項目を維持） */}
             <div style={{ background: '#fff', borderRadius: 18, border: '1px solid var(--line)', padding: 20 }}>
               {selectedSlot && selectedDate && (
                 <div style={{ background: 'var(--blue-bg2)', borderRadius: 10, padding: '12px 14px', marginBottom: 18 }}>
@@ -161,11 +161,11 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
                 </div>
               )}
 
-              <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>お客様情報</h2>
+              <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>お客さま情報</h2>
 
-              {/* お客様の種別 */}
+              {/* お客さまの種別 */}
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>お客様の種別</label>
+                <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>お客さまの種別</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
                     <button type="button" key={v} onClick={() => setCustomerType(v)}
@@ -181,7 +181,7 @@ export default function BookPage({ params }: { params: Promise<{ partner_id: str
               {customerType === 'individual' ? (
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ fontSize: 13, color: 'var(--muted2)', display: 'block', marginBottom: 6, fontWeight: 500 }}>
-                    お客様のお名前 <span style={{ color: 'var(--red)' }}>*</span>
+                    お客さまのお名前 <span style={{ color: 'var(--red)' }}>*</span>
                   </label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎"
                     style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--line)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }} />

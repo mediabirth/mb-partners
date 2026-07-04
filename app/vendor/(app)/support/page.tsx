@@ -59,7 +59,7 @@ export default function VendorSupport() {
               })}
             </div>
             <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>件名（任意）</label>
-            <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="例: 委託費の振込日について" style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.78rem', marginBottom: 14, boxSizing: 'border-box' }} />
+            <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="例：委託費の振込日について" style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontFamily: 'inherit', fontSize: '.78rem', marginBottom: 14, boxSizing: 'border-box' }} />
             <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>お問い合わせ内容</label>
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={5} placeholder="お困りごとの内容をご記入ください。" style={{ width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '11px 12px', fontFamily: 'inherit', fontSize: '.78rem', resize: 'vertical', boxSizing: 'border-box' }} />
             {error && <p style={{ fontSize: '.66rem', color: 'var(--red)', margin: '10px 0 0' }}>{error}</p>}

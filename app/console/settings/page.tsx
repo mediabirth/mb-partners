@@ -252,7 +252,7 @@ export default function SettingsPage() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.84rem', fontWeight: 500 }}>自動メッセージ</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 500, marginTop: 4 }}>{msgAutoCount == null ? '　' : `7イベント · ${msgAutoCount}件カスタム`}</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--c-blue)', fontWeight: 500, marginTop: 4 }}>{msgAutoCount == null ? '　' : `7イベント ・ ${msgAutoCount}件カスタム`}</div>
               </div>
               <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
             </a>
@@ -282,7 +282,7 @@ export default function SettingsPage() {
                       inputMode="numeric"
                       value={mtDraft}
                       onChange={e => setMtDraft(e.target.value)}
-                      placeholder="例: 500000"
+                      placeholder="例：500000"
                       style={{ width: 140, border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'Inter', fontSize: '.82rem', textAlign: 'right' }}
                     />
                   </div>

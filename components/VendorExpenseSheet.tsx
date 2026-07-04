@@ -92,7 +92,7 @@ export default function VendorExpenseSheet({ open, onClose, presetAssignmentId, 
         </div>
 
         <label style={lbl}>金額（円）</label>
-        <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" placeholder="例: 15000" disabled={busy} style={{ ...inp, marginBottom: 14, fontFamily: 'Inter' }} />
+        <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" placeholder="例：15000" disabled={busy} style={{ ...inp, marginBottom: 14, fontFamily: 'Inter' }} />
 
         <label style={lbl}>領収書（任意）</label>
         <input ref={camRef} type="file" accept="image/*" capture="environment" onChange={e => pick(e.target.files?.[0] ?? null)} disabled={busy} style={{ display: 'none' }} />

@@ -156,7 +156,7 @@ export default function MailScreen() {
                       <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: o ? (o.is_active ? 'var(--green)' : 'var(--muted)') : 'var(--line)' }} />
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
-                        <span style={{ display: 'block', fontSize: '.56rem', color: 'var(--muted2)' }}>{AUDIENCE_LABEL[d.audience]}宛 · {o ? (o.is_active ? 'カスタム' : '無効化中') : '既定'}</span>
+                        <span style={{ display: 'block', fontSize: '.56rem', color: 'var(--muted2)' }}>{AUDIENCE_LABEL[d.audience]}宛 ・ {o ? (o.is_active ? 'カスタム' : '無効化中') : '既定'}</span>
                       </span>
                     </button>
                   )
@@ -181,7 +181,7 @@ export default function MailScreen() {
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                 {def.vars.map(v => (
-                  <button key={v.key} type="button" title={`${v.label}（例: ${v.sample}）`}
+                  <button key={v.key} type="button" title={`${v.label}（例：${v.sample}）`}
                     onClick={() => { setBody(b => b + '${' + v.key + '}'); setDirty(true) }}
                     style={{ border: LINE, background: 'var(--bg2)', borderRadius: 20, padding: '2px 9px', fontSize: '.6rem', fontFamily: 'Inter, monospace', color: 'var(--muted2)', cursor: 'pointer' }}>
                     {'${' + v.key + '}'}
@@ -204,7 +204,7 @@ export default function MailScreen() {
                   </button>
                 )}
               </div>
-              {ov && <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '10px 0 0' }}>カスタム文面 · 最終更新 {fmtJST(ov.updated_at)}</p>}
+              {ov && <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '10px 0 0' }}>カスタム文面 ・ 最終更新 {fmtJST(ov.updated_at)}</p>}
             </div>
 
             {/* プレビュー（実データ風サンプル差し込み） */}

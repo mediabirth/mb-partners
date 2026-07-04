@@ -165,7 +165,6 @@ export default async function AppPage() {
       {/* ⑨ 空状態: 最初の紹介をしてみよう */}
       {isEmpty && (
         <div className="page-anim" style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, padding: '26px 22px', textAlign: 'center' }}>
-          <div className="celebrate-pop" style={{ fontSize: '2.2rem', marginBottom: 10 }} aria-hidden>✨</div>
           <b style={{ fontSize: '.92rem', display: 'block', marginBottom: 6 }}>最初のご案内をしてみよう</b>
           <p style={{ fontSize: '.7rem', color: 'var(--muted2)', lineHeight: 1.8, marginBottom: 16 }}>
             知り合いをひとり思い浮かべて、つなぐだけ。あとはMBが対応します。
@@ -226,7 +225,7 @@ export default async function AppPage() {
                     {t.label}
                   </div>
                   <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
-                    {d ? customerHonorific(d) : '案件'}{d?.services?.name ? ` · ${d.services.name}` : ''}
+                    {d ? customerHonorific(d) : '案件'}{d?.services?.name ? ` ・ ${d.services.name}` : ''}
                   </div>
                 </div>
                 {t.remaining > 0 && (
@@ -271,8 +270,8 @@ export default async function AppPage() {
                 <div style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {deal ? customerHonorific(deal) : ''}
                 </div>
-                {/* ③ APP表示は4語統一（共有 lib/status は3面共通のため触れず、ここで表示だけ差し替え）。 */}
-                {deal && (() => { const s = dealStatus(deal.status); return <StatusPill size="sm" tone={s.tone} children={s.children === '成約・確定' ? '成約' : s.children} /> })()}
+                {/* ③ ステータス語彙は lib/status.ts（単一の正）をそのまま表示。 */}
+                {deal && (() => { const s = dealStatus(deal.status); return <StatusPill size="sm" tone={s.tone} children={s.children} /> })()}
                 <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
               </Link>
             )

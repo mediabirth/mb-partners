@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   }> = []
 
   const STATUS: Record<string, string> = {
-    received: '受付', in_progress: '対応中', confirmed: '成約・確定', paid: '支払済',
+    received: '受付', in_progress: '対応中', confirmed: '成約', paid: '支払済',
   }
 
   const { customerHonorific } = await import('@/lib/customer')
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
       type: 'deal',
       id: d.id,
       label: customerHonorific(d),
-      sub: `${(d as any).services?.name ?? ''} · ${STATUS[d.status] ?? d.status}`,
+      sub: `${(d as any).services?.name ?? ''} ・ ${STATUS[d.status] ?? d.status}`,
       href: '/console/deals',
     })
   }
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
         type: 'partner',
         id: p.id,
         label: (p as any).profiles?.name ?? p.code,
-        sub: `${p.code} · ${(p as any).profiles?.email ?? ''}`,
+        sub: `${p.code} ・ ${(p as any).profiles?.email ?? ''}`,
         href: `/console/partners/${p.id}`,
       })
     }
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
         type: 'partner',
         id: p.id,
         label: (p as any).profiles?.name ?? p.code,
-        sub: `${p.code} · ${(p as any).profiles?.email ?? ''}`,
+        sub: `${p.code} ・ ${(p as any).profiles?.email ?? ''}`,
         href: `/console/partners/${p.id}`,
       })
     }
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
       type: 'inquiry',
       id: inq.id,
       label: inq.subject ?? '—',
-      sub: `${inq.category ?? ''} · ${inq.status === 'open' ? '未対応' : '解決済み'}`,
+      sub: `${inq.category ?? ''} ・ ${inq.status === 'open' ? '未対応' : '解決済み'}`,
       href: '/console/inquiries',
     })
   }

@@ -61,7 +61,7 @@ export default function ProfileSection() {
             value={draftName}
             onChange={e => setDraftName(e.target.value)}
             maxLength={60}
-            placeholder="例: 神原勝彦"
+            placeholder="例：神原勝彦"
             style={{ width: '100%', maxWidth: 280, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 12px', fontFamily: 'inherit', fontSize: '.84rem', background: '#fff' }}
           />
         </div>

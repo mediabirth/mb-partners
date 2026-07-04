@@ -154,9 +154,9 @@ export default async function PartnerDetailPage({
                 </div>
                 <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>
                   {p.profiles?.email}
-                  <span style={{ margin: '0 6px', color: 'var(--line)' }}>·</span>
+                  <span style={{ margin: '0 6px', color: 'var(--line)' }}>・</span>
                   登録 {new Date(p.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'short', day: 'numeric' })}
-                  <span style={{ margin: '0 6px', color: 'var(--line)' }}>·</span>
+                  <span style={{ margin: '0 6px', color: 'var(--line)' }}>・</span>
                   {p.tax_type === 'individual' ? '個人（源泉10.21%）' : '法人'}
                 </div>
               </div>
@@ -210,7 +210,7 @@ export default async function PartnerDetailPage({
                       </div>
                       <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>
                         {d.services?.name ?? '相談（サービス未定）'}
-                        <span style={{ margin: '0 5px' }}>·</span>
+                        <span style={{ margin: '0 5px' }}>・</span>
                         {new Date(d.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })}
                       </div>
                     </div>

@@ -14,13 +14,24 @@ function CatChip({ cat }: { cat: 'referral' | 'cooperation' }) {
 
 function fmtFee(m: MenuRow) {
   if (m.ref_type === 'fixed') return `¥${Number(m.ref_value).toLocaleString()}`
-  return `${m.ref_value}%${m.ref_base ? ` (${m.ref_base})` : ''}`
+  return `${m.ref_value}%${m.ref_base ? `（${m.ref_base}）` : ''}`
 }
 
 function fmtCoopFee(m: MenuRow) {
   if (m.coop_type === 'fixed') return `¥${Number(m.coop_value ?? 0).toLocaleString()}`
-  if (m.coop_type === 'rate')  return `${m.coop_value ?? 0}%${m.coop_base ? ` (${m.coop_base})` : ''}`
+  if (m.coop_type === 'rate')  return `${m.coop_value ?? 0}%${m.coop_base ? `（${m.coop_base}）` : ''}`
   return '-'
+}
+
+// 注意アイコン（v2.2：絵文字ではなく stroke SVG）
+function AlertIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0, marginTop: 2 }}>
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  )
 }
 
 // ③ 対応範囲タグ＝required協力タスクのラベル（単一ソース）。
@@ -63,8 +74,8 @@ function FeeRow({ m }: { m: MenuRow }) {
           )}
           <CoverageTags labels={m.coverage_tasks} accent />
           {m.qualification && (
-            <small style={{ fontSize: '.6rem', color: 'var(--amber)', display: 'block', marginTop: 4 }}>
-              ⚠ {m.qualification}
+            <small style={{ fontSize: '.6rem', color: 'var(--amber)', display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: 4 }}>
+              <AlertIcon />{m.qualification}
             </small>
           )}
         </div>
@@ -97,8 +108,8 @@ function CoopFeeRow({ m }: { m: MenuRow }) {
             </>
           )}
           {m.coop_condition && (
-            <small style={{ fontSize: '.6rem', color: 'var(--amber)', display: 'block', marginTop: 4 }}>
-              ⚠ {m.coop_condition}
+            <small style={{ fontSize: '.6rem', color: 'var(--amber)', display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: 4 }}>
+              <AlertIcon />{m.coop_condition}
             </small>
           )}
         </div>

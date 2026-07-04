@@ -47,7 +47,7 @@ export default function BroadcastDetailPage() {
       router.push('/console/broadcasts')
     } else {
       const d = await res.json()
-      setToast(d.error ?? 'エラーが発生しました')
+      setToast(d.error ?? '配信を削除できませんでした。時間をおいて再度お試しください')
       setTimeout(() => setToast(''), 3000)
     }
   }

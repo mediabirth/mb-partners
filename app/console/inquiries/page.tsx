@@ -77,7 +77,7 @@ export default function ConsoleInquiriesPage() {
         </div>
 
         {loading ? (
-          <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中...</p>
+          <p style={{ color: 'var(--muted2)', fontSize: '.82rem' }}>読み込み中…</p>
         ) : inquiries.length === 0 ? (
           <div style={{
             background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13,

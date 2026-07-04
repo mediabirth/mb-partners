@@ -51,7 +51,7 @@ export default async function VendorHome() {
   for (const a of b.assignments) {
     const tks = tasksOf(a.id)
     for (const t of tks.filter(t => t.type === 'task' && t.status !== 'done').slice(0, 2))
-      todos.push({ key: 't' + t.id, title: t.title, sub: `${(a.deal && customerHonorific(a.deal)) || '案件'}${t.due_date ? ` · 期日 ${t.due_date.slice(5)}` : ''}`, href: `/vendor/cases/${a.id}`, dot: 'var(--c-blue)' })
+      todos.push({ key: 't' + t.id, title: t.title, sub: `${(a.deal && customerHonorific(a.deal)) || '案件'}${t.due_date ? ` ・ 期日 ${t.due_date.slice(5)}` : ''}`, href: `/vendor/cases/${a.id}`, dot: 'var(--c-blue)' })
     for (const t of tks.filter(t => t.needs_deliverable && !b.deliverables.some(d => d.task_id === t.id)).slice(0, 2))
       todos.push({ key: 'd' + t.id, title: `成果物を提出: ${t.title}`, sub: (a.deal && customerHonorific(a.deal)) || '案件', href: `/vendor/cases/${a.id}`, dot: 'var(--amber)' })
   }
@@ -83,7 +83,7 @@ export default async function VendorHome() {
       <div style={{ margin: '18px 20px 0', background: 'linear-gradient(155deg,#4733E6 0%,#3A28CE 100%)', borderRadius: 18, padding: '20px 22px 16px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
         {/* ① 小キャプション「今月の委託費見込み」＋状態チップ（履歴なし新規は非表示） */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-          <span style={{ fontSize: '.6rem', opacity: .9 }}>今月の委託費見込み{targetPeriod ? ` · ${fmtPeriod(targetPeriod)}` : ''}</span>
+          <span style={{ fontSize: '.6rem', opacity: .9 }}>今月の委託費見込み{targetPeriod ? ` ・ ${fmtPeriod(targetPeriod)}` : ''}</span>
           {payState !== 'none' && (
             <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
           )}

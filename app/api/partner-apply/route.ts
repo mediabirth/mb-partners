@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // 最低限のサーバ側検証：name必須／email・phone どちらか必須。
     if (!name) return NextResponse.json({ error: 'お名前を入力してください' }, { status: 400 })
-    if (!email && !phone) return NextResponse.json({ error: 'メールか電話のいずれかをご入力ください' }, { status: 400 })
+    if (!email && !phone) return NextResponse.json({ error: 'メールか電話のいずれかを入力してください' }, { status: 400 })
 
     const admin = await createServiceRoleClient()
 
