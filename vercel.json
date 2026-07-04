@@ -42,7 +42,7 @@
     {
       "source": "/api/services",
       "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=300, stale-while-revalidate=600" }
+        { "key": "Cache-Control", "value": "public, s-maxage=300, stale-while-revalidate=86400" }
       ]
     },
     {

@@ -157,7 +157,7 @@ export async function getAllDeals(supabase: SupabaseClient) {
     .select(`
       id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount, base_amount,
       fixed_month, consent, meeting_at, created_at, updated_at,
-      service_id, internal_memo, reward_snapshot, reward_ref, continuous_months,
+      service_id, internal_memo, reward_snapshot, reward_ref, continuous_months, intake_type, project_status,
       services(id, name, subtitle, icon, color),
       partners(id, code, profiles(name, color))
     `)

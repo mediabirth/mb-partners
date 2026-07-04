@@ -18,11 +18,15 @@ export default async function AppPage() {
   if (!uid) redirect('/login')
   const supabase = await createClient()
 
-  // Single parallel round: partner+deals combined query + events by userId
+  // Single parallel round: partner+deals combined query + events by userId + menus 名称マップ
   // (avoids needing partner.id before fetching events)
-  const [partnerResult, recentEvents] = await Promise.all([
+  // 磨き④: menus 全件（表示名解決）は何にも依存しないため初回並列に統合（従来は後追い直列＋service client二重生成）。
+  const { createServiceRoleClient } = await import('@/lib/supabase/server')
+  const admin = await createServiceRoleClient()
+  const [partnerResult, recentEvents, menusRes] = await Promise.all([
     getPartnerWithDeals(supabase, uid),
     getRecentEventsByUserId(supabase, uid),
+    admin.from('menus').select('id, name').then(r => r, () => ({ data: null })),
   ])
   // If no partner record, go to root — root page routes admins to /console.
   // Redirecting to /login here would loop: login→/app→/login for admins.
@@ -54,12 +58,7 @@ export default async function AppPage() {
 
   // お客さま向け新名称の解決マップ（reward_snapshot->>menu_id → menus.name）。改名せず表示のみ。best-effort。
   const menuNameById: Record<string, string> = {}
-  try {
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
-    const admin = await createServiceRoleClient()
-    const { data: menus } = await admin.from('menus').select('id, name')
-    for (const m of (menus ?? []) as { id: string; name: string }[]) menuNameById[m.id] = m.name
-  } catch { /* best-effort */ }
+  for (const m of (menusRes.data ?? []) as { id: string; name: string }[]) menuNameById[m.id] = m.name
   const dealMenuName = (d: { reward_snapshot?: { menu_id?: string } | null; service_menus?: { name?: string } | null; services?: { name?: string } | null }) =>
     (d.reward_snapshot?.menu_id && menuNameById[d.reward_snapshot.menu_id]) || d.service_menus?.name || d.services?.name || ''
 
@@ -69,8 +68,6 @@ export default async function AppPage() {
   let pendingTasks: { id: string; deal_id: string; label: string; remaining: number }[] = []
   if (coopActiveIds.length) {
     try {
-      const { createServiceRoleClient } = await import('@/lib/supabase/server')
-      const admin = await createServiceRoleClient()
       const { data } = await admin
         .from('deal_tasks')
         .select('id, deal_id, label, kind, done, sort')

@@ -43,8 +43,9 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   const supabase = await createClient()
 
   // owner認証では nested partners.profiles が RLS で null → service role で読取（/console は middleware でガード済）
+  // 磨き④: 従来7段あったDB往復を1段に統合（deals再取得の重複解消＋直列awaitの並列化。読み取りのみ・結果不変）。
   const admin = await createServiceRoleClient()
-  const [profileRes, deals, recentEventsRes, pnl] = await Promise.all([
+  const [profileRes, deals, recentEventsRes, pnl, settingsRes, assignRes, dTasksRes, expensesRes, updatesRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', uid).single(),
     getAllDeals(admin),
     admin.from('deal_events')
@@ -52,6 +53,11 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
       .order('created_at', { ascending: false })
       .limit(6),
     loadProjectPnl(admin),   // A-3: 全プロジェクトP&L（lib/pnl ベースの正確な集計）
+    admin.from('notification_settings').select('*').eq('id', 1).maybeSingle().then(r => r, () => ({ data: null })),
+    admin.from('delivery_assignments').select('id, deal_id').then(r => r, () => ({ data: null })),
+    admin.from('delivery_tasks').select('delivery_assignment_id, title, status, due_date, type').then(r => r, () => ({ data: null })),
+    admin.from('expense_claims').select('delivery_assignment_id, kind, amount, status').then(r => r, () => ({ data: null })),
+    admin.from('delivery_updates').select('delivery_assignment_id, body, kind, status').then(r => r, () => ({ data: null })),
   ])
   const profile = profileRes.data
   const recentEvents = recentEventsRes.data
@@ -73,12 +79,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   const selMonthLabel = `${Number(selectedYm.slice(5, 7))}月`
   const isCurrentMonth = selectedYm === ym
 
-  // 月間目標（運営取り分=MB粗利）。notification_settings(id=1).monthly_target を best-effort 読取。
-  let monthlyTarget = 0
-  try {
-    const s = await admin.from('notification_settings').select('*').eq('id', 1).maybeSingle()
-    monthlyTarget = Number((s.data as { monthly_target?: number } | null)?.monthly_target ?? 0) || 0
-  } catch { /* 列未追加(DDL前) → 目標なし */ }
+  // 月間目標（運営取り分=MB粗利）。notification_settings(id=1).monthly_target を best-effort 読取（上のPromise.allで取得済み）。
+  const monthlyTarget = Number((settingsRes.data as { monthly_target?: number } | null)?.monthly_target ?? 0) || 0
 
   // 件数系（成約数/受付数/成約率）は getAllDeals から。金額系は pnl から。
   const wonCount = (k: string) => deals.filter(d => d.fixed_month?.startsWith(k) && (d.status === 'confirmed' || d.status === 'paid')).length
@@ -159,12 +161,12 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   const totalCost = costLines.reduce((s, c) => s + c.val, 0)
   const barBase = Math.max(1, cur.revenue)
 
-  // ── F-3b：プロジェクトモデルの次元（intake_type / project_status）を best-effort 取得（DDL前は空で安全）。
+  // ── F-3b：プロジェクトモデルの次元（intake_type / project_status）。
+  // 磨き④: deals 全行の再取得（重複クエリ）を廃止し、getAllDeals の取得列から導出（結果不変）。
   const dimByDeal: Record<string, { intake: string | null; ps: string | null }> = {}
-  try {
-    const { data } = await admin.from('deals').select('id, intake_type, project_status')
-    for (const d of (data ?? []) as Array<{ id: string; intake_type: string | null; project_status: string | null }>) dimByDeal[d.id] = { intake: d.intake_type, ps: d.project_status }
-  } catch { /* 列未追加 → 既定で扱う */ }
+  for (const d of deals as unknown as Array<{ id: string; intake_type?: string | null; project_status?: string | null }>) {
+    dimByDeal[d.id] = { intake: d.intake_type ?? null, ps: d.project_status ?? null }
+  }
   const intakeOf = (id: string) => dimByDeal[id]?.intake ?? 'referral_coop'
   const psOf = (id: string) => dimByDeal[id]?.ps ?? null
 
@@ -219,37 +221,26 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   })
 
   // ⑥ 要対応アラート（各行→当該案件詳細）：差戻し経費・期日超過タスク・課題フラグ・受注額未入力。
+  // 磨き④: 4本の直列awaitを冒頭のPromise.allへ統合済み（ここは取得済みデータの加工のみ・結果不変）。
   const assignDeal: Record<string, string> = {}
-  try {
-    const { data } = await admin.from('delivery_assignments').select('id, deal_id')
-    for (const a of (data ?? []) as Array<{ id: string; deal_id: string }>) assignDeal[a.id] = a.deal_id
-  } catch { /* 未作成 → アラート無し */ }
+  for (const a of (assignRes.data ?? []) as Array<{ id: string; deal_id: string }>) assignDeal[a.id] = a.deal_id
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   type Alert = { dealId: string; type: string; detail: string; tone: 'warn' | 'danger' }
   const alerts: Alert[] = []
   const nameOf = (id: string) => { const d = dealById[id]; return d ? customerHonorific(d) : '案件' }
   for (const d of missingDeals) alerts.push({ dealId: d.id, type: '受注額未入力', detail: nameOf(d.id), tone: 'warn' })
-  try {
-    const { data } = await admin.from('delivery_tasks').select('delivery_assignment_id, title, status, due_date, type')
-    for (const t of (data ?? []) as Array<{ delivery_assignment_id: string; title: string; status: string; due_date: string | null; type: string }>) {
-      const dealId = assignDeal[t.delivery_assignment_id]
-      if (dealId && t.status !== 'done' && t.due_date && t.due_date < todayStr) alerts.push({ dealId, type: '期日超過', detail: `${nameOf(dealId)}・${t.title}`, tone: 'danger' })
-    }
-  } catch { /* 未作成 */ }
-  try {
-    const { data } = await admin.from('expense_claims').select('delivery_assignment_id, kind, amount, status')
-    for (const e of (data ?? []) as Array<{ delivery_assignment_id: string; kind: string; amount: number; status: string }>) {
-      const dealId = assignDeal[e.delivery_assignment_id]
-      if (dealId && e.status === 'rejected') alerts.push({ dealId, type: '差戻し経費', detail: `${nameOf(dealId)}・${e.kind} ¥${(e.amount ?? 0).toLocaleString()}`, tone: 'danger' })
-    }
-  } catch { /* 未作成 */ }
-  try {
-    const { data } = await admin.from('delivery_updates').select('delivery_assignment_id, body, kind, status')
-    for (const u of (data ?? []) as Array<{ delivery_assignment_id: string; body: string | null; kind: string; status: string }>) {
-      const dealId = assignDeal[u.delivery_assignment_id]
-      if (dealId && u.kind === 'flag' && u.status !== 'resolved' && u.status !== 'closed') alerts.push({ dealId, type: '課題フラグ', detail: `${nameOf(dealId)}・${(u.body ?? '').slice(0, 20)}`, tone: 'warn' })
-    }
-  } catch { /* 未作成 */ }
+  for (const t of (dTasksRes.data ?? []) as Array<{ delivery_assignment_id: string; title: string; status: string; due_date: string | null; type: string }>) {
+    const dealId = assignDeal[t.delivery_assignment_id]
+    if (dealId && t.status !== 'done' && t.due_date && t.due_date < todayStr) alerts.push({ dealId, type: '期日超過', detail: `${nameOf(dealId)}・${t.title}`, tone: 'danger' })
+  }
+  for (const e of (expensesRes.data ?? []) as Array<{ delivery_assignment_id: string; kind: string; amount: number; status: string }>) {
+    const dealId = assignDeal[e.delivery_assignment_id]
+    if (dealId && e.status === 'rejected') alerts.push({ dealId, type: '差戻し経費', detail: `${nameOf(dealId)}・${e.kind} ¥${(e.amount ?? 0).toLocaleString()}`, tone: 'danger' })
+  }
+  for (const u of (updatesRes.data ?? []) as Array<{ delivery_assignment_id: string; body: string | null; kind: string; status: string }>) {
+    const dealId = assignDeal[u.delivery_assignment_id]
+    if (dealId && u.kind === 'flag' && u.status !== 'resolved' && u.status !== 'closed') alerts.push({ dealId, type: '課題フラグ', detail: `${nameOf(dealId)}・${(u.body ?? '').slice(0, 20)}`, tone: 'warn' })
+  }
 
   // ── B3：表示専用の前処理（金額・件数の再計算はしない／既存配列をフィルタ・スライスするだけ）。
   const visibleServiceRows = serviceRows.filter(s => s.name !== '—')   // 空サービス名(—)行は非表示

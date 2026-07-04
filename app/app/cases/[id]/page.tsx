@@ -54,25 +54,29 @@ export default async function CaseDetailPage({
   try {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const admin = await createServiceRoleClient()
-    if (deal.channel === 'cooperation') {
-      const { data } = await admin.from('deal_tasks').select('id, label, kind, required, done, note, sort').eq('deal_id', id).order('sort')
-      tasks = (data ?? []) as DealTask[]
-    }
-    if (deal.service_id) {
-      const { data: tpls } = await admin.from('cooperation_task_templates').select('label, description').eq('service_id', deal.service_id).eq('active', true)
-      for (const t of (tpls ?? []) as { label: string; description: string | null }[]) if (t.description) taskDesc[t.label] = t.description
-    }
-    const { data: it } = await admin.from('deal_items').select('id, kind, amount, base_amount, sort, services(name)').eq('deal_id', id).order('sort')
-    items = (it ?? []) as typeof items
-    if (snapMenuId) {
-      const { data: mm } = await admin.from('menus').select('name, description').eq('id', snapMenuId).maybeSingle()
-      newMenuName = (mm as { name?: string } | null)?.name ?? null
-      menuInfoDescription = (mm as { description?: string | null } | null)?.description ?? null
-    }
-    if (newMenuName && deal.service_id) {
-      const { data: sx } = await admin.from('services').select('description, image_url').eq('id', deal.service_id).maybeSingle()
-      svcExtra = (sx as { description: string | null; image_url: string | null } | null) ?? null
-    }
+    // 磨き④: 相互独立な5本の直列awaitを1段のPromise.allへ（読み取りのみ・結果不変）。
+    const [tasksRes, tplsRes, itRes, mmRes, sxRes] = await Promise.all([
+      deal.channel === 'cooperation'
+        ? admin.from('deal_tasks').select('id, label, kind, required, done, note, sort').eq('deal_id', id).order('sort')
+        : Promise.resolve({ data: null }),
+      deal.service_id
+        ? admin.from('cooperation_task_templates').select('label, description').eq('service_id', deal.service_id).eq('active', true)
+        : Promise.resolve({ data: null }),
+      admin.from('deal_items').select('id, kind, amount, base_amount, sort, services(name)').eq('deal_id', id).order('sort'),
+      snapMenuId
+        ? admin.from('menus').select('name, description').eq('id', snapMenuId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      deal.service_id
+        ? admin.from('services').select('description, image_url').eq('id', deal.service_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+    tasks = (tasksRes.data ?? []) as DealTask[]
+    for (const t of (tplsRes.data ?? []) as { label: string; description: string | null }[]) if (t.description) taskDesc[t.label] = t.description
+    items = (itRes.data ?? []) as typeof items
+    newMenuName = (mmRes.data as { name?: string } | null)?.name ?? null
+    menuInfoDescription = (mmRes.data as { description?: string | null } | null)?.description ?? null
+    // ⓘの表示条件は従来同様「新メニュー名が解決できたとき」のみ（svcExtra 自体は並列取得済み）
+    svcExtra = newMenuName ? ((sxRes.data as { description: string | null; image_url: string | null } | null) ?? null) : null
   } catch { /* best-effort */ }
   const menuLabel: string | null = newMenuName || ((deal as any).service_menus?.name ?? null)
 
