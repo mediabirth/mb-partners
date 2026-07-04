@@ -106,8 +106,15 @@ async function login(page, surf) {
   await page.locator('input[type="email"]').fill(ACC[surf].email)
   await page.locator('input[type="password"]').fill(PW)
   await page.locator('button[type="submit"], button:has-text("ログイン")').first().click()
-  // 認証後 home へ遷移（クライアント router.push）を待つ
+  // 認証後 home へ遷移（クライアント router.push）を待つ。本番コールドスタート耐性で最大2回まで再送信。
   await page.waitForURL(u => !s.loginRe.test(new URL(u).pathname), { timeout: 20000 }).catch(() => {})
+  for (let i = 0; i < 2; i++) {
+    if (!s.loginRe.test(new URL(page.url()).pathname)) break
+    const stillForm = await page.locator('button[type="submit"]').count().catch(() => 0)
+    if (!stillForm) break
+    await page.locator('button[type="submit"], button:has-text("ログイン")').first().click().catch(() => {})
+    await page.waitForURL(u => !s.loginRe.test(new URL(u).pathname), { timeout: 15000 }).catch(() => {})
+  }
   await page.waitForTimeout(1200)
 }
 
