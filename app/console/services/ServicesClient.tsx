@@ -37,6 +37,7 @@ type MenuDraft = {
   id: string | null            // null=新規メニュー
   service_menu_id: string
   name: string
+  short_description: string    // menus.short_description（APP一覧の一言説明・3ペイン化でドロワーに集約）
   description: string          // menus.description（APP詳細シート「このメニューでは」）
   rewards: RewardDraft[]
 }
@@ -95,17 +96,18 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 
+// 静音化v2：フラットフォームの基本文法＝ラベル11px/muted＋入力欄（0.5px罫線・radius8）。箱は作らない。
 function Fld({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
-      <label style={{ fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.04em' }}>{label}</label>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
+      <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.03em' }}>{label}</label>
       {children}
     </div>
   )
 }
 
 const inputStyle: React.CSSProperties = {
-  border: '1.5px solid var(--line)', borderRadius: 7, padding: '8px 11px',
+  border: '0.5px solid var(--line)', borderRadius: 8, padding: '8px 11px',
   fontFamily: 'inherit', fontSize: '.82rem', color: 'var(--txt)', background: '#fff',
   width: '100%', boxSizing: 'border-box',
 }
@@ -122,16 +124,19 @@ function FTextarea({ value, onChange, placeholder, rows = 3 }: {
   return <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{ ...inputStyle, resize: 'vertical' }} />
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontSize: '.58rem', fontWeight: 500, color: 'var(--blue)', letterSpacing: '.12em',
-      textTransform: 'uppercase', marginBottom: 12,
-      paddingTop: 16, borderTop: '0.5px solid var(--line)', marginTop: 4,
-    }}>
-      {children}
-    </div>
-  )
+// 3ペイン左ナビ項目（12px・選択中=accent文字 var(--c-blue)・他は var(--txt)）。
+const navItemStyle = (selected: boolean): React.CSSProperties => ({
+  display: 'block', width: '100%', textAlign: 'left', padding: '7px 14px',
+  background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+  fontSize: 12, fontWeight: 500, lineHeight: 1.5,
+  color: selected ? 'var(--c-blue)' : 'var(--txt)',
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0,
+})
+
+// ロゴ・イメージ画像の横並び2枠（同サイズ・入力欄と同じ0.5px罫線/radius8）。
+const uploadBoxStyle: React.CSSProperties = {
+  border: '0.5px solid var(--line)', borderRadius: 8, padding: 12, minHeight: 150,
+  display: 'flex', flexDirection: 'column', justifyContent: 'center', boxSizing: 'border-box',
 }
 
 function Toggle2({ val, onA, onB, labelA, labelB }: {
@@ -299,15 +304,6 @@ function DraftRewardPill({ reward }: { reward: SheetReward }) {
   return <RewardPill style={{ flexShrink: 0 }}>{rewardValueText(reward)}</RewardPill>
 }
 
-// 空フィールド → 「入力すると◯◯に表示されます」の点線ヒント。
-function PreviewHint({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ border: '1px dashed var(--line)', borderRadius: 8, padding: '7px 10px', fontSize: '.62rem', color: 'var(--muted)', lineHeight: 1.6, marginTop: 8, background: '#fff' }}>
-      {children}
-    </div>
-  )
-}
-
 // 一覧カード（BrandCard 展開状態の簡易再現・表示のみ）。
 function PreviewCard({ svcForm, menus }: { svcForm: ServiceForm; menus: MenuDraft[] }) {
   const audience = svcForm.target_audience.trim()
@@ -327,11 +323,8 @@ function PreviewCard({ svcForm, menus }: { svcForm: ServiceForm; menus: MenuDraf
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9l6 6 6-6" /></svg>
           </span>
         </div>
-        {audience ? (
-          <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>{audience}</p>
-        ) : (
-          <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, margin: 0, border: '1px dashed var(--line)', borderRadius: 6, padding: '3px 8px' }}>紹介対象を入力するとフック文がここに表示されます</p>
-        )}
+        {/* 静音化v2：空欄はプレビューの空白自身が語る（ヒント文なし） */}
+        {audience && <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>{audience}</p>}
       </div>
       <div style={{ borderTop: '0.5px solid var(--line)', padding: '0 16px' }}>
         {menus.length === 0 ? (
@@ -361,13 +354,15 @@ function PreviewCard({ svcForm, menus }: { svcForm: ServiceForm; menus: MenuDraf
   )
 }
 
-// プレビュー本体：一覧カード ⇄ 詳細シート（事業概要／各メニュー）。入力の度に再描画＝ライブ同期。
-function DrawerPreview({ svcForm, menuDrafts, isNew }: { svcForm: ServiceForm; menuDrafts: MenuDraft[]; isNew: boolean }) {
+// プレビュー本体：一覧カード ⇄ 詳細シート。入力の度に再描画＝ライブ同期。
+// 静音化v2：ヒント文なし＝空欄はプレビューの空白自身が語る。
+// focus（左ナビの選択）に追従：メニュー選択中はシートが当該メニューの menu variant を映す。
+function DrawerPreview({ svcForm, menuDrafts, focus }: { svcForm: ServiceForm; menuDrafts: MenuDraft[]; focus: 'basic' | number }) {
   const [mode, setMode] = useState<'card' | 'sheet'>('card')
-  const [sel, setSel] = useState<number | null>(null)   // 詳細シートの対象：null=事業概要（brand）／n=メニュー
+  useEffect(() => { if (typeof focus === 'number') setMode('sheet') }, [focus])
   // プレビュー対象＝名前か報酬が入っている draft（保存対象と同じ判定）。
   const menus = menuDrafts.filter(d => d.name.trim() || d.rewards.some(r => r.reward_value))
-  const selDraft = sel != null ? menus[sel] : undefined
+  const selDraft = typeof focus === 'number' ? menuDrafts[focus] : undefined
   const sheetSvc = {
     name: svcForm.name || 'サービス名',
     logo_path: svcForm.logo_path || null,
@@ -378,50 +373,22 @@ function DrawerPreview({ svcForm, menuDrafts, isNew }: { svcForm: ServiceForm; m
   }
   const sheetMenus: SheetMenuItem[] = menus.map(d => ({ name: d.name.trim() || '（無題）', reward: draftFirstReward(d) }))
   const segBtn = (active: boolean): React.CSSProperties => ({ flex: 1, padding: '7px 0', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, border: `1.5px solid ${active ? 'var(--blue)' : 'var(--line)'}`, background: active ? 'var(--blue-bg2)' : '#fff', color: active ? 'var(--blue)' : 'var(--muted2)' })
-  const chip = (active: boolean): React.CSSProperties => ({ fontSize: '.62rem', fontWeight: 500, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${active ? 'var(--blue)' : 'var(--line)'}`, background: active ? 'var(--blue-bg2)' : '#fff', color: active ? 'var(--blue)' : 'var(--muted2)' })
   return (
     <div>
-      <div style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--blue)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6 }}>APPプレビュー</div>
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>編集内容はパートナーAPPにこのように表示されます</p>
+      <div style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--blue)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 12 }}>APPプレビュー</div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button type="button" onClick={() => setMode('card')} style={segBtn(mode === 'card')}>一覧カード</button>
-        <button type="button" onClick={() => { setMode('sheet'); setSel(null) }} style={segBtn(mode === 'sheet')}>詳細シート</button>
+        <button type="button" onClick={() => setMode('sheet')} style={segBtn(mode === 'sheet')}>詳細シート</button>
       </div>
       {mode === 'card' ? (
-        <>
-          <PreviewCard svcForm={svcForm} menus={menus} />
-          {!svcForm.description.trim() && <PreviewHint>事業概要ⓘは説明を入力すると表示されます</PreviewHint>}
-          {menus.length === 0 && (
-            <PreviewHint>{isNew ? '作成後にBでメニューと報酬を追加すると、カードに報酬つきで並びます' : 'Bでメニューと報酬を追加すると、カードに報酬つきで並びます'}</PreviewHint>
-          )}
-        </>
+        <PreviewCard svcForm={svcForm} menus={menus} />
+      ) : selDraft ? (
+        <MenuDetailSheet inline svc={sheetSvc} menuName={selDraft.name.trim() || '（無題）'}
+          menuDescription={selDraft.description.trim() || null}
+          reward={draftFirstReward(selDraft)} tasks={draftTasks(selDraft)} onClose={noop} />
       ) : (
-        <>
-          {/* 詳細シートの対象：事業概要（ブランドⓘ）／各メニュー（メニュー行タップ） */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-            <button type="button" onClick={() => setSel(null)} style={chip(selDraft == null)}>事業概要</button>
-            {menus.map((d, i) => (
-              <button key={d.id ?? `sel-${i}`} type="button" onClick={() => setSel(i)} style={chip(sel === i && !!selDraft)}>{d.name.trim() || '（無題）'}</button>
-            ))}
-          </div>
-          {selDraft ? (
-            <>
-              <MenuDetailSheet inline svc={sheetSvc} menuName={selDraft.name.trim() || '（無題）'}
-                menuDescription={selDraft.description.trim() || null}
-                reward={draftFirstReward(selDraft)} tasks={draftTasks(selDraft)} onClose={noop} />
-              {!selDraft.description.trim() && <PreviewHint>「このメニューでは」はメニュー詳細説明を入力すると表示されます</PreviewHint>}
-              {!draftFirstReward(selDraft)?.reward_trigger && <PreviewHint>「◯◯に確定」は報酬のトリガーを入力すると表示されます</PreviewHint>}
-            </>
-          ) : (
-            <>
-              <MenuDetailSheet inline variant="brand" svc={sheetSvc}
-                audience={svcForm.target_audience.trim() || null} menus={sheetMenus} onClose={noop} />
-              {!svcForm.image_url && <PreviewHint>イメージ画像を設定すると上部に表示されます（未設定はロゴ）</PreviewHint>}
-              {!svcForm.description.trim() && <PreviewHint>「{svcForm.name || 'サービス名'}とは」は説明を入力すると表示されます</PreviewHint>}
-              {!svcForm.target_audience.trim() && <PreviewHint>フック文は紹介対象を入力すると表示されます</PreviewHint>}
-            </>
-          )}
-        </>
+        <MenuDetailSheet inline variant="brand" svc={sheetSvc}
+          audience={svcForm.target_audience.trim() || null} menus={sheetMenus} onClose={noop} />
       )}
     </div>
   )
@@ -442,6 +409,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   }, [])
   const [editing, setEditing]    = useState<ServiceWithMenus | null>(null)
   const [showAdd, setShowAdd]    = useState(false)
+  // 静音化v2：3ペインの左ナビ選択（'basic'=基本情報／number=menuDrafts のインデックス）。
+  const [navSel, setNavSel]      = useState<'basic' | number>('basic')
   const [svcForm, setSvcForm]    = useState<ServiceForm>(defaultServiceForm)
   const [submitting, startTrans] = useTransition()
   const [toast, setToast]        = useState('')
@@ -482,12 +451,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     const rewardParent: Record<string, string> = {}
     for (const sm of svc.service_menus) {
       const md = await fetch(`/api/console/menus?service_menu_id=${sm.id}`).then(r => r.json()).catch(() => ({ menus: [] }))
-      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; description?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
+      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; short_description?: string | null; description?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
         origMids.push(mn.id)
         const rd = await fetch(`/api/console/menu-rewards?menu_id=${mn.id}`).then(r => r.json()).catch(() => ({ rewards: [] }))
         const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: number; reward_trigger: string | null; default_months: number | null }[])
           .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_months: r.default_months != null ? String(r.default_months) : '', reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
-        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, description: mn.description ?? '', rewards })
+        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, short_description: mn.short_description ?? '', description: mn.description ?? '', rewards })
       }
     }
     setMenuDrafts(drafts); setOrigMenuIds(origMids); setOrigRewardParent(rewardParent); setOrigTasks(origT)
@@ -495,12 +464,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function addMenuDraft() {
     const defaultSm = editing?.service_menus[0]?.id
     if (!defaultSm) { showToast('先にサービスを保存してください'); return }
-    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', description: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
+    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', short_description: '', description: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
+    setNavSel(menuDrafts.length)   // 追加した draft を左ナビで即選択（中央＝メニュー編集・右＝シート追従）
   }
   function removeMenuDraft(i: number) {
     const d = menuDrafts[i]
     if (d.id && !confirm('このメニューを削除しますか？')) return
     setMenuDrafts(p => p.filter((_, j) => j !== i))
+    setNavSel(prev => typeof prev === 'number' ? (prev === i ? 'basic' : prev > i ? prev - 1 : prev) : prev)
   }
   // 保存：draft を menus＋menu_rewards＋報酬単位タスク(reward_id)に反映。money計算式には触れない。
   // 戻り値＝反映後のメニュー（service_menu_id別・一覧の即時更新用の表示構築のみ。DBの正はサーバ）。
@@ -523,17 +494,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         continue
       }
       const desc = d.description.trim() || null   // menus.description（詳細シート「このメニューでは」）
+      const sdesc = d.short_description.trim() || null   // menus.short_description（一覧の一言説明）
       let menuId = d.id
       let menuSort = menuId ? (origMenuById.get(menuId)?.sort ?? 0) : 0
-      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）', description: desc }) }).catch(() => {})
+      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）', short_description: sdesc, description: desc }) }).catch(() => {})
       else {
-        // POST /api/console/menus は name のみ受理（API変更は最小）→ description は POST 後に PATCH で反映。
+        // POST /api/console/menus は name のみ受理（API変更は最小）→ description 系は POST 後に PATCH で反映。
         const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）' }) })
         const jd = await res.json().catch(() => ({}))
         menuId = jd?.menu?.id ?? null
         if (!menuId) { showToast(`メニュー保存に失敗: ${jd?.error ?? res.status}`); continue }
         menuSort = jd?.menu?.sort ?? 0
-        if (desc) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc }) }).catch(() => {})
+        if (desc || sdesc) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_description: sdesc, description: desc }) }).catch(() => {})
       }
       const builtRewards: MenuReward[] = []
       for (let k = 0; k < d.rewards.length; k++) {
@@ -559,7 +531,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       ;(rebuilt[d.service_menu_id] ??= []).push({
         id: menuId, service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）', sort: menuSort, active: true,
         calendar_member_id: d.id ? origMenuById.get(d.id)?.calendar_member_id ?? null : null,
-        short_description: d.id ? origMenuById.get(d.id)?.short_description ?? null : null,
+        short_description: sdesc,
         description: desc, rewards: builtRewards,
       })
     }
@@ -571,7 +543,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function openEdit(svc: ServiceWithMenus) {
     setSvcForm(svcToForm(svc))
     setEditing(svc); setShowAdd(false)
-    setSvcError('')
+    setSvcError(''); setNavSel('basic')
     setMenuDrafts([]); setOrigMenuIds([]); setOrigRewardParent({}); setOrigTasks({})
     loadMenuEditor(svc).catch(() => {})   // 確定モックのメニュー編集に seed
   }
@@ -579,7 +551,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function openAdd() {
     setSvcForm({ ...defaultServiceForm })
     setEditing(null); setShowAdd(true)
-    setSvcError('')
+    setSvcError(''); setNavSel('basic')
     setMenuDrafts([]); setOrigMenuIds([]); setOrigRewardParent({}); setOrigTasks({})
   }
 
@@ -609,7 +581,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         setServices(prev => prev.map(s => s.id === editing.id
           ? { ...s, ...data.service, service_menus: s.service_menus.map(sm => ({ ...sm, menus: rebuilt[sm.id] ?? [] })) }
           : s))
-        showToast('保存しました — パートナー画面へ反映')
+        showToast('保存しました')
         closeDrawer()
       } else {
         let backbone: MenuRow | null = null
@@ -622,8 +594,8 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         } catch { /* バックボーン作成に失敗してもサービスは作成済み（再度編集を開けば再試行できる） */ }
         const created: ServiceWithMenus = { ...data.service, service_menus: backbone ? [{ ...backbone, menus: [] }] : [] }
         setServices(prev => [...prev, created])
-        openEdit(created)   // 作成→即メニュー追加（ドロワーは編集モードのまま継続）
-        showToast('サービスを追加しました。続けてメニューと報酬を設定できます')
+        openEdit(created)   // 作成→即メニュー追加（3ペインは編集モードのまま継続・左ナビにメニュー列が現れる）
+        showToast('サービスを追加しました')
       }
     })
   }
@@ -733,7 +705,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>サービスマスタ</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="chip chip-direct" style={{ fontVariantNumeric: 'tabular-nums' }}>{services.length} サービス</span>
-          <button onClick={openAdd} className="ui-btn ui-btn--primary" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ 追加</button>
+          <button onClick={openAdd} className="ui-btn ui-btn--primary" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ サービス追加</button>
         </div>
       </div>
 
@@ -764,10 +736,6 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       color: svc.active ? 'var(--green)' : 'var(--muted2)',
                     }}>
                       {svc.active ? '公開中' : '停止中'}
-                    </span>
-                    {/* 結果予告：この状態がAPPにどう映るか（トグルの隣・常時） */}
-                    <span style={{ fontSize: '.58rem', color: 'var(--muted)', flexShrink: 0 }}>
-                      {svc.active ? 'APPの紹介一覧に表示中' : '停止中はAPPに出ません'}
                     </span>
                   </div>
                   {/* 紹介対象＝商売の顔（ブランド名直下・常時表示＋インライン編集・APP STEP1と同一データ） */}
@@ -908,145 +876,159 @@ export default function ServicesClient({ initialServices }: { initialServices: S
           onClick={closeDrawer} />
       )}
 
-      {/* ── Drawer（2ペイン：左=編集フォーム／右=APPライブプレビュー） ── */}
+      {/* ── Drawer（静音化v2・3ペイン：左ナビ132px／中央フラットフォーム／右APPライブプレビュー） ── */}
       {/* 狭幅ではプレビューを隠す（編集操作を優先） */}
-      <style>{`@media (max-width: 760px) { .svc-drawer-preview { display: none } }`}</style>
+      <style>{`@media (max-width: 920px) { .svc-drawer-preview { display: none } }`}</style>
       <div style={{
-        position: 'fixed', right: drawerOpen ? 0 : 'calc(-1 * min(880px, 94vw) - 60px)', top: 0, height: '100vh', width: 'min(880px, 94vw)',
+        position: 'fixed', right: drawerOpen ? 0 : 'calc(-1 * min(1080px, 96vw) - 60px)', top: 0, height: '100vh', width: 'min(1080px, 96vw)',
         background: '#fff', borderLeft: '0.5px solid var(--line)', boxShadow: '-8px 0 40px rgba(14,14,20,.12)',
         zIndex: 50, overflow: 'hidden', transition: 'right .3s cubic-bezier(.4,0,.2,1)',
       }}>
-        {drawerOpen && (
-          <div key={editing?.id ?? 'new'} style={{ display: 'flex', height: '100%' }}>
-          <form onSubmit={e => submitService(e)} className="cascade" style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 26px 88px' }}>
+        {drawerOpen && (() => {
+          // 左ナビの選択 → 中央の表示対象（'basic'=基本情報／number=メニューdraft）。
+          const selMenu = typeof navSel === 'number' ? menuDrafts[navSel] : undefined
+          const mi = typeof navSel === 'number' ? navSel : -1
+          return (
+          <div key={editing?.id ?? 'new'} style={{ display: 'flex', height: '100%', position: 'relative' }}>
+            <button type="button" onClick={closeDrawer} className="lift" aria-label="閉じる"
+              style={{ position: 'absolute', top: 12, right: 12, zIndex: 5, fontSize: '1rem', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--muted2)', lineHeight: 1 }}>✕</button>
 
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-              <h2 style={{ fontSize: '.92rem', fontWeight: 500 }}>
-                {editing ? 'サービスを編集' : '新しいサービス'}
-              </h2>
-              <button type="button" onClick={closeDrawer} className="lift"
-                style={{ fontSize: '1rem', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg2)', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--muted2)', lineHeight: 1, flexShrink: 0 }}>✕</button>
-            </div>
+            {/* ── 左ナビ 132px：ブランド名 → 基本情報 → メニュー列 → ＋ メニュー追加（新規時は「新規」1項目） ── */}
+            <nav style={{ width: 132, flexShrink: 0, borderRight: '0.5px solid var(--line)', display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '18px 0 14px' }}>
+              {editing ? (
+                <>
+                  <button type="button" onClick={() => setNavSel('basic')}
+                    style={{ ...navItemStyle(false), fontSize: 13, marginBottom: 8 }}>
+                    {svcForm.name || '（無題）'}
+                  </button>
+                  <button type="button" onClick={() => setNavSel('basic')} style={navItemStyle(navSel === 'basic')}>基本情報</button>
+                  {menuDrafts.map((d, i) => (
+                    <button key={d.id ?? `nav-${i}`} type="button" onClick={() => setNavSel(i)} style={navItemStyle(navSel === i)}>
+                      {d.name.trim() || '（無題）'}
+                    </button>
+                  ))}
+                  <button type="button" onClick={addMenuDraft}
+                    style={{ ...navItemStyle(false), color: 'var(--c-blue)', marginTop: 'auto', paddingTop: 14 }}>
+                    ＋ メニュー追加
+                  </button>
+                </>
+              ) : (
+                <button type="button" onClick={() => setNavSel('basic')} style={navItemStyle(true)}>新規</button>
+              )}
+            </nav>
 
-            {/* ── A. 基本情報 ── */}
-            <SectionLabel>A. 基本情報</SectionLabel>
-
-            <Fld label="ロゴ画像（推奨・APPの紹介一覧カードと詳細シートに表示）">
-              <LogoUpload logoPath={svcForm.logo_path} name={svcForm.name} onUpload={v => setF({ logo_path: v })} />
-            </Fld>
-
-            <Fld label="イメージ画像（任意・APPの詳細シート上部に表示・未設定はロゴ）">
-              <ImageUpload imageUrl={svcForm.image_url} onUpload={v => setF({ image_url: v })} />
-            </Fld>
-
-            <Fld label="サービス名（必須）">
-              <FInput value={svcForm.name} onChange={v => setF({ name: v })} placeholder="MOOM" />
-            </Fld>
-
-            <Fld label="サブタイトル">
-              <FInput value={svcForm.subtitle} onChange={v => setF({ subtitle: v })} placeholder="賃貸仲介プラットフォーム" />
-            </Fld>
-
-            <Fld label="紹介対象（APPの紹介一覧カードでフック文として表示）">
-              <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例：引越し・お部屋探しをしたい人" />
-            </Fld>
-
-            <Fld label="カテゴリ（任意・APPの紹介一覧の絞り込みチップに使用）">
-              <FInput value={svcForm.category} onChange={v => setF({ category: v })} placeholder="例：不動産 / 人材 / 制作" />
-            </Fld>
-
-            <Fld label="サービスサイト URL">
-              <FInput value={svcForm.url} onChange={v => setF({ url: v })} placeholder="https://example.com" />
-            </Fld>
-
-            <Fld label="説明（APPの事業概要ⓘと詳細シート「◯◯とは」に表示）">
-              <FTextarea value={svcForm.description} onChange={v => setF({ description: v })} placeholder="サービスの概要を記載" />
-            </Fld>
-
-            <Fld label="こんな方に（Who）">
-              <FInput value={svcForm.who} onChange={v => setF({ who: v })} placeholder="不動産業に従事する方、物件を探している方" />
-            </Fld>
-
-            {/* ── B. メニューと報酬（確定モック menu_edit_reward_with_trigger_tasks_console・メニュー＞報酬複数） ── */}
-            <SectionLabel>B. メニューと報酬</SectionLabel>
-            {!editing && (
-              <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>
-                サービスを作成すると、続けてこの画面でメニューと報酬を追加できます
-              </p>
-            )}
-            {editing && (
-              <>
-
-                {menuDrafts.map((d, i) => (
-                  <div key={d.id ?? `new-${i}`} style={{ border: '0.5px solid var(--line)', borderRadius: 12, padding: '14px 14px', marginBottom: 12, background: '#fff' }}>
-                    {/* メニュー名 ＋ メニュー削除 */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <input value={d.name} onChange={e => setMenuField(i, { name: e.target.value })} placeholder="メニュー名"
-                        style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'inherit', fontSize: '.84rem', fontWeight: 500 }} />
-                      <button type="button" onClick={() => removeMenuDraft(i)}
-                        style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, padding: '8px 2px', flexShrink: 0, whiteSpace: 'nowrap' }}>メニューを削除</button>
+            {/* ── 中央フラットフォーム：ラベル11px/muted＋入力欄だけで縦に流す（箱なし） ── */}
+            <form onSubmit={e => submitService(e)} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              <div className="cascade" key={selMenu ? `menu-${mi}` : 'basic'} style={{ flex: 1, overflowY: 'auto', padding: '24px 26px 30px' }}>
+                {!selMenu ? (
+                  <>
+                    {/* 基本情報 */}
+                    <Fld label="ブランド名（必須）">
+                      <FInput value={svcForm.name} onChange={v => setF({ name: v })} placeholder="MOOM" />
+                    </Fld>
+                    <Fld label="カテゴリ">
+                      <FInput value={svcForm.category} onChange={v => setF({ category: v })} placeholder="例：不動産 / 人材 / 制作" />
+                    </Fld>
+                    <Fld label="説明（〜とは）">
+                      <FTextarea value={svcForm.description} onChange={v => setF({ description: v })} placeholder="サービスの概要を記載" />
+                    </Fld>
+                    <Fld label="紹介対象（フック文）">
+                      <FInput value={svcForm.target_audience} onChange={v => setF({ target_audience: v })} placeholder="例：引越し・お部屋探しをしたい人" />
+                    </Fld>
+                    <Fld label="こんな方に（Who）">
+                      <FInput value={svcForm.who} onChange={v => setF({ who: v })} placeholder="不動産業に従事する方、物件を探している方" />
+                    </Fld>
+                    <Fld label="サービスサイト URL">
+                      <FInput value={svcForm.url} onChange={v => setF({ url: v })} placeholder="https://example.com" />
+                    </Fld>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <Fld label="ロゴ画像">
+                        <div style={uploadBoxStyle}>
+                          <LogoUpload logoPath={svcForm.logo_path} name={svcForm.name} onUpload={v => setF({ logo_path: v })} />
+                        </div>
+                      </Fld>
+                      <Fld label="イメージ画像">
+                        <div style={uploadBoxStyle}>
+                          <ImageUpload imageUrl={svcForm.image_url} onUpload={v => setF({ image_url: v })} />
+                        </div>
+                      </Fld>
                     </div>
+                    <Fld label="サブタイトル">
+                      <FInput value={svcForm.subtitle} onChange={v => setF({ subtitle: v })} placeholder="賃貸仲介プラットフォーム" />
+                    </Fld>
+                    <Fld label="公開">
+                      <Toggle2
+                        val={svcForm.active}
+                        onA={() => setF({ active: false })}
+                        onB={() => setF({ active: true })}
+                        labelA="停止中"
+                        labelB="公開中"
+                      />
+                    </Fld>
+                  </>
+                ) : (
+                  <>
 
-                    {/* メニュー詳細説明（menus.description）＝APP詳細シート「このメニューでは」。
-                        一覧のインライン✎編集と同一データ（ドロワーが正の編集口・プレビュー連動） */}
-                    <div style={{ marginTop: 10 }}>
-                      <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>メニュー詳細説明（任意・APPの詳細シート「このメニューでは」に表示）</label>
-                      <textarea value={d.description} onChange={e => setMenuField(i, { description: e.target.value })} rows={3}
-                        placeholder="例：お客さまの状況を伺い、最適なプランをご提案します"
-                        style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', resize: 'vertical', background: '#fff' }} />
-                    </div>
+                    {/* メニュー編集：メニュー名／一言説明／詳細説明／報酬（枠なし）／協力タスク */}
+                    <Fld label="メニュー名">
+                      <input value={selMenu.name} onChange={e => setMenuField(mi, { name: e.target.value })} placeholder="メニュー名"
+                        style={{ ...inputStyle, fontSize: '.84rem', fontWeight: 500 }} />
+                    </Fld>
+                    <Fld label="一言説明">
+                      <FInput value={selMenu.short_description} onChange={v => setMenuField(mi, { short_description: v })} placeholder="例：お部屋を探している人を紹介するだけ。物件紹介はMBが対応。" />
+                    </Fld>
+                    <Fld label="詳細説明">
+                      <FTextarea value={selMenu.description} onChange={v => setMenuField(mi, { description: v })} placeholder="例：お客さまの状況を伺い、最適なプランをご提案します" />
+                    </Fld>
 
-                    {/* 報酬ブロック（複数） */}
-                    {d.rewards.map((r, ri) => (
-                      <div key={r.id ?? `nr-${ri}`} style={{ marginTop: 12, border: '1px solid var(--blue-bg)', borderRadius: 10, padding: '12px 12px', background: 'var(--blue-bg2)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--blue-dk)' }}>報酬{ri + 1}</span>
-                          <button type="button" onClick={() => removeReward(i, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 500 }}>削除</button>
+                    {/* 報酬ブロック（既存エディタ・枠なし＝0.5px罫線と余白で区切る） */}
+                    {selMenu.rewards.map((r, ri) => (
+                      <div key={r.id ?? `nr-${ri}`} style={{ borderTop: '0.5px solid var(--line)', marginTop: 16, paddingTop: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)' }}>報酬{ri + 1}</span>
+                          <button type="button" onClick={() => removeReward(mi, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 500 }}>削除</button>
                         </div>
                         {/* 報酬タイプ：固定（円）/ 粗利（%）/ 継続（毎月）の3択 */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {([['fixed', '固定（円）'], ['rate', '粗利（%）'], ['continuous', '継続（毎月）']] as const).map(([v, l]) => (
-                            <button type="button" key={v} onClick={() => setRewardField(i, ri, { reward_type: v })}
-                              style={{ padding: '8px 11px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500,
-                                background: r.reward_type === v ? 'var(--c-blue)' : '#fff', color: r.reward_type === v ? '#fff' : 'var(--muted2)' }}>{l}</button>
+                            <button type="button" key={v} onClick={() => setRewardField(mi, ri, { reward_type: v })}
+                              style={{ padding: '8px 11px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500,
+                                border: `1.5px solid ${r.reward_type === v ? 'var(--c-blue)' : 'var(--line)'}`,
+                                background: r.reward_type === v ? 'var(--blue-bg2)' : '#fff', color: r.reward_type === v ? 'var(--c-blue)' : 'var(--muted2)' }}>{l}</button>
                           ))}
                         </div>
                         {/* 金額/率（継続時は「毎月の率」＋「期間」） */}
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                          <input value={r.reward_value} onChange={e => setRewardField(i, ri, { reward_value: e.target.value })} inputMode="numeric"
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
+                          <input value={r.reward_value} onChange={e => setRewardField(mi, ri, { reward_value: e.target.value })} inputMode="numeric"
                             placeholder={r.reward_type === 'fixed' ? '30000' : '50'}
-                            style={{ flex: 1, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
+                            style={{ ...inputStyle, flex: 1, width: 'auto', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right' }} />
                           <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500, flexShrink: 0 }}>
                             {r.reward_type === 'fixed' ? '円' : r.reward_type === 'rate' ? '%（粗利）' : '%（毎月の粗利）'}
                           </span>
                         </div>
                         {r.reward_type === 'continuous' && (
-                          <>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-                              <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', flexShrink: 0 }}>期間（デフォルト）</label>
-                              <input value={r.reward_months} onChange={e => setRewardField(i, ri, { reward_months: e.target.value })} inputMode="numeric"
-                                placeholder="12"
-                                style={{ width: 80, border: '1.5px solid var(--line)', borderRadius: 8, padding: '9px 11px', fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right', background: '#fff' }} />
-                              <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>ヶ月</span>
-                            </div>
-                          </>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                            <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', flexShrink: 0 }}>期間（デフォルト）</label>
+                            <input value={r.reward_months} onChange={e => setRewardField(mi, ri, { reward_months: e.target.value })} inputMode="numeric" placeholder="12"
+                              style={{ ...inputStyle, width: 80, fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right' }} />
+                            <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>ヶ月</span>
+                          </div>
                         )}
                         {/* トリガー */}
-                        <div style={{ marginTop: 10 }}>
-                          <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>トリガー（成果地点）</label>
-                          <input value={r.reward_trigger} onChange={e => setRewardField(i, ri, { reward_trigger: e.target.value })} placeholder="例：賃貸成約で確定"
-                            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.76rem', boxSizing: 'border-box', background: '#fff' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)' }}>トリガー（成果地点）</label>
+                          <input value={r.reward_trigger} onChange={e => setRewardField(mi, ri, { reward_trigger: e.target.value })} placeholder="例：賃貸成約で確定"
+                            style={{ ...inputStyle, fontSize: '.76rem' }} />
                         </div>
-                        {/* 協力タスク（この報酬で必要なもの） */}
-                        <div style={{ marginTop: 10 }}>
-                          <label style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク（この報酬で必要なものを選ぶ）</label>
+                        {/* 協力タスク（この報酬に紐づく6マスタ選択） */}
+                        <div style={{ marginTop: 12 }}>
+                          <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク</label>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {COOP_TASK_MASTER.map(mt => {
                               const on = r.tasks.includes(mt.label)
                               return (
                                 <label key={mt.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
-                                  <input type="checkbox" checked={on} onChange={() => toggleRewardTask(i, ri, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
+                                  <input type="checkbox" checked={on} onChange={() => toggleRewardTask(mi, ri, mt.label)} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
                                   <span style={{ flex: 1, fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
                                   <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
                                 </label>
@@ -1057,58 +1039,39 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                       </div>
                     ))}
 
-                    {/* ＋報酬を追加 */}
-                    <button type="button" onClick={() => addReward(i)}
-                      style={{ width: '100%', padding: '8px 0', borderRadius: 8, border: '1.5px dashed var(--blue)', background: '#fff', color: 'var(--blue)', fontSize: '.7rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginTop: 10 }}>
-                      ＋ 報酬を追加
-                    </button>
-                  </div>
-                ))}
+                    {/* ＋ 報酬を追加／メニューを削除（テキストアクション・箱なし） */}
+                    <div style={{ borderTop: '0.5px solid var(--line)', marginTop: 16, paddingTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <button type="button" onClick={() => addReward(mi)}
+                        style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                        ＋ 報酬を追加
+                      </button>
+                      <button type="button" onClick={() => removeMenuDraft(mi)}
+                        style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                        メニューを削除
+                      </button>
+                    </div>
+                  </>
+                )}
 
-                {/* ＋ メニューを追加（破線） */}
-                <button type="button" onClick={addMenuDraft}
-                  style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: '1.5px dashed var(--c-blue)', background: 'var(--blue-bg2)', color: 'var(--c-blue)', fontSize: '.78rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
-                  ＋ メニューを追加
+                {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 10 }}>{svcError}</p>}
+              </div>
+
+              {/* 保存（下部固定・予告文なし） */}
+              <div style={{ flexShrink: 0, borderTop: '0.5px solid var(--line)', padding: '12px 26px', background: '#fff' }}>
+                <button type="submit" disabled={submitting || !svcForm.name} className="ui-btn ui-btn--primary"
+                  style={{ width: '100%', opacity: submitting || !svcForm.name ? .5 : 1 }}>
+                  {submitting ? '保存中…' : '保存する'}
                 </button>
-              </>
-            )}
+              </div>
+            </form>
 
-            {/* ── C. 公開状態 ── */}
-            <SectionLabel>C. 公開状態</SectionLabel>
-            <Fld label="公開状態">
-              <Toggle2
-                val={svcForm.active}
-                onA={() => setF({ active: false })}
-                onB={() => setF({ active: true })}
-                labelA="停止中"
-                labelB="公開中"
-              />
-            </Fld>
-            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '-6px 0 0', lineHeight: 1.6 }}>
-              停止するとAPPの紹介一覧から非表示になります
-            </p>
-
-            {svcError && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{svcError}</p>}
-
-            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button type="submit" disabled={submitting || !svcForm.name} className="ui-btn ui-btn--primary"
-                style={{ width: '100%', opacity: submitting || !svcForm.name ? .5 : 1 }}>
-                {submitting ? '保存中…' : editing ? '保存してパートナー画面へ反映' : '作成してパートナー画面へ公開'}
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }} />
-              </button>
-              {/* 結果予告：保存がどこに映るか（1行） */}
-              <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: 0, textAlign: 'center' }}>
-                保存するとAPPの紹介一覧・詳細シートに即時反映されます
-              </p>
-            </div>
-          </form>
-
-          {/* ── 右ペイン：APPライブプレビュー（svcForm/menuDrafts と同期） ── */}
-          <aside className="svc-drawer-preview" style={{ width: 336, flexShrink: 0, borderLeft: '0.5px solid var(--line)', background: 'var(--bg2)', overflowY: 'auto', padding: '20px 18px 40px' }}>
-            <DrawerPreview svcForm={svcForm} menuDrafts={menuDrafts} isNew={!editing} />
-          </aside>
+            {/* ── 右ペイン：APPライブプレビュー（svcForm/menuDrafts と同期・左ナビ選択に追従） ── */}
+            <aside className="svc-drawer-preview" style={{ width: 336, flexShrink: 0, borderLeft: '0.5px solid var(--line)', background: 'var(--bg2)', overflowY: 'auto', padding: '20px 18px 40px' }}>
+              <DrawerPreview svcForm={svcForm} menuDrafts={menuDrafts} focus={navSel} />
+            </aside>
           </div>
-        )}
+          )
+        })()}
       </div>
 
       {/* ── Toast ── */}
