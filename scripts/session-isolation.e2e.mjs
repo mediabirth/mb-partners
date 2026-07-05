@@ -153,6 +153,13 @@ async function main() {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
 
+    // ウォームアップ: 新デプロイ直後の関数コールドスタートを先に叩いて温める（初回計測のflake根絶）。
+    console.log('[0] ウォームアップ（コールドスタート回避）')
+    for (const surf of ['app', 'vendor', 'console']) {
+      await page.goto(SURF[surf].base + SURF[surf].login, { waitUntil: 'domcontentloaded' }).catch(() => {})
+      await page.waitForTimeout(400)
+    }
+
     console.log('[1] 3面へ順次ログイン（同一ブラウザ）')
     await login(page, 'app');     ok(await isAlive(page, 'app'), 'app ログイン成立')
     await login(page, 'vendor');  ok(await isAlive(page, 'vendor'), 'vendor ログイン成立')
