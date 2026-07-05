@@ -161,6 +161,14 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // 通水P1: ファネル「register」を記録（リンク経由の顧客セルフ登録＝転換の到達点）。読み取り帰属は不変・お金非接触。
+    try {
+      await supabase.from('funnel_events').insert({
+        event_type: 'register', token, partner_id: link.partner_id,
+        channel: source === 'qr' ? 'qr' : 'link', dedup_hash: `register:${deal.id}`,
+      })
+    } catch { /* best-effort・計測失敗は登録を止めない */ }
+
     return NextResponse.json({ success: true, dealId: deal.id })
   } catch (err) {
     console.error('referral API error', err)

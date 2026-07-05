@@ -34,6 +34,7 @@ const NAV_STYLE = `
 const ITEMS = [
   { href: '/console',           id: 'dash',     label: 'ダッシュボード', icon: 'dash' },
   { href: '/console/deals',     id: 'deals',    label: '案件',           icon: 'list' },
+  { href: '/console/growth',    id: 'growth',   label: '成長（紹介）',   icon: 'growth' },
   { href: '/console/partners',  id: 'partners', label: 'パートナー',     icon: 'users' },
   { href: '/console/applications', id: 'applications', label: 'パートナー応募', icon: 'apply' },
   { href: '/console/services',  id: 'svcs',     label: 'サービスマスタ', icon: 'svcs' },
@@ -64,6 +65,8 @@ function NavIcon({ id }: { id: string }) {
       return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
     case 'settings':
       return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    case 'growth':
+      return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
     default: return null
   }
 }

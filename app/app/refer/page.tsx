@@ -8,6 +8,7 @@ import { rewardValueText, rewardPillText, rewardRangeLabel } from '@/lib/reward-
 import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
 import RewardPill from '@/components/ui/RewardPill'
 import MenuDetailSheet from '@/components/MenuDetailSheet'
+import ShareLinkSheet from './ShareLinkSheet'
 import { submitPartnerReferral, getPartnerInfo } from './actions'
 
 // リファラル v3.1：世界観は「紹介」1つ。協力タスクで報酬が変わるだけ。「協力/関わり方」はUIに出さない。
@@ -78,6 +79,7 @@ export default function ReferPage() {
   const [selMenuData, setSelMenuData]     = useState<Menu | null>(null)
   const [selReward, setSelReward]         = useState<MenuReward | null>(null)
   const [showSheet, setShowSheet]         = useState(false)
+  const [shareSvc, setShareSvc]           = useState<{ id: string; name: string } | null>(null)  // 通水P1: 共有シート
   const [query, setQuery]                 = useState('')                 // v3：検索（クライアント絞り込み）
   const [category, setCategory]           = useState<string>('すべて')   // v3：カテゴリチップ（単一選択）
   const [consultNote, setConsultNote]     = useState('')
@@ -281,7 +283,7 @@ export default function ReferPage() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {filteredServices.map((svc, i) => (
-                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} />
+                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name })} />
               ))}
             </div>
             {services.length > 0 && filteredServices.length === 0 && (
@@ -478,6 +480,9 @@ export default function ReferPage() {
         </div>
       )}
 
+      {/* 通水P1: 紹介リンク共有シート（ブランド単位・referral_links既存資産の露出） */}
+      {shareSvc && <ShareLinkSheet serviceId={shareSvc.id} serviceName={shareSvc.name} onClose={() => setShareSvc(null)} />}
+
       {showSheet && selSvc && (
         <MenuDetailSheet
           svc={selSvc}
@@ -525,9 +530,9 @@ function Radio({ active, onSelect, title, desc }: { active: boolean; onSelect: (
 
 // Opportunity Board ブランドカード：フル幅・1行目(ロゴ40px+名前+メニューN+chevron)/2行目(フック文)/3行目(レンジピル+ヒント)。
 //   展開でカード内にメニュー行リスト（0.5px罫線）。展開機構は既存の expandedSvc を維持（URL不変）。
-function BrandCard({ svc, active, index, onToggle, onPick }: {
+function BrandCard({ svc, active, index, onToggle, onPick, onShare }: {
   svc: ServiceWithMenus; active: boolean; index: number
-  onToggle: () => void; onPick: (sm: MenuRow, menu: Menu, reward: MenuReward) => void
+  onToggle: () => void; onPick: (sm: MenuRow, menu: Menu, reward: MenuReward) => void; onShare: () => void
 }) {
   const audience = (svc as { target_audience?: string | null }).target_audience || ''
   const groups = svc.service_menus
@@ -570,15 +575,21 @@ function BrandCard({ svc, active, index, onToggle, onPick }: {
       {/* 展開：メニュー行（1行目=名前+報酬ピル+chevron／2行目=協力タスクピル） */}
       {active && (
         <div className="exp-in" style={{ borderTop: '0.5px solid var(--line)', padding: '0 16px' }}>
+          {/* 通水P1: このブランドの紹介リンクを共有（メニュー選択で「送って紹介」／リンク共有で「自分で登録してもらう」の両輪） */}
+          <button onClick={(e) => { e.stopPropagation(); onShare() }}
+            style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', padding: '13px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--c-blue)' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>紹介リンクを共有</span>
+          </button>
           {groups.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '13px 0', margin: 0 }}>メニューは準備中です。</p>
+            <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '13px 0', margin: 0, borderTop: '0.5px solid var(--line)' }}>メニューは準備中です。</p>
           ) : groups.map(({ sm, menu }, i) => {
             const reward = (menu.rewards ?? [])[0]
             // ★一覧のタスクピル＝登録ページのチェック項目 と同一の解決経路（共通純関数）。
             const tasks = resolveMenuCoopTasks((sm as { coverage_task_details?: CoopTaskItem[] }).coverage_task_details, reward?.reward_type)
             return (
               <button key={menu.id} onClick={() => onPick(sm, menu, reward)}
-                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', padding: '13px 0', display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--txt)' }}>
+                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: '0.5px solid var(--line)', padding: '13px 0', display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--txt)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
                   {reward && <MenuRowPill reward={reward} />}
