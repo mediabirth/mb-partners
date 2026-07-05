@@ -8,7 +8,8 @@ const VendorExpenseSheet = dynamic(() => import('@/components/VendorExpenseSheet
 type Expense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean }
 
 // 案件詳細の経費ブロック：申請は共通シート（対象案件プリセット・カメラ/ファイル独立）、下に履歴。
-export default function VendorCaseExpense({ assignmentId, label, initial }: { assignmentId: string; label: string; initial: Expense[] }) {
+// 純化バッチ: 経費申請は「納品済み」がゲート（正典業務フロー: 納品→経費申請→承認→粗利）。delivered=false のときは申請不可。
+export default function VendorCaseExpense({ assignmentId, label, initial, delivered = true }: { assignmentId: string; label: string; initial: Expense[]; delivered?: boolean }) {
   const [open, setOpen] = useState(false)
   const approved = initial.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0)
 
@@ -19,7 +20,8 @@ export default function VendorCaseExpense({ assignmentId, label, initial }: { as
         <span style={{ fontSize: '.62rem', color: 'var(--muted)' }}>承認済 ¥{approved.toLocaleString()}</span>
       </div>
 
-      <button onClick={() => setOpen(true)} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>経費を申請</button>
+      <button onClick={() => setOpen(true)} disabled={!delivered} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center', opacity: delivered ? 1 : .5 }}>経費を申請</button>
+      {!delivered && <p style={{ fontSize: '.62rem', color: 'var(--muted)', margin: '8px 2px 0', lineHeight: 1.6 }}>納品済みにすると経費を申請できます。</p>}
 
       <div style={{ marginTop: 14 }}>
         {initial.length === 0 ? (

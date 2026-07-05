@@ -12,19 +12,21 @@ import { useEffect, useState, type ReactNode, type CSSProperties } from 'react'
 // app は全項目 href のみ＝この拡張の影響を受けない（後方互換・乖離不能性を維持）。
 export type NavItem = { href?: string; label: string; icon: ReactNode; rootExact?: boolean; onClick?: () => void }
 
-/** 中央 FAB（app=リンク／vendor=アクション）。円・グラデ・寸法は単一ソース。 */
-export function NavFab({ href, onClick, label, children }: { href?: string; onClick?: () => void; label?: string; children: ReactNode }) {
+/** 中央 FAB（app=リンク／vendor=アクション）。円・グラデ・寸法は単一ソース。
+ *  iconOnly＝ラベルテキストを出さずアイコンのみ（名称は aria-label で保持・タップ領域不変）。 */
+export function NavFab({ href, onClick, label, children, iconOnly }: { href?: string; onClick?: () => void; label?: string; children: ReactNode; iconOnly?: boolean }) {
   const circle = <span className="snav-fab" style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#5240F2,#3D2BD0)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(71,51,230,.4)' }}>{children}</span>
-  const inner = <>{circle}{label && <span style={{ fontSize: '.52rem', color: 'var(--c-blue)', fontWeight: 700 }}>{label}</span>}</>
+  const inner = <>{circle}{label && !iconOnly && <span style={{ fontSize: '.52rem', color: 'var(--c-blue)', fontWeight: 700 }}>{label}</span>}</>
   const css: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', padding: '0 0 10px', background: 'none', border: 'none', cursor: 'pointer' }
-  return href ? <Link href={href} style={css}>{inner}</Link> : <button onClick={onClick} style={css} aria-label={label}>{inner}</button>
+  return href ? <Link href={href} style={css} aria-label={label}>{inner}</Link> : <button onClick={onClick} style={css} aria-label={label}>{inner}</button>
 }
 
-export default function SurfaceNav({ left, right, fab, unreadHref }: {
+export default function SurfaceNav({ left, right, fab, unreadHref, iconOnly }: {
   left: NavItem[]
   right: NavItem[]
   fab: ReactNode
   unreadHref?: string   // セット時のみ /api/notifications/unread を取得しその項目にバッジ
+  iconOnly?: boolean    // 純化(E): ラベルテキストを出さずアイコンのみ（aria-labelで名称保持・タップ領域不変）
 }) {
   const path = usePathname()
   const [hasUnread, setHasUnread] = useState(false)
@@ -41,16 +43,16 @@ export default function SurfaceNav({ left, right, fab, unreadHref }: {
       <>
         {on && <span className="snav-active-bar" />}
         <span className="snav-item-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">{it.icon}</svg></span>
-        {it.label}
+        {!iconOnly && it.label}
         {unreadHref === it.href && hasUnread && <span className="snav-bdg" />}
       </>
     )
     const cls = `snav-item${on ? ' is-active' : ''}`
     // 憲法§9：選択=--c-blue／非選択=--t-tertiary（見た目のみ。active判定/href は不変）。
     const css: CSSProperties = { color: on ? 'var(--c-blue)' : 'var(--t-tertiary)', fontWeight: on ? 700 : 400 }
-    // href→Link 遷移 / onClick→button（モーダル等の既存導線）。寸法・タップ領域・safe-area は同一(.snav-item)。
+    // href→Link 遷移 / onClick→button（モーダル等の既存導線）。寸法・タップ領域・safe-area は同一(.snav-item)。名称は aria-label で保持。
     return it.href
-      ? <Link key={it.href} href={it.href} className={cls} style={css}>{inner}</Link>
+      ? <Link key={it.href} href={it.href} className={cls} style={css} aria-label={it.label}>{inner}</Link>
       : <button key={it.label} type="button" onClick={it.onClick} aria-label={it.label} className={cls} style={{ ...css, fontFamily: 'inherit', background: 'none', border: 'none', cursor: 'pointer' }}>{inner}</button>
   }
 

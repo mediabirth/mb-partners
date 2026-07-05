@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import VendorStatusSteps from '@/components/VendorStatusSteps'
 import { loadVendorBundle } from '@/lib/vendor-data'
 import { VENDOR_DEAL_ST, VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
@@ -46,7 +45,6 @@ export default async function VendorCases() {
                 </div>
               </div>
               <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 6 }}>{svc?.name ?? 'サービス'}</div>
-              <VendorStatusSteps status={a.deal?.status ?? 'received'} />
             </Link>
           )
         })}

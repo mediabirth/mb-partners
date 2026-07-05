@@ -12,10 +12,12 @@ const BELL = <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 
 export default function VendorNav() {
   return (
     <SurfaceNav
+      // 純化(E): 「案件」ラベル削除＝整合のため全項目アイコンのみ（名称は aria-label で保持・タップ領域不変）。
+      iconOnly
       // 並び＝ホーム / 予定(スケジュール) / 〔案件・中央隆起〕 / 委託費 / 通知
       left={[{ href: '/vendor', label: 'ホーム', icon: HOME, rootExact: true }, { href: '/vendor/schedule', label: '予定', icon: CAL }]}
       right={[{ href: '/vendor/rewards', label: '委託費', icon: REWARD }, { href: '/vendor/inbox', label: '通知', icon: BELL }]}
-      fab={<NavFab href="/vendor/cases" label="案件"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="7.5" width="18" height="12.5" rx="2" /><path d="M8 7.5V5.5a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></NavFab>}
+      fab={<NavFab href="/vendor/cases" label="案件" iconOnly><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="7.5" width="18" height="12.5" rx="2" /><path d="M8 7.5V5.5a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></NavFab>}
     />
   )
 }

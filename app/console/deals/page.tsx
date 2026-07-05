@@ -5,7 +5,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import ChannelMark from '@/components/ChannelMark'
 import ConsoleNav from '@/components/ConsoleNav'
 import { customerHonorific } from '@/lib/customer'
-import { phaseOf, PHASE_LABEL, PROJECT_STATUSES, PROJECT_STATUS_STYLE } from '@/lib/phase'
+import { phaseOf, PHASE_LABEL } from '@/lib/phase'
 import RewardPill from '@/components/ui/RewardPill'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
@@ -16,7 +16,6 @@ import { statusTranslation, projectLaneTranslation, transitionForecast, forecast
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 // A: ドロワー内でのみ使う重い子を遅延読込（初回バンドルから除外・押下/展開時に取得）。
-const DeliveryProgress = dynamic(() => import('./DeliveryProgress'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 120, borderRadius: 12 }} /> })
 const ContinuousMonthly = dynamic(() => import('./ContinuousMonthly'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 200, borderRadius: 12, marginTop: 18 }} /> })
 
 type Deal = {
@@ -277,21 +276,26 @@ const SHODAN_LANES: Lane[] = [
   { key: 'received',    label: '受付',   group: 'shodan', tone: 'warn' },
   { key: 'in_progress', label: '商談中', group: 'shodan', tone: 'progress' },
 ]
+// 純化バッチ(B): プロジェクトレーンは「納品」を軸に2レーンへ統合。
+//   進行中（納品前）／納品済み（＝経費申請・粗利確定のゲート）。旧6値は表示写像で吸収（project_status は非破壊deprecate）。
+//   レーンは手動 project_status ではなく「デリバリー割当の納品signal」から導出＝更新されない第二の真実を排除。
 const PROJECT_LANES: Lane[] = [
-  // 静音化v2.1(A2): レーン名は正典 DEAL_STATUS.confirmed.label（=成約）から導出（「成約・未着手」廃止）。
-  { key: '未着手', label: DEAL_STATUS.confirmed.label, group: 'project', tone: 'neutral' },
-  { key: '進行中', label: '進行中',       group: 'project', tone: 'progress' },
-  { key: '確認待ち', label: '確認待ち',   group: 'project', tone: 'warn' },
-  { key: '修正対応', label: '修正対応',   group: 'project', tone: 'danger' },
-  { key: '納品完了', label: '納品完了',   group: 'project', tone: 'success' },
-  { key: '保留',   label: '保留',         group: 'project', tone: 'neutral' },
+  { key: '進行中',   label: '進行中',   group: 'project', tone: 'progress' },
+  { key: '納品済み', label: '納品済み', group: 'project', tone: 'success' },
 ]
 const PIPELINE_LANES: Lane[] = [...SHODAN_LANES, ...PROJECT_LANES]
-// 案件が属するレーンキー（商談=status／プロジェクト=project_status・null は 未着手 とみなす）。
-function laneKeyOf(d: { status: string; intake_type?: string | null; project_status?: string | null; _phase?: 'shodan' | 'project' }): string {
+// プロジェクトのレーン導出（納品signal）: 了承済/納品済みの割当が全て納品済み→「納品済み」、それ以外→「進行中」。
+function projectLaneOf(d: { _deliveries?: { delivery_id: string | null; status?: string }[] }): string {
+  const asgs = (d._deliveries ?? []).filter(a => a.delivery_id)
+  const active = asgs.filter(a => ['accepted', 'assigned', 'delivered'].includes(a.status ?? 'assigned'))
+  if (active.length > 0 && active.every(a => a.status === 'delivered')) return '納品済み'
+  return '進行中'
+}
+// 案件が属するレーンキー（商談=status／プロジェクト=納品signal導出）。
+function laneKeyOf(d: { status: string; intake_type?: string | null; project_status?: string | null; _phase?: 'shodan' | 'project'; _deliveries?: { delivery_id: string | null; status?: string }[] }): string {
   const phase = d._phase ?? phaseOf(d)
   if (phase === 'shodan') return d.status                 // received | in_progress
-  return d.project_status ?? '未着手'
+  return projectLaneOf(d)
 }
 
 // A2b: 割当ごとの経費（一覧＋承認/却下＋追加＋領収書プレビュー）。
@@ -499,19 +503,7 @@ export default function DealsPage() {
     setDeals(d.deals)
     if (keepId) setSelected(d.deals.find((x: Deal) => x.id === keepId) ?? null)
   }
-  // F-3a: 任意の deal の project_status を変更（ボードのプロジェクト・レーン間ドラッグ用）。お金に非干渉。
-  // 実装2: 波及なし（3面表示・メール不変）のため確認は挟まず即時実行。ドロップ経由(opts.undoFrom)は Undoトースト8秒。
-  async function setProjectStatusForDeal(deal: Deal, ps: string, opts?: { undoFrom: string; laneLabel: string }) {
-    setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, project_status: ps } : d))  // 楽観更新
-    if (selected?.id === deal.id) setSelected(s => s ? { ...s, project_status: ps } : s)
-    try {
-      const res = await fetch(`/api/console/deals/${deal.id}/project-status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_status: ps }) })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data.needsMigration) { showToast(data.needsMigration ? 'project_status列のDB適用が必要です' : (data.error ?? '更新に失敗しました')); await refreshDeals(selected?.id) }
-      else if (opts) showToast(`「${opts.laneLabel}」へ移動しました`, { duration: 8000, undo: () => setProjectStatusForDeal(deal, opts.undoFrom) })
-      else showToast(`プロジェクト状態を「${ps}」に変更しました`)
-    } catch { showToast('更新に失敗しました'); await refreshDeals(selected?.id) }
-  }
+  // 純化バッチ(A/B): 手動 project_status 変更は撤去（レーンは納品signal導出）。setProjectStatusForDeal / saveProjectStatus は廃止。
   // F-3a/D: 直営業プロジェクト起票（intake=direct → API が MB直営・confirmed・amount=0・未着手 で作成）。
   //   起票後: MB担当→PATCH pnl／デリバリー→POST deliveries（明細id=レスポンスitem.id・委託費0）→ refresh→ドロワーを開く。
   async function createDirectProject() {
@@ -568,18 +560,6 @@ export default function DealsPage() {
         await refreshDeals(selected.id)
       }
       else if (data.needsMigration) showToast('P&L列のDB適用が必要です（batchPnlA1 DDL）')
-      else showToast(data.error ?? '保存に失敗しました')
-    } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
-  }
-  // F-1: プロジェクト実行ステータス更新（独立ルート）。reward/frozen/payout/status/amount には一切触れない。
-  async function saveProjectStatus(ps: string | null) {
-    if (!selected) return
-    setItemBusy(true)
-    try {
-      const res = await fetch(`/api/console/deals/${selected.id}/project-status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_status: ps }) })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && !data.needsMigration) { await refreshDeals(selected.id); showToast('プロジェクト状態を更新しました') }
-      else if (data.needsMigration) showToast('project_status列のDB適用が必要です（batchF1 DDL）')
       else showToast(data.error ?? '保存に失敗しました')
     } catch { showToast('保存に失敗しました') } finally { setItemBusy(false) }
   }
@@ -852,12 +832,11 @@ export default function DealsPage() {
       if (srcPhase === 'project') { showToast('プロジェクトの案件は商談へ戻せません'); dragItem.current = null; return }
       requestStatusMove(deal, lane.key as Status)         // 受付↔商談中（既存処理＋実装2の結果予告）
     } else if (srcPhase === 'shodan') {
-      if (lane.key === '未着手') requestStatusMove(deal, 'confirmed')   // 成約フロー（base/報酬は既存処理＋実装2の結果予告）
-      else showToast(`先に「${DEAL_STATUS.confirmed.label}」へ移動して成約してください`)
+      // 商談→プロジェクト列（進行中）へのドロップ＝成約フロー。
+      requestStatusMove(deal, 'confirmed')
     } else {
-      // 実装2: project間は波及なし（3面表示・メール不変）＝即時実行＋Undoトースト8秒。
-      const undoFrom = deal.project_status ?? '未着手'
-      setProjectStatusForDeal(deal, lane.key, { undoFrom, laneLabel: lane.label })
+      // 純化バッチ(B): プロジェクトのレーンは納品signal（デリバリー承諾/納品）から導出＝手動移動はしない。
+      showToast('納品済みは、デリバリーの「納品済みにする」で決まります')
     }
     dragItem.current = null
   }
@@ -1029,7 +1008,7 @@ export default function DealsPage() {
           </div>
         ) : (
         <div style={{ padding: '18px 0 28px' }}>
-          {/* F-3a: フェーズ×ステータスのパイプライン。左→右で 商談(受付→商談中)→成約→プロジェクト(未着手→納品完了)。
+          {/* F-3a: フェーズ×ステータスのパイプライン。左→右で 商談(受付→商談中)→成約→プロジェクト(進行中→納品済み)。
               直営業は商談を飛ばしプロジェクト列に出現。レーン間ドラッグ：商談=status変更／成約=既存の成約フロー／プロジェクト間=project_status変更（お金非干渉）。 */}
           {/* 静音化v2.1(A4): ゾーン見出し＝PHASE_LABEL正典（商談/プロジェクト）から導出・11px/muted 1行。
               ゾーン間ガター24px・レーン間12px。projectの3面写像ツールチップ（MappingTip）はゾーン見出しに1回のみ。
@@ -1219,27 +1198,8 @@ export default function DealsPage() {
               {/* 縦タイムライン（受付→対応中→成約→支払済／lostは不成立終端・理由つき）。登録日＝受付の日時。 */}
               <StatusTimeline deal={selected} />
 
-              {/* F-1: プロジェクト実行ステータス（お金に非干渉の独立メタデータ・プロジェクト段階のみ）。
-                  A2: フェーズ/流入チップは撤去＝ボードのゾーン・レーンが語る。
-                  静音化v2: 保存結果の説明サブテキストは常設せず title属性へ退避。 */}
-              {(() => {
-                const phase = selected._phase ?? phaseOf(selected)
-                if (phase !== 'project') return null
-                return (
-                  <div style={{ marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                      <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500 }}>プロジェクト状態</span>
-                      <select value={selected.project_status ?? ''} disabled={itemBusy} title="社内管理・パートナー/デリバリーには表示されません"
-                        onChange={e => saveProjectStatus(e.target.value === '' ? null : e.target.value)}
-                        style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontSize: '.72rem', fontWeight: 500, background: '#fff', color: PROJECT_STATUS_STYLE[selected.project_status ?? '']?.c ?? 'var(--txt)' }}>
-                        <option value="">未設定</option>
-                        {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-                    {/* 静音化v2.1(B3): 稟議ステージselectは概念廃止＝撤去（API/DB列は残置・到達不能） */}
-                  </div>
-                )
-              })()}
+              {/* 純化バッチ(A): 手動「プロジェクト状態」selectは撤去＝更新されない第二の真実の排除。
+                  進行/納品はデリバリー割当の納品signalで決まる（ボードのレーンと下の委託行が語る）。 */}
 
               {/* P: 報酬ゲート判定（協力で必須タスク未達→紹介レート）— 枠なしテキスト（表示専用・判定不変） */}
               {selected.channel === 'cooperation' && selected.reward_snapshot?.gate_reason && (
@@ -1522,9 +1482,8 @@ export default function DealsPage() {
                       ))}
                     </div>
 
-                    {/* V-1: デリバリー進行（プロジェクト管理）。お金ロジック非接触・実行メタデータのみ。 */}
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <DeliveryProgress deal={selected as any} onRefresh={() => refreshDeals(selected.id)} />
+                    {/* 純化バッチ(A): 「デリバリー進行（プロジェクト管理）」「プロジェクト概要/スコープ」は撤去。
+                        納品は上のデリバリー行の状態（提示中→了承済→納品済み）と経費で語る＝契約とお金の記録に純化。 */}
                   </div>
                 )
               })()}
@@ -1792,7 +1751,7 @@ export default function DealsPage() {
                             <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--st-neutral)', flexShrink: 0 }} />
                             <span style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>プロジェクト状態</span>
                           </span>
-                          <div style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 2 }}>未着手〜納品完了</div>
+                          <div style={{ fontSize: '.6rem', color: 'var(--muted)', marginTop: 2 }}>進行中／納品済み</div>
                         </td>
                         <td style={{ padding: '9px 12px', fontWeight: 400, verticalAlign: 'top' }}>{pt.partner}</td>
                         <td style={{ padding: '9px 12px', fontWeight: 400, verticalAlign: 'top' }}>{pt.vendor}</td>
@@ -1804,7 +1763,7 @@ export default function DealsPage() {
               </table>
             </div>
             <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 12, lineHeight: 1.7 }}>
-              プロジェクト状態（未着手〜納品完了）は社内管理で、パートナー・デリバリーには表示されません
+              プロジェクト状態（進行中／納品済み）は社内管理で、パートナー・デリバリーには表示されません
             </p>
             <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.7 }}>
               メール文面の編集は <Link href="/console/settings/mail" style={{ color: 'var(--c-blue)', textDecoration: 'underline', textUnderlineOffset: 3 }}>設定→メール</Link>

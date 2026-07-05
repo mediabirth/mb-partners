@@ -92,12 +92,13 @@ export function intakeType(intake: string | null | undefined): { tone: Tone; chi
   return { tone: key === 'direct' ? 'neutral' : 'progress', children: INTAKE_LABEL[key] ?? key }
 }
 
-// ── デリバリー割当（委託提示）の状態（提示中→ベンダー了承/辞退。assigned=旧既定値は了承済相当）──
+// ── デリバリー割当（委託提示）の状態（提示中→了承→納品済み。assigned=旧既定値は了承済相当）──
 export const ASSIGN_STATUS: Record<string, Pill> = {
-  proposed: { tone: 'warn',    label: '提示中' },
-  accepted: { tone: 'success', label: '了承済' },
-  assigned: { tone: 'success', label: '了承済' },
-  declined: { tone: 'neutral', label: '辞退' },
+  proposed:  { tone: 'warn',    label: '提示中' },
+  accepted:  { tone: 'progress', label: '了承済' },
+  assigned:  { tone: 'progress', label: '了承済' },
+  delivered: { tone: 'success', label: '納品済み' },
+  declined:  { tone: 'neutral', label: '辞退' },
 }
 export function assignStatus(status: string | null | undefined): { tone: Tone; children: string } {
   const p = ASSIGN_STATUS[status ?? 'assigned'] ?? { tone: 'neutral' as Tone, label: status ?? '—' }

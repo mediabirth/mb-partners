@@ -144,10 +144,10 @@ export async function GET() {
   for (const a of ((dasR.data ?? []) as Array<Record<string, unknown> & { id: string; deal_id: string; base_fee: number }>)) {
     const ent = (deliveryByDeal[a.deal_id] ??= { rows: [], cost: 0 })
     ent.rows.push(a)
-    // ライフサイクル: 委託費が原価として確定するのはベンダー了承後（accepted / 旧既定値 assigned は了承済相当）。
+    // ライフサイクル: 委託費が原価として確定するのはベンダー了承後（accepted / delivered / 旧既定値 assigned）。
     // proposed（提示中）・declined（辞退）は原価に算入しない＝勝彦フロー「了承→アサイン確定で委託費確定」。
     const ast = (a as { status?: string }).status ?? 'assigned'
-    if (ast === 'accepted' || ast === 'assigned') ent.cost += a.base_fee ?? 0
+    if (ast === 'accepted' || ast === 'assigned' || ast === 'delivered') ent.cost += a.base_fee ?? 0
     assignToDeal[a.id] = a.deal_id
   }
 
