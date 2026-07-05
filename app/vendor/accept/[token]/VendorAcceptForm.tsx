@@ -98,8 +98,8 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.4"><path d="M20 6L9 17l-5-5" /></svg>
           </div>
           <h1 style={{ fontSize: '1.2rem', fontWeight: 500, marginBottom: 8 }}>登録が完了しました</h1>
-          <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 22 }}>MB Partners デリバリーへようこそ。<br />ダッシュボードから委託案件を確認できます。</p>
-          <button onClick={() => { window.location.href = '/vendor' }} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>ダッシュボードへ</button>
+          <p style={{ fontSize: '.78rem', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 22 }}>MB Partners へようこそ。<br />ダッシュボードから案件を確認できます。</p>
+          <button onClick={() => { window.location.href = '/vendor' }} className="btn btn-p" style={{ width: '100%', justifyContent: 'center' }}>ダッシュボードへ</button>
         </div>
       </div>
     )
@@ -110,7 +110,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
       <div style={card}>
         <div style={{ padding: '28px 26px 16px' }}>
           <Logo />
-          <h1 style={{ fontSize: '1.12rem', fontWeight: 500, letterSpacing: '-.01em' }}>デリバリー登録</h1>
+          <h1 style={{ fontSize: '1.12rem', fontWeight: 500, letterSpacing: '-.01em' }}>MB Partners 登録</h1>
           <p style={{ fontSize: '.66rem', color: 'var(--muted2)', marginTop: 3 }}>STEP {step} / 4 — {STEP_LABELS[step - 1]}</p>
           <div style={{ display: 'flex', gap: 5, marginTop: 12 }}>
             {[1, 2, 3, 4].map(s => (
@@ -148,7 +148,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
               <Field label="区分 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
-                    <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer', fontFamily: 'inherit' }}>{l}</button>
+                    <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer' }}>{l}</button>
                   ))}
                 </div>
               </Field>
@@ -156,7 +156,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
               <Field label="種別 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {['普通', '当座'].map(v => (
-                    <button key={v} type="button" onClick={() => setAccountType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${accountType === v ? 'var(--blue)' : 'var(--line)'}`, background: accountType === v ? 'var(--blue-bg2)' : '#fff', color: accountType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer', fontFamily: 'inherit' }}>{v}</button>
+                    <button key={v} type="button" onClick={() => setAccountType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${accountType === v ? 'var(--blue)' : 'var(--line)'}`, background: accountType === v ? 'var(--blue-bg2)' : '#fff', color: accountType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer' }}>{v}</button>
                   ))}
                 </div>
               </Field>
@@ -179,7 +179,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
                   ['口座名義', accountHolder],
                   ['インボイス', invoiceNumber || '未登録'],
                 ].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: '.72rem' }}>
                     <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{k}</span>
                     <span style={{ fontWeight: 500, textAlign: 'right', wordBreak: 'break-all' }}>{v}</span>
                   </div>
@@ -199,12 +199,12 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 8 }}>{error}</p>}
         </div>
 
-        <div style={{ display: 'flex', gap: 10, padding: '12px 26px 26px', borderTop: '0.5px solid var(--line)' }}>
-          {step > 1 && <button onClick={back} className="ui-btn ui-btn--secondary ui-btn--lg" style={{ flex: '0 0 96px', justifyContent: 'center' }} disabled={loading}>戻る</button>}
+        <div style={{ display: 'flex', gap: 10, padding: '12px 26px 26px', borderTop: '1px solid var(--line)' }}>
+          {step > 1 && <button onClick={back} className="btn btn-g" style={{ flex: '0 0 96px', justifyContent: 'center' }} disabled={loading}>戻る</button>}
           {step < 4 ? (
-            <button onClick={next} className="ui-btn ui-btn--primary ui-btn--lg" style={{ flex: 1, justifyContent: 'center' }}>次へ</button>
+            <button onClick={next} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }}>次へ</button>
           ) : (
-            <button onClick={submit} className="ui-btn ui-btn--primary ui-btn--lg" style={{ flex: 1, justifyContent: 'center' }} disabled={!step4ok || loading}>
+            <button onClick={submit} className="btn btn-p" style={{ flex: 1, justifyContent: 'center' }} disabled={!step4ok || loading}>
               {loading ? '登録中…' : '登録を完了する'}
             </button>
           )}

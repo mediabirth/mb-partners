@@ -3,7 +3,7 @@ import Link from 'next/link'
 export const runtime = 'edge'
 
 const SECTIONS: { h: string; b: string }[] = [
-  { h: '業務委託の関係', b: 'デリバリー（実行者）は、MB Partners からの委託に基づき、案件ごとに定めた成果物・業務を遂行します。雇用関係ではなく、独立した業務委託契約に基づきます。' },
+  { h: '業務委託の関係', b: '受託者は、MB Partners からの委託に基づき、案件ごとに定めた成果物・業務を遂行します。雇用関係ではなく、独立した業務委託契約に基づきます。' },
   { h: '委託費の確定と支払', b: '委託費は案件ごとに事前提示され、納品・検収の完了をもって確定します。承認済の経費を加えた金額を、MB が確定した時点で「委託費」に反映し、所定の振込日にお支払いします。' },
   { h: '成果物と権利', b: '納品物の取り扱い・著作権の帰属は、各案件で合意した条件に従います。再利用・公開の可否は事前にご確認ください。' },
   { h: '経費の精算', b: '案件に必要な経費は、領収書（任意）を添えて申請してください。MB の承認後、委託費とあわせてお支払いします。' },
@@ -23,7 +23,7 @@ export default function VendorTerms() {
       </div>
       <div style={{ padding: '10px 20px 6px' }}>
         <h1 style={{ fontSize: '1.06rem', fontWeight: 500, letterSpacing: '-.01em' }}>業務委託規約・ヘルプ</h1>
-        <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>デリバリー（実行者）として案件を進めるうえでの基本ルールとよくある質問です。</p>
+        <p style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>案件を進めるうえでの基本ルールとよくある質問です。</p>
       </div>
 
       <div style={{ padding: '2px 24px 8px', fontSize: '.68rem', color: 'var(--muted)', fontWeight: 500 }}>規約</div>

@@ -201,7 +201,7 @@ const INVITE_COPY: Record<InviteKind, { subject: string; fallbackName: string; l
   partner:  { subject: '【MB Partners】アカウント登録のご案内', fallbackName: 'パートナー',  lead: 'MB Partners パートナーアカウントの登録のご案内です。' },
   member:   { subject: '【MB Partners】運営メンバー招待のご案内', fallbackName: 'ご担当者', lead: 'MB Partners の運営メンバーとしてご招待します。下記のリンクから登録を完了してください。' },
   frontier: { subject: '【MB Partners】パートナー招待のご案内',   fallbackName: 'パートナー',  lead: 'MB Partners のパートナーとしてご招待します。下記のリンクから登録を完了してください。' },
-  vendor:   { subject: '【MB Partners】お取引のご案内',           fallbackName: 'ご担当者', lead: 'MB Partners の業務委託先（デリバリー）としてご登録のご案内です。下記のリンクから登録を完了してください。' },
+  vendor:   { subject: '【MB Partners】お取引のご案内',           fallbackName: 'ご担当者', lead: 'MB Partners の業務委託先としてご登録のご案内です。下記のリンクから登録を完了してください。' },
 }
 
 export async function sendInviteEmail(params: {

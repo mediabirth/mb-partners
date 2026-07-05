@@ -171,10 +171,10 @@ export const MAIL_REGISTRY: MailTemplateDef[] = [
   },
   {
     key: 'invite-vendor', name: '招待（業務委託先）', audience: 'invitee',
-    event: '招待発行', trigger: '業務委託先（デリバリー）を招待したとき',
+    event: '招待発行', trigger: '業務委託先を招待したとき',
     vars: [V.name('ご担当者名'), V.url, V.expires],
     defaultSubject: '【MB Partners】お取引のご案内',
-    defaultBody: '${name} 様\n\nMB Partners の業務委託先（デリバリー）としてご登録のご案内です。下記のリンクからパスワードを設定し、登録を完了してください。\n\n${url}\n\n有効期限：${expires}',
+    defaultBody: '${name} 様\n\nMB Partners の業務委託先としてご登録のご案内です。下記のリンクからパスワードを設定し、登録を完了してください。\n\n${url}\n\n有効期限：${expires}',
     buttons: [{ label: 'パスワードを設定する', urlVar: 'url' }],
   },
   // ── 業務委託 ───────────────────────────────────────────────

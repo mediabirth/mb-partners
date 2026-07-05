@@ -1,7 +1,7 @@
 {
   "name": "MB Partners",
   "short_name": "MB Partners",
-  "description": "MB Partners — デリバリー（業務委託先）ポータル",
+  "description": "MB Partners — 業務委託先ポータル",
   "start_url": "/vendor",
   "scope": "/vendor",
   "display": "standalone",

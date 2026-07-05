@@ -9,6 +9,14 @@ import { attachSurfaceProfile } from '@/lib/identity'
 
 const VENDOR_COLORS = ['#15917E', '#4733E6', '#D98914', '#C2479E', '#2A7DE1', '#9333EA']
 
+// ID表記の正典: partner コード（英字2+数字4・generatePartnerCode）と同型式で display_code を採番。
+// ＝マイページのID表示を APP と同型（chip・Inter・letter-spacing）に揃える。
+function generateDeliveryCode(name: string): string {
+  const upper = (name || '').trim().toUpperCase().replace(/[^A-Z]/g, '')
+  const prefix = upper.length >= 2 ? upper.slice(0, 2) : ('ZZ' + upper).slice(-2)
+  return prefix + Math.floor(1000 + Math.random() * 9000)
+}
+
 export const runtime = 'edge'
 
 export async function POST(req: NextRequest) {
@@ -83,9 +91,13 @@ export async function POST(req: NextRequest) {
   const nowIso = new Date().toISOString()
   const acctType = (accountType === '当座' ? '当座' : '普通')
   const bankAccount = accountNumber?.trim() ? `${acctType}${accountNumber.trim()}` : null
+  // display_code（ID表記の正典）: 未採番なら採番。既存があれば保持。
+  const { data: curDelivery } = await service.from('deliveries').select('display_code').eq('id', invite.delivery_id).maybeSingle()
+  const displayCode = (curDelivery?.display_code as string | null) || generateDeliveryCode(name.trim())
   const deliveryPatch: Record<string, unknown> = {
     auth_user_id: userId,
     name: name.trim(),
+    display_code: displayCode,
     phone: (typeof phone === 'string' ? phone.trim() : '') || null,
     address: (typeof address === 'string' ? address.trim() : '') || null,
     tax_type: taxType === 'corporate' ? '法人' : taxType === 'individual' ? '個人' : (taxType || null),
