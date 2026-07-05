@@ -5,6 +5,7 @@ import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import CountUp from '@/components/CountUp'
 import RewardHero from '@/components/ui/RewardHero'
+import MilestoneStrip from '@/components/ui/MilestoneStrip'
 import { withholdingTax } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
 import { DEAL_STATUS } from '@/lib/status'
@@ -34,6 +35,8 @@ export default async function RewardsPage() {
   const paidGross  = deals.filter(d => d.status === 'paid').reduce((s, d) => s + d.amount, 0)
   const confirmedGross = deals.filter(d => d.status === 'confirmed').reduce((s, d) => s + d.amount, 0)
   const totalDeals = Object.values(byMonth).flat().length
+  // 通水P3: 生涯累計（確定＋支払済の税抜報酬・全期間）。マイルストーン表示専用＝payout計算に非接触。
+  const lifetimeGross = deals.filter(d => d.status === 'confirmed' || d.status === 'paid').reduce((s, d) => s + d.amount, 0)
 
   // 源泉計算は lib/payout の単一ソースを使用（コンソール close_month_batch と完全一致）
   function withholding(gross: number) {
@@ -55,6 +58,9 @@ export default async function RewardsPage() {
         ]}
       />
       </div>
+
+      {/* 通水P3「循環」: 累計報酬のマイルストーン（静音・表示専用）。 */}
+      <MilestoneStrip cumulative={lifetimeGross} />
 
       {/* Statement buttons */}
       <div style={{ display: 'flex', gap: 8, margin: '14px 20px 0' }}>

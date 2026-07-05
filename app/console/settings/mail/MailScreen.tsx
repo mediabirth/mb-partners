@@ -113,6 +113,13 @@ export default function MailScreen() {
 
       {tab === 'matrix' && (
         <div style={{ background: '#fff', border: LINE, borderRadius: 14, overflow: 'hidden' }}>
+          {/* 通水P3「循環」: 自動送信の実配線ドライラン。どのイベントで・誰に・いつ飛ぶかの全体像＝この画面からは送信されません。 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderBottom: LINE, background: 'var(--blue-bg)' }}>
+            <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', border: '0.5px solid var(--c-blue)', borderRadius: 20, padding: '1px 8px' }}>ドライラン</span>
+            <span style={{ fontSize: '.64rem', color: 'var(--muted2)', lineHeight: 1.5 }}>
+              自動送信の実配線です（{matrix.length}イベント／{MAIL_REGISTRY.length}通）。この画面からは送信されません。各イベントの「いつ」は下に記載。
+            </span>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1.4fr 1fr 1fr', padding: '9px 18px', borderBottom: LINE, background: 'var(--bg2)' }}>
             {['イベント', 'パートナー', 'お客さま', '委託先', '招待先'].map(h => (
               <span key={h} style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.06em' }}>{h}</span>
@@ -120,7 +127,10 @@ export default function MailScreen() {
           </div>
           {matrix.map(row => (
             <div key={row.event} style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1.4fr 1fr 1fr', padding: '11px 18px', borderBottom: LINE, fontSize: '.72rem', alignItems: 'start' }}>
-              <span style={{ fontWeight: 500 }}>{row.event}</span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontWeight: 500 }}>{row.event}</span>
+                <span style={{ fontSize: '.56rem', color: 'var(--muted)', lineHeight: 1.4 }}>{MAIL_REGISTRY.find(d => d.event === row.event)?.trigger ?? ''}</span>
+              </span>
               {(['partner', 'customer', 'vendor', 'invitee'] as const).map(aud => (
                 <span key={aud} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {row[aud].length === 0 ? <span style={{ color: 'var(--muted)' }}>—</span> : row[aud].map(k => (
