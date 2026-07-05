@@ -97,10 +97,18 @@ export default function RootLayout({
         <InstallHint />
         <script dangerouslySetInnerHTML={{ __html: `
 if ('serviceWorker' in navigator) {
-  var _mbpRefreshing = false;
+  // 体感: 新デプロイでSWが切り替わっても操作中は即リロードしない（画面中断を排除）。
+  // タブが背面(hidden)になった/離脱する時にだけ新版へリロード＝ユーザーは中断されず、戻ると最新。
+  // HTMLは常にno-store(network)で取得＝データは常に最新なので、JSの反映を次の離脱まで遅延しても金銭/状態はstaleにならない。
+  var _mbpPendingReload = false, _mbpReloading = false;
+  function _mbpDoReload() { if (_mbpReloading) return; _mbpReloading = true; window.location.reload(); }
   navigator.serviceWorker.addEventListener('controllerchange', function() {
-    if (!_mbpRefreshing) { _mbpRefreshing = true; window.location.reload(); }
+    if (document.visibilityState === 'hidden') { _mbpDoReload(); } else { _mbpPendingReload = true; }
   });
+  document.addEventListener('visibilitychange', function() {
+    if (_mbpPendingReload && document.visibilityState === 'hidden') _mbpDoReload();
+  });
+  window.addEventListener('pagehide', function() { if (_mbpPendingReload) _mbpDoReload(); });
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/sw.js').catch(function(e) {
       console.warn('[SW] registration failed:', e);

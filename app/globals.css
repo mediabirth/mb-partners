@@ -258,33 +258,36 @@ body {
   box-shadow: 0 8px 24px rgba(14,14,20,.1);
   transform: translateY(-2px);
 }
+/* 体感: タッチ端末はhoverが出ない＝押下の即時フィードバックを:activeで付与（ネイティブのタップ感）。 */
+.card-hover:active { transform: scale(.985); transition: transform .06s var(--ease-out); }
+.lift:active { transform: scale(.985); transition: transform .06s var(--ease-out); }
 
 /* Link row hover — left accent border */
 .row-hover {
   transition: box-shadow .15s;
 }
 .row-hover:hover { box-shadow: inset 3px 0 0 var(--blue) !important; }
+.row-hover:active { background: var(--bg2); }
 
 /* ============================================================
    Page transition
    ============================================================ */
 .page-anim {
-  animation: pageIn .28s var(--ease-out) both;
+  animation: pageIn .2s var(--ease-out) both;   /* 体感: 遷移フェードを .28s→.2s に短縮（settling感を削る） */
 }
 
 /* ============================================================
-   Stagger list — first 8 children animate in sequence */
+   Stagger list — first 6 children animate in sequence（体感: 遅延を大幅短縮・可視即応） */
 .stagger > * {
-  animation: pageIn .32s var(--ease-out) both;
+  animation: pageIn .22s var(--ease-out) both;
 }
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 50ms; }
-.stagger > *:nth-child(3) { animation-delay: 95ms; }
-.stagger > *:nth-child(4) { animation-delay: 135ms; }
-.stagger > *:nth-child(5) { animation-delay: 170ms; }
-.stagger > *:nth-child(6) { animation-delay: 200ms; }
-.stagger > *:nth-child(7) { animation-delay: 226ms; }
-.stagger > *:nth-child(8) { animation-delay: 248ms; }
+.stagger > *:nth-child(2) { animation-delay: 28ms; }
+.stagger > *:nth-child(3) { animation-delay: 52ms; }
+.stagger > *:nth-child(4) { animation-delay: 72ms; }
+.stagger > *:nth-child(5) { animation-delay: 88ms; }
+.stagger > *:nth-child(6) { animation-delay: 100ms; }
+.stagger > *:nth-child(n+7) { animation-delay: 108ms; }
 
 /* ============================================================
    Toast

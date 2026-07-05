@@ -12,17 +12,34 @@ export default function VendorOfferActions({ assignmentId, baseFee }: { assignme
   const [busy, setBusy] = useState(false)
   const [confirmDecline, setConfirmDecline] = useState(false)
   const [err, setErr] = useState('')
+  // 体感: 楽観更新＝タップ即座に結果状態へ（本人の操作＝安全）。失敗時は巻き戻し＋トースト。
+  const [optimistic, setOptimistic] = useState<null | 'accept' | 'decline'>(null)
 
   async function respond(action: 'accept' | 'decline') {
-    setBusy(true); setErr('')
+    setBusy(true); setErr(''); setOptimistic(action)
     try {
       const res = await fetch(`/api/vendor/assignments/${assignmentId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) { setErr(j.error || '送信に失敗しました'); setBusy(false); return }
-      router.refresh()
-    } catch { setErr('通信に失敗しました'); setBusy(false) }
+      if (!res.ok) { setErr(j.error || '送信に失敗しました'); setBusy(false); setOptimistic(null); return }  // 巻き戻し
+      router.refresh()  // サーバ状態と最終同期（楽観表示のまま裏で反映）
+    } catch { setErr('通信に失敗しました'); setBusy(false); setOptimistic(null) }
+  }
+
+  // 楽観表示: 承諾→「承諾しました」／辞退→終了注記（refresh 完了までの体感を即時化）。
+  if (optimistic === 'accept') {
+    return (
+      <div style={{ margin: '12px 20px 4px', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', background: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--green-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="3"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+        <span style={{ fontSize: '.76rem', fontWeight: 500 }}>この委託を承諾しました</span>
+      </div>
+    )
+  }
+  if (optimistic === 'decline') {
+    return <p style={{ margin: '10px 20px 0', fontSize: '.68rem', color: 'var(--muted2)' }}>この委託提示は辞退しました。</p>
   }
 
   return (

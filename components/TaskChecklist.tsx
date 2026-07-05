@@ -67,12 +67,15 @@ function HearingInline({ dealId, initial, onSaved }: { dealId: string; initial: 
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   async function save() {
-    setSaving(true); setMsg('')
+    // 体感: 楽観更新＝押した瞬間に「保存しました」＋完了反映（本人入力＝安全）。失敗時はメッセージで巻き戻し。
+    setSaving(true)
+    const hadText = !!text.trim()
+    if (hadText) { onSaved(); setMsg('保存しました') } else setMsg('')
     try {
       const res = await fetch(`/api/app/deals/${dealId}/hearing`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
       const j = await res.json().catch(() => ({}))
-      if (res.ok) { if (j.done) onSaved(); setMsg('保存しました') }
-      else setMsg(j.error || '保存に失敗しました')
+      if (!res.ok) setMsg(j.error || '保存に失敗しました')
+      else if (j.done && !hadText) onSaved()
     } catch { setMsg('通信に失敗しました') } finally { setSaving(false) }
   }
   return (

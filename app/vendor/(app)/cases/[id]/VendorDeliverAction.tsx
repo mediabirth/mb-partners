@@ -12,17 +12,29 @@ export default function VendorDeliverAction({ assignmentId }: { assignmentId: st
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [err, setErr] = useState('')
+  const [done, setDone] = useState(false)   // 体感: 楽観更新（本人操作＝安全・失敗時巻き戻し）
 
   async function deliver() {
-    setBusy(true); setErr('')
+    setBusy(true); setErr(''); setDone(true)
     try {
       const res = await fetch(`/api/vendor/assignments/${assignmentId}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'deliver' }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) { setErr(j.error || '送信に失敗しました'); setBusy(false); return }
+      if (!res.ok) { setErr(j.error || '送信に失敗しました'); setBusy(false); setDone(false); return }  // 巻き戻し
       router.refresh()
-    } catch { setErr('通信に失敗しました'); setBusy(false) }
+    } catch { setErr('通信に失敗しました'); setBusy(false); setDone(false) }
+  }
+
+  if (done) {
+    return (
+      <div style={{ margin: '4px 20px 0', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', background: '#fff', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--green-bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="3"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+        <span style={{ fontSize: '.76rem', fontWeight: 500 }}>納品済みにしました</span>
+      </div>
+    )
   }
 
   return (
