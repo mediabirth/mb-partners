@@ -39,6 +39,7 @@ type MenuDraft = {
   name: string
   short_description: string    // menus.short_description（APP一覧の一言説明・3ペイン化でドロワーに集約）
   description: string          // menus.description（APP詳細シート「このメニューでは」）
+  public_description: string   // menus.public_description（顧客向け相談ページ /r/ の説明・顧客の言葉のみ）
   calendar_member_id: string   // 担当メンバー（''=既定・一覧v2で担当selectを3ペインへ移設）
   rewards: RewardDraft[]
 }
@@ -461,12 +462,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     const rewardParent: Record<string, string> = {}
     for (const sm of svc.service_menus) {
       const md = await fetch(`/api/console/menus?service_menu_id=${sm.id}`).then(r => r.json()).catch(() => ({ menus: [] }))
-      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; short_description?: string | null; description?: string | null; calendar_member_id?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
+      for (const mn of ((md.menus ?? []) as { id: string; name: string; sort: number; short_description?: string | null; description?: string | null; public_description?: string | null; calendar_member_id?: string | null }[]).sort((a, b) => a.sort - b.sort)) {
         origMids.push(mn.id)
         const rd = await fetch(`/api/console/menu-rewards?menu_id=${mn.id}`).then(r => r.json()).catch(() => ({ rewards: [] }))
         const rewards: RewardDraft[] = ((rd.rewards ?? []) as { id: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: number; reward_trigger: string | null; default_months: number | null }[])
           .map(r => { rewardParent[r.id] = mn.id; return { id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_months: r.default_months != null ? String(r.default_months) : '', reward_trigger: r.reward_trigger ?? '', tasks: (tasksByReward[r.id] ?? []).map(t => t.label) } })
-        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, short_description: mn.short_description ?? '', description: mn.description ?? '', calendar_member_id: mn.calendar_member_id ?? '', rewards })
+        drafts.push({ id: mn.id, service_menu_id: sm.id, name: mn.name, short_description: mn.short_description ?? '', description: mn.description ?? '', public_description: mn.public_description ?? '', calendar_member_id: mn.calendar_member_id ?? '', rewards })
       }
     }
     setMenuDrafts(drafts); setOrigMenuIds(origMids); setOrigRewardParent(rewardParent); setOrigTasks(origT)
@@ -474,7 +475,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   function addMenuDraft() {
     const defaultSm = editing?.service_menus[0]?.id
     if (!defaultSm) { showToast('先にサービスを保存してください'); return }
-    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', short_description: '', description: '', calendar_member_id: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
+    setMenuDrafts(p => [...p, { id: null, service_menu_id: defaultSm, name: '', short_description: '', description: '', public_description: '', calendar_member_id: '', rewards: [{ id: null, reward_type: 'fixed', reward_value: '', reward_months: '', reward_trigger: '', tasks: [] }] }])
     setNavSel(menuDrafts.length)   // 追加した draft を左ナビで即選択（中央＝メニュー編集・右＝シート追従）
   }
   function removeMenuDraft(i: number) {
@@ -507,15 +508,16 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       }
       const desc = d.description.trim() || null   // menus.description（詳細シート「このメニューでは」）
       const sdesc = d.short_description.trim() || null   // menus.short_description（一覧の一言説明）
+      const pdesc = d.public_description.trim() || null   // menus.public_description（顧客向け相談ページ /r/）
       let menuId = d.id
-      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）', short_description: sdesc, description: desc }) }).catch(() => {})
+      if (menuId) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: d.name.trim() || '（無題）', short_description: sdesc, description: desc, public_description: pdesc }) }).catch(() => {})
       else {
         // POST /api/console/menus は name のみ受理（API変更は最小）→ description 系は POST 後に PATCH で反映。
         const res = await fetch('/api/console/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_menu_id: d.service_menu_id, name: d.name.trim() || '（無題）' }) })
         const jd = await res.json().catch(() => ({}))
         menuId = jd?.menu?.id ?? null
         if (!menuId) { showToast(`メニュー保存に失敗: ${jd?.error ?? res.status}`); continue }
-        if (desc || sdesc) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_description: sdesc, description: desc }) }).catch(() => {})
+        if (desc || sdesc || pdesc) await fetch(`/api/console/menus/${menuId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_description: sdesc, description: desc, public_description: pdesc }) }).catch(() => {})
       }
       const builtRewards: MenuReward[] = []
       for (let k = 0; k < d.rewards.length; k++) {
@@ -873,6 +875,10 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                     </Fld>
                     <Fld label="詳細説明">
                       <FTextarea value={selMenu.description} onChange={v => setMenuField(mi, { description: v })} placeholder="例：お客さまの状況を伺い、最適なプランをご提案します" />
+                    </Fld>
+                    {/* 顧客向け相談ページ /r/ の説明（顧客の言葉のみ・空なら「{メニュー名}についてのご相談を承ります」を自動表示）。 */}
+                    <Fld label="顧客向け説明（相談ページ）">
+                      <FTextarea value={selMenu.public_description} onChange={v => setMenuField(mi, { public_description: v })} placeholder="例：お部屋探し・お住み替えのご相談を承ります。ご希望条件を伺い、最適なお部屋をご提案します。" />
                     </Fld>
                     {/* 担当（メニュー個別・一覧v2でインライン担当selectをここへ移設。既存 setMenuMember 配線＝即時PATCH） */}
                     {editing && selMenu.id && calMembers.length > 0 && (

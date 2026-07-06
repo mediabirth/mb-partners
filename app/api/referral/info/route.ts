@@ -17,29 +17,18 @@ export async function GET(req: NextRequest) {
 
   if (!link) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-  // 顧客に見せるメニュー＝正典の新モデル menus（名称・短説明）。旧 service_menus.name（例:「賃貸」）は
-  // パートナー非選択の先頭行が主役化する不具合の元だったため使わない。service→service_menus→menus で解決。
-  const { data: service } = await supabase.from('services').select('id, name, subtitle, icon, color').eq('id', link.service_id).single()
+  // 第3稿: 顧客の目のページ＝サービス自身の相談ページ。紹介の機構は透けさせない。
+  //   顧客向けテキストは menus.public_description（顧客専用の言葉の置き場）のみ使用。
+  //   パートナー向けの short_description/description・紹介者名は顧客面に一切流用しない（返さない）。
+  const { data: service } = await supabase.from('services').select('id, name, icon, color, image_url').eq('id', link.service_id).single()
   const { data: sm } = await supabase.from('service_menus').select('id').eq('service_id', link.service_id)
   const smIds = (sm ?? []).map(x => x.id)
   const { data: menuRows } = smIds.length
-    ? await supabase.from('menus').select('id, name, short_description, sort').in('service_menu_id', smIds).eq('active', true).order('sort')
-    : { data: [] as { id: string; name: string; short_description: string | null; sort: number }[] }
-  const menus = (menuRows ?? []).map(m => ({ id: m.id, name: m.name, short_description: m.short_description ?? null }))
+    ? await supabase.from('menus').select('id, name, public_description, sort').in('service_menu_id', smIds).eq('active', true).order('sort')
+    : { data: [] as { id: string; name: string; public_description: string | null; sort: number }[] }
+  const menus = (menuRows ?? []).map(m => ({ id: m.id, name: m.name, public_description: m.public_description ?? null }))
 
-  // 紹介者名（信頼ランディングの「{紹介者名}様からのご紹介です」表示用・read-only）。
-  // ★帰属には一切不使用（帰属は POST /api/referral の link.partner_id のまま）。取得失敗時は null フォールバック。
-  let referrerName: string | null = null
-  try {
-    if (link.partner_id) {
-      const { data: partner } = await supabase.from('partners').select('profile_id').eq('id', link.partner_id).single()
-      if (partner?.profile_id) {
-        const { data: prof } = await supabase.from('profiles').select('name').eq('id', partner.profile_id).single()
-        referrerName = prof?.name ?? null
-      }
-    }
-  } catch { /* 表示用のみ・失敗は無視 */ }
-
-  // menus[]＝正典のメニュー一覧（顧客が選べる形）。単一の主役menuは返さない（構造的に非選択メニューの主役化を不可能に）。
-  return NextResponse.json({ service, menus, referrerName })
+  // menus[]＝正典のメニュー一覧（顧客が選べる形）。単一の主役menuは返さない（非選択メニューの主役化を構造的に不可能に）。
+  // 紹介者名・partner_id は顧客面に不要のため返さない（帰属は POST /api/referral の token のまま不変）。
+  return NextResponse.json({ service, menus })
 }
