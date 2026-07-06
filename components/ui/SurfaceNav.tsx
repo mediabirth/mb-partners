@@ -73,10 +73,17 @@ export default function SurfaceNav({ left, right, fab, unreadHref, iconOnly }: {
         .snav-fab{transition:box-shadow .22s,transform .2s cubic-bezier(.34,1.56,.64,1)}
         .snav-fab:active{transform:scale(.9)!important}
         .snav-fab:hover{box-shadow:0 12px 28px rgba(71,51,230,.5)!important}
+        /* レスポンシブ: ≥1024px はボトムナビ→左レール（fixed のまま再配置・DOM不変・<1024は無影響）。 */
+        @media (min-width:1024px){
+          .snav-root{ top:0!important; bottom:0!important; left:0!important; right:auto!important; transform:none!important; width:84px!important; max-width:84px!important; height:100dvh; flex-direction:column!important; justify-content:flex-start!important; align-items:stretch!important; border-top:none!important; border-right:1px solid var(--line); padding:18px 0 22px!important; gap:2px; }
+          .snav-root .snav-item{ flex:0 0 auto!important; padding:13px 4px!important; font-size:.5rem!important; }
+          .snav-root .snav-fabwrap{ order:-1!important; top:0!important; flex:0 0 auto!important; margin-bottom:12px!important; }
+          .snav-root .snav-active-bar{ top:50%!important; left:0!important; transform:translateY(-50%)!important; width:3px!important; height:22px!important; border-radius:0 3px 3px 0!important; }
+        }
       `}</style>
-      <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, background: 'rgba(255,255,255,.96)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--line)', display: 'flex', zIndex: 60 }}>
+      <nav className="snav-root" style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, background: 'rgba(255,255,255,.96)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--line)', display: 'flex', zIndex: 60 }}>
         {left.map(Item)}
-        <div style={{ flex: '0 0 74px', position: 'relative', top: -15, display: 'flex', justifyContent: 'center' }}>{fab}</div>
+        <div className="snav-fabwrap" style={{ flex: '0 0 74px', position: 'relative', top: -15, display: 'flex', justifyContent: 'center' }}>{fab}</div>
         {right.map(Item)}
       </nav>
     </>

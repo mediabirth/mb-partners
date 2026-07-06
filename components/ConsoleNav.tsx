@@ -16,10 +16,11 @@ const NAV_STYLE = `
   .cnav-acct:hover { background: var(--bg2) !important; }
   .cnav-burger { display: none; }
   .cnav-scrim { display: none; }
-  @media (max-width: 900px) {
+  @media (max-width: 1024px) {
     aside[data-cnav] { transform: translateX(-100%); transition: transform .26s cubic-bezier(.4,0,.2,1); box-shadow: 8px 0 40px rgba(14,14,20,.16); }
     aside[data-cnav].cnav-open { transform: translateX(0); }
-    aside[data-cnav] ~ * { margin-left: 0 !important; }
+    /* 主コンテンツ：レール分の margin を解除＋flex子が縮めるよう min-width:0＋横溢れは内部スクロールに閉じ込め page は溢れさせない */
+    aside[data-cnav] ~ * { margin-left: 0 !important; min-width: 0 !important; max-width: 100vw !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
     .cnav-burger { display: flex !important; }
     .cnav-scrim.cnav-open { display: block; }
     /* 広いコンテンツは横スクロール（カンバン4列・広いテーブル） */
