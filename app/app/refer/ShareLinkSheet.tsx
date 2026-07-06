@@ -56,7 +56,10 @@ export default function ShareLinkSheet({ serviceId, serviceName, onClose }: { se
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.32)', zIndex: 90 }} />
-      <div className="page-anim" role="dialog" aria-label="紹介リンクを共有" style={{ position: 'fixed', left: '50%', bottom: 0, transform: 'translateX(-50%)', width: '100%', maxWidth: 430, background: '#fff', borderRadius: '18px 18px 0 0', zIndex: 95, boxShadow: '0 -18px 48px rgba(14,14,20,.16)', padding: '20px 22px calc(24px + env(safe-area-inset-bottom))' }}>
+      {/* 中央寄せは left/right:0 + margin:auto で行う（transform に依存しない）。
+          page-anim(@keyframes pageIn) は fill:both で終端 transform:none を焼き付けるため、
+          translateX(-50%) をここで使うと打ち消されてシートが右へずれる（実機375pxで left=188 の再現バグ）。 */}
+      <div className="page-anim" role="dialog" aria-label="紹介リンクを共有" style={{ position: 'fixed', left: 0, right: 0, bottom: 0, margin: '0 auto', width: '100%', maxWidth: 430, background: '#fff', borderRadius: '18px 18px 0 0', zIndex: 95, boxShadow: '0 -18px 48px rgba(14,14,20,.16)', padding: '20px 22px calc(24px + env(safe-area-inset-bottom))' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
           <b style={{ fontSize: '.92rem', fontWeight: 500 }}>{serviceName}を紹介する</b>
           <button onClick={onClose} aria-label="閉じる" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '1rem', cursor: 'pointer' }}>✕</button>

@@ -275,6 +275,14 @@ body {
 .page-anim {
   animation: pageIn .2s var(--ease-out) both;   /* 体感: 遷移フェードを .28s→.2s に短縮（settling感を削る） */
 }
+/* 中央寄せモーダル専用の入場アニメ。pageIn は fill:both で終端 transform:none を焼き付け、
+   translate(-50%,-50%) の中央寄せを打ち消してしまう（＝右下へずれる/はみ出るバグ）。
+   modalPop は終端で translate(-50%,-50%) を維持するため、中央寄せを保ったまま淡く立ち上がる。 */
+.modal-pop { animation: modalPop .2s var(--ease-out) both; }
+@keyframes modalPop {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
 
 /* ============================================================
    Stagger list — first 6 children animate in sequence（体感: 遅延を大幅短縮・可視即応） */
