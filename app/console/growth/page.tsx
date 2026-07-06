@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import ConsoleNav from '@/components/ConsoleNav'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -53,7 +54,9 @@ export default async function GrowthPage() {
   const dormant = perPartner.filter(p => p.dormantDays == null || p.dormantDays >= 14)
 
   return (
-    <div style={{ padding: '22px 24px 40px', maxWidth: 1080 }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
+      <ConsoleNav />
+      <div style={{ flex: 1, marginLeft: 230, padding: '22px 24px 40px', maxWidth: 1080 + 230 }}>
       <h1 style={{ fontSize: '1.15rem', fontWeight: 500, marginBottom: 4 }}>成長（紹介ファネル）</h1>
       <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginBottom: 18 }}>共有リンク経由の紹介の流れと、パートナー別の生産性・休眠を可視化します（読み取り専用）。</p>
 
@@ -102,6 +105,7 @@ export default async function GrowthPage() {
         {dormant.length === 0 ? <p style={{ fontSize: '.7rem', color: 'var(--muted2)' }}>休眠中のパートナーはいません。</p> : dormant.map(p => (
           <span key={p.id} style={{ fontSize: '.68rem', border: '0.5px solid var(--line)', borderRadius: 20, padding: '5px 12px', background: '#fff' }}>{p.name} <span style={{ color: 'var(--muted)' }}>· {p.dormantDays == null ? '未活動' : `${p.dormantDays}日`}</span></span>
         ))}
+      </div>
       </div>
     </div>
   )
