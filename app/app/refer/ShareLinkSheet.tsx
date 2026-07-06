@@ -11,14 +11,18 @@ import { trackFunnel } from '@/lib/funnel-client'
 
 const APEX = 'https://mb-partners.app'
 
-export default function ShareLinkSheet({ serviceId, serviceName, onClose }: { serviceId: string; serviceName: string; onClose: () => void }) {
+export default function ShareLinkSheet({ serviceId, serviceName, menus = [], onClose }: { serviceId: string; serviceName: string; menus?: { id: string; name: string }[]; onClose: () => void }) {
   const [token, setToken] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
   const [qr, setQr] = useState<string | null>(null)
+  // 何を共有するか＝ブランド全体（''）／特定メニュー（menu.id）。パートナーが明示選択したものだけがリンクに乗る。
+  const [selMenu, setSelMenu] = useState<string>('')
   const canvasWrap = useRef<HTMLDivElement>(null)
 
-  const url = token ? `${APEX}/r/${token}` : ''
+  // メニュー選択は URL パラメータ ?m= で表現（帰属token・money非接触。未選択=ブランドリンク）。
+  const url = token ? `${APEX}/r/${token}${selMenu ? `?m=${selMenu}` : ''}` : ''
+  const selMenuName = menus.find(m => m.id === selMenu)?.name ?? null
 
   useEffect(() => {
     let alive = true
@@ -41,7 +45,7 @@ export default function ShareLinkSheet({ serviceId, serviceName, onClose }: { se
   }
   function line() {
     if (!url) return
-    const text = `${serviceName}のご紹介です\n${url}`
+    const text = `${selMenuName ?? serviceName}のご紹介です\n${url}`
     trackFunnel('share', { token, channel: 'line' })
     window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, '_blank', 'noopener')
   }
@@ -64,7 +68,27 @@ export default function ShareLinkSheet({ serviceId, serviceName, onClose }: { se
           <b style={{ fontSize: '.92rem', fontWeight: 500 }}>{serviceName}を紹介する</b>
           <button onClick={onClose} aria-label="閉じる" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '1rem', cursor: 'pointer' }}>✕</button>
         </div>
-        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.6, marginBottom: 16 }}>あなた専用のリンクです。お客さまがここから登録すると、あなたの紹介として記録されます。</p>
+        <p style={{ fontSize: '.66rem', color: 'var(--muted2)', lineHeight: 1.6, marginBottom: 14 }}>あなた専用のリンクです。お客さまがここから登録すると、あなたの紹介として記録されます。</p>
+
+        {/* 共有内容の選択：ブランド全体 or 特定メニュー（選んだものだけがリンクに乗る＝勝手な主役化を防ぐ）。 */}
+        {menus.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500, marginBottom: 7 }}>共有する内容</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {[{ id: '', name: `${serviceName}（全体）` }, ...menus].map(m => {
+                const on = selMenu === m.id
+                return (
+                  <button key={m.id || 'all'} onClick={() => setSelMenu(m.id)} style={{
+                    fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, cursor: 'pointer',
+                    padding: '5px 11px', borderRadius: 7, whiteSpace: 'nowrap',
+                    border: on ? '1px solid var(--c-blue)' : '0.5px solid var(--line)',
+                    color: on ? 'var(--c-blue)' : 'var(--muted2)', background: on ? 'var(--blue-bg2)' : '#fff',
+                  }}>{m.name}</button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {err && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 12 }}>{err}</p>}
 

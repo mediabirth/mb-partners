@@ -79,7 +79,7 @@ export default function ReferPage() {
   const [selMenuData, setSelMenuData]     = useState<Menu | null>(null)
   const [selReward, setSelReward]         = useState<MenuReward | null>(null)
   const [showSheet, setShowSheet]         = useState(false)
-  const [shareSvc, setShareSvc]           = useState<{ id: string; name: string } | null>(null)  // 通水P1: 共有シート
+  const [shareSvc, setShareSvc]           = useState<{ id: string; name: string; menus: { id: string; name: string }[] } | null>(null)  // 通水P1: 共有シート（＋メニュー選択）
   const [query, setQuery]                 = useState('')                 // v3：検索（クライアント絞り込み）
   const [category, setCategory]           = useState<string>('すべて')   // v3：カテゴリチップ（単一選択）
   const [consultNote, setConsultNote]     = useState('')
@@ -283,7 +283,7 @@ export default function ReferPage() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {filteredServices.map((svc, i) => (
-                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name })} />
+                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name, menus: svc.service_menus.flatMap(sm => (sm.menus ?? []).filter(m => m.active !== false).map(m => ({ id: m.id, name: m.name }))) })} />
               ))}
             </div>
             {services.length > 0 && filteredServices.length === 0 && (
@@ -481,7 +481,7 @@ export default function ReferPage() {
       )}
 
       {/* 通水P1: 紹介リンク共有シート（ブランド単位・referral_links既存資産の露出） */}
-      {shareSvc && <ShareLinkSheet serviceId={shareSvc.id} serviceName={shareSvc.name} onClose={() => setShareSvc(null)} />}
+      {shareSvc && <ShareLinkSheet serviceId={shareSvc.id} serviceName={shareSvc.name} menus={shareSvc.menus} onClose={() => setShareSvc(null)} />}
 
       {showSheet && selSvc && (
         <MenuDetailSheet

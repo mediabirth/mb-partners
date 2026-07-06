@@ -4,9 +4,13 @@ import { useParams, useSearchParams } from 'next/navigation'
 import ServiceIcon from '@/components/ServiceIcon'
 import { trackFunnel } from '@/lib/funnel-client'
 
+type Menu = { id: string; name: string; short_description: string | null }
+// データ由来テキスト(menus.short_description・services.subtitle)の顧客表示時の正規化。
+// 内部略語「MB」を対外正典「Media Birth」へ（＝CC生成ではなく正典への正規化）。他の言い換えはしない。
+const sanitize = (s: string | null | undefined): string => (s ?? '').replace(/MB\s*Partners/g, 'Media Birth').replace(/MB/g, 'Media Birth')
 type LinkInfo = {
   service: { id: string; name: string; subtitle: string | null; icon: string; color: string }
-  menu: { name: string; ref_type: string; ref_value: number; example_ref: string | null } | null
+  menus: Menu[]
   referrerName?: string | null
 }
 
@@ -23,10 +27,17 @@ const ATELIER_CSS = `
 .r-title{font-size:2rem;line-height:1.32;color:var(--ink);margin:0;}
 .r-lead{font-size:.82rem;line-height:2;color:var(--ink-2);margin:16px 0 0;}
 .r-steps{margin:30px 0 4px;border-top:.5px solid var(--r-line);}
-.r-step{display:flex;align-items:baseline;gap:13px;padding:14px 2px;border-bottom:.5px solid var(--r-line);}
-.r-step .n{font-family:Inter,sans-serif;font-size:.72rem;font-weight:600;color:var(--indigo);min-width:16px;font-feature-settings:'tnum';}
-.r-step .t{font-size:.8rem;font-weight:500;color:var(--ink);}
-.r-step .d{font-size:.68rem;color:var(--ink-3);margin-left:auto;}
+.r-step{display:flex;align-items:flex-start;gap:13px;padding:15px 2px;border-bottom:.5px solid var(--r-line);}
+.r-step .n{font-family:Inter,sans-serif;font-size:.74rem;font-weight:600;color:var(--indigo);min-width:14px;font-feature-settings:'tnum';line-height:1.7;}
+.r-step .t{font-size:.78rem;font-weight:500;color:var(--ink);line-height:1.7;}
+.r-menus{margin:30px 0 4px;}
+.r-menus-h{font-size:.92rem;color:var(--ink);margin:0 0 12px;}
+.r-menu-list{display:flex;flex-direction:column;gap:8px;}
+.r-menu{display:flex;flex-direction:column;gap:2px;text-align:left;width:100%;background:#fff;border:.5px solid #DFDCD4;border-radius:4px;padding:12px 14px;cursor:pointer;transition:border-color .14s,background .14s;}
+.r-menu:hover{border-color:#C9C5BB;}
+.r-menu.on{border-color:var(--indigo);background:#FBFAFF;}
+.r-menu .mn{font-size:.82rem;font-weight:500;color:var(--ink);}
+.r-menu .md{font-size:.66rem;color:var(--ink-3);line-height:1.6;}
 .r-formhead{font-size:1.02rem;margin:40px 0 6px;color:var(--ink);}
 .r-formsub{font-size:.72rem;line-height:1.8;color:var(--ink-2);margin:0 0 22px;}
 .r-field{margin-bottom:16px;}
@@ -62,8 +73,10 @@ export default function ReferralLandingPage() {
   const searchParams = useSearchParams()
   const token = params.token as string
   const via   = searchParams.get('via') ?? 'link'
+  const linkedMenuId = searchParams.get('m') ?? ''   // パートナーがメニュー単位で共有した場合のみ付く（?m=）
 
   const [info, setInfo]         = useState<LinkInfo | null>(null)
+  const [pickedMenu, setPickedMenu] = useState<string>('')   // ブランドリンクで顧客が選んだメニュー（表示・memo用・money非接触）
   const [loading, setLoading]   = useState(true)
   const [notFound, setNotFound] = useState(false)
   // B2B 整合フォーム（会社名/担当者名/部署・役職/連絡先/メール/メモ）。token帰属は不変。
@@ -100,6 +113,9 @@ export default function ReferralLandingPage() {
     // Batch B（クライアント送信gateの追加のみ・payload/サーバ insert は不変）：メールか電話のどちらか必須。
     if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかを入力してください'); return }
     if (!consent) { setError('同意確認が必要です'); return }
+    // 選択メニュー名（メニュー単位リンク or 顧客がページで選択）を memo に添える。money・帰属には非接触。
+    const chosenId = linkedMenuId || pickedMenu
+    const chosenMenuName = (info?.menus ?? []).find(m => m.id === chosenId)?.name ?? null
     setSubmitting(true)
     try {
       const res = await fetch('/api/referral', {
@@ -114,7 +130,7 @@ export default function ReferralLandingPage() {
           contactTitle: contactTitle.trim(),
           customerEmail: email.trim(),
           customerType: company ? 'corporate' : 'individual',
-          phone, memo, via,
+          phone, memo: chosenMenuName ? [`ご相談メニュー: ${chosenMenuName}`, memo].filter(Boolean).join('\n') : memo, via,
         }),
       })
       const data = await res.json()
@@ -161,8 +177,13 @@ export default function ReferralLandingPage() {
   )
 
   const partnerName = (info?.referrerName ?? '').trim()
-  const bigTitle = info?.menu?.name?.trim() || info?.service.name?.trim() || 'ご相談'
-  const lead = info?.service.subtitle?.trim() || null
+  const menus = info?.menus ?? []
+  // メニュー単位リンク(?m=)＝そのメニューが見出し。ブランドリンク＝ブランド名が見出し＋一覧を提示。
+  //   ＝パートナーが明示選択したメニューだけが主役。非選択メニューが勝手に主役化することは構造的に起きない。
+  const linkedMenu = menus.find(m => m.id === linkedMenuId) ?? null
+  const chosen = linkedMenu ?? menus.find(m => m.id === pickedMenu) ?? null
+  const bigTitle = linkedMenu?.name?.trim() || info?.service.name?.trim() || 'ご相談'
+  const lead = sanitize((chosen?.short_description ?? info?.service.subtitle)?.trim() || null) || null
 
   return (
     <div className="r-atelier"><style>{ATELIER_CSS}</style><link rel="preload" href="/fonts/zen-old-mincho-500.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
@@ -175,36 +196,53 @@ export default function ReferralLandingPage() {
             <rect x="6" y="28" width="14" height="14" rx="7" stroke="#B7B3A9" strokeWidth="3"/>
             <rect x="28" y="28" width="14" height="14" rx="3" fill="var(--indigo)"/>
           </svg>
-          <span>MB <span className="p">Partners</span></span>
+          <span>Media <span className="p">Birth</span></span>
         </div>
 
-        {/* 2. サービス／メニュー名を明朝で大きく（改善①：info.menu.name を描画） */}
+        {/* 2. 見出し：メニュー単位リンクはメニュー名／ブランドリンクはブランド名（明朝・大） */}
         <div className="r-eyebrow">{info?.service.name ?? 'ご相談'}</div>
         <h1 className="r-mincho r-title">{bigTitle}</h1>
-
-        {/* 3. このメニューで相談できること（具体・借り物の言葉を廃す） */}
         {lead && <p className="r-lead">{lead}</p>}
+
+        {/* サービス識別 */}
         {info && (
           <div className="r-svccard">
             <ServiceIcon icon={info.service.icon} color={info.service.color} size={38} />
             <div style={{ minWidth: 0 }}>
               <div className="nm">{info.service.name}</div>
-              <div className="st">{info.menu?.name ? `${info.menu.name} のご相談を承ります` : 'ご相談を承ります'}</div>
+              <div className="st">{chosen ? `${chosen.name} のご相談を承ります` : 'ご相談を承ります'}</div>
             </div>
           </div>
         )}
 
-        {/* 4. 安心3ステップ（静音・番号＋細罫線・成約の語彙は置かない） */}
+        {/* 3. ブランドリンク時：正典のメニュー一覧を提示（顧客が選べる形）。メニュー単位リンク時は非表示。 */}
+        {!linkedMenu && menus.length > 0 && (
+          <div className="r-menus">
+            <div className="r-menus-h r-mincho">ご相談メニュー</div>
+            <div className="r-menu-list">
+              {menus.map(m => {
+                const on = pickedMenu === m.id
+                return (
+                  <button type="button" key={m.id} onClick={() => setPickedMenu(on ? '' : m.id)} className={`r-menu${on ? ' on' : ''}`}>
+                    <span className="mn">{m.name}</span>
+                    {m.short_description && <span className="md">{sanitize(m.short_description)}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 4. 安心3ステップ（正典文言・静音・番号＋細罫線） */}
         <div className="r-steps">
           {[
-            { n: '1', t: 'MB が内容を確認', d: '担当がお話を伺います' },
-            { n: '2', t: 'ご提案・お打ち合わせ', d: '貴社に合わせて' },
-            { n: '3', t: '着手', d: '一貫してサポート' },
+            { n: '1', t: 'ご相談内容を確認のうえ、Media Birth の担当者からご連絡します' },
+            { n: '2', t: '状況を伺い、お客さまに合わせたご提案をします' },
+            { n: '3', t: 'ご納得いただけてから、正式にスタートします' },
           ].map(s => (
             <div key={s.n} className="r-step">
               <span className="n">{s.n}</span>
               <span className="t">{s.t}</span>
-              <span className="d">{s.d}</span>
             </div>
           ))}
         </div>
@@ -243,7 +281,7 @@ export default function ReferralLandingPage() {
           <div className="r-consent">
             <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)} />
             <label htmlFor="consent">
-              Media Birth株式会社からのご連絡に同意します。いただいた情報はご提案のためにのみ使用します。
+              株式会社Media Birth からのご連絡に同意します。いただいた情報はご提案のためにのみ使用します。
             </label>
           </div>
 
@@ -257,16 +295,16 @@ export default function ReferralLandingPage() {
 
           {error && <p className="r-error">{error}</p>}
 
-          {/* 7. CTA＝墨の塗りボタン */}
+          {/* 7. CTA＝墨の塗りボタン（「無料」の語はページ全体で不使用） */}
           <button type="submit" disabled={submitting || !consent} className="r-cta">
-            {submitting ? '送信中…' : '無料で相談する'}
+            {submitting ? '送信中…' : '相談する'}
           </button>
-          <p className="r-fineprint">送信いただいても費用は発生しません。内容を確認のうえご連絡します。</p>
+          <p className="r-fineprint">内容を確認のうえ、担当者よりご連絡します。</p>
         </form>
 
         {/* 8. フッター（運営者情報・プライバシー） */}
         <div className="r-footer">
-          Media Birth株式会社 ・ パートナープログラム<br/>
+          株式会社Media Birth ・ パートナープログラム<br/>
           <a href="/legal/privacy">プライバシーポリシー</a>
         </div>
       </div>

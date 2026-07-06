@@ -17,10 +17,15 @@ export async function GET(req: NextRequest) {
 
   if (!link) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-  const [{ data: service }, { data: menus }] = await Promise.all([
-    supabase.from('services').select('id, name, subtitle, icon, color').eq('id', link.service_id).single(),
-    supabase.from('service_menus').select('name, ref_type, ref_value, example_ref').eq('service_id', link.service_id).order('sort').limit(1),
-  ])
+  // 顧客に見せるメニュー＝正典の新モデル menus（名称・短説明）。旧 service_menus.name（例:「賃貸」）は
+  // パートナー非選択の先頭行が主役化する不具合の元だったため使わない。service→service_menus→menus で解決。
+  const { data: service } = await supabase.from('services').select('id, name, subtitle, icon, color').eq('id', link.service_id).single()
+  const { data: sm } = await supabase.from('service_menus').select('id').eq('service_id', link.service_id)
+  const smIds = (sm ?? []).map(x => x.id)
+  const { data: menuRows } = smIds.length
+    ? await supabase.from('menus').select('id, name, short_description, sort').in('service_menu_id', smIds).eq('active', true).order('sort')
+    : { data: [] as { id: string; name: string; short_description: string | null; sort: number }[] }
+  const menus = (menuRows ?? []).map(m => ({ id: m.id, name: m.name, short_description: m.short_description ?? null }))
 
   // 紹介者名（信頼ランディングの「{紹介者名}様からのご紹介です」表示用・read-only）。
   // ★帰属には一切不使用（帰属は POST /api/referral の link.partner_id のまま）。取得失敗時は null フォールバック。
@@ -35,5 +40,6 @@ export async function GET(req: NextRequest) {
     }
   } catch { /* 表示用のみ・失敗は無視 */ }
 
-  return NextResponse.json({ service, menu: menus?.[0] ?? null, referrerName })
+  // menus[]＝正典のメニュー一覧（顧客が選べる形）。単一の主役menuは返さない（構造的に非選択メニューの主役化を不可能に）。
+  return NextResponse.json({ service, menus, referrerName })
 }
