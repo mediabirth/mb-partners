@@ -135,7 +135,7 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
           {item.id === 'partners' && badges.pendingPartners > 0 && (
             <span style={{
               marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-              background: 'var(--c-blue)', color: '#fff', fontSize: '.56rem', fontWeight: 500,
+              background: 'var(--ink)', color: '#fff', fontSize: '.56rem', fontWeight: 500,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
               animation: 'pulseDot 2.8s ease-in-out infinite',
             }}>

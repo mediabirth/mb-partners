@@ -260,7 +260,7 @@ export default function ReferPage() {
                   const on = category === cat
                   return (
                     <button key={cat} onClick={() => setCategory(cat)} className="no-break"
-                      style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 500 : 400, cursor: 'pointer', borderRadius: 999, padding: '5px 13px', whiteSpace: 'nowrap', border: on ? '0.5px solid var(--txt)' : '0.5px solid var(--line)', background: on ? 'var(--txt)' : '#fff', color: on ? '#fff' : 'var(--muted2)' }}>{cat}</button>
+                      style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 500 : 400, cursor: 'pointer', borderRadius: 4, padding: '5px 13px', whiteSpace: 'nowrap', border: on ? '0.5px solid var(--txt)' : '0.5px solid var(--line)', background: on ? 'var(--txt)' : '#fff', color: on ? '#fff' : 'var(--muted2)' }}>{cat}</button>
                   )
                 })}
               </div>
@@ -497,7 +497,7 @@ export default function ReferPage() {
   )
 }
 
-const btnPrimary: React.CSSProperties = { minHeight: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: '0 20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
+const btnPrimary: React.CSSProperties = { minHeight: 44, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: '0 20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
 const backBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 400, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }
 const sectionTitle: React.CSSProperties = { fontSize: 13, fontWeight: 500, marginBottom: 12 }
 
@@ -600,7 +600,7 @@ function BrandCard({ svc, active, index, onToggle, onPick, onShare }: {
                 {tasks.length > 0 && (
                   <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {tasks.map(t => (
-                      <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>
+                      <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 4, padding: '2px 9px' }}>{t.label}</span>
                     ))}
                   </span>
                 )}

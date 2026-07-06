@@ -81,7 +81,7 @@ export default function SupportThreadPage({ params }: { params: Promise<{ id: st
             </p>
           </div>
           <span style={{
-            fontSize: '.62rem', fontWeight: 500, padding: '3px 10px', borderRadius: 20,
+            fontSize: '.62rem', fontWeight: 500, padding: '3px 10px', borderRadius: 4,
             color: inquiry.status === 'replied' ? 'var(--c-blue)' : inquiry.status === 'open' ? 'var(--amber)' : 'var(--muted2)',
             background: inquiry.status === 'replied' ? 'var(--blue-bg2)' : inquiry.status === 'open' ? 'var(--amber-bg)' : 'var(--bg2)',
             flexShrink: 0,

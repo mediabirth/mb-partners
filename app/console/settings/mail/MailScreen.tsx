@@ -115,7 +115,7 @@ export default function MailScreen() {
         <div style={{ background: '#fff', border: LINE, borderRadius: 14, overflow: 'hidden' }}>
           {/* 通水P3「循環」: 自動送信の実配線ドライラン。どのイベントで・誰に・いつ飛ぶかの全体像＝この画面からは送信されません。 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderBottom: LINE, background: 'var(--blue-bg)' }}>
-            <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', border: '0.5px solid var(--c-blue)', borderRadius: 20, padding: '1px 8px' }}>ドライラン</span>
+            <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', border: '0.5px solid var(--c-blue)', borderRadius: 4, padding: '1px 8px' }}>ドライラン</span>
             <span style={{ fontSize: '.64rem', color: 'var(--muted2)', lineHeight: 1.5 }}>
               自動送信の実配線です（{matrix.length}イベント／{MAIL_REGISTRY.length}通）。この画面からは送信されません。各イベントの「いつ」は下に記載。
             </span>
@@ -193,7 +193,7 @@ export default function MailScreen() {
                 {def.vars.map(v => (
                   <button key={v.key} type="button" title={`${v.label}（例：${v.sample}）`}
                     onClick={() => { setBody(b => b + '${' + v.key + '}'); setDirty(true) }}
-                    style={{ border: LINE, background: 'var(--bg2)', borderRadius: 20, padding: '2px 9px', fontSize: '.6rem', fontFamily: 'Inter, monospace', color: 'var(--muted2)', cursor: 'pointer' }}>
+                    style={{ border: LINE, background: 'var(--bg2)', borderRadius: 4, padding: '2px 9px', fontSize: '.6rem', fontFamily: 'Inter, monospace', color: 'var(--muted2)', cursor: 'pointer' }}>
                     {'${' + v.key + '}'}
                   </button>
                 ))}

@@ -96,7 +96,7 @@ export default function BroadcastPreviewPage() {
             </button>
           )}
           {broadcast?.sent_at && (
-            <span style={{ fontSize: '.7rem', fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', padding: '5px 12px', borderRadius: 20 }}>
+            <span style={{ fontSize: '.7rem', fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', padding: '5px 12px', borderRadius: 4 }}>
               配信済み
             </span>
           )}
@@ -120,7 +120,7 @@ export default function BroadcastPreviewPage() {
               <div style={{ padding: '32px 36px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                   <span style={{
-                    fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 20,
+                    fontSize: '.6rem', fontWeight: 500, padding: '2px 8px', borderRadius: 4,
                     background: broadcast.kind === 'news' ? 'var(--blue-bg)' : 'var(--amber-bg)',
                     color: broadcast.kind === 'news' ? 'var(--c-blue)' : 'var(--amber)',
                   }}>

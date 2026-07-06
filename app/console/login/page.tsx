@@ -32,7 +32,7 @@ export default function ConsoleLoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(120% 90% at 85% 0%, var(--blue-bg2) 0%, var(--bg2) 55%)',
+      background: 'var(--bg2)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -42,7 +42,7 @@ export default function ConsoleLoginPage() {
     }}>
       {/* Orbit rings — top-right corner */}
       <div style={{ position: 'absolute', right: -110, top: -110, width: 340, height: 340, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: 0, border: '1.5px solid #EDEBFC', borderRadius: '50%', animation: 'spin 50s linear infinite' }} />
+        <div style={{ position: 'absolute', inset: 0, border: '1.5px solid #ECE6DA', borderRadius: '50%', animation: 'spin 50s linear infinite' }} />
         <div style={{ position: 'absolute', inset: 46, border: '1.5px solid #DCD8FA', borderRadius: '50%', animation: 'spin 34s linear infinite reverse' }} />
         <div style={{ position: 'absolute', inset: 104, border: '1.5px solid #4733E6', borderRadius: '50%', opacity: .22, animation: 'spin 22s linear infinite' }} />
       </div>

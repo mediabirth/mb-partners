@@ -34,7 +34,7 @@ export default function LineLinkCard() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <span style={{ width: 30, height: 30, borderRadius: 8, background: '#06C755', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '.8rem', flexShrink: 0 }}>L</span>
         <b style={{ fontSize: '.84rem' }}>LINEと連携</b>
-        {linked && <span style={{ marginLeft: 'auto', fontSize: '.6rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 999, padding: '3px 10px' }}>連携済み</span>}
+        {linked && <span style={{ marginLeft: 'auto', fontSize: '.6rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', borderRadius: 4, padding: '3px 10px' }}>連携済み</span>}
       </div>
       <p style={{ fontSize: '.64rem', color: 'var(--muted2)', lineHeight: 1.6, margin: '0 0 12px' }}>
         連携すると、成約などの大事なお知らせを LINE でも受け取れます（通知用途のみ・ログインには使いません）。

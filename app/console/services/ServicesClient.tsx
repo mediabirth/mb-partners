@@ -345,7 +345,7 @@ function PreviewCard({ svcForm, menus }: { svcForm: ServiceForm; menus: MenuDraf
               </span>
               {tasks.length > 0 && (
                 <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {tasks.map(t => <span key={t.label} style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>)}
+                  {tasks.map(t => <span key={t.label} style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 4, padding: '2px 9px' }}>{t.label}</span>)}
                 </span>
               )}
             </div>
@@ -943,7 +943,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                                       onClick={e => { e.preventDefault(); setTaskDescDraft(taskDescs[mt.label] ?? ''); setEditTaskFor(taskKey) }}
                                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
                                     <span style={{ flex: 1 }} />
-                                    <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
+                                    <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 4, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>
                                   </label>
                                   {editTaskFor === taskKey && (
                                     <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', margin: '2px 0 6px 22px' }}>
@@ -952,7 +952,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                                         placeholder="このタスクの説明（登録ページのⓘに表示）"
                                         style={{ flex: 1, minWidth: 0, border: '1px solid var(--blue)', borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', fontSize: '.64rem', resize: 'vertical' }} />
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                        <button type="button" onClick={() => saveTaskDesc(mt.label, taskDescDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
+                                        <button type="button" onClick={() => saveTaskDesc(mt.label, taskDescDraft)} style={{ fontSize: '.58rem', fontWeight: 500, color: '#fff', background: 'var(--ink)', border: 'none', borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>保存する</button>
                                         <button type="button" onClick={() => setEditTaskFor(null)} style={{ fontSize: '.62rem', color: 'var(--muted2)', background: 'var(--bg2)', border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
                                       </div>
                                     </div>

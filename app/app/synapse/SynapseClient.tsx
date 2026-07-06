@@ -72,7 +72,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
   return (
     <div style={{ padding: '4px 0 24px' }}>
       {/* A1. ヒーロー：紋章＋件数（表示のみ・money非依存）＋資産の一言 */}
-      <div style={{ margin: '14px 20px 16px', display: 'flex', alignItems: 'center', gap: 14, background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--blue-bg2) 70%)', border: '1px solid var(--blue-bg)', borderRadius: 18, padding: '18px 18px' }}>
+      <div style={{ margin: '14px 20px 16px', display: 'flex', alignItems: 'center', gap: 14, background: 'var(--bg2)', border: '1px solid var(--blue-bg)', borderRadius: 18, padding: '18px 18px' }}>
         <div style={{ flexShrink: 0 }}><SynapseCrest size={74} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '.54rem', fontWeight: 500, letterSpacing: '.16em', color: 'var(--c-blue)' }}>SYNAPSE</div>
@@ -90,7 +90,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
       <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px 12px' }}>
           <b style={{ fontSize: '.78rem', fontWeight: 500 }}>すべてのつながり</b>
-          <button onClick={() => { setAdding({ name: '', company: '' }); setAddErr('') }} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500 }}>
+          <button onClick={() => { setAdding({ name: '', company: '' }); setAddErr('') }} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>追加
           </button>
         </div>

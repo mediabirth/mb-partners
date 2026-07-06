@@ -117,10 +117,10 @@ export default function ReferralLandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#E9E9ED', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '40px 20px' }}>
-      <div style={{ width: '100%', maxWidth: 440, background: '#fff', borderRadius: 20, boxShadow: '0 24px 70px rgba(14,14,20,.12)', overflow: 'hidden' }}>
+      <div style={{ width: '100%', maxWidth: 440, background: '#fff', borderRadius: 4, boxShadow: '0 24px 70px rgba(14,14,20,.12)', overflow: 'hidden' }}>
 
         {/* ── ブランドヘッダー（#4733E6） ── */}
-        <div style={{ background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', padding: '22px 28px 20px' }}>
+        <div style={{ background: '#1B1A17', color: '#fff', padding: '22px 28px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
               <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#fff" strokeWidth="3"/>
@@ -216,7 +216,7 @@ export default function ReferralLandingPage() {
             {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
             <button type="submit" disabled={submitting || !consent}
-              className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
+              className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: '#1B1A17', boxShadow: '0 8px 20px rgba(27,26,23,.20)' }}>
               {submitting ? '送信中…' : '無料で相談する'}
             </button>
             <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>

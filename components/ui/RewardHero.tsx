@@ -13,7 +13,7 @@ export default function RewardHero({ label, amount, items }: {
   items: RewardHeroItem[]
 }) {
   return (
-    <div style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', borderRadius: 18, padding: '24px 22px 18px', color: '#fff' }}>
+    <div style={{ margin: '18px 20px 0', background: '#1B1A17', borderRadius: 18, padding: '24px 22px 18px', color: '#fff' }}>
       <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>{label}</div>
       <div style={{ fontFamily: 'Inter', fontWeight: 800, fontSize: '2.5rem', fontFeatureSettings: '"tnum"', letterSpacing: '-.022em', lineHeight: 1.05 }}>
         <span style={{ fontSize: '1.04rem', fontWeight: 600, opacity: .78, marginRight: 4 }}>¥</span>

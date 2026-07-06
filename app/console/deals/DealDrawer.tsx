@@ -142,7 +142,7 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                               <span style={{ display: 'block', fontSize: '.66rem', fontWeight: 400, color: 'var(--txt)', whiteSpace: 'pre-wrap', lineHeight: 1.6, marginTop: 4, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 8 }}>{t.note}</span>
                             )}
                           </span>
-                          {t.required && !t.done && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 20, padding: '1px 7px' }}>必須</span>}
+                          {t.required && !t.done && <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: 'var(--blue)', background: 'var(--blue-bg)', borderRadius: 4, padding: '1px 7px' }}>必須</span>}
                         </button>
                       )
                     })}

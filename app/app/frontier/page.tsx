@@ -97,7 +97,7 @@ export default async function FrontierPage() {
     return (
       <div className="page-anim" style={{ paddingBottom: 8 }}>
         {/* ① ヒーロー：これから育つ */}
-        <div className="shine" style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
+        <div className="shine" style={{ margin: '18px 20px 0', background: '#1B1A17', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
             <div style={{ position: 'absolute', inset: 30, border: '1.5px solid rgba(255,255,255,.2)', borderRadius: '50%' }} />
@@ -160,7 +160,7 @@ export default async function FrontierPage() {
   return (
     <div className="page-anim" style={{ paddingBottom: 8 }}>
       {/* ① 収入ヒーロー：今月のオーバーライド収入＋前月比＋3指標 */}
-      <div className="shine" style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
+      <div className="shine" style={{ margin: '18px 20px 0', background: '#1B1A17', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
           <div style={{ position: 'absolute', inset: 30, border: '1.5px solid rgba(255,255,255,.2)', borderRadius: '50%' }} />
@@ -171,7 +171,7 @@ export default async function FrontierPage() {
         </div>
         {/* 前月比（先月データがある時のみ・トレンドアイコン） */}
         {(lastMonthOverride > 0 || momDelta !== 0) && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: '.66rem', background: 'rgba(255,255,255,.16)', borderRadius: 999, padding: '3px 10px', position: 'relative' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: '.66rem', background: 'rgba(255,255,255,.16)', borderRadius: 4, padding: '3px 10px', position: 'relative' }}>
             先月より {momDelta >= 0 ? '+' : '−'}¥{Math.abs(momDelta).toLocaleString()}
           </div>
         )}

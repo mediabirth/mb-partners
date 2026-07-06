@@ -2,25 +2,25 @@ type ColorSpec = { bg: string; fg: string }
 
 // Named color keys (legacy support)
 const COLOR_MAP: Record<string, ColorSpec> = {
-  'c-blue':   { bg: '#EDEBFC', fg: '#4733E6' },
+  'c-blue':   { bg: '#ECE6DA', fg: '#4733E6' },
   'c-purple': { bg: '#F0EAFA', fg: '#7A48D6' },
   'c-amber':  { bg: '#FBF1DF', fg: '#C07A12' },
   'c-green':  { bg: '#E7F6EF', fg: '#1E9E6A' },
   'c-pink':   { bg: '#F9EAF4', fg: '#C2479E' },
   // Common hex values stored in DB
-  '#4733e6': { bg: '#EDEBFC', fg: '#4733E6' },
+  '#4733e6': { bg: '#ECE6DA', fg: '#4733E6' },
   '#1e9e6a': { bg: '#E7F6EF', fg: '#1E9E6A' },
   '#c07a12': { bg: '#FBF1DF', fg: '#C07A12' },
   '#d34545': { bg: '#FBE9E9', fg: '#D34545' },
   '#0ea5e9': { bg: '#E0F2FE', fg: '#0284c7' },
-  '#8b5cf6': { bg: '#EDE9FE', fg: '#7C3AED' },
+  '#8b5cf6': { bg: '#ECE6DA', fg: '#7C3AED' },
   '#ec4899': { bg: '#FDF2F8', fg: '#DB2777' },
   '#14b8a6': { bg: '#CCFBF1', fg: '#0F766E' },
 }
 
 export function getServiceColors(color: string): ColorSpec {
   const key = (color ?? '').toLowerCase()
-  return COLOR_MAP[key] ?? COLOR_MAP[color] ?? { bg: '#EDEBFC', fg: '#4733E6' }
+  return COLOR_MAP[key] ?? COLOR_MAP[color] ?? { bg: '#ECE6DA', fg: '#4733E6' }
 }
 
 function IconShape({ icon }: { icon: string }) {

@@ -269,8 +269,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           {/* ① ヒーロー：今月のMB粗利（正確）＋前月比＋月間目標進捗 */}
           <div className="page-anim shine card-hover" style={{
             position: 'relative', borderRadius: 16, padding: '22px 26px', marginBottom: 16,
-            background: 'linear-gradient(120deg, var(--c-blue) 0%, var(--blue-dk) 100%)',
-            color: '#fff', overflow: 'hidden', boxShadow: '0 10px 30px rgba(71,51,230,.22)',
+            background: '#1B1A17',
+            color: '#fff', overflow: 'hidden', boxShadow: '0 10px 30px rgba(27,26,23,.16)',
           }}>
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div className="eyebrow" style={{ color: 'rgba(255,255,255,.8)' }}>{isCurrentMonth ? '今月' : selMonthLabel}のMB粗利</div>
@@ -388,7 +388,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                         {dt.toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span style={{ flex: 1, minWidth: 0, fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(d)}</span>
-                      {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, padding: '1px 6px', borderRadius: 20, background: 'var(--blue-bg)', color: 'var(--c-blue)' }}>本日</span>}
+                      {isToday && <span style={{ flexShrink: 0, fontSize: '.52rem', fontWeight: 500, padding: '1px 6px', borderRadius: 4, background: 'var(--blue-bg)', color: 'var(--c-blue)' }}>本日</span>}
                     </Link>
                   )
                 })}

@@ -17,7 +17,7 @@ function kindBadge(kind: string) {
   const isNews = kind === 'news'
   return (
     <span style={{
-      fontSize: '.58rem', fontWeight: 500, padding: '2px 7px', borderRadius: 20,
+      fontSize: '.58rem', fontWeight: 500, padding: '2px 7px', borderRadius: 4,
       background: isNews ? 'var(--blue-bg)' : 'var(--amber-bg)',
       color: isNews ? 'var(--c-blue)' : 'var(--amber)',
     }}>
@@ -66,7 +66,7 @@ export default function BroadcastsPage() {
           </div>
           <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
             fontSize: '.75rem', fontWeight: 500, padding: '8px 16px', borderRadius: 9,
-            background: 'var(--c-blue)', color: '#fff', textDecoration: 'none',
+            background: 'var(--ink)', color: '#fff', textDecoration: 'none',
           }}>
             + 新規作成
           </Link>
@@ -105,7 +105,7 @@ export default function BroadcastsPage() {
               </div>
               <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
                 fontSize: '.78rem', fontWeight: 500, padding: '10px 22px', borderRadius: 10,
-                background: 'var(--c-blue)', color: '#fff', textDecoration: 'none', display: 'inline-block',
+                background: 'var(--ink)', color: '#fff', textDecoration: 'none', display: 'inline-block',
               }}>
                 + 新規作成
               </Link>
@@ -139,7 +139,7 @@ export default function BroadcastsPage() {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {b.sent_at ? (
                     <>
-                      <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 10px', borderRadius: 20, marginBottom: 5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--green)', background: 'var(--green-bg)', padding: '3px 10px', borderRadius: 4, marginBottom: 5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)' }} />
                         配信済
                       </div>
@@ -151,7 +151,7 @@ export default function BroadcastsPage() {
                       </div>
                     </>
                   ) : (
-                    <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--amber)', background: 'var(--amber-bg)', padding: '3px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--amber)', background: 'var(--amber-bg)', padding: '3px 10px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                       <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--amber)' }} />
                       下書き
                     </span>

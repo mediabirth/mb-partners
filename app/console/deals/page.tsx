@@ -861,7 +861,7 @@ export default function DealsPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               {LOST_REASONS.map(r => (
                 <button key={r} onClick={() => setLostReason(r)}
-                  style={{ fontSize: '.7rem', padding: '7px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+                  style={{ fontSize: '.7rem', padding: '7px 12px', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
                     border: `1.5px solid ${lostReason === r ? 'var(--red)' : 'var(--line)'}`,
                     background: lostReason === r ? 'var(--red-bg)' : '#fff', color: lostReason === r ? 'var(--red)' : 'var(--txt)' }}>
                   {lostReasonLabel(r)}
@@ -1015,7 +1015,7 @@ export default function DealsPage() {
             </select>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setDirectModal(false)} disabled={directBusy} style={{ border: '1.5px solid var(--line)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '8px 16px', borderRadius: 8, color: 'var(--muted2)' }}>キャンセル</button>
-              <button onClick={createDirectProject} disabled={directBusy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '8px 18px', borderRadius: 8, color: '#fff', background: 'var(--c-blue)', opacity: directBusy ? .6 : 1 }}>{directBusy ? '作成中…' : '起票する'}</button>
+              <button onClick={createDirectProject} disabled={directBusy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, padding: '8px 18px', borderRadius: 8, color: '#fff', background: 'var(--ink)', opacity: directBusy ? .6 : 1 }}>{directBusy ? '作成中…' : '起票する'}</button>
             </div>
           </div>
         </div>

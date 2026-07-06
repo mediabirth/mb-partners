@@ -89,7 +89,7 @@ export default function GlobalSearchClient() {
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontSize: '.58rem', fontWeight: 500, padding: '2px 7px', borderRadius: 20, background: TYPE_COLORS[r.type].bg, color: TYPE_COLORS[r.type].txt, flexShrink: 0 }}>
+              <span style={{ fontSize: '.58rem', fontWeight: 500, padding: '2px 7px', borderRadius: 4, background: TYPE_COLORS[r.type].bg, color: TYPE_COLORS[r.type].txt, flexShrink: 0 }}>
                 {TYPE_LABEL[r.type]}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>

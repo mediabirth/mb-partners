@@ -67,7 +67,7 @@ export default function ConsoleInquiriesPage() {
           {openCount > 0 && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: '.66rem', fontWeight: 500, padding: '3px 10px', borderRadius: 20,
+              fontSize: '.66rem', fontWeight: 500, padding: '3px 10px', borderRadius: 4,
               color: 'var(--amber)', background: 'var(--amber-bg)',
             }}>
               <span className="status-dot" style={{ background: 'var(--amber)' }} />
@@ -138,7 +138,7 @@ export default function ConsoleInquiriesPage() {
                       </span>
                       {overSLA && (
                         <span style={{
-                          fontSize: '.58rem', fontWeight: 500, padding: '1px 7px', borderRadius: 20,
+                          fontSize: '.58rem', fontWeight: 500, padding: '1px 7px', borderRadius: 4,
                           color: 'var(--red)', background: 'var(--red-bg)', flexShrink: 0,
                         }}>
                           SLA超過
@@ -157,7 +157,7 @@ export default function ConsoleInquiriesPage() {
 
                   {/* Category chip */}
                   <span style={{
-                    fontSize: '.62rem', fontWeight: 500, padding: '3px 9px', borderRadius: 20,
+                    fontSize: '.62rem', fontWeight: 500, padding: '3px 9px', borderRadius: 4,
                     color: cc.color, background: cc.bg, flexShrink: 0,
                   }}>
                     {CATEGORY_LABEL[inq.category] ?? inq.category}
@@ -166,7 +166,7 @@ export default function ConsoleInquiriesPage() {
                   {/* Status chip */}
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    fontSize: '.62rem', fontWeight: 500, padding: '3px 9px', borderRadius: 20,
+                    fontSize: '.62rem', fontWeight: 500, padding: '3px 9px', borderRadius: 4,
                     color: sc.color, background: sc.bg, flexShrink: 0,
                   }}>
                     <span className="status-dot" style={{ background: sc.dot }} />

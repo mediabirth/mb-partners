@@ -33,7 +33,7 @@ export default function SettingsScreen({ links, notifications, logout, extra }: 
             <div style={{ fontSize: '.77rem', color: 'var(--txt)', fontWeight: 500 }}>ホーム画面に追加</div>
             <div style={{ fontSize: '.66rem', color: 'var(--muted)', marginTop: 2 }}>共有 → 「ホーム画面に追加」でアプリのように全画面で使えます。</div>
           </div>
-          <span style={{ flexShrink: 0, fontSize: '.64rem', fontWeight: 500, padding: '3px 10px', borderRadius: 20, color: 'var(--green)', background: 'var(--green-bg)' }}>対応</span>
+          <span style={{ flexShrink: 0, fontSize: '.64rem', fontWeight: 500, padding: '3px 10px', borderRadius: 4, color: 'var(--green)', background: 'var(--green-bg)' }}>対応</span>
         </div>
       </div>
 

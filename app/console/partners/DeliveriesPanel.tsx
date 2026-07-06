@@ -74,9 +74,9 @@ export default function DeliveriesPanel() {
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1 }}>{d.kind ?? '—'}{d.contact_email ? ` ・ ${d.contact_email}` : ''}</div>
               </div>
               {d.auth_user_id
-                ? <span title="ポータル連携済み" style={{ fontSize: '.56rem', fontWeight: 500, borderRadius: 20, padding: '2px 9px', color: 'var(--green)', background: 'var(--green-bg)' }}>連携済み</span>
-                : <button onClick={() => invite(d)} style={{ fontSize: '.6rem', fontWeight: 500, borderRadius: 20, padding: '3px 11px', border: '1px solid var(--green)', cursor: 'pointer', color: 'var(--green)', background: '#fff' }}>招待</button>}
-              <button onClick={() => patch(d.id, { active: !d.active })} style={{ fontSize: '.58rem', fontWeight: 500, borderRadius: 20, padding: '2px 9px', border: 'none', cursor: 'pointer', color: d.active ? 'var(--green)' : 'var(--muted)', background: d.active ? 'var(--green-bg)' : 'var(--bg2)' }}>{d.active ? '有効' : '無効'}</button>
+                ? <span title="ポータル連携済み" style={{ fontSize: '.56rem', fontWeight: 500, borderRadius: 4, padding: '2px 9px', color: 'var(--green)', background: 'var(--green-bg)' }}>連携済み</span>
+                : <button onClick={() => invite(d)} style={{ fontSize: '.6rem', fontWeight: 500, borderRadius: 4, padding: '3px 11px', border: '1px solid var(--green)', cursor: 'pointer', color: 'var(--green)', background: '#fff' }}>招待</button>}
+              <button onClick={() => patch(d.id, { active: !d.active })} style={{ fontSize: '.58rem', fontWeight: 500, borderRadius: 4, padding: '2px 9px', border: 'none', cursor: 'pointer', color: d.active ? 'var(--green)' : 'var(--muted)', background: d.active ? 'var(--green-bg)' : 'var(--bg2)' }}>{d.active ? '有効' : '無効'}</button>
               <button onClick={() => del(d.id)} style={{ fontSize: '.7rem', color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
             </div>
           ))}

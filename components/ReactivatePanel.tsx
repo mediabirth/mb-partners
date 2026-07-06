@@ -66,7 +66,7 @@ export default function ReactivatePanel({ rows, cooldownDays }: { rows: DormantR
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <b style={{ fontSize: '.84rem' }}>{r.name}</b>
-                <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 999, padding: '2px 9px' }}>{r.dormantDays}日 休眠</span>
+                <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-bg)', borderRadius: 4, padding: '2px 9px' }}>{r.dormantDays}日 休眠</span>
               </div>
               <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 4 }}>
                 最終紹介 {fmt(r.lastReferral)}・紹介{r.referrals}件・最終ナッジ {fmt(r.lastNudgedAt)}

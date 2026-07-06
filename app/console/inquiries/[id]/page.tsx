@@ -149,7 +149,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     </span>
                     <span style={{ fontSize: '.64rem', color: 'var(--muted2)', opacity: .8 }}>({inquiry.partners?.code})</span>
                     <span style={{
-                      fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 20,
+                      fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 4,
                       color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color,
                       background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg,
                     }}>
@@ -157,7 +157,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     </span>
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
-                      fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 20,
+                      fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 4,
                       color: statusColor, background: statusBg,
                     }}>
                       <span className="status-dot" style={{ background: statusColor }} />
@@ -181,7 +181,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     <span style={{ opacity: .8 }}>
                       {new Date(inquiry.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '1px 7px', borderRadius: 20, color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color, background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg }}>
+                    <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '1px 7px', borderRadius: 4, color: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).color, background: (CATEGORY_COLOR[inquiry.category] ?? CATEGORY_COLOR.other).bg }}>
                       {CATEGORY_LABEL[inquiry.category] ?? inquiry.category}
                     </span>
                   </div>
@@ -215,7 +215,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                         background: isOwner ? 'var(--c-blue)' : '#fff',
                         color: isOwner ? '#fff' : 'var(--txt)',
                         border: isOwner ? 'none' : '0.5px solid var(--line)',
-                        boxShadow: isOwner ? '0 1px 2px rgba(46,91,255,.18)' : '0 1px 2px rgba(14,14,20,.04)',
+                        boxShadow: isOwner ? '0 1px 2px rgba(27,26,23,.16)' : '0 1px 2px rgba(14,14,20,.04)',
                         fontSize: '.8rem', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
                       }}>
                         {msg.body}
@@ -242,7 +242,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                         className="chip lift"
                         onClick={() => setReplyBody(t.body)}
                         style={{
-                          padding: '4px 11px', borderRadius: 20, border: '0.5px solid var(--line)',
+                          padding: '4px 11px', borderRadius: 4, border: '0.5px solid var(--line)',
                           background: 'var(--bg2)', fontSize: '.66rem', color: 'var(--muted)',
                           cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
                         }}
