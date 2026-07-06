@@ -4,32 +4,22 @@
    MB Partners — Design Tokens
    ============================================================ */
 :root {
-  /* ── デザインシステム v3「墨と絹×インディゴ」──────────────────────
-     基調＝紙白(暖色ニュートラルランプ)×墨黒(テキスト/CTA)。インディゴは色相不変のブランド署名。
-     ニュートラルは全て暖色ランプへ差替。インディゴ(--blue/--c-blue)は #4733E6 のまま＝使用量を絞って強くする。 */
-  --blue:     #4733E6;   /* インディゴ＝署名（金額下線数字・リンク・選択・フォーカス・ロゴのみ） */
+  --blue:     #4733E6;
   --blue-dk:  #3826C4;
-  /* v3: 旧「薄紫の地」は全廃。--blue-bg/-bg2 は暖色ニュートラルの淡いtag地へ退避（＝bg-accent面に薄紫が出ない）。
-     インディゴは text/border/選択の署名としてのみ立てる（地にはしない）。 */
-  --blue-bg:  #ECE6DA;   /* 暖色ニュートラルのtag地（旧 薄紫 #EDEBFC を退役） */
-  --blue-bg2: #F1EDE2;   /* 暖色の淡い選択/hover地（旧 薄紫 #F7F6FE を退役） */
-  /* 墨（テキスト＋CTA塗り）。--ink 系は塗りCTA・強テキストの単一ソース。 */
-  --ink:      #1B1A17;
-  --ink-hover:#33302A;
-  --ink-press:#100F0B;
-  --txt:      #1B1A17;   /* 墨 */
-  --muted:    #8C887C;   /* 暖色ミュート（旧 #9A9CA8） */
-  --muted2:   #57544B;   /* 暖色サブ（旧 #6E707D） */
-  --line:     #E4DECF;   /* 暖色ヘアライン（旧 #ECECF1） */
-  --bg:       #FAF7F0;   /* 紙白カード面（旧 #FFFFFF） */
-  --bg2:      #F0ECE1;   /* 紙白キャンバス（旧 #F6F6F8） */
-  --paper:    #F6F4EE;   /* 基準の紙色（仕様アンカー） */
+  --blue-bg:  #EDEBFC;
+  --blue-bg2: #F7F6FE;
+  --txt:      #0E0E14;
+  --muted:    #9A9CA8;
+  --muted2:   #6E707D;
+  --line:     #ECECF1;
+  --bg:       #FFFFFF;
+  --bg2:      #F6F6F8;
   --green:    #1E9E6A;
-  --green-bg: #E7F3EA;
-  --amber:    #B5730F;
-  --amber-bg: #F6EEDC;
-  --red:      #C6403F;
-  --red-bg:   #F6E5E1;
+  --green-bg: #E7F6EF;
+  --amber:    #C07A12;
+  --amber-bg: #FBF1DF;
+  --red:      #D34545;
+  --red-bg:   #FBE9E9;
 
   /* Motion timing */
   --ease-out: cubic-bezier(.2,.8,.2,1);
@@ -64,47 +54,45 @@
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
   --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
 
-  /* ── 角丸（v3: 角丸ほぼゼロ。999pxピルは体系として廃止＝--radius-pill も角tagへ）── */
-  --radius-sm: 4px;  --radius: 4px;  --radius-lg: 6px;  --radius-xl: 8px;  --radius-pill: 4px;
+  /* ── 角丸 ── */
+  --radius-sm: 8px;  --radius: 12px;  --radius-lg: 16px;  --radius-xl: 18px;  --radius-pill: 999px;
 
-  /* ── 影（v3: 紙は浮かない＝墨系の淡い影に軽量化）── */
-  --shadow-sm: 0 1px 2px rgba(27,26,23,.05);
-  --shadow:    0 4px 16px rgba(27,26,23,.08);
-  --shadow-lg: 0 16px 48px rgba(27,26,23,.10);
+  /* ── 影 ── */
+  --shadow-sm: 0 1px 2px rgba(14,14,20,.04);
+  --shadow:    0 8px 24px rgba(14,14,20,.10);
+  --shadow-lg: 0 28px 80px rgba(14,14,20,.12);
 
   /* ============================================================
      Design Constitution v1（§1-6）— 単一ソース。既存 --blue 等はここへ alias。
      ============================================================ */
-  --c-blue:      #4733E6;   /* インディゴ署名（不変） */
-  --c-blue-dk:   #3D2BCC;   /* リンクhover等 */
-  --c-blue-press:#3525B8;
+  --c-blue:      #4733E6;   /* primary */
+  --c-blue-dk:   #3D2BCC;   /* primary hover（§8） */
+  --c-blue-press:#3525B8;   /* primary active（§8） */
   --c-blue-2:    #378ADD;   /* info / secondary accent */
-  --c-violet:    #7F77DD;   /* violet accent（装飾用途は v3 で抑制） */
-  --c-ring:      rgba(71,51,230,0.30);   /* focus-visible ring＝インディゴ（許可用途） */
-  --c-ring-soft: rgba(71,51,230,0.16);   /* field focus ring */
-  --c-ghost-bg:  rgba(27,26,23,0.05);    /* ghost hover＝墨の淡い地（violet地を廃止） */
-  --c-selected-bg: rgba(71,51,230,0.06); /* 選択状態のごく淡いインディゴ地（許可用途） */
-  --t-primary:   #1B1A17;   /* 墨 */
-  --t-secondary: #57544B;
-  --t-tertiary:  #8C887C;
-  --s-0:         #FAF7F0;   /* 紙白カード面 */
-  --s-1:         #F0ECE1;   /* 紙白キャンバス/hover */
-  --s-2:         #E7E1D3;   /* 沈み込み */
-  --line-2:      rgba(27,26,23,0.14);    /* 強めの境界（墨系） */
-  --c-hairline:  rgba(27,26,23,0.09);    /* 墨系ヘアライン */
+  --c-violet:    #7F77DD;   /* violet accent */
+  --c-ring:      rgba(71,51,230,0.22);   /* focus-visible ring */
+  --c-ring-soft: rgba(71,51,230,0.14);   /* field focus ring */
+  --c-ghost-bg:  rgba(71,51,230,0.07);   /* ghost hover / tag selected bg */
+  --t-primary:   #0A0A0A;
+  --t-secondary: #334155;
+  --t-tertiary:  #94A3B8;
+  --s-0:         #FFFFFF;
+  --s-1:         #F7F8FA;
+  --s-2:         #EEF0F4;
+  --line-2:      rgba(15,23,42,0.12);    /* 強めの境界（新規・非破壊） */
+  --c-hairline:  rgba(15,23,42,0.07);    /* 憲法 --line（既存 --line=#ECECF1 は後方互換で温存） */
   --c-success:   #1E9E6A;
   --c-info:      #378ADD;
-  --c-danger:    #C6403F;
-  --r-el:        4px;   /* element radius（v3: 角丸ほぼゼロ） */
-  --r-card:      4px;   /* card radius */
+  --c-danger:    #D34545;
+  --r-el:        8px;   /* element radius */
+  --r-card:      12px;  /* card radius */
 
   /* 憲法モーション：個別property・150-200ms・this curve（all禁止・移動2-7px）。 */
   --ease-std:    cubic-bezier(0.2,0,0,1);
 
-  /* フォント：Inter=英数（tnum/cv05）、Zen=和文見出し。self-host(next/font)。
-     v3: --font-display は「明朝displayへの差し替え口」＝本バッチでは sans(Zen) にエイリアスのまま（書体は別バッチ）。 */
+  /* フォント：Inter=英数（tnum/cv05）、Zen=和文見出し。self-host(next/font)。 */
   --font-sans:    var(--font-inter);
-  --font-display: var(--font-zen);   /* ← 別バッチで明朝トークンに差し替える単一ポイント */
+  --font-display: var(--font-zen);
 
   /* 既存トークン → 憲法へ alias（値は同一＝非破壊。--c-blue を変えれば一括反映）。 */
   --blue: var(--c-blue);
@@ -114,51 +102,19 @@
 @theme inline {
   --color-blue:      #4733E6;
   --color-blue-dk:   #3826C4;
-  --color-blue-bg:   #ECE6DA;
-  --color-blue-bg2:  #F1EDE2;
-  --color-mbp-txt:   #1B1A17;
-  --color-muted:     #8C887C;
-  --color-muted2:    #57544B;
-  --color-line:      #E4DECF;
-  --color-bg2:       #F0ECE1;
+  --color-blue-bg:   #EDEBFC;
+  --color-blue-bg2:  #F7F6FE;
+  --color-mbp-txt:   #0E0E14;
+  --color-muted:     #9A9CA8;
+  --color-muted2:    #6E707D;
+  --color-line:      #ECECF1;
+  --color-bg2:       #F6F6F8;
   --color-green:     #1E9E6A;
-  --color-green-bg:  #E7F3EA;
-  --color-amber:     #B5730F;
-  --color-amber-bg:  #F6EEDC;
-  --color-mbp-red:   #C6403F;
-  --color-red-bg:    #F6E5E1;
-}
-
-/* ============================================================
-   v3 ダークモード「墨と絹」— 墨地 × 絹文字。インディゴは明度を上げて署名を保つ。
-   opt-in（:root[data-theme="dark"]）＝ライブ無影響。トークン化された面/文字/線は自動追随する。
-   ※ ハードコード #fff カード等は別バッチで token 化してから全面点灯（本バッチは基盤定義＋実機スクショ検証）。
-   ============================================================ */
-:root[data-theme="dark"] {
-  --blue:      #8E7DFF;   /* インディゴ署名（墨地で立つよう明度up） */
-  --blue-dk:   #A99CFF;
-  --blue-bg:   #26242B;   /* tag地（墨の淡い段） */
-  --blue-bg2:  #201E24;
-  --ink:       #5A48E0;   /* 墨地ではCTAは絹に埋もれる→署名インディゴ塗り（#fff文字と両立） */
-  --ink-hover: #6D5CEE;
-  --ink-press: #4B3AD0;
-  --txt:       #F3F0E8;   /* 絹 */
-  --muted:     #8B8678;
-  --muted2:    #B7B2A4;
-  --line:      rgba(243,240,232,.14);
-  --bg:        #201E22;   /* 墨カード面 */
-  --bg2:       #161418;   /* 墨キャンバス */
-  --paper:     #161418;
-  --green-bg:  #16281F;
-  --amber-bg:  #2A2113;
-  --red-bg:    #2C1A19;
-  /* 憲法ミラー */
-  --c-blue:      #8E7DFF; --c-blue-dk: #A99CFF; --c-blue-press: #7A69F0;
-  --c-ring:      rgba(142,125,255,0.40); --c-ring-soft: rgba(142,125,255,0.22);
-  --c-ghost-bg:  rgba(243,240,232,0.06); --c-selected-bg: rgba(142,125,255,0.12);
-  --t-primary:   #F3F0E8; --t-secondary: #B7B2A4; --t-tertiary: #8B8678;
-  --s-0:         #201E22; --s-1: #26242B; --s-2: #2E2B32;
-  --line-2:      rgba(243,240,232,0.20); --c-hairline: rgba(243,240,232,0.12);
+  --color-green-bg:  #E7F6EF;
+  --color-amber:     #C07A12;
+  --color-amber-bg:  #FBF1DF;
+  --color-mbp-red:   #D34545;
+  --color-red-bg:    #FBE9E9;
 }
 
 /* ============================================================
@@ -218,7 +174,7 @@ body {
   justify-content: center;
   gap: 7px;
   padding: 13px 22px;
-  border-radius: var(--r-el);
+  border-radius: 8px;
   font-family: inherit;
   font-size: .85rem;
   font-weight: 700;
@@ -229,24 +185,23 @@ body {
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .btn:active:not(:disabled) { transform: scale(.96); }
 
-/* v3: CTA＝墨黒の塗り（fill-primary=墨）。インディゴ塗りは廃止。 */
 .btn-p {
-  background: var(--ink);
+  background: var(--blue);
   color: #fff;
 }
 .btn-p:hover:not(:disabled) {
-  background: var(--ink-hover);
-  box-shadow: 0 4px 14px rgba(27,26,23,.16);
+  background: var(--blue-dk);
+  box-shadow: 0 6px 18px rgba(71,51,230,.3);
 }
 
 .btn-g {
-  background: var(--bg);
+  background: #fff;
   color: var(--txt);
   border: 1px solid var(--line);
 }
 .btn-g:hover:not(:disabled) {
-  border-color: var(--line-2);
-  color: var(--txt);
+  border-color: var(--blue);
+  color: var(--blue);
 }
 
 /* ============================================================
@@ -265,19 +220,19 @@ body {
 }
 .fld input, .fld select, .fld textarea {
   border: 1.5px solid var(--line);
-  border-radius: var(--r-el);
+  border-radius: 8px;
   padding: 11px 13px;
   font-family: inherit;
   font-size: .9rem;
   color: var(--txt);
-  background: var(--bg);
+  background: #fff;
   transition: border-color .15s, box-shadow .15s;
   width: 100%;
 }
 .fld input::placeholder, .fld textarea::placeholder { color: var(--muted); }
 .fld input:focus, .fld select:focus, .fld textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px var(--c-ring);
+  box-shadow: 0 0 0 3px var(--blue-bg);
   border-color: var(--blue);
 }
 
@@ -399,7 +354,7 @@ body {
    Skeleton / sheen loading
    ============================================================ */
 .skeleton {
-  background: linear-gradient(90deg, var(--line) 25%, #F6F2E8 50%, var(--line) 75%);
+  background: linear-gradient(90deg, var(--line) 25%, #F0F0F4 50%, var(--line) 75%);
   background-size: 200% 100%;
   animation: skeletonWave 1.4s ease-in-out infinite;
   border-radius: 6px;
@@ -537,18 +492,17 @@ body {
 
 /* Subtle interactive lift for rows / links (lighter than .card-hover) */
 .lift { transition: background .16s var(--ease-out), box-shadow .16s var(--ease-out), transform .16s var(--ease-out); }
-.lift:hover { background: var(--s-1); transform: translateY(-1px); }
+.lift:hover { background: var(--blue-bg2); transform: translateY(-1px); }
 
-/* v3: 情報chipは小さな角tag（2px角・0.5pxアウトライン・地は淡く）。色相は系統維持（紹介=藍/協力=ティール/直販=中立）。 */
+/* System-color chips: 紹介=藍 / 協力=ティール（別色相・低彩度） / 直販=中立 */
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: .56rem; font-weight: 700; letter-spacing: .02em;
-  padding: 2px 7px; border-radius: 2px; white-space: nowrap;
-  border: 0.5px solid var(--line);
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
 }
-.chip-referral    { background: transparent; color: var(--blue);   border-color: rgba(71,51,230,.28); }
-.chip-cooperation { background: transparent; color: #3F7D72;       border-color: rgba(63,125,114,.30); }
-.chip-direct      { background: transparent; color: var(--muted2); border-color: var(--line); }
+.chip-referral    { background: var(--blue-bg);  color: var(--blue); }
+.chip-cooperation { background: #E5EFEC;          color: #3F7D72; }
+.chip-direct      { background: var(--bg2);        color: var(--muted2); }
 
 /* Timeline / feed dot */
 .feed-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -643,14 +597,13 @@ body {
 .ui-btn--sm { padding: 7px 12px; font-size: .72rem; }
 .ui-btn--md { padding: 10px 16px; font-size: .8rem; }
 .ui-btn--lg { padding: 13px 20px; font-size: .86rem; }
-/* v3: CTA＝墨黒の塗り。secondary/ghost は墨テキスト（インディゴは署名用途へ退避）。 */
-.ui-btn--primary   { background: var(--ink); color: #fff; }
-.ui-btn--primary:hover   { background: var(--ink-hover); }
-.ui-btn--primary:active  { background: var(--ink-press); transform: translateY(1px) scale(.99); }
-.ui-btn--secondary { background: var(--s-0); color: var(--txt); border-color: var(--line); }
+.ui-btn--primary   { background: var(--c-blue); color: #fff; }
+.ui-btn--primary:hover   { background: var(--c-blue-dk); }
+.ui-btn--primary:active  { background: var(--c-blue-press); transform: translateY(1px) scale(.99); }
+.ui-btn--secondary { background: var(--s-0); color: var(--c-blue); border-color: var(--line); }
 .ui-btn--secondary:hover  { background: var(--s-1); border-color: var(--line-2); }
 .ui-btn--secondary:active { background: var(--s-2); transform: translateY(1px) scale(.99); }
-.ui-btn--ghost     { background: transparent; color: var(--txt); }
+.ui-btn--ghost     { background: transparent; color: var(--c-blue); }
 .ui-btn--ghost:hover  { background: var(--c-ghost-bg); }
 .ui-btn--ghost:active { background: var(--c-ghost-bg); transform: translateY(1px) scale(.99); }
 .ui-btn--danger    { background: var(--c-danger); color: #fff; }       /* 後方互換 */
@@ -667,7 +620,7 @@ body {
 /* ── Tag（selectable）─────────────────────────────────────── */
 .ui-tag {
   display: inline-flex; align-items: center; font-family: inherit; font-size: .62rem; font-weight: 700;
-  border-radius: var(--radius-pill); padding: 5px 12px; cursor: pointer;
+  border-radius: var(--r-pill, 999px); padding: 5px 12px; cursor: pointer;
   background: var(--s-0); border: 1.5px solid var(--line); color: var(--t-secondary);
   transition: background-color .16s var(--ease-std), border-color .16s var(--ease-std), color .16s var(--ease-std);
 }
