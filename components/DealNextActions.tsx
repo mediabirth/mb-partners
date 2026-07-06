@@ -34,7 +34,7 @@ export default function DealNextActions({
               商談 {new Date(booked).toLocaleString('ja', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })} を設定しました
             </p>
           ) : (
-            <button onClick={() => setShowBooking(true)} style={{ width: '100%', height: 44, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>面談日時を予約する</button>
+            <button onClick={() => setShowBooking(true)} style={{ width: '100%', height: 44, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>面談日時を予約する</button>
           )}
         </NextBox>
       )}

@@ -15,7 +15,7 @@ export type NavItem = { href?: string; label: string; icon: ReactNode; rootExact
 /** 中央 FAB（app=リンク／vendor=アクション）。円・グラデ・寸法は単一ソース。
  *  iconOnly＝ラベルテキストを出さずアイコンのみ（名称は aria-label で保持・タップ領域不変）。 */
 export function NavFab({ href, onClick, label, children, iconOnly }: { href?: string; onClick?: () => void; label?: string; children: ReactNode; iconOnly?: boolean }) {
-  const circle = <span className="snav-fab" style={{ width: 52, height: 52, borderRadius: '50%', background: '#1B1A17', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(27,26,23,.24)' }}>{children}</span>
+  const circle = <span className="snav-fab" style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#5240F2,#3D2BD0)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(71,51,230,.4)' }}>{children}</span>
   const inner = <>{circle}{label && !iconOnly && <span style={{ fontSize: '.52rem', color: 'var(--c-blue)', fontWeight: 700 }}>{label}</span>}</>
   const css: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', padding: '0 0 10px', background: 'none', border: 'none', cursor: 'pointer' }
   return href ? <Link href={href} style={css} aria-label={label}>{inner}</Link> : <button onClick={onClick} style={css} aria-label={label}>{inner}</button>

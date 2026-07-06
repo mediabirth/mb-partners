@@ -57,7 +57,7 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
           <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '15px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '.72rem', color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 8 }}>
               委託費
-              <span style={{ fontSize: '.5rem', fontWeight: 500, color: delivered ? 'var(--green)' : 'var(--amber)', border: '0.5px solid var(--line)', borderRadius: 4, padding: '2px 9px' }}>{delivered ? '納品済み' : '納品後に確定'}</span>
+              <span style={{ fontSize: '.5rem', fontWeight: 500, color: delivered ? 'var(--green)' : 'var(--amber)', border: '0.5px solid var(--line)', borderRadius: 20, padding: '2px 9px' }}>{delivered ? '納品済み' : '納品後に確定'}</span>
             </span>
             <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 500 }}>¥{a.base_fee.toLocaleString()}</span>
           </div>

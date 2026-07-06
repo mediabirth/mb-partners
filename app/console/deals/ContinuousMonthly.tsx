@@ -71,7 +71,7 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
     <div style={{ marginTop: 18, border: '1px solid var(--blue-bg)', borderRadius: 12, overflow: 'hidden' }}>
       {/* ヘッダ */}
       <div style={{ padding: '12px 16px', background: 'var(--blue-bg2)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '.6rem', fontWeight: 500, color: '#fff', background: 'var(--ink)', borderRadius: 4, padding: '2px 9px' }}>継続報酬</span>
+        <span style={{ fontSize: '.6rem', fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '2px 9px' }}>継続報酬</span>
         <span style={{ fontSize: '.74rem', fontWeight: 500, color: 'var(--blue-dk)' }}>{baseLabel} {rate}% / 月</span>
         {deal.partners?.profiles?.name && <span style={{ fontSize: '.62rem', color: 'var(--muted2)', marginLeft: 'auto' }}>担当：{deal.partners.profiles.name}</span>}
       </div>

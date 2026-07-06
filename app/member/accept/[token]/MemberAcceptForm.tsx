@@ -28,7 +28,7 @@ export default function MemberAcceptForm({ email, defaultName, token }: { email:
   const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 700, color: 'var(--muted2)', marginBottom: 5 }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div style={{ minHeight: '100vh', background: 'radial-gradient(120% 90% at 85% 0%, var(--blue-bg2) 0%, var(--bg2) 55%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: 420, maxWidth: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 18, padding: '34px 30px', boxShadow: '0 28px 80px rgba(14,14,20,.12)' }}>
         <svg width="40" height="40" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 14 }}>
           <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="2.6" />

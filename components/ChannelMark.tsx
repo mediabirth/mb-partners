@@ -37,7 +37,7 @@ export default function ChannelMark({
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         fontSize: '.56rem', fontWeight: 700, letterSpacing: '.02em',
-        color: m.color, background: m.bg, borderRadius: 4, padding: '2px 8px', whiteSpace: 'nowrap',
+        color: m.color, background: m.bg, borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap',
       }}
     >
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

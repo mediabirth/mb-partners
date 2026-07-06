@@ -18,7 +18,7 @@ const SUPPORT = 'support@mb-partners.app'
 
 const LOGO_BAR =
 `<div style="padding:20px 0;text-align:center">
-  <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:4px" />
+  <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:9px" />
   <span style="font-weight:800;font-size:17px;vertical-align:middle;margin-left:9px">MB <span style="color:#4733E6">Partners</span></span>
 </div>`
 
@@ -58,16 +58,16 @@ ${linkLine}
   const html =
 `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
   ${LOGO_BAR}
-  <div style="background:#F0ECE1;border-radius:4px;padding:24px 22px">
+  <div style="background:#F6F6F8;border-radius:14px;padding:24px 22px">
     <p style="margin:0 0 14px">${nm} 様</p>
     <p style="margin:0 0 16px">ご予約を承りました。当日はどうぞよろしくお願いいたします。</p>
-    <div style="background:#fff;border-radius:4px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:12px;color:#57544B;margin-bottom:4px">日時</div>
+    <div style="background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;color:#6E707D;margin-bottom:4px">日時</div>
       <div style="font-size:15px;font-weight:700;color:#1E3A8A">${when}</div>
     </div>
-    ${params.meetingUrl ? `<p style="margin:0"><a href="${params.meetingUrl}" style="color:#2563EB;font-weight:600">打ち合わせリンクを開く</a></p>` : '<p style="margin:0;font-size:13px;color:#57544B">カレンダー招待を別途お送りする場合があります。</p>'}
+    ${params.meetingUrl ? `<p style="margin:0"><a href="${params.meetingUrl}" style="color:#2563EB;font-weight:600">打ち合わせリンクを開く</a></p>` : '<p style="margin:0;font-size:13px;color:#6E707D">カレンダー招待を別途お送りする場合があります。</p>'}
   </div>
-  <p style="font-size:12px;color:#57544B;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
+  <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
   // 文面のみ templates 優先解決（無ければ既存 text/html へフォールバック）。宛先/送信経路は不変。
@@ -153,23 +153,23 @@ ${caseLineText}
   const html =
 `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
   ${LOGO_BAR}
-  <div style="background:#F0ECE1;border-radius:4px;padding:24px 22px">
+  <div style="background:#F6F6F8;border-radius:14px;padding:24px 22px">
     <p style="margin:0 0 14px">${name} 様</p>
     <p style="margin:0 0 16px">${kindLabel}を受け付けました。</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:18px">
-      ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#57544B;width:90px">${k}</td><td style="padding:6px 0">${v}</td></tr>`).join('')}
+      ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#6E707D;width:90px">${k}</td><td style="padding:6px 0">${v}</td></tr>`).join('')}
     </table>
-    ${params.meetingUrl ? `<div style="background:#fff;border-radius:4px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:12px;color:#57544B;margin-bottom:6px">オンライン会議（Google Meet）</div>
+    ${params.meetingUrl ? `<div style="background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;color:#6E707D;margin-bottom:6px">オンライン会議（Google Meet）</div>
       <a href="${params.meetingUrl}" style="color:#2563EB;word-break:break-all">${params.meetingUrl}</a>
     </div>` : ''}
-    <div style="background:#fff;border-radius:4px;padding:14px 16px">
+    <div style="background:#fff;border-radius:10px;padding:14px 16px">
       <div style="font-size:13px;color:#41414E">このあとはMBがお客さまへご連絡します。進捗は案件ページでご確認いただけます。</div>
       ${caseUrl ? `<div style="margin-top:10px"><a href="${caseUrl}" style="color:#4733E6;word-break:break-all">案件ページを開く</a></div>` : ''}
-      <div style="font-size:12px;color:#57544B;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します（税抜表示・消費税はインボイス登録の有無に応じて支払時に別途）。</div>
+      <div style="font-size:12px;color:#6E707D;margin-top:8px">※ 本プログラムは成功報酬制です。報酬は成約時のみ発生します（税抜表示・消費税はインボイス登録の有無に応じて支払時に別途）。</div>
     </div>
   </div>
-  <p style="font-size:12px;color:#57544B;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
+  <p style="font-size:12px;color:#6E707D;margin:16px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> まで。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
 
@@ -247,20 +247,20 @@ ${params.url}
   const html =
 `<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:520px;margin:0 auto;color:#0E0E14;line-height:1.7">
   <div style="padding:24px 0;text-align:center">
-    <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="44" height="44" style="display:inline-block;vertical-align:middle;border-radius:4px" />
+    <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="44" height="44" style="display:inline-block;vertical-align:middle;border-radius:10px" />
     <span style="font-weight:800;font-size:18px;vertical-align:middle;margin-left:10px">MB <span style="color:#4733E6">Partners</span></span>
   </div>
-  <div style="background:#F0ECE1;border-radius:4px;padding:28px 24px">
+  <div style="background:#F6F6F8;border-radius:14px;padding:28px 24px">
     <p style="margin:0 0 14px">${name} 様</p>
     <p style="margin:0 0 18px">${copy.lead}下記のボタンからパスワードを設定し、登録を完了してください。</p>
     <p style="text-align:center;margin:24px 0">
-      <a href="${params.url}" style="display:inline-block;background:#1B1A17;color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:4px">パスワードを設定する</a>
+      <a href="${params.url}" style="display:inline-block;background:#4733E6;color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:9px">パスワードを設定する</a>
     </p>
-    <p style="margin:0 0 6px;font-size:13px;color:#57544B">ボタンが開けない場合は次のURLをブラウザに貼り付けてください：</p>
+    <p style="margin:0 0 6px;font-size:13px;color:#6E707D">ボタンが開けない場合は次のURLをブラウザに貼り付けてください：</p>
     <p style="margin:0 0 18px;font-size:12px;word-break:break-all;color:#4733E6">${params.url}</p>
-    <p style="margin:0;font-size:13px;color:#57544B">有効期限：${expires}<br/>※期限を過ぎた場合は、お手数ですが再発行をご依頼ください。</p>
+    <p style="margin:0;font-size:13px;color:#6E707D">有効期限：${expires}<br/>※期限を過ぎた場合は、お手数ですが再発行をご依頼ください。</p>
   </div>
-  <p style="font-size:12px;color:#57544B;margin:18px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> までお問い合わせください。</p>
+  <p style="font-size:12px;color:#6E707D;margin:18px 4px 0">ご不明な点は <a href="mailto:${SUPPORT}" style="color:#4733E6">${SUPPORT}</a> までお問い合わせください。</p>
   <p style="font-size:12px;color:#9A9CA8;margin:8px 4px 24px">— MB Partners 運営事務局</p>
 </div>`
 

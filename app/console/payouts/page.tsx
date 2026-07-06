@@ -250,7 +250,7 @@ export default function PayoutsPage() {
             <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 16, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)' }}>{monthLabel(`${jstYm}-01`)}の支払{thisMonthConfirmed ? '' : '見込み'}</span>
-                <span style={{ fontSize: '.52rem', fontWeight: 500, color: thisMonthConfirmed ? 'var(--green)' : 'var(--amber)', background: thisMonthConfirmed ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 4, padding: '2px 8px' }}>
+                <span style={{ fontSize: '.52rem', fontWeight: 500, color: thisMonthConfirmed ? 'var(--green)' : 'var(--amber)', background: thisMonthConfirmed ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>
                   {thisMonthConfirmed ? '確定済み' : '締め後に確定'}
                 </span>
               </div>
@@ -261,7 +261,7 @@ export default function PayoutsPage() {
             <div style={{ background: '#fff', border: `0.5px solid ${overdue ? 'var(--red)' : 'var(--line)'}`, borderRadius: 16, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)' }}>要支払い（即振込）</span>
-                {overdue && <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 4, padding: '2px 8px' }}>延滞 {overdueDays}日</span>}
+                {overdue && <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--red)', background: 'var(--red-bg)', borderRadius: 20, padding: '2px 8px' }}>延滞 {overdueDays}日</span>}
               </div>
               <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 500, color: dueTotal > 0 ? 'var(--green)' : 'var(--muted2)', lineHeight: 1.1 }}>{yen(dueTotal)}</div>
               <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>{due.length} 件</div>

@@ -191,7 +191,7 @@ export default function SupportPage() {
                 </div>
               </div>
               <span style={{
-                fontSize: '.6rem', fontWeight: 500, padding: '3px 8px', borderRadius: 4,
+                fontSize: '.6rem', fontWeight: 500, padding: '3px 8px', borderRadius: 20,
                 color: STATUS_COLOR[inq.status]?.color ?? 'var(--muted2)',
                 background: STATUS_COLOR[inq.status]?.bg ?? 'var(--bg2)',
                 flexShrink: 0,

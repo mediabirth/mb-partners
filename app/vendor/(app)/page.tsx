@@ -50,12 +50,12 @@ export default async function VendorHome() {
       {/* Step1：支払予定を主役にしたヒーロー。上端＝theme-color(#4733E6) と一致させ継ぎ目を消す。
           金額/件数の値・計算・クエリは無改修（既存値の再配置のみ）。
           v2.2：この塗りが「1画面1つの塗り」。回転する装飾円は撤去（装飾アニメ禁止）。 */}
-      <div style={{ margin: '18px 20px 0', background: '#1B1A17', borderRadius: 18, padding: '20px 22px 16px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ margin: '18px 20px 0', background: 'linear-gradient(155deg,#4733E6 0%,#3A28CE 100%)', borderRadius: 18, padding: '20px 22px 16px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
         {/* ① 小キャプション「今月の委託費見込み」＋状態チップ（履歴なし新規は非表示） */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
           <span style={{ fontSize: '.6rem', opacity: .9 }}>今月の委託費見込み{targetPeriod ? ` ・ ${fmtPeriod(targetPeriod)}` : ''}</span>
           {payState !== 'none' && (
-            <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '3px 10px', borderRadius: 4, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
+            <span style={{ fontSize: '.56rem', fontWeight: 500, padding: '3px 10px', borderRadius: 999, background: 'rgba(255,255,255,.18)', color: '#fff' }}>{payState === 'due' ? '未払い' : '支払済'}</span>
           )}
         </div>
         {/* ② 状態別表示（金額は既存値のまま・再計算なし） */}

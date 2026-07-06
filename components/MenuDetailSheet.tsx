@@ -78,7 +78,7 @@ export default function MenuDetailSheet(props: MenuSheetProps | BrandSheetProps)
   const body = (
     <>
         {/* 1. ハンドル */}
-        <button type="button" onClick={close} aria-label="閉じる" style={{ display: 'block', width: 38, height: 4, borderRadius: 4, background: 'var(--line)', border: 'none', margin: '2px auto 16px', cursor: 'pointer', padding: 0 }} />
+        <button type="button" onClick={close} aria-label="閉じる" style={{ display: 'block', width: 38, height: 4, borderRadius: 999, background: 'var(--line)', border: 'none', margin: '2px auto 16px', cursor: 'pointer', padding: 0 }} />
         {/* 2. ヒーロー：image_url／未設定はロゴタイル56pxのフォールバック（全ブランドが視覚アンカーを持つ） */}
         {imageUrl ? (
           <img src={imageUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 12, marginBottom: 16, display: 'block' }} />
@@ -146,7 +146,7 @@ export default function MenuDetailSheet(props: MenuSheetProps | BrandSheetProps)
                 <div style={headStyle}>あなたの協力タスク</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {props.tasks.map(t => (
-                    <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 4, padding: '2px 9px' }}>{t.label}</span>
+                    <span key={t.label} className="no-break" style={{ fontSize: 11, color: 'var(--muted2)', border: '0.5px solid var(--line)', borderRadius: 999, padding: '2px 9px' }}>{t.label}</span>
                   ))}
                 </div>
               </div>

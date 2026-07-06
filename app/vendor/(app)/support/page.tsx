@@ -54,7 +54,7 @@ export default function VendorSupport() {
               {CATS.map(c => {
                 const on = category === c.value
                 return (
-                  <button key={c.value} type="button" onClick={() => setCategory(c.value)} style={{ padding: '7px 12px', borderRadius: 4, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: on ? 500 : 400, background: on ? 'var(--c-blue)' : 'var(--bg2)', color: on ? '#fff' : 'var(--muted2)' }}>{c.label}</button>
+                  <button key={c.value} type="button" onClick={() => setCategory(c.value)} style={{ padding: '7px 12px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: on ? 500 : 400, background: on ? 'var(--c-blue)' : 'var(--bg2)', color: on ? '#fff' : 'var(--muted2)' }}>{c.label}</button>
                 )
               })}
             </div>

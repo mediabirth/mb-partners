@@ -45,7 +45,7 @@ export default function PushToggle() {
   if (state === 'loading') return <span style={{ flexShrink: 0, width: 40 }} />
   if (state === 'unsupported' || state === 'denied') {
     return (
-      <span style={{ flexShrink: 0, fontSize: 'var(--fs-cap)', fontWeight: 500, padding: '3px 10px', borderRadius: 4, color: 'var(--muted2)', background: 'var(--bg2)', border: '0.5px solid var(--line)' }}>
+      <span style={{ flexShrink: 0, fontSize: 'var(--fs-cap)', fontWeight: 500, padding: '3px 10px', borderRadius: 20, color: 'var(--muted2)', background: 'var(--bg2)', border: '0.5px solid var(--line)' }}>
         {state === 'denied' ? 'ブラウザで拒否中' : 'この環境では未対応'}
       </span>
     )
@@ -54,7 +54,7 @@ export default function PushToggle() {
   return (
     <button type="button" onClick={toggle} disabled={state === 'busy'} aria-label={`プッシュ通知を${on ? 'オフ' : 'オン'}にする`}
       style={{
-        flexShrink: 0, width: 44, height: 26, borderRadius: 4, border: 'none', cursor: 'pointer', padding: 2,
+        flexShrink: 0, width: 44, height: 26, borderRadius: 20, border: 'none', cursor: 'pointer', padding: 2,
         background: on ? 'var(--c-blue)' : 'var(--line)', transition: 'background 150ms ease-out', opacity: state === 'busy' ? .6 : 1,
       }}>
       <span style={{

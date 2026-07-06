@@ -104,7 +104,7 @@ export default async function AppPage() {
       {/* Balance card */}
       <div style={{
         margin: '18px 20px 0',
-        background: '#1B1A17',
+        background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)',
         borderRadius: 18, padding: '24px 22px 18px', color: '#fff', position: 'relative', overflow: 'hidden',
       }}>
         {/* Ring decoration（微回転・prefers-reduced-motion で静止） */}
@@ -113,7 +113,7 @@ export default async function AppPage() {
           <div className="syn-spin-rev" style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%' }} />
         </div>
         {/* SYNAPSE 導線：共有紋章（light）＋「SYNAPSE」のみ。件数の主表示は一覧へ集約。タップで /app/synapse へ。 */}
-        <Link href="/app/synapse" aria-label="SYNAPSE つながり" style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', padding: '4px 9px 4px 4px', borderRadius: 4, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.18)' }}>
+        <Link href="/app/synapse" aria-label="SYNAPSE つながり" style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', padding: '4px 9px 4px 4px', borderRadius: 999, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.18)' }}>
           <SynapseCrest size={30} tone="light" />
           <span style={{ fontSize: '.56rem', fontWeight: 500, letterSpacing: '.06em', color: 'rgba(255,255,255,.95)', whiteSpace: 'nowrap' }}>SYNAPSE</span>
         </Link>
@@ -156,7 +156,7 @@ export default async function AppPage() {
             <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>{nextPayLabel ?? '予定なし'}</span>
           </div>
           <div className="bar-grow" style={{ height: 7, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}>
-            <div style={{ width: `${Math.round(cycleProgress * 100)}%`, height: '100%', borderRadius: 4, background: 'var(--blue)' }} />
+            <div style={{ width: `${Math.round(cycleProgress * 100)}%`, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,var(--blue) 0%,var(--blue-dk) 100%)' }} />
           </div>
           <p style={{ fontSize: '.64rem', color: 'var(--muted)', margin: '9px 0 0', lineHeight: 1.6 }}>{encouragement}</p>
         </div>
@@ -229,7 +229,7 @@ export default async function AppPage() {
                   </div>
                 </div>
                 {t.remaining > 0 && (
-                  <span style={{ flexShrink: 0, fontSize: '.54rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 4, padding: '2px 8px' }}>他{t.remaining}件</span>
+                  <span style={{ flexShrink: 0, fontSize: '.54rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 20, padding: '2px 8px' }}>他{t.remaining}件</span>
                 )}
                 <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
               </Link>

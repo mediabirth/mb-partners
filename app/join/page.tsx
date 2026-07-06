@@ -59,7 +59,7 @@ export default function JoinPage() {
       <div style={{ maxWidth: 480, margin: '0 auto', background: '#fff', minHeight: '100vh', boxShadow: '0 0 48px rgba(14,14,20,.1)' }}>
 
         {/* ── Hero ── */}
-        <div style={{ background: '#1B1A17', color: '#fff', padding: '30px 26px 34px' }}>
+        <div style={{ background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', padding: '30px 26px 34px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 22 }}>
             <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
               <rect x="6" y="6" width="14" height="14" rx="3" stroke="#fff" strokeWidth="3" />
@@ -107,7 +107,7 @@ export default function JoinPage() {
                 { n: '3', t: '成果に応じた報酬', d: '成約に応じてパートナー報酬。※具体条件は面談で個別にご案内します。' },
               ].map(s => (
                 <div key={s.n} style={{ ...card, display: 'flex', gap: 13, alignItems: 'flex-start', padding: '15px 16px' }}>
-                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, background: '#1B1A17', color: '#fff', fontSize: '.84rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>{s.n}</span>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', color: '#fff', fontSize: '.84rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>{s.n}</span>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '.84rem', fontWeight: 800 }}>{s.t}</div>
                     <div style={{ fontSize: '.72rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.7 }}>{s.d}</div>
@@ -197,7 +197,7 @@ export default function JoinPage() {
 
                 {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
-                <button type="submit" disabled={submitting} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: '#1B1A17', boxShadow: '0 8px 20px rgba(27,26,23,.20)' }}>
+                <button type="submit" disabled={submitting} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
                   {submitting ? '送信中…' : '応募する'}
                 </button>
                 <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>

@@ -123,7 +123,7 @@ export default async function PartnerDetailPage({
           <span style={{ color: 'var(--line)' }}>/</span>
           <h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>{p.profiles?.name ?? p.code}</h1>
           {pendingBankCount > 0 && (
-            <span style={{ fontSize: '.6rem', fontWeight: 500, background: 'var(--amber)', color: '#fff', borderRadius: 4, padding: '2px 8px' }}>
+            <span style={{ fontSize: '.6rem', fontWeight: 500, background: 'var(--amber)', color: '#fff', borderRadius: 20, padding: '2px 8px' }}>
               口座申請 {pendingBankCount}件
             </span>
           )}

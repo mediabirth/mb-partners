@@ -127,7 +127,7 @@ export function PreviewButtons({ buttons }: { buttons: EditButton[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
       {valid.map((b, i) => (
-        <div key={i} style={{ textAlign: 'center', background: 'var(--ink)', color: '#fff', fontWeight: 500, fontSize: '.68rem', borderRadius: 8, padding: '8px 10px' }}>{b.label}</div>
+        <div key={i} style={{ textAlign: 'center', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.68rem', borderRadius: 8, padding: '8px 10px' }}>{b.label}</div>
       ))}
     </div>
   )
@@ -137,7 +137,7 @@ export function PreviewButtons({ buttons }: { buttons: EditButton[] }) {
 export function SectionHead({ n, title, hint }: { n: number; title: string; hint?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-      <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 9, background: 'var(--ink)', color: '#fff', fontSize: '.6rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(1px)' }}>{n}</span>
+      <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: 9, background: 'var(--c-blue)', color: '#fff', fontSize: '.6rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(1px)' }}>{n}</span>
       <span style={{ fontSize: '.78rem', fontWeight: 500 }}>{title}</span>
       {hint && <span style={{ fontSize: '.58rem', color: 'var(--t-tertiary)' }}>{hint}</span>}
     </div>
@@ -174,7 +174,7 @@ export function RichPreview({ channel, imgUrl, body, placeholder, buttons, accou
         <div style={{ padding: '13px', fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           {text || <span style={{ color: 'var(--t-tertiary)' }}>{placeholder}</span>}
           {imgUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={imgUrl} alt="" style={{ display: 'block', maxWidth: 180, borderRadius: 8, marginTop: 8 }} />}
-          {valid.length > 0 && <div style={{ marginTop: 10 }}>{valid.map((b, i) => <div key={i} style={{ display: 'inline-block', background: 'var(--ink)', color: '#fff', fontWeight: 500, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px', margin: '0 6px 6px 0' }}>{b.label}</div>)}</div>}
+          {valid.length > 0 && <div style={{ marginTop: 10 }}>{valid.map((b, i) => <div key={i} style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px', margin: '0 6px 6px 0' }}>{b.label}</div>)}</div>}
         </div>
       </div>
     )
@@ -376,14 +376,14 @@ export function BlocksPreview({ channel, blocks, urls }: { channel: Template['ch
           {card.length === 0 && <span style={{ fontSize: '.7rem', color: 'var(--t-tertiary)' }}>ブロックを追加すると、ここに表示されます</span>}
           {card.map((b, i) => b.type === 'text' ? <div key={i} style={{ fontSize: '.72rem', lineHeight: 1.75, color: 'var(--txt)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 10 }}>{b.text}</div>
             : b.type === 'image' ? (urls[b.path] ? /* eslint-disable-next-line @next/next/no-img-element */ <img key={i} src={urls[b.path]} alt="" style={{ display: 'block', maxWidth: 200, borderRadius: 8, marginBottom: 10 }} /> : null)
-            : b.type === 'button' ? <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--ink)', color: '#fff', fontWeight: 500, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>
+            : b.type === 'button' ? <div key={i} style={{ marginBottom: 8 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.66rem', borderRadius: 8, padding: '8px 16px' }}>{b.label}</span></div>
             : <div key={i} style={{ marginBottom: 10 }}>{b.cards.map((c, ci) => (
                 <div key={ci} style={{ border: '0.5px solid var(--line)', borderRadius: 9, overflow: 'hidden', maxWidth: 240, marginBottom: 8 }}>
                   {c.image && urls[c.image] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={urls[c.image]} alt="" style={{ display: 'block', width: '100%' }} />}
                   {(c.title || c.text || c.buttons?.length) && <div style={{ padding: '8px 10px' }}>
                     {c.title && <div style={{ fontWeight: 500, fontSize: '.66rem' }}>{c.title}</div>}
                     {c.text && <div style={{ fontSize: '.6rem', color: '#555', marginTop: 2 }}>{c.text}</div>}
-                    {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ marginTop: 5 }}><span style={{ display: 'inline-block', background: 'var(--ink)', color: '#fff', fontWeight: 500, fontSize: '.6rem', borderRadius: 6, padding: '5px 12px' }}>{bt.label}</span></div>)}
+                    {(c.buttons ?? []).map((bt, k) => <div key={k} style={{ marginTop: 5 }}><span style={{ display: 'inline-block', background: 'var(--c-blue)', color: '#fff', fontWeight: 500, fontSize: '.6rem', borderRadius: 6, padding: '5px 12px' }}>{bt.label}</span></div>)}
                   </div>}
                 </div>
               ))}</div>)}

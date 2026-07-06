@@ -62,8 +62,8 @@ function BroadcastIcon({ kind }: { kind: 'news' | 'tips' }) {
 }
 
 const HERO_COLORS: Record<string, string> = {
-  news: '#1B1A17',
-  tips: '#B5730F',
+  news: 'linear-gradient(130deg,#4733E6,#8A7BFF)',
+  tips: 'linear-gradient(130deg,#C07A12,#EDB45C)',
 }
 
 const fmt = (iso: string) => new Date(iso).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })
@@ -197,7 +197,7 @@ export default function InboxPage() {
             }}>
               {lbl}
               {val === 'personal' && unreadCount > 0 && (
-                <span style={{ background: 'var(--ink)', color: '#fff', borderRadius: 99, fontSize: '.52rem', padding: '1px 5px', fontFamily: 'Inter', fontWeight: 500 }}>
+                <span style={{ background: 'var(--c-blue)', color: '#fff', borderRadius: 99, fontSize: '.52rem', padding: '1px 5px', fontFamily: 'Inter', fontWeight: 500 }}>
                   {unreadCount}
                 </span>
               )}

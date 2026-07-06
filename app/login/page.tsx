@@ -70,7 +70,7 @@ export default function LoginPage() {
         }}>
           <div style={{
             position: 'absolute', inset: 0,
-            border: '1.5px solid #ECE6DA', borderRadius: '50%',
+            border: '1.5px solid #EDEBFC', borderRadius: '50%',
             animation: 'spin 50s linear infinite',
           }} />
           <div style={{
@@ -88,7 +88,7 @@ export default function LoginPage() {
         {/* Background gradient */}
         <div style={{
           position: 'absolute', inset: '-30%', pointerEvents: 'none',
-          background: 'transparent',
+          background: 'radial-gradient(46% 36% at 72% 18%,#EDEBFC,transparent 70%)',
           animation: 'drift 16s ease-in-out infinite alternate',
         }} />
 

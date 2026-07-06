@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F6F4EE',
+  themeColor: '#4733E6',
   // H: iOS Safari の動的下部バー対策。env(safe-area-inset-*) を有効化（cover必須）。
   viewportFit: 'cover',
 }
@@ -58,10 +58,10 @@ export default function RootLayout({
             critical inline CSS で外部CSS読込前から表示→hydration完了(load)で200msフェードアウト→DOMから除去。
             SPA内遷移ではroot layoutは再描画されず＝再表示されない。reduced-motionで静止。 */}
         <style dangerouslySetInnerHTML={{ __html: `
-#mbp-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#F6F4EE;transition:opacity .2s ease;font-family:system-ui,-apple-system,sans-serif}
+#mbp-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#F7F8FA;transition:opacity .2s ease;font-family:system-ui,-apple-system,sans-serif}
 #mbp-splash.is-hide{opacity:0;pointer-events:none}
 #mbp-splash svg{width:84px;height:84px}
-#mbp-splash .mbp-spl-lbl{font-size:11px;font-weight:700;letter-spacing:.16em;color:#8C887C;text-transform:uppercase}
+#mbp-splash .mbp-spl-lbl{font-size:11px;font-weight:700;letter-spacing:.16em;color:#94A3B8;text-transform:uppercase}
 .mbp-spl-node{transform-box:fill-box;transform-origin:center;animation:mbpSplNode 2.8s ease-in-out infinite}
 .mbp-spl-link{animation:mbpSplLink 3.2s ease-in-out infinite}
 @keyframes mbpSplNode{0%,100%{opacity:.55;transform:scale(.82)}50%{opacity:1;transform:scale(1)}}

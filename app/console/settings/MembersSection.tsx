@@ -55,7 +55,7 @@ export default function MembersSection() {
                 <div style={{ fontSize: '.78rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name ?? '—'}</div>
                 <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
               </div>
-              <span style={{ fontSize: '.56rem', fontWeight: 500, borderRadius: 4, padding: '2px 9px', color: m.role === 'owner' ? 'var(--blue)' : 'var(--muted2)', background: m.role === 'owner' ? 'var(--blue-bg2)' : 'var(--bg2)' }}>{ROLE_JP[m.role] ?? m.role}</span>
+              <span style={{ fontSize: '.56rem', fontWeight: 500, borderRadius: 20, padding: '2px 9px', color: m.role === 'owner' ? 'var(--blue)' : 'var(--muted2)', background: m.role === 'owner' ? 'var(--blue-bg2)' : 'var(--bg2)' }}>{ROLE_JP[m.role] ?? m.role}</span>
             </div>
           ))}
         </div>

@@ -18,7 +18,7 @@ const TIERS = [
   { key: 'bronze', label: 'ブロンズ', min: 0, color: '#9C6B3F', bg: '#F3EAE0' },
   { key: 'silver', label: 'シルバー', min: 3, color: '#6E7681', bg: '#EDEFF2' },
   { key: 'gold', label: 'ゴールド', min: 10, color: '#B8860B', bg: '#FBF1D9' },
-  { key: 'platinum', label: 'プラチナ', min: 25, color: '#4733E6', bg: '#ECE6DA' },
+  { key: 'platinum', label: 'プラチナ', min: 25, color: '#4733E6', bg: '#EDEBFC' },
 ]
 
 export const TIER_THRESHOLDS = TIERS.map(t => ({ label: t.label, min: t.min }))

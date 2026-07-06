@@ -82,7 +82,7 @@ export default async function GrowthPage() {
           <tbody>
             {perPartner.map(p => (
               <tr key={p.id}>
-                <td style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', fontWeight: 500 }}>{p.name}{p.is_frontier && <span style={{ fontSize: '.54rem', color: 'var(--c-blue)', border: '0.5px solid var(--line)', borderRadius: 4, padding: '1px 7px', marginLeft: 6 }}>フロンティア</span>}</td>
+                <td style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', fontWeight: 500 }}>{p.name}{p.is_frontier && <span style={{ fontSize: '.54rem', color: 'var(--c-blue)', border: '0.5px solid var(--line)', borderRadius: 20, padding: '1px 7px', marginLeft: 6 }}>フロンティア</span>}</td>
                 <td style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', color: 'var(--muted2)', fontFamily: 'Inter' }}>{p.code}</td>
                 <td className="tnum" style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', textAlign: 'right', fontFamily: 'Inter' }}>{p.deals}</td>
                 <td className="tnum" style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', textAlign: 'right', fontFamily: 'Inter', color: p.won > 0 ? 'var(--green)' : 'var(--muted)' }}>{p.won}</td>
@@ -100,7 +100,7 @@ export default async function GrowthPage() {
       <h2 style={{ fontSize: '.85rem', fontWeight: 500, margin: '24px 0 10px' }}>休眠パートナー（14日以上 無活動）<span style={{ fontSize: '.66rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 8 }}>{dormant.length}名</span></h2>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {dormant.length === 0 ? <p style={{ fontSize: '.7rem', color: 'var(--muted2)' }}>休眠中のパートナーはいません。</p> : dormant.map(p => (
-          <span key={p.id} style={{ fontSize: '.68rem', border: '0.5px solid var(--line)', borderRadius: 4, padding: '5px 12px', background: '#fff' }}>{p.name} <span style={{ color: 'var(--muted)' }}>· {p.dormantDays == null ? '未活動' : `${p.dormantDays}日`}</span></span>
+          <span key={p.id} style={{ fontSize: '.68rem', border: '0.5px solid var(--line)', borderRadius: 20, padding: '5px 12px', background: '#fff' }}>{p.name} <span style={{ color: 'var(--muted)' }}>· {p.dormantDays == null ? '未活動' : `${p.dormantDays}日`}</span></span>
         ))}
       </div>
     </div>

@@ -124,7 +124,7 @@ export default async function CasesPage({
       </div>
 
       {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計）＋(a)支払済/未払い分割 */}
-      <div style={{ margin: '6px 20px 14px', background: '#1B1A17', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>
+      <div style={{ margin: '6px 20px 14px', background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>
         <div style={{ fontSize: '.58rem', opacity: .9, letterSpacing: '.04em', fontWeight: 500 }}>確定報酬の累計</div>
         <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}>¥{confirmedRewardTotal.toLocaleString()}</div>
         <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.25)' }}>
