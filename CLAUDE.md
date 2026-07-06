@@ -7,10 +7,9 @@
 
 ### 対象操作
 
-- **本番デプロイ**: `vercel --prod`、`vercel deploy --prod` およびそれに相当する操作
 - **本番環境変数の変更**: `vercel env add`、`vercel env rm`、Vercel ダッシュボードでの変更
 - **データベースの破壊的操作**: `supabase db reset`、`supabase db push`、`DROP TABLE`、`DROP DATABASE`、`TRUNCATE`、`DELETE FROM`（テスト用DBを除く）
-- **外部へのデータ送信**: POST/PATCH/PUT/DELETE を伴う HTTP リクエスト、メール送信、Webhook 呼び出し
+- **外部へのデータ送信**: POST/PATCH/PUT/DELETE を伴う HTTP リクエスト、メール送信、Webhook 呼び出し（※検証は throwaway・顧客宛メール未入力で実送信ゼロを保つ）
 - **git の強制操作**: `git push --force`、`git push -f`、`git reset --hard`、`git clean -f`
 
 ### 確認の取り方
@@ -19,6 +18,17 @@
 1. 何をしようとしているか、なぜ必要かを明示する
 2. ユーザーの承認を待つ
 3. 承認なしに実行しない
+
+## 本番デプロイ（自律実行・2026-07-06 勝彦承認）
+
+**本番デプロイ（`vercel --prod` 等）および `git push origin main` は、以下4条件を全て満たす場合に限り、都度承認なしで自律実行してよい**（通水プログラムの承認をもって恒久ルール化）。1つでも欠ければ従来どおり実行前に確認を取ること。
+
+1. **rollbackタグ付与**: デプロイ対象の直前ベースラインに `rollback-<program>-baseline` を付す（差し戻し先を常に確保）。
+2. **stamp=HEAD 実測一致**: `--build-env NEXT_PUBLIC_BUILD_SHA=<デプロイSHA>` で注入し、本番 `/app/settings` の版数stampが当該SHAと一致することを実ブラウザで確認する。
+3. **回帰green**: 「検証標準」7項目（build0・3面307・webhook401・page errors[]・money証明・canon・session）が全て green。
+4. **money確認**: `menu_rewards` 16行/¥340,100・勝彦deals3件・報酬ハッシュ不変を突合し、CCが金額を触っていないことを証明。
+
+上記を満たさない本番デプロイ、および本番環境変数変更・DB破壊操作・外部実送信・git強制操作は、引き続き人間確認必須（このルールは deploy/push のみを対象とし、他項目の自律化ではない）。
 
 ## 検証標準（全バッチの合格条件）
 
