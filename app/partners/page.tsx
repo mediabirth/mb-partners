@@ -51,6 +51,29 @@ const PRODUCTS = [
   { n: 'PRAGMATION', c: '#15917e' }, { n: 'EMANATION', c: '#6d5cf5' }, { n: 'ENTERSOLOGY', c: '#ec4899' },
 ]
 
+// こんな方へ（パートナー像・動くアイコン）
+const AUDIENCE = [
+  { key: 'expert', n: '士業・専門家', d: '顧問先の課題を、価値に。', c: '#4733e6' },
+  { key: 'exec', n: '経営者・役員', d: '人脈を、新たな収益に。', c: '#1e9e6a' },
+  { key: 'sales', n: '営業・フリーランス', d: '日々の出会いを、報酬に。', c: '#8b5cf6' },
+  { key: 'company', n: '企業・団体', d: '既存の関係を、資産に。', c: '#ec4899' },
+]
+const AUDIENCE_GLYPH: Record<string, React.ReactNode> = {
+  expert: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="13" y="9" width="22" height="30" rx="3" /><path d="M20 9v-2h8v2" /><circle cx="24" cy="20" r="4" /><path d="M18 31c1-3.5 3.2-5 6-5s5 1.5 6 5" /></svg>,
+  exec: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 39V17l11-7 11 7v22" /><path d="M20 39v-8h8v8" /><path d="M19 20h2M27 20h2M19 26h2M27 26h2" /></svg>,
+  sales: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="22" cy="16" r="5" /><path d="M12 37c1-6.5 5-9.5 10-9.5s9 3 10 9.5" /><path d="M33 15l5-5M38 10h-4M38 10v4" /></svg>,
+  company: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="11" y="19" width="13" height="20" rx="1.5" /><rect x="24" y="12" width="13" height="27" rx="1.5" /><path d="M15 25h4M15 31h4M29 19h4M29 25h4M29 31h4" /></svg>,
+}
+
+// FAQ（事実の正典・収入保証や創作数字なし）
+const FAQ = [
+  { q: 'どんな方に向いていますか？', a: '人とのつながりが多い方に向いています。士業・経営者・営業職など、ご紹介の機会が多い方におすすめです。' },
+  { q: '費用はかかりますか？', a: '登録は無料です。審査のうえ、ご案内します。' },
+  { q: '何を紹介すればいいですか？', a: '不動産・人材・制作・DXなど、お困りごとをお持ちの方をおつなぎいただくだけです。' },
+  { q: '手間はかかりますか？', a: 'ご紹介いただくだけ。商談も実務も、すべて当社が対応します。' },
+  { q: '報酬はどう決まりますか？', a: '固定・成果連動・継続の3タイプがあります。内容はメニューにより異なります。' },
+]
+
 // ── 生きた光のネットワーク(動的import・全面固定層・pointer-events:none) ──
 function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -228,6 +251,22 @@ function Kicker({ label }: { label: string }) {
   return <div className="plp-kicker" data-st><span className="plp-kicker-dot" aria-hidden />{label}</div>
 }
 
+function Faq() {
+  const [open, setOpen] = useState<number | null>(0)
+  return (
+    <div className="plp-faq">
+      {FAQ.map((f, i) => (
+        <div key={i} className={`plp-faq-item${open === i ? ' open' : ''}`} data-st>
+          <button className="plp-faq-q" onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
+            <span>{f.q}</span><span className="plp-faq-chev" aria-hidden />
+          </button>
+          <div className="plp-faq-a"><p>{f.a}</p></div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Stat({ s }: { s: typeof STATS[number] }) {
   const ref = useRef<HTMLSpanElement>(null)
   useCountUp(ref, s.to, s.prefix ?? '', s.suffix ?? '')
@@ -304,7 +343,6 @@ export default function PartnersLP() {
         {/* ── 数字(実績)。field=6実値／partner・fee は仮値 ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <Kicker label="achievements" />
             <div className="plp-stats">
               {STATS.map(s => <Stat key={s.key} s={s} />)}
             </div>
@@ -318,13 +356,12 @@ export default function PartnersLP() {
             <div className="plp-fields">
               {FIELDS.map(f => (
                 <div key={f.key} className="plp-fchip" data-st style={{ ['--fc' as string]: f.c }}>
-                  <span className="plp-fobj" aria-hidden>{FIELD_GLYPH[f.key]}</span>
+                  <span className={`plp-fobj fobj-${f.key}`} aria-hidden>{FIELD_GLYPH[f.key]}</span>
                   <span className="plp-fname">{f.n}</span>
                 </div>
               ))}
               <div className="plp-fchip plp-fchip-more" data-st>
-                <span className="plp-fobj" aria-hidden>＋</span>
-                <span className="plp-fname">など</span>
+                <span className="plp-fobj" aria-hidden><b>＋</b><i>など</i></span>
               </div>
             </div>
           </div>
@@ -341,6 +378,22 @@ export default function PartnersLP() {
                   <span className={`plp-step-obj ${s.c}`} aria-hidden>{STEP_GLYPH[s.key]}</span>
                   <h3 className="plp-step-t">{s.t}</h3>
                   <p className="plp-step-d">{s.d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── こんな方へ（パートナー像・動くアイコン） ── */}
+        <section className="plp-sec plp-calm plp-io">
+          <div className="plp-wrap">
+            <Kicker label="for you" />
+            <div className="plp-aud">
+              {AUDIENCE.map(a => (
+                <div key={a.key} className="plp-audcard" data-st style={{ ['--fc' as string]: a.c }}>
+                  <span className={`plp-aud-obj aud-${a.key}`} aria-hidden>{AUDIENCE_GLYPH[a.key]}</span>
+                  <span className="plp-aud-n">{a.n}</span>
+                  <span className="plp-aud-d">{a.d}</span>
                 </div>
               ))}
             </div>
@@ -378,7 +431,6 @@ export default function PartnersLP() {
         {/* ── すべて、スマホで完結 ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <Kicker label="mobile" />
             <div className="plp-complete">
             <div className="plp-phone" data-st aria-hidden>
               <div className="plp-phone-body">
@@ -392,6 +444,14 @@ export default function PartnersLP() {
               <p className="plp-lead" data-st>紹介も、進捗も、報酬の確認も。<br />アプリひとつで完結します。</p>
             </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── FAQ（アコーディオン） ── */}
+        <section className="plp-sec plp-calm plp-io">
+          <div className="plp-wrap plp-faq-wrap">
+            <Kicker label="faq" />
+            <Faq />
           </div>
         </section>
 
@@ -549,10 +609,41 @@ const CSS = `
 .plp-fobj{width:clamp(74px,10vw,88px);height:clamp(74px,10vw,88px);border-radius:24px;display:flex;align-items:center;justify-content:center;color:var(--fc);background:linear-gradient(158deg,rgba(255,255,255,.92),rgba(244,242,255,.72));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.92);box-shadow:0 16px 40px rgba(40,30,80,.09);animation:floaty 5.2s ease-in-out infinite;transition:transform .2s,box-shadow .2s;}
 .plp-fchip:nth-child(2) .plp-fobj{animation-delay:.5s;} .plp-fchip:nth-child(3) .plp-fobj{animation-delay:1s;} .plp-fchip:nth-child(4) .plp-fobj{animation-delay:1.5s;} .plp-fchip:nth-child(5) .plp-fobj{animation-delay:.8s;} .plp-fchip:nth-child(6) .plp-fobj{animation-delay:1.3s;}
 .plp-fchip:hover .plp-fobj{transform:translateY(-7px);box-shadow:0 26px 56px color-mix(in srgb,var(--fc) 22%,rgba(40,30,80,.1));}
-.plp-fobj svg{width:clamp(38px,5vw,46px);height:clamp(38px,5vw,46px);}
+.plp-fobj svg{width:clamp(38px,5vw,46px);height:clamp(38px,5vw,46px);transform-box:fill-box;transform-origin:center;}
+.fobj-estate svg{animation:fbob 3s ease-in-out infinite;} .fobj-talent svg{animation:fbeat 2.4s ease-in-out infinite;}
+.fobj-create svg{animation:fwiggle 3s ease-in-out infinite;} .fobj-ops svg{animation:fspin 8s linear infinite;}
+.fobj-marke svg{animation:fshake 2.6s ease-in-out infinite;} .fobj-enta svg{animation:fbeat 2s ease-in-out infinite;}
+@keyframes fbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes fbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
+@keyframes fwiggle{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+@keyframes fspin{to{transform:rotate(360deg)}}
+@keyframes fshake{0%,100%{transform:rotate(-5deg)}25%{transform:rotate(5deg)}50%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
 .plp-fname{font-size:.98rem;font-weight:800;letter-spacing:-.01em;color:var(--ink);}
-.plp-fchip-more .plp-fobj{color:var(--mut);border-style:dashed;background:rgba(255,255,255,.36);box-shadow:none;animation:none;font-size:1.7rem;font-weight:300;}
-.plp-fchip-more .plp-fname{color:var(--mut);}
+.plp-fchip-more .plp-fobj{flex-direction:column;gap:1px;color:var(--mut);border-style:dashed;background:rgba(255,255,255,.36);box-shadow:none;animation:none;}
+.plp-fchip-more .plp-fobj b{font-size:1.7rem;font-weight:300;line-height:1;} .plp-fchip-more .plp-fobj i{font-style:normal;font-size:.66rem;font-weight:600;letter-spacing:.02em;}
+
+/* こんな方へ（パートナー像・動くアイコン） */
+.plp-aud{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:960px;margin:0 auto;}
+.plp-audcard{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:30px 18px;border-radius:22px;background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:0.5px solid rgba(255,255,255,.85);box-shadow:0 12px 40px rgba(40,30,80,.07);transition:transform .2s,box-shadow .2s;}
+.plp-audcard:hover{transform:translateY(-6px);box-shadow:0 26px 56px color-mix(in srgb,var(--fc) 18%,rgba(40,30,80,.1));}
+.plp-aud-obj{width:66px;height:66px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--fc);background:linear-gradient(150deg,color-mix(in srgb,var(--fc) 14%,#fff),color-mix(in srgb,var(--fc) 5%,#fff));border:1px solid color-mix(in srgb,var(--fc) 16%,transparent);}
+.plp-aud-obj svg{width:36px;height:36px;transform-box:fill-box;transform-origin:center;}
+.aud-expert svg{animation:fbob 3s ease-in-out infinite;} .aud-exec svg{animation:fbeat 2.5s ease-in-out infinite;} .aud-sales svg{animation:fwiggle 3s ease-in-out infinite;} .aud-company svg{animation:fbeat 2.2s ease-in-out infinite;}
+.plp-aud-n{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+.plp-aud-d{font-size:.82rem;line-height:1.65;color:var(--ink2);}
+
+/* FAQ（アコーディオン） */
+.plp-faq-wrap{max-width:720px;}
+.plp-faq{display:flex;flex-direction:column;gap:12px;}
+.plp-faq-item{border-radius:16px;background:rgba(255,255,255,.6);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);border:0.5px solid rgba(255,255,255,.85);box-shadow:0 8px 30px rgba(40,30,80,.06);overflow:hidden;transition:box-shadow .25s;}
+.plp-faq-item.open{box-shadow:0 16px 46px rgba(86,70,230,.13);}
+.plp-faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;background:none;border:none;cursor:pointer;font:inherit;font-size:1rem;font-weight:700;color:var(--ink);text-align:left;letter-spacing:-.01em;transition:color .18s;}
+.plp-faq-q:hover{color:var(--indigo);}
+.plp-faq-chev{width:10px;height:10px;border-right:2.2px solid var(--indigo);border-bottom:2.2px solid var(--indigo);transform:rotate(45deg);transition:transform .3s cubic-bezier(.34,1.56,.64,1);flex-shrink:0;margin-right:5px;margin-top:-3px;}
+.plp-faq-item.open .plp-faq-chev{transform:rotate(-135deg);margin-top:3px;}
+.plp-faq-a{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1);}
+.plp-faq-item.open .plp-faq-a{max-height:240px;}
+.plp-faq-a p{padding:0 24px 22px;font-size:.9rem;line-height:1.85;color:var(--ink2);}
 
 /* MBプロダクト マーキー（横スクロール・ずっと動く） */
 .plp-mq-sec{position:relative;z-index:2;padding:clamp(56px,8vh,96px) 0;overflow:hidden;background:linear-gradient(180deg,rgba(250,249,255,0),rgba(250,249,255,.5),rgba(250,249,255,0));}
@@ -607,11 +698,14 @@ const CSS = `
   .plp-hero{padding:104px 22px 56px;}
   .plp-h1{font-size:clamp(1.4rem,6.5vw,2rem);line-height:1.2;letter-spacing:-.035em;}
   .plp-fields{gap:14px 12px;} .plp-fname{font-size:.86rem;}
-  .plp-sec{padding:70px 0;}
-  .plp-stats{grid-template-columns:1fr;gap:34px;}
-  .plp-statnum{font-size:clamp(3.4rem,15vw,4.6rem);}
-  .plp-steps{grid-template-columns:1fr;gap:34px;} .plp-thread{display:none;}
-  .plp-step-obj{width:88px;height:88px;margin-bottom:18px;} .plp-step-obj svg{width:48px;height:48px;}
+  .plp-sec{padding:66px 0;}
+  .plp-stats{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .plp-stat{padding:8px 2px;gap:8px;}
+  .plp-statnum{font-size:clamp(1.3rem,6.4vw,1.95rem);}
+  .plp-statlab{font-size:.56rem;letter-spacing:.14em;padding-left:.14em;}
+  .plp-steps{grid-template-columns:repeat(3,1fr);gap:10px;} .plp-thread{display:none;}
+  .plp-step-obj{width:clamp(56px,17vw,74px);height:clamp(56px,17vw,74px);margin-bottom:12px;} .plp-step-obj svg{width:clamp(30px,10vw,42px);height:clamp(30px,10vw,42px);}
+  .plp-step-t{font-size:.94rem;} .plp-step-d{font-size:.72rem;line-height:1.5;margin-top:6px;}
   .plp-rewards{gap:12px;}
   .plp-rw-card{border-radius:20px;} .plp-rw-card svg{width:52px;height:52px;}
   .plp-rw-t{font-size:1.05rem;} .plp-rw-d{font-size:.68rem;margin-top:-6px;}
@@ -619,5 +713,7 @@ const CSS = `
   .plp-complete-txt .plp-h2,.plp-complete .plp-lead{text-align:center;}
   .plp-complete .plp-lead br{display:none;}
   .plp-fld-row{grid-template-columns:1fr;}
+  .plp-aud{grid-template-columns:1fr 1fr;gap:12px;} .plp-audcard{padding:22px 12px;gap:11px;} .plp-aud-obj{width:56px;height:56px;} .plp-aud-obj svg{width:30px;height:30px;} .plp-aud-n{font-size:.92rem;} .plp-aud-d{font-size:.74rem;}
+  .plp-faq-q{font-size:.9rem;padding:16px 18px;} .plp-faq-a p{padding:0 18px 18px;font-size:.84rem;}
 }
 `
