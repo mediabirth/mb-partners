@@ -10,9 +10,9 @@ import { useEffect, useRef, useState } from 'react'
 // ── 数字セクション。field=6は実値(services active)。partner/fee は仮値＝実データに差し替え可。 ──
 // fee は K表記(千円単位)。to=3200 → "3,200K"（＝¥3,200,000相当）。
 const STATS: { key: string; to: number; prefix?: string; suffix?: string; label: string; real?: boolean }[] = [
-  { key: 'field', to: 6, label: 'field', real: true },
-  { key: 'partner', to: 40, label: 'partner' },
-  { key: 'fee', to: 3200, suffix: 'K', label: 'fee' },
+  { key: 'field', to: 6, prefix: '+', label: 'field', real: true },
+  { key: 'partner', to: 40, prefix: '+', label: 'partner' },
+  { key: 'fee', to: 3200, prefix: '+', suffix: 'K', label: 'fee' },
 ]
 
 // ステップ用「動くオブジェクト」＝グラスタイル内で動くアイコン(つなげる/はなす/もたらす)
@@ -27,6 +27,29 @@ const REWARD_ILLUS: Record<string, React.ReactNode> = {
   perf: <svg viewBox="0 0 88 88" fill="none"><rect className="ri-bar rb1" x="20" y="50" width="12" height="18" rx="3" fill="currentColor" opacity=".3" /><rect className="ri-bar rb2" x="38" y="40" width="12" height="28" rx="3" fill="currentColor" opacity=".52" /><rect className="ri-bar rb3" x="56" y="28" width="12" height="40" rx="3" fill="currentColor" /><path d="M22 40l16-10 12 6 18-16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><path d="M62 20h8v8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   recur: <svg viewBox="0 0 88 88" fill="none"><circle cx="44" cy="44" r="20" fill="currentColor" opacity=".14" /><g className="ri-cyc"><path d="M60 38a18 18 0 1 0 1.5 11" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" /><path d="M61 26v13H48" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /></g><circle cx="44" cy="44" r="4.5" fill="currentColor" /></svg>,
 }
+
+// field：業種（動くオブジェクト＋名称）。実領域カテゴリ＝拡大前提。
+const FIELDS = [
+  { key: 'estate', n: '不動産', c: '#4733e6' },
+  { key: 'talent', n: '人材', c: '#1e9e6a' },
+  { key: 'create', n: '制作', c: '#8b5cf6' },
+  { key: 'ops', n: '業務改善', c: '#15917e' },
+  { key: 'marke', n: 'マーケ', c: '#6d5cf5' },
+  { key: 'enta', n: 'エンタメ', c: '#ec4899' },
+]
+const FIELD_GLYPH: Record<string, React.ReactNode> = {
+  estate: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 23L24 10l15 13" /><path d="M13 21v15h22V21" /><path d="M20 36v-8h8v8" /></svg>,
+  talent: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="5" /><circle cx="31" cy="20" r="4.3" /><path d="M9 37c1-6 5-9 9-9s8 3 9 9" /><path d="M27 35c1-5 4-7.5 7-7.5s6 2.5 7 7.5" /></svg>,
+  create: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 35l3-8L32 11l5 5-16 16-8 3z" /><path d="M28 15l5 5" /><path d="M13 35l4-1" /></svg>,
+  ops: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="6" /><path d="M24 9v5M24 34v5M39 24h-5M14 24H9M34.6 13.4l-3.5 3.5M16.9 31.1l-3.5 3.5M34.6 34.6l-3.5-3.5M16.9 16.9l-3.5-3.5" /></svg>,
+  marke: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v6l19 8V13z" /><path d="M31 19c4 1.5 4 8.5 0 10" /><path d="M15 27v7h5v-5" /></svg>,
+  enta: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="14" /><path d="M20.5 18l9 6-9 6z" fill="currentColor" stroke="none" /></svg>,
+}
+// MBプロダクト（横スクロール・実ブランド配色）
+const PRODUCTS = [
+  { n: 'MOOM', c: '#4733e6' }, { n: 'MatchHub', c: '#1e9e6a' }, { n: 'RESONATION', c: '#8b5cf6' },
+  { n: 'PRAGMATION', c: '#15917e' }, { n: 'EMANATION', c: '#6d5cf5' }, { n: 'ENTERSOLOGY', c: '#ec4899' },
+]
 
 // ── 生きた光のネットワーク(動的import・全面固定層・pointer-events:none) ──
 function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
@@ -244,9 +267,9 @@ export default function PartnersLP() {
   }
 
   const STEPS = [
-    { key: 'connect', c: 'b1', t: 'つなげる', d: '知り合いを、つなぐだけ。' },
-    { key: 'talk', c: 'b2', t: 'はなす', d: 'あとは、私たちが話す。' },
-    { key: 'bring', c: 'b3', t: 'もたらす', d: '成果が、報酬になる。' },
+    { key: 'connect', c: 'b1', t: 'つなげる', d: 'つながりをご紹介いただく' },
+    { key: 'talk', c: 'b2', t: 'はなす', d: '当社が丁寧に対応します' },
+    { key: 'bring', c: 'b3', t: 'もたらす', d: '成果をあなたに還元します' },
   ]
   const REWARDS = [
     { key: 'fixed', c: 'var(--indigo)', t: '固定', d: '成約ごとに' },
@@ -271,7 +294,7 @@ export default function PartnersLP() {
       <div className="plp-content" id="top">
         {/* ── HERO ── */}
         <section className="plp-hero plp-io">
-          <h1 className="plp-h1" data-st>「つながり」が<br /><em>価値</em>になる。</h1>
+          <h1 className="plp-h1" data-st><span className="plp-h1l">あなたの<span className="plp-quote">「つながり」</span>が</span><span className="plp-h1l"><em>資産</em>になる。</span></h1>
           <div className="plp-cta-row" data-st>
             <button className="plp-cta" onClick={scrollForm}>パートナーに応募する<span className="plp-arrow">→</span></button>
           </div>
@@ -281,9 +304,28 @@ export default function PartnersLP() {
         {/* ── 数字(実績)。field=6実値／partner・fee は仮値 ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <Kicker label="numbers" />
+            <Kicker label="achievements" />
             <div className="plp-stats">
               {STATS.map(s => <Stat key={s.key} s={s} />)}
+            </div>
+          </div>
+        </section>
+
+        {/* ── field：業種（動くオブジェクト・拡大前提） ── */}
+        <section className="plp-sec plp-calm plp-io">
+          <div className="plp-wrap">
+            <Kicker label="field" />
+            <div className="plp-fields">
+              {FIELDS.map(f => (
+                <div key={f.key} className="plp-fchip" data-st style={{ ['--fc' as string]: f.c }}>
+                  <span className="plp-fobj" aria-hidden>{FIELD_GLYPH[f.key]}</span>
+                  <span className="plp-fname">{f.n}</span>
+                </div>
+              ))}
+              <div className="plp-fchip plp-fchip-more" data-st>
+                <span className="plp-fobj" aria-hidden>＋</span>
+                <span className="plp-fname">など</span>
+              </div>
             </div>
           </div>
         </section>
@@ -321,6 +363,18 @@ export default function PartnersLP() {
           </div>
         </section>
 
+        {/* ── MBプロダクト（横スクロール・ずっと動く） ── */}
+        <section className="plp-mq-sec plp-io">
+          <div className="plp-kicker plp-mq-kicker" data-st><span className="plp-kicker-dot" aria-hidden />our products</div>
+          <div className="plp-marquee" aria-hidden>
+            <div className="plp-mq-track">
+              {[...PRODUCTS, ...PRODUCTS, ...PRODUCTS, ...PRODUCTS].map((p, i) => (
+                <span key={i} className="plp-mq-item" style={{ color: p.c }}>{p.n}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── すべて、スマホで完結 ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
@@ -353,7 +407,6 @@ export default function PartnersLP() {
               </div>
             ) : (
               <>
-                <div className="plp-form-head" data-st><h2 className="plp-h2">はじめる。</h2></div>
                 <form className="plp-form" data-st onSubmit={submit}>
                   <label className="plp-fld"><span>お名前 <i>*</i></span><input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required /></label>
                   <div className="plp-fld-row">
@@ -416,7 +469,9 @@ const CSS = `
 
 .plp-hero{min-height:100svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;max-width:1120px;margin:0 auto;padding:120px 28px 80px;}
 .plp-eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.42em;color:var(--indigo);opacity:.8;margin-bottom:26px;padding-left:.42em;}
-.plp-h1{font-size:clamp(2.9rem,7vw,5.2rem);font-weight:760;line-height:1.12;letter-spacing:-.045em;color:var(--ink);text-wrap:balance;}
+.plp-h1{font-size:clamp(1.7rem,6.2vw,4.3rem);font-weight:800;line-height:1.16;letter-spacing:-.04em;color:var(--ink);}
+.plp-h1l{display:block;white-space:nowrap;}
+.plp-quote{color:var(--indigo);}
 .plp-h1 em{font-style:normal;background:linear-gradient(105deg,#5646e6,#8b5cf6 46%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .plp-cta-row{margin-top:44px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;}
 .plp-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:58px;padding:0 42px;border-radius:999px;background:linear-gradient(100deg,#5646e6,#7c4ff0);color:#fff;border:none;font:inherit;font-size:15px;font-weight:650;cursor:pointer;box-shadow:0 12px 34px rgba(86,70,230,.34);transition:transform .2s,box-shadow .2s,filter .2s;}
@@ -488,6 +543,26 @@ const CSS = `
 .ri-cyc{transform-box:view-box;transform-origin:44px 44px;animation:cspin 6.5s linear infinite;}
 @keyframes cspin{to{transform:rotate(360deg)}}
 
+/* field：業種チップ（動くオブジェクト・拡大前提） */
+.plp-fields{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(16px,2.6vw,34px);max-width:940px;margin:0 auto;}
+.plp-fchip{flex:0 0 auto;width:clamp(96px,13vw,124px);display:flex;flex-direction:column;align-items:center;gap:14px;}
+.plp-fobj{width:clamp(74px,10vw,88px);height:clamp(74px,10vw,88px);border-radius:24px;display:flex;align-items:center;justify-content:center;color:var(--fc);background:linear-gradient(158deg,rgba(255,255,255,.92),rgba(244,242,255,.72));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.92);box-shadow:0 16px 40px rgba(40,30,80,.09);animation:floaty 5.2s ease-in-out infinite;transition:transform .2s,box-shadow .2s;}
+.plp-fchip:nth-child(2) .plp-fobj{animation-delay:.5s;} .plp-fchip:nth-child(3) .plp-fobj{animation-delay:1s;} .plp-fchip:nth-child(4) .plp-fobj{animation-delay:1.5s;} .plp-fchip:nth-child(5) .plp-fobj{animation-delay:.8s;} .plp-fchip:nth-child(6) .plp-fobj{animation-delay:1.3s;}
+.plp-fchip:hover .plp-fobj{transform:translateY(-7px);box-shadow:0 26px 56px color-mix(in srgb,var(--fc) 22%,rgba(40,30,80,.1));}
+.plp-fobj svg{width:clamp(38px,5vw,46px);height:clamp(38px,5vw,46px);}
+.plp-fname{font-size:.98rem;font-weight:800;letter-spacing:-.01em;color:var(--ink);}
+.plp-fchip-more .plp-fobj{color:var(--mut);border-style:dashed;background:rgba(255,255,255,.36);box-shadow:none;animation:none;font-size:1.7rem;font-weight:300;}
+.plp-fchip-more .plp-fname{color:var(--mut);}
+
+/* MBプロダクト マーキー（横スクロール・ずっと動く） */
+.plp-mq-sec{position:relative;z-index:2;padding:clamp(56px,8vh,96px) 0;overflow:hidden;background:linear-gradient(180deg,rgba(250,249,255,0),rgba(250,249,255,.5),rgba(250,249,255,0));}
+.plp-mq-kicker{margin-bottom:30px;}
+.plp-marquee{width:100%;overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);}
+.plp-mq-track{display:flex;width:max-content;animation:marq 34s linear infinite;}
+@keyframes marq{to{transform:translateX(-50%)}}
+.plp-mq-item{display:inline-flex;align-items:center;white-space:nowrap;font-size:clamp(1.5rem,3.2vw,2.3rem);font-weight:800;letter-spacing:-.01em;padding-right:clamp(30px,4.5vw,60px);opacity:.92;}
+.plp-mq-item::after{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.45;margin-left:clamp(30px,4.5vw,60px);}
+
 /* スマホで完結 */
 .plp-complete{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:clamp(40px,7vw,90px);}
 .plp-complete-txt .plp-h2{text-align:left;margin-bottom:18px;}
@@ -530,7 +605,8 @@ const CSS = `
   .plp-hd{padding:11px 18px;}
   .plp-hd-login{height:36px;padding:0 16px;font-size:.78rem;}
   .plp-hero{padding:104px 22px 56px;}
-  .plp-h1{font-size:clamp(1.85rem,8vw,2.45rem);line-height:1.18;letter-spacing:-.04em;}
+  .plp-h1{font-size:clamp(1.4rem,6.5vw,2rem);line-height:1.2;letter-spacing:-.035em;}
+  .plp-fields{gap:14px 12px;} .plp-fname{font-size:.86rem;}
   .plp-sec{padding:70px 0;}
   .plp-stats{grid-template-columns:1fr;gap:34px;}
   .plp-statnum{font-size:clamp(3.4rem,15vw,4.6rem);}
