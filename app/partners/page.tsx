@@ -74,6 +74,18 @@ const FAQ = [
   { q: '報酬はどう決まりますか？', a: '固定・成果連動・継続の3タイプがあります。内容はメニューにより異なります。' },
 ]
 
+// 安心して紹介できる理由（動くアイコン・枠なし）
+const REASONS = [
+  { key: 'secure', n: '情報は厳重に管理', d: 'いただいた情報は、ご案内のためだけに使用します。', c: '#4733e6' },
+  { key: 'nospam', n: 'しつこい連絡なし', d: '必要な範囲でご案内。無理な営業はいたしません。', c: '#1e9e6a' },
+  { key: 'wedo', n: '実務はすべて当社', d: '商談も対応も当社が担当。あなたはつなぐだけ。', c: '#8b5cf6' },
+]
+const REASON_GLYPH: Record<string, React.ReactNode> = {
+  secure: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M24 8l13 5v9c0 8.5-5.5 14.5-13 17-7.5-2.5-13-8.5-13-17v-9z" /><path d="M18 24l4.5 4.5L30 20" /></svg>,
+  nospam: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M16 20a8 8 0 0 1 15.5-2.8" /><path d="M34 24v6l3 4H11l3-4v-6" /><path d="M20 38a4 4 0 0 0 8 0" /><path d="M10 10l28 28" /></svg>,
+  wedo: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 27v-3a12 12 0 0 1 24 0v3" /><rect x="9" y="26" width="6" height="10" rx="2" /><rect x="33" y="26" width="6" height="10" rx="2" /><path d="M36 36a6 6 0 0 1-6 5h-4" /></svg>,
+}
+
 // ── 生きた光のネットワーク(動的import・全面固定層・pointer-events:none) ──
 function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -229,6 +241,49 @@ function useMotion() {
   }, [])
 }
 
+// スクロール進捗バー＋カーソル追従の光＋CTA磁力ホバー
+function useInteractions(progRef: React.RefObject<HTMLDivElement | null>, glowRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - innerHeight
+      const p = max > 0 ? Math.min(1, scrollY / max) : 0
+      if (progRef.current) progRef.current.style.transform = `scaleX(${p})`
+    }
+    addEventListener('scroll', onScroll, { passive: true }); onScroll()
+    const cleanups: (() => void)[] = [() => removeEventListener('scroll', onScroll)]
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+    const mobile = matchMedia('(max-width: 820px)').matches
+    if (!reduce && !mobile) {
+      let gx = innerWidth / 2, gy = innerHeight / 2, tx = gx, ty = gy, raf = 0
+      const move = (e: PointerEvent) => {
+        tx = e.clientX; ty = e.clientY
+        document.querySelectorAll<HTMLElement>('.plp-cta:not(.plp-cta-full)').forEach(btn => {
+          const r = btn.getBoundingClientRect(); const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2)
+          btn.style.transform = Math.hypot(dx, dy) < r.width * 0.85 ? `translate(${dx * 0.2}px,${dy * 0.34}px)` : ''
+        })
+      }
+      const loop = () => { gx += (tx - gx) * 0.12; gy += (ty - gy) * 0.12; if (glowRef.current) glowRef.current.style.transform = `translate(${gx}px,${gy}px)`; raf = requestAnimationFrame(loop) }
+      addEventListener('pointermove', move); loop()
+      cleanups.push(() => { removeEventListener('pointermove', move); cancelAnimationFrame(raf) })
+    }
+    return () => cleanups.forEach(fn => fn())
+  }, [progRef, glowRef])
+}
+
+function RewardSim() {
+  const [n, setN] = useState(3)
+  const total = 30000 * n
+  return (
+    <div className="plp-sim" data-st>
+      <div className="plp-sim-row"><span className="plp-sim-cap">固定報酬 例：¥30,000</span><span className="plp-sim-x">×</span><span className="plp-sim-cnt">月 {n} 件</span></div>
+      <div className="plp-sim-total"><span className="plp-sim-eg">例</span>¥{total.toLocaleString('ja-JP')}<i>/月</i></div>
+      <input className="plp-sim-range" type="range" min={1} max={10} value={n} onChange={e => setN(Number(e.target.value))} aria-label="月の紹介件数" style={{ ['--p' as string]: `${((n - 1) / 9) * 100}%` }} />
+      <div className="plp-sim-scale"><span>月1件</span><span>月10件</span></div>
+      <p className="plp-sim-note">※上記は「例」です。実際の報酬はメニュー・成約内容により異なり、収入を保証するものではありません。</p>
+    </div>
+  )
+}
+
 function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, prefix = '', suffix = '', dur = 1700) {
   useEffect(() => {
     const el = ref.current; if (!el) return
@@ -238,7 +293,7 @@ function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, prefix
       const step = (now: number) => {
         const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3)
         el.textContent = prefix + Math.round(to * e).toLocaleString('ja-JP') + suffix
-        if (p < 1) requestAnimationFrame(step)
+        if (p < 1) requestAnimationFrame(step); else el.classList.add('plp-pop')
       }
       requestAnimationFrame(step)
     }
@@ -280,8 +335,11 @@ function Stat({ s }: { s: typeof STATS[number] }) {
 
 export default function PartnersLP() {
   const sceneRef = useRef<HTMLDivElement>(null)
+  const progRef = useRef<HTMLDivElement>(null)
+  const glowRef = useRef<HTMLDivElement>(null)
   useNetwork(sceneRef)
   useMotion()
+  useInteractions(progRef, glowRef)
 
   const [name, setName] = useState(''), [org, setOrg] = useState(''), [expertise, setExpertise] = useState('')
   const [email, setEmail] = useState(''), [phone, setPhone] = useState(''), [message, setMessage] = useState('')
@@ -319,6 +377,8 @@ export default function PartnersLP() {
   return (
     <main className="plp">
       <style>{CSS}</style>
+      <div className="plp-progress" ref={progRef} aria-hidden />
+      <div className="plp-glow" ref={glowRef} aria-hidden />
       <div className="plp-field" aria-hidden />
       <div ref={sceneRef} className="plp-scene" aria-hidden />
 
@@ -413,6 +473,15 @@ export default function PartnersLP() {
           </div>
         </section>
 
+        {/* ── 報酬シミュレーター（例示・仮・インタラクティブ） ── */}
+        <section className="plp-sec plp-calm plp-io">
+          <div className="plp-wrap plp-sim-wrap">
+            <Kicker label="simulator" />
+            <RewardSim />
+            <a className="plp-textlink" href="/partners/rewards" data-st>報酬の詳細を見る<span className="plp-arrow">→</span></a>
+          </div>
+        </section>
+
         {/* ── MBプロダクト（横スクロール・ずっと動く） ── */}
         <section className="plp-mq-sec plp-io">
           <div className="plp-kicker plp-mq-kicker" data-st><span className="plp-kicker-dot" aria-hidden />our products</div>
@@ -420,6 +489,22 @@ export default function PartnersLP() {
             <div className="plp-mq-track">
               {[...PRODUCTS, ...PRODUCTS, ...PRODUCTS, ...PRODUCTS].map((p, i) => (
                 <span key={i} className="plp-mq-item" style={{ color: p.c }}>{p.n}</span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 安心して紹介できる理由（枠なしオブジェクト） ── */}
+        <section className="plp-sec plp-calm plp-io">
+          <div className="plp-wrap">
+            <h2 className="plp-h2" data-st>安心して、紹介できる。</h2>
+            <div className="plp-aud plp-reasons">
+              {REASONS.map(r => (
+                <div key={r.key} className="plp-audcard" data-st style={{ ['--fc' as string]: r.c }}>
+                  <span className={`plp-aud-obj rgl-${r.key}`} aria-hidden>{REASON_GLYPH[r.key]}</span>
+                  <span className="plp-aud-n">{r.n}</span>
+                  <span className="plp-aud-d">{r.d}</span>
+                </div>
               ))}
             </div>
           </div>
@@ -449,6 +534,7 @@ export default function PartnersLP() {
           <div className="plp-wrap plp-faq-wrap">
             <Kicker label="faq" />
             <Faq />
+            <a className="plp-textlink" href="/partners/faq" data-st>すべての質問を見る<span className="plp-arrow">→</span></a>
           </div>
         </section>
 
@@ -488,6 +574,11 @@ export default function PartnersLP() {
             )}
           </div>
           <footer className="plp-footer">
+            <nav className="plp-foot-nav">
+              <a href="/partners/guide">はじめてガイド</a>
+              <a href="/partners/rewards">報酬について</a>
+              <a href="/partners/faq">よくある質問</a>
+            </nav>
             <span className="plp-foot-meta">株式会社Media Birth ・ <a href="/legal/privacy">プライバシーポリシー</a></span>
           </footer>
         </section>
@@ -508,11 +599,15 @@ const CSS = `
   radial-gradient(50% 50% at 40% 60%,#f3f0ff 0%,rgba(243,240,255,0) 70%),
   linear-gradient(180deg,#fbfaff,#f5f3ff);}
 .plp-scene{position:fixed;inset:0;z-index:1;pointer-events:none;}
+.plp-progress{position:fixed;top:0;left:0;right:0;height:3px;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,#5646e6,#8b5cf6,#f2971b);z-index:70;will-change:transform;}
+.plp-glow{position:fixed;top:0;left:0;width:560px;height:560px;margin:-280px;border-radius:50%;background:radial-gradient(circle,rgba(124,108,240,.16),rgba(124,108,240,0) 66%);pointer-events:none;z-index:1;will-change:transform;}
 .plp-content{position:relative;z-index:2;}
 
-.plp-io [data-st]{opacity:0;transform:translateY(14px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);}
+.plp-io [data-st]{opacity:0;transform:translateY(16px) scale(.985);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);}
 .plp-io.in [data-st]{opacity:1;transform:none;}
-@media (prefers-reduced-motion:reduce){.plp-io [data-st]{opacity:1!important;transform:none!important;transition:none!important;} .plp *{animation:none!important;}}
+.plp-pop{animation:numpop .55s cubic-bezier(.34,1.56,.64,1);}
+@keyframes numpop{0%{transform:scale(1)}42%{transform:scale(1.09)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.plp-io [data-st]{opacity:1!important;transform:none!important;transition:none!important;} .plp *{animation:none!important;} .plp-glow{display:none;}}
 
 .plp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:15px 32px;background:rgba(251,250,255,.66);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 1px 0 var(--line);}
 .plp-hd-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);}
@@ -679,6 +774,35 @@ const CSS = `
 .plp-trust-item{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:var(--ink2);transition:color .18s;}
 .plp-trust-item:hover{color:var(--ink);} .plp-trust-item svg{color:var(--indigo);}
 
+/* 報酬シミュレーター（例示・仮） */
+.plp-sim-wrap{max-width:560px;text-align:center;}
+.plp-sim{background:rgba(255,255,255,.66);backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);border:0.5px solid rgba(255,255,255,.85);border-radius:24px;box-shadow:0 22px 60px rgba(40,30,80,.1);padding:clamp(28px,4vw,42px);}
+.plp-sim-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-size:.9rem;font-weight:600;color:var(--ink2);}
+.plp-sim-x{color:var(--mut);} .plp-sim-cnt{color:var(--indigo);font-weight:800;}
+.plp-sim-total{margin-top:14px;font-size:clamp(2.6rem,7vw,3.8rem);font-weight:820;letter-spacing:-.04em;color:var(--ink);font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;}
+.plp-sim-total i{font-size:1rem;font-weight:700;font-style:normal;color:var(--mut);margin-left:2px;align-self:flex-end;margin-bottom:.5em;}
+.plp-sim-eg{font-size:.72rem;font-weight:700;color:#fff;background:var(--indigo);border-radius:6px;padding:3px 8px;margin-right:10px;letter-spacing:.06em;}
+.plp-sim-range{-webkit-appearance:none;appearance:none;width:100%;height:8px;margin-top:26px;border-radius:6px;background:linear-gradient(90deg,var(--indigo) var(--p,30%),rgba(86,70,230,.16) var(--p,30%));outline:none;cursor:pointer;}
+.plp-sim-range::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--indigo);box-shadow:0 4px 14px rgba(86,70,230,.4);cursor:grab;transition:transform .15s;}
+.plp-sim-range::-webkit-slider-thumb:active{transform:scale(1.15);cursor:grabbing;}
+.plp-sim-range::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--indigo);box-shadow:0 4px 14px rgba(86,70,230,.4);cursor:grab;}
+.plp-sim-scale{display:flex;justify-content:space-between;margin-top:11px;font-size:.72rem;color:var(--mut);}
+.plp-sim-note{margin-top:18px;font-size:.7rem;line-height:1.6;color:var(--mut);}
+
+/* 安心して紹介できる理由（3列・枠なし） */
+.plp-reasons{grid-template-columns:repeat(3,1fr)!important;max-width:860px!important;}
+.rgl-secure svg{animation:fbeat 2.6s ease-in-out infinite;} .rgl-nospam svg{animation:fwiggle 3s ease-in-out infinite;} .rgl-wedo svg{animation:fbob 3s ease-in-out infinite;}
+
+/* テキストリンク（下層ページ導線） */
+.plp-textlink{display:inline-flex;align-items:center;gap:8px;margin-top:34px;font-size:.92rem;font-weight:700;color:var(--indigo);text-decoration:none;transition:gap .2s,color .2s;}
+.plp-textlink:hover{gap:13px;color:var(--violet);}
+.plp-textlink .plp-arrow{transition:transform .2s;} .plp-textlink:hover .plp-arrow{transform:translateX(3px);}
+
+/* フッターナビ */
+.plp-foot-nav{display:flex;justify-content:center;flex-wrap:wrap;gap:12px 26px;margin-bottom:18px;}
+.plp-foot-nav a{font-size:.8rem;font-weight:600;color:var(--ink2);text-decoration:none;transition:color .18s;}
+.plp-foot-nav a:hover{color:var(--indigo);}
+
 /* スマホで完結 */
 .plp-complete{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:clamp(40px,7vw,90px);}
 .plp-complete-txt .plp-h2{text-align:left;margin-bottom:18px;}
@@ -740,5 +864,7 @@ const CSS = `
   .plp-fld-row{grid-template-columns:1fr;}
   .plp-aud{grid-template-columns:1fr 1fr;gap:26px 12px;} .plp-audcard{gap:12px;} .plp-aud-obj{width:72px;height:72px;border-radius:20px;} .plp-aud-obj svg{width:40px;height:40px;} .plp-aud-n{font-size:.92rem;} .plp-aud-d{font-size:.74rem;}
   .plp-faq-q{font-size:.9rem;padding:16px 18px;} .plp-faq-a p{padding:0 18px 18px;font-size:.84rem;}
+  .plp-reasons{grid-template-columns:1fr!important;gap:26px;}
+  .plp-sim-total{font-size:clamp(2.2rem,11vw,3rem);}
 }
 `
