@@ -7,12 +7,26 @@
  */
 import { useEffect, useRef, useState } from 'react'
 
-// ── 数字セクション。領域=6は実値(services active)。他は仮値＝実データに差し替え可。 ──
-const STATS: { key: string; to: number; prefix?: string; label: string; note: string; real?: boolean }[] = [
-  { key: 'domain', to: 6, label: '領域', note: '拡大中', real: true },
-  { key: 'partner', to: 40, label: 'パートナー', note: '活動中' },
-  { key: 'paid', to: 3200000, prefix: '¥', label: '累計お支払い', note: 'そして増えていく' },
+// ── 数字セクション。field=6は実値(services active)。partner/fee は仮値＝実データに差し替え可。 ──
+// fee は K表記(千円単位)。to=3200 → "3,200K"（＝¥3,200,000相当）。
+const STATS: { key: string; to: number; prefix?: string; suffix?: string; label: string; real?: boolean }[] = [
+  { key: 'field', to: 6, label: 'field', real: true },
+  { key: 'partner', to: 40, label: 'partner' },
+  { key: 'fee', to: 3200, suffix: 'K', label: 'fee' },
 ]
+
+// ステップ用「動くオブジェクト」＝グラスタイル内で動くアイコン(つなげる/はなす/もたらす)
+const STEP_GLYPH: Record<string, React.ReactNode> = {
+  connect: <svg viewBox="0 0 56 56" fill="none"><circle cx="16" cy="28" r="6.5" className="pg-node" /><circle cx="40" cy="28" r="6.5" className="pg-node" /><line x1="22.5" y1="28" x2="33.5" y2="28" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" opacity=".5" /><circle cx="22.5" cy="28" r="3" fill="currentColor" className="pg-travel" /></svg>,
+  talk: <svg viewBox="0 0 56 56" fill="none"><path d="M13 19h26a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5H24l-8 6v-6a5 5 0 0 1-5-5v-7a5 5 0 0 1 5-5z" fill="currentColor" opacity=".16" stroke="currentColor" strokeWidth="2.2" className="pg-bubble" /><circle cx="21" cy="27.5" r="1.9" fill="currentColor" /><circle cx="27" cy="27.5" r="1.9" fill="currentColor" className="pg-blink" /><circle cx="33" cy="27.5" r="1.9" fill="currentColor" /></svg>,
+  bring: <svg viewBox="0 0 56 56" fill="none"><path d="M28 11l4.3 8.7 9.6 1.4-6.9 6.8 1.6 9.5L28 43l-8.6 4.6 1.6-9.5-6.9-6.8 9.6-1.4z" fill="currentColor" opacity=".2" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" className="pg-star" /></svg>,
+}
+// 報酬用フラットイラスト(固定/成果/継続) — スマホ図と同じ分かりやすさ
+const REWARD_ILLUS: Record<string, React.ReactNode> = {
+  fixed: <svg viewBox="0 0 88 88" fill="none"><ellipse cx="44" cy="52" rx="24" ry="8" fill="currentColor" opacity=".14" /><circle cx="44" cy="40" r="21" fill="currentColor" opacity=".16" /><circle cx="44" cy="40" r="21" stroke="currentColor" strokeWidth="3" /><path d="M44 31v18M37 37l7 5 7-5M38 43h12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  perf: <svg viewBox="0 0 88 88" fill="none"><rect x="20" y="50" width="12" height="18" rx="3" fill="currentColor" opacity=".28" /><rect x="38" y="40" width="12" height="28" rx="3" fill="currentColor" opacity=".5" /><rect x="56" y="28" width="12" height="40" rx="3" fill="currentColor" /><path d="M22 40l16-10 12 6 18-16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><path d="M62 20h8v8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  recur: <svg viewBox="0 0 88 88" fill="none"><circle cx="44" cy="44" r="20" fill="currentColor" opacity=".14" /><path d="M60 38a18 18 0 1 0 1.5 11" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" /><path d="M61 26v13H48" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="44" cy="44" r="4.5" fill="currentColor" /></svg>,
+}
 
 // ── 生きた光のネットワーク(動的import・全面固定層・pointer-events:none) ──
 function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
@@ -169,7 +183,7 @@ function useMotion() {
   }, [])
 }
 
-function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, prefix = '', dur = 1700) {
+function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, prefix = '', suffix = '', dur = 1700) {
   useEffect(() => {
     const el = ref.current; if (!el) return
     let started = false
@@ -177,23 +191,23 @@ function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, prefix
       const t0 = performance.now()
       const step = (now: number) => {
         const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3)
-        el.textContent = prefix + Math.round(to * e).toLocaleString('ja-JP')
+        el.textContent = prefix + Math.round(to * e).toLocaleString('ja-JP') + suffix
         if (p < 1) requestAnimationFrame(step)
       }
       requestAnimationFrame(step)
     }
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !started) { started = true; run(); io.disconnect() } }), { threshold: 0.5 })
     io.observe(el); return () => io.disconnect()
-  }, [ref, to, prefix, dur])
+  }, [ref, to, prefix, suffix, dur])
 }
 
 function Stat({ s }: { s: typeof STATS[number] }) {
   const ref = useRef<HTMLSpanElement>(null)
-  useCountUp(ref, s.to, s.prefix ?? '')
+  useCountUp(ref, s.to, s.prefix ?? '', s.suffix ?? '')
   return (
     <div className="plp-stat" data-st>
-      <span className="plp-statnum" ref={ref}>{s.prefix ?? ''}0</span>
-      <span className="plp-statlab">{s.label}<i>{s.note}</i></span>
+      <span className="plp-statnum" ref={ref}>{(s.prefix ?? '') + '0' + (s.suffix ?? '')}</span>
+      <span className="plp-statlab">{s.label}</span>
     </div>
   )
 }
@@ -226,14 +240,14 @@ export default function PartnersLP() {
   }
 
   const STEPS = [
-    { n: '01', c: 'b1', t: '紹介する', d: '知り合いを、つなぐだけ。' },
-    { n: '02', c: 'b2', t: '私たちが対応', d: '商談も実務も、Media Birth が。' },
-    { n: '03', c: 'b3', t: '成約で、報酬', d: '成果は、あなたへ還元。' },
+    { key: 'connect', c: 'b1', t: 'つなげる', d: '知り合いを、つなぐだけ。' },
+    { key: 'talk', c: 'b2', t: 'はなす', d: 'あとは、私たちが話す。' },
+    { key: 'bring', c: 'b3', t: 'もたらす', d: '成果が、報酬になる。' },
   ]
   const REWARDS = [
-    { c: 'var(--indigo)', t: '固定報酬' },
-    { c: 'var(--teal)', t: '成果連動' },
-    { c: 'var(--gold)', t: '継続報酬' },
+    { key: 'fixed', c: 'var(--indigo)', t: '固定', d: '成約ごとに' },
+    { key: 'perf', c: 'var(--teal)', t: '成果', d: '成果に応じて' },
+    { key: 'recur', c: 'var(--gold)', t: '継続', d: '毎月つづく' },
   ]
 
   return (
@@ -253,31 +267,28 @@ export default function PartnersLP() {
       <div className="plp-content" id="top">
         {/* ── HERO ── */}
         <section className="plp-hero plp-io">
-          <span className="plp-eyebrow" data-st>MB PARTNERS</span>
           <h1 className="plp-h1" data-st>「つながり」が、<br /><em>価値</em>になる。</h1>
           <div className="plp-cta-row" data-st>
             <button className="plp-cta" onClick={scrollForm}>パートナーに応募する<span className="plp-arrow">→</span></button>
-            <span className="plp-cta-note">登録無料・審査あり</span>
           </div>
           <div className="plp-scrollcue" data-st aria-hidden><span /></div>
         </section>
 
-        {/* ── 数字(実績)。領域=6実値／他は仮値 ── */}
-        <section className="plp-sec plp-io">
+        {/* ── 数字(実績)。field=6実値／partner・fee は仮値 ── */}
+        <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap plp-stats">
             {STATS.map(s => <Stat key={s.key} s={s} />)}
           </div>
         </section>
 
-        {/* ── はじめかた 3ステップ ── */}
-        <section className="plp-sec plp-io">
+        {/* ── 流れ：つなげる・はなす・もたらす(動くオブジェクト) ── */}
+        <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <h2 className="plp-h2" data-st>はじめかたは、3つ。</h2>
             <div className="plp-steps">
               <span className="plp-thread" aria-hidden />
               {STEPS.map(s => (
-                <div key={s.n} className="plp-step" data-st>
-                  <span className={`plp-step-orb ${s.c}`} aria-hidden><i>{s.n}</i></span>
+                <div key={s.key} className="plp-step" data-st>
+                  <span className={`plp-step-obj ${s.c}`} aria-hidden>{STEP_GLYPH[s.key]}</span>
                   <h3 className="plp-step-t">{s.t}</h3>
                   <p className="plp-step-d">{s.d}</p>
                 </div>
@@ -286,15 +297,16 @@ export default function PartnersLP() {
           </div>
         </section>
 
-        {/* ── 報酬(名称のみ・枠なし) ── */}
-        <section className="plp-sec plp-io">
+        {/* ── 報酬：固定・成果・継続(フラットイラスト) ── */}
+        <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <h2 className="plp-h2" data-st>報酬は、3つのかたち。</h2>
+            <h2 className="plp-h2" data-st>報酬。</h2>
             <div className="plp-rewards">
               {REWARDS.map(r => (
-                <div key={r.t} className="plp-rw" data-st style={{ ['--rc' as string]: r.c }}>
-                  <span className="plp-rw-node" aria-hidden />
+                <div key={r.key} className="plp-rw" data-st style={{ ['--rc' as string]: r.c }}>
+                  <span className="plp-rw-card" aria-hidden>{REWARD_ILLUS[r.key]}</span>
                   <span className="plp-rw-t">{r.t}</span>
+                  <span className="plp-rw-d">{r.d}</span>
                 </div>
               ))}
             </div>
@@ -302,7 +314,7 @@ export default function PartnersLP() {
         </section>
 
         {/* ── すべて、スマホで完結 ── */}
-        <section className="plp-sec plp-io">
+        <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap plp-complete">
             <div className="plp-phone" data-st aria-hidden>
               <div className="plp-phone-body">
@@ -400,34 +412,46 @@ const CSS = `
 .plp-wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 28px;}
 .plp-h2{font-size:clamp(1.75rem,3.6vw,2.4rem);font-weight:800;letter-spacing:-.035em;color:var(--ink);text-align:center;margin-bottom:clamp(40px,6vw,64px);text-wrap:balance;}
 
+/* 視認性ヴェール(背景シナプスを局所的に鎮める) */
+.plp-calm > .plp-wrap{position:relative;z-index:1;}
+.plp-calm::before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(1120px,126%);height:118%;background:radial-gradient(ellipse 58% 52% at 50% 50%,rgba(250,249,255,.9) 0%,rgba(250,249,255,.66) 44%,rgba(250,249,255,0) 75%);z-index:0;pointer-events:none;}
+
 /* 数字(実績) */
 .plp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
-.plp-stat{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:14px 8px;}
+.plp-stat{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:14px 8px;}
 .plp-statnum{font-size:clamp(3.4rem,7vw,5.6rem);font-weight:820;line-height:1.04;letter-spacing:-.05em;background:linear-gradient(155deg,#5646e6,#8b5cf6 55%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums;padding:0 .06em;}
-.plp-statlab{font-size:1rem;font-weight:800;letter-spacing:-.01em;color:var(--ink);display:flex;flex-direction:column;gap:6px;}
-.plp-statlab i{font-style:normal;font-size:.74rem;font-weight:600;color:var(--indigo);letter-spacing:.03em;}
+.plp-statlab{font-size:.82rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);padding-left:.24em;}
 
-/* 3ステップ */
+/* 流れ：動くオブジェクト(つなげる/はなす/もたらす) */
 .plp-steps{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;}
-.plp-thread{position:absolute;top:38px;left:16.6%;width:66.8%;height:2px;background:linear-gradient(90deg,rgba(86,70,230,.5),rgba(21,145,126,.5),rgba(242,151,27,.5));border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform 1.3s cubic-bezier(.4,0,.2,1) .1s;z-index:0;}
+.plp-thread{position:absolute;top:52px;left:16.6%;width:66.8%;height:2px;background:linear-gradient(90deg,rgba(86,70,230,.45),rgba(21,145,126,.45),rgba(242,151,27,.45));border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform 1.3s cubic-bezier(.4,0,.2,1) .1s;z-index:0;}
 .plp-steps.seq .plp-thread{transform:scaleX(1);}
 .plp-step{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;}
-.plp-step-orb{width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:22px;}
-.plp-step-orb i{font-style:normal;font-size:.82rem;font-weight:800;color:#fff;letter-spacing:.06em;opacity:.92;}
-.plp-step-orb.b1{background:radial-gradient(circle at 38% 34%,#8b5cf6,#5646e6);box-shadow:0 0 0 8px rgba(86,70,230,.09),0 16px 40px rgba(86,70,230,.32);}
-.plp-step-orb.b2{background:radial-gradient(circle at 38% 34%,#3ec6a0,#15917e);box-shadow:0 0 0 8px rgba(21,145,126,.09),0 16px 40px rgba(21,145,126,.3);}
-.plp-step-orb.b3{background:radial-gradient(circle at 38% 34%,#ffc24d,#f2971b);box-shadow:0 0 0 8px rgba(242,151,27,.1),0 16px 40px rgba(242,151,27,.32);}
-.plp-step-orb::after{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.55);animation:opulse 3s ease-in-out infinite;}
-@keyframes opulse{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.16);opacity:0}}
-.plp-step-t{font-size:1.22rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+.plp-step-obj{width:104px;height:104px;border-radius:28px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:24px;background:linear-gradient(158deg,rgba(255,255,255,.92),rgba(244,242,255,.72));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.92);animation:floaty 5s ease-in-out infinite;}
+.plp-step-obj svg{width:56px;height:56px;overflow:visible;}
+.plp-step-obj.b1{color:var(--indigo);box-shadow:0 20px 46px rgba(86,70,230,.22);}
+.plp-step-obj.b2{color:var(--teal);box-shadow:0 20px 46px rgba(21,145,126,.2);animation-delay:.7s;}
+.plp-step-obj.b3{color:var(--gold);box-shadow:0 20px 46px rgba(242,151,27,.24);animation-delay:1.4s;}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
+.pg-node{fill:currentColor;opacity:.9;animation:pgpulse 2.4s ease-in-out infinite;}
+.pg-node:nth-of-type(2){animation-delay:1.2s;}
+@keyframes pgpulse{0%,100%{opacity:.9}50%{opacity:.4}}
+.pg-travel{animation:pgtravel 2.1s ease-in-out infinite;}
+@keyframes pgtravel{0%,100%{transform:translateX(0)}50%{transform:translateX(11px)}}
+.pg-blink{animation:pgpulse 1.5s ease-in-out infinite;}
+.pg-star{transform-box:fill-box;transform-origin:center;animation:pgstar 2.8s ease-in-out infinite;}
+@keyframes pgstar{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-3px) rotate(6deg)}}
+.plp-step-t{font-size:1.32rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
 .plp-step-d{margin-top:10px;font-size:.92rem;line-height:1.7;color:var(--ink2);}
 
-/* 報酬(枠なし・名称のみ) */
-.plp-rewards{display:flex;justify-content:center;align-items:center;gap:clamp(28px,7vw,90px);flex-wrap:wrap;}
-.plp-rw{display:flex;flex-direction:column;align-items:center;gap:20px;}
-.plp-rw-node{width:60px;height:60px;border-radius:50%;background:radial-gradient(circle at 40% 36%,color-mix(in srgb,var(--rc) 70%,#fff),var(--rc));box-shadow:0 0 0 10px color-mix(in srgb,var(--rc) 12%,transparent),0 0 34px 6px color-mix(in srgb,var(--rc) 46%,transparent);position:relative;}
-.plp-rw-node::after{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.6);animation:opulse 3.4s ease-in-out infinite;}
-.plp-rw-t{font-size:clamp(1.3rem,2.6vw,1.7rem);font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+/* 報酬：フラットイラスト(固定/成果/継続) */
+.plp-rewards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:840px;margin:0 auto;}
+.plp-rw{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.plp-rw-card{width:100%;aspect-ratio:1/1;max-width:200px;border-radius:26px;display:flex;align-items:center;justify-content:center;color:var(--rc);background:linear-gradient(158deg,rgba(255,255,255,.9),rgba(244,242,255,.68));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.92);box-shadow:0 22px 54px rgba(40,30,80,.1);transition:transform .22s,box-shadow .22s;}
+.plp-rw:hover .plp-rw-card{transform:translateY(-6px);box-shadow:0 30px 64px color-mix(in srgb,var(--rc) 22%,rgba(40,30,80,.12));}
+.plp-rw-card svg{width:84px;height:84px;}
+.plp-rw-t{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+.plp-rw-d{font-size:.82rem;color:var(--ink2);margin-top:-8px;}
 
 /* スマホで完結 */
 .plp-complete{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:clamp(40px,7vw,90px);}
@@ -472,13 +496,14 @@ const CSS = `
   .plp-hd-login{height:36px;padding:0 16px;font-size:.78rem;}
   .plp-hero{padding:104px 22px 56px;}
   .plp-h1{font-size:clamp(1.85rem,8vw,2.45rem);line-height:1.18;letter-spacing:-.04em;}
-  .plp-eyebrow{letter-spacing:.34em;margin-bottom:18px;}
   .plp-sec{padding:70px 0;}
-  .plp-stats{grid-template-columns:1fr;gap:36px;}
-  .plp-statnum{font-size:clamp(3.6rem,17vw,5rem);}
+  .plp-stats{grid-template-columns:1fr;gap:34px;}
+  .plp-statnum{font-size:clamp(3.4rem,15vw,4.6rem);}
   .plp-steps{grid-template-columns:1fr;gap:34px;} .plp-thread{display:none;}
-  .plp-step-orb{width:64px;height:64px;margin-bottom:16px;}
-  .plp-rewards{gap:30px;}
+  .plp-step-obj{width:88px;height:88px;margin-bottom:18px;} .plp-step-obj svg{width:48px;height:48px;}
+  .plp-rewards{gap:12px;}
+  .plp-rw-card{border-radius:20px;} .plp-rw-card svg{width:52px;height:52px;}
+  .plp-rw-t{font-size:1.05rem;} .plp-rw-d{font-size:.68rem;margin-top:-6px;}
   .plp-complete{grid-template-columns:1fr;gap:34px;justify-items:center;}
   .plp-complete-txt .plp-h2,.plp-complete .plp-lead{text-align:center;}
   .plp-complete .plp-lead br{display:none;}
