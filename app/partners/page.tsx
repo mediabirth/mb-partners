@@ -42,7 +42,7 @@ const FIELD_GLYPH: Record<string, React.ReactNode> = {
   estate: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 23L24 10l15 13" /><path d="M13 21v15h22V21" fill="currentColor" fillOpacity="0.13" /><path d="M20 36v-8h8v8" fill="currentColor" fillOpacity="0.3" /></svg>,
   talent: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="5" fill="currentColor" fillOpacity="0.18" /><circle cx="31" cy="20" r="4.3" fill="currentColor" fillOpacity="0.18" /><path d="M9 37c1-6 5-9 9-9s8 3 9 9" /><path d="M27 35c1-5 4-7.5 7-7.5s6 2.5 7 7.5" /></svg>,
   create: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 35l3-8L32 11l5 5-16 16-8 3z" fill="currentColor" fillOpacity="0.14" /><path d="M28 15l5 5" /></svg>,
-  ops: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="6" fill="currentColor" fillOpacity="0.18" /><path d="M24 9v5M24 34v5M39 24h-5M14 24H9M34.6 13.4l-3.5 3.5M16.9 31.1l-3.5 3.5M34.6 34.6l-3.5-3.5M16.9 16.9l-3.5-3.5" /></svg>,
+  ops: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="7.5" fill="currentColor" fillOpacity="0.16" /><circle cx="24" cy="24" r="7.5" /><path d="M24 10v5M24 33v5M38 24h-5M10 24h5" /></svg>,
   marke: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v6l19 8V13z" fill="currentColor" fillOpacity="0.16" /><path d="M31 19c4 1.5 4 8.5 0 10" /><path d="M15 27v7h5v-5" /></svg>,
   enta: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="14" fill="currentColor" fillOpacity="0.14" /><path d="M20.5 18l9 6-9 6z" fill="currentColor" stroke="none" /></svg>,
 }
@@ -81,16 +81,6 @@ const REASONS = [
   { key: 'nospam', n: 'しつこい連絡なし', d: '必要な範囲でご案内。無理な営業はいたしません。', c: '#1e9e6a' },
   { key: 'wedo', n: '実務はすべて当社', d: '商談も対応も当社が担当。あなたはつなぐだけ。', c: '#8b5cf6' },
 ]
-const COMPLETE = [
-  { key: 'intro', n: 'アプリで紹介', d: '知り合いを、ワンタップでおつなぎ。', c: '#5646e6' },
-  { key: 'track', n: '進捗を確認', d: '商談の状況を、いつでも。', c: '#15917e' },
-  { key: 'reward', n: '報酬を受け取る', d: '成果は、そのままあなたへ。', c: '#f2971b' },
-]
-const COMPLETE_GLYPH: Record<string, React.ReactNode> = {
-  intro: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13" cy="16" r="5" fill="currentColor" fillOpacity="0.18" /><path d="M6 34c1-6 4-8.5 7-8.5s6 2.5 7 8.5" fill="currentColor" fillOpacity="0.12" /><circle cx="35" cy="16" r="5" fill="currentColor" fillOpacity="0.18" /><path d="M28 34c1-6 4-8.5 7-8.5s6 2.5 7 8.5" fill="currentColor" fillOpacity="0.12" /><path d="M19 20h10" opacity="0.45" /><circle cx="19" cy="20" r="2.6" fill="currentColor" stroke="none" className="cg-travel" /></svg>,
-  track: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="15" y="7" width="18" height="34" rx="4" fill="currentColor" fillOpacity="0.13" /><path d="M21 12h6" /><path d="M19 27l4 4 7-8" strokeWidth="2.6" className="cg-check" /></svg>,
-  reward: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="13" fill="currentColor" fillOpacity="0.16" /><path d="M24 17v14M20 21l4 3 4-3M20 26h8" /></svg>,
-}
 const REASON_GLYPH: Record<string, React.ReactNode> = {
   secure: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M24 8l13 5v9c0 8.5-5.5 14.5-13 17-7.5-2.5-13-8.5-13-17v-9z" fill="currentColor" fillOpacity="0.14" /><path d="M18 24l4.5 4.5L30 20" /></svg>,
   nospam: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M16 20a8 8 0 0 1 15.5-2.8" /><path d="M34 24v6l3 4H11l3-4v-6" fill="currentColor" fillOpacity="0.12" /><path d="M20 38a4 4 0 0 0 8 0" /><path d="M10 10l28 28" /></svg>,
@@ -315,19 +305,18 @@ export default function PartnersLP() {
           </div>
         </section>
 
-        {/* ── すべて、スマホで（安心と同じ体裁・動くオブジェクト3種） ── */}
+        {/* ── すべて、スマホで（フォン図・完全中央） ── */}
         <section className="plp-sec plp-calm plp-io">
-          <div className="plp-wrap">
-            <h2 className="plp-h2" data-st>すべて、スマホで。</h2>
-            <div className="plp-aud plp-reasons">
-              {COMPLETE.map(c => (
-                <div key={c.key} className="plp-audcard" data-st style={{ ['--fc' as string]: c.c }}>
-                  <span className={`plp-aud-obj cgl-${c.key}`} aria-hidden>{COMPLETE_GLYPH[c.key]}</span>
-                  <span className="plp-aud-n">{c.n}</span>
-                  <span className="plp-aud-d">{c.d}</span>
-                </div>
-              ))}
+          <div className="plp-wrap plp-complete-c">
+            <div className="plp-phone" data-st aria-hidden>
+              <div className="plp-phone-body">
+                <span className="plp-phone-dot d1" /><span className="plp-phone-dot d2" /><span className="plp-phone-dot d3" />
+                <span className="plp-phone-line l1" /><span className="plp-phone-line l2" /><span className="plp-phone-line l3" />
+                <span className="plp-phone-pulse" />
+              </div>
             </div>
+            <h2 className="plp-h2" data-st>すべて、スマホで。</h2>
+            <p className="plp-lead" data-st>紹介も、進捗も、報酬の確認も。<br />アプリひとつで完結します。</p>
           </div>
         </section>
 
@@ -458,7 +447,7 @@ const CSS = `
 /* 数字(実績) */
 .plp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
 .plp-stat{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:14px 8px;}
-.plp-statnum{font-size:clamp(3.4rem,7vw,5.6rem);font-weight:820;line-height:1.04;letter-spacing:-.05em;background:linear-gradient(155deg,#5646e6,#8b5cf6 55%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums;padding:0 .06em;}
+.plp-statnum{font-size:clamp(3.4rem,7vw,5.6rem);font-weight:820;line-height:1.04;letter-spacing:-.05em;background:linear-gradient(155deg,#5646e6,#8b5cf6 55%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums;}
 .plp-statlab{font-size:.82rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);padding-left:.24em;}
 
 /* 流れ：動くオブジェクト(つなげる/はなす/もたらす) */
@@ -593,6 +582,9 @@ const CSS = `
 
 /* 安心して紹介できる理由（3列・枠なし） */
 .plp-reasons{grid-template-columns:repeat(3,1fr)!important;max-width:860px!important;}
+.plp-complete-c{display:flex;flex-direction:column;align-items:center;text-align:center;gap:clamp(30px,4vw,46px);}
+.plp-complete-c .plp-h2{margin-bottom:0;}
+.plp-complete-c .plp-lead{margin:0;text-align:center;max-width:28em;}
 .rgl-secure svg{animation:fbeat 2.6s ease-in-out infinite;} .rgl-nospam svg{animation:fwiggle 3s ease-in-out infinite;} .rgl-wedo svg{animation:fbob 3s ease-in-out infinite;}
 
 /* すべてスマホで：動くオブジェクト */
@@ -610,7 +602,8 @@ const CSS = `
 .plp-fmq:hover .plp-fname{color:var(--fc);}
 
 /* 数字は中央寄せ */
-.plp-statnum{text-align:center;justify-content:center;}
+.plp-stat>*{width:100%;}
+.plp-statnum{display:block;width:100%;text-align:center;text-indent:-.05em;}
 
 /* テキストリンク（下層ページ導線） */
 .plp-textlink{display:inline-flex;align-items:center;gap:8px;margin-top:34px;font-size:.92rem;font-weight:700;color:var(--indigo);text-decoration:none;transition:gap .2s,color .2s;}
