@@ -29,7 +29,7 @@ export default function RewardsPage() {
 
       <h2 className="sp-h2">お支払いのタイミング</h2>
       <div className="sp-card">
-        <p className="sp-rwd-d">報酬は、原則として<strong>成約時</strong>にお支払いします。継続報酬は、ご契約が続くかぎり毎月お支払いします。進捗・報酬の状況は、アプリでいつでもご確認いただけます。</p>
+        <p className="sp-rwd-d"><strong>成約月の翌月末</strong>にお支払いします。進捗・報酬の状況は、アプリでいつでもご確認いただけます。</p>
       </div>
 
       <p className="sp-note">※本ページの金額（例：¥30,000 等）は一例です。実際の報酬はメニュー・成約内容により異なり、収入を保証するものではありません。</p>
