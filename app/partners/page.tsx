@@ -1,31 +1,24 @@
 'use client'
 /**
- * パートナー募集LP v5 — ページ全体にガラス浮遊オブジェクト＋モーション。ページスコープ（three は /partners のみ動的import）。
- * 3Dは固定フルページ層(pointer-events:none)。オブジェクトはスクロールに連動して全セクションを流れる＋各々が浮遊/回転＋マウス3°パララックス。
- * コンテンツはフロストガラス（backdrop-blur）で3Dを透かしつつ可読。コピーは削ぎ落とし。desktop=transmissionガラス／mobile=軽量フロスト。
- * 事実の正典・創作数字禁止。応募は既存 /api/partner-apply(partner_applications)。
+ * パートナー募集LP v7 — 文字を捨て、光のネットワークCGで「つながりが価値になる」を表現。
+ * 全面: 生きたノード網（node/edge/金の価値パルス）＋スクロール連動＋マウス視差。ページスコープ（three は /partners のみ動的import）。
+ * 事実の正典・創作数字禁止。数字の主役は実データ＝6領域（拡大中）と報酬設計（例）。払い出し/人数は実データ連動で将来点灯。
+ * 応募は既存 /api/partner-apply(partner_applications)。会社表記「株式会社Media Birth」。
  */
 import { useEffect, useRef, useState } from 'react'
 
-const K = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-const ICONS: Record<string, React.ReactNode> = {
-  intro: <><circle cx="6.5" cy="15" r="3" {...K} /><circle cx="17.5" cy="9" r="3" {...K} /><path d="M9 13.6l6-3.2" {...K} /><path d="M18.4 15.5l3 .6-.6 3" {...K} /><path d="M14.5 18.5c2.4 1.6 5.2 1 6.9-2.4" {...K} /></>,
-  handle: <><path d="M12 3l7 3v6c0 4.2-2.8 7.5-7 9-4.2-1.5-7-4.8-7-9V6z" {...K} /><path d="M9 12.2l2.2 2.2L15.2 10" {...K} /></>,
-  reward: <><circle cx="12" cy="13.5" r="6.5" {...K} /><path d="M12 10.6v5.8M9.8 11.8h4.4M9.8 14h4.4" {...K} /><path d="M12 4.2v2.2M8.5 5l1 1.9M15.5 5l-1 1.9" {...K} /></>,
-  fixed: <><rect x="5.5" y="7.5" width="13" height="10" rx="2" {...K} /><circle cx="12" cy="12.5" r="2.4" {...K} /><path d="M8 4.5l2.5 3M16 4.5l-2.5 3" {...K} /></>,
-  perf: <><path d="M4 20h16" {...K} /><rect x="5.5" y="13" width="3" height="5" rx="1" {...K} /><rect x="10.5" y="9" width="3" height="9" rx="1" {...K} /><rect x="15.5" y="5" width="3" height="13" rx="1" {...K} /></>,
-  recur: <><path d="M6 8.5A7 7 0 0 1 19 11" {...K} /><path d="M18 8.5V11h-2.5" {...K} /><path d="M18 15.5A7 7 0 0 1 5 13" {...K} /><path d="M6 15.5V13h2.5" {...K} /></>,
-  phone: <><rect x="7" y="3.5" width="10" height="17" rx="2.4" {...K} /><path d="M10.5 6h3" {...K} /><circle cx="12" cy="17.5" r="1" fill="currentColor" stroke="none" /></>,
-  apply: <><path d="M6 4.5h8l4 4V19.5H6z" {...K} /><path d="M14 4.5V9h4" {...K} /><path d="M9 13h6M9 16h4" {...K} /></>,
-  home: <><path d="M5 11.5L12 5l7 6.5" {...K} /><path d="M7 10.5V19h10v-8.5" {...K} /><path d="M10.5 19v-4h3v4" {...K} /></>,
-  people: <><circle cx="8" cy="9" r="2.6" {...K} /><circle cx="16" cy="9" r="2.6" {...K} /><path d="M3.8 18c.4-2.6 2.2-4 4.2-4s3.8 1.4 4.2 4" {...K} /><path d="M11.8 18c.4-2.6 2.2-4 4.2-4s3.8 1.4 4.2 4" {...K} /></>,
-  create: <><path d="M4 18c3-1 4-4 3.5-7C11 9 14 6 19 5c-.6 5-3.4 8.2-7 9.2C9 15 6.6 16.2 4 18z" {...K} /><path d="M8 14.5l2 2" {...K} /></>,
-  dx: <><circle cx="6" cy="7" r="2" {...K} /><circle cx="18" cy="7" r="2" {...K} /><circle cx="12" cy="17" r="2" {...K} /><path d="M7.5 8.5l3.5 6.8M16.5 8.5L13 15.3M8 7h8" {...K} /></>,
-}
-const Ic = ({ n }: { n: string }) => <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden>{ICONS[n]}</svg>
+// ── 実データ（本番DB services active=on／brand color 実値）。領域は今後も増える＝配列で表現。 ──
+const DOMAINS = [
+  { n: 'MOOM', k: '不動産', c: '#4733e6' },
+  { n: 'MatchHub', k: '人材', c: '#1e9e6a' },
+  { n: 'RESONATION', k: '制作', c: '#8b5cf6' },
+  { n: 'PRAGMATION', k: '業務改善', c: '#15917e' },
+  { n: 'EMANATION', k: 'マーケ', c: '#6d5cf5' },
+  { n: 'ENTERSOLOGY', k: 'エンタメ', c: '#ec4899' },
+]
 
-// ── ページ全体のガラス3D層（動的import・全セクションにオブジェクトが流れる） ──
-function useScene(mountRef: React.RefObject<HTMLDivElement | null>) {
+// ── 生きた光のネットワーク（動的import・全面固定層・pointer-events:none） ──
+function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const el = mountRef.current; if (!el) return
     let dispose = () => {}; let cancelled = false
@@ -34,199 +27,325 @@ function useScene(mountRef: React.RefObject<HTMLDivElement | null>) {
       const mobile = matchMedia('(max-width: 820px)').matches
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
       const W = () => innerWidth, H = () => innerHeight
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.4 : 1.75))
-      renderer.setSize(W(), H()); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15
+      const renderer = new THREE.WebGLRenderer({ antialias: !mobile, alpha: true, powerPreference: 'high-performance' })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2))
+      renderer.setSize(W(), H()); renderer.setClearColor(0x000000, 0)
       el.appendChild(renderer.domElement)
       const scene = new THREE.Scene()
-      const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100); camera.position.set(0, 0, 9)
+      const camera = new THREE.PerspectiveCamera(58, W() / H(), 0.1, 100); camera.position.z = 15
 
-      const eq = document.createElement('canvas'); eq.width = 512; eq.height = 256; const g = eq.getContext('2d')!
-      const grd = g.createLinearGradient(0, 0, 0, 256); grd.addColorStop(0, '#eae6ff'); grd.addColorStop(.4, '#fff'); grd.addColorStop(.7, '#e6f6ef'); grd.addColorStop(1, '#ffeede')
-      g.fillStyle = grd; g.fillRect(0, 0, 512, 256)
-      const rg = (x: number, y: number, r: number, c: string) => { const rr = g.createRadialGradient(x, y, 0, x, y, r); rr.addColorStop(0, c); rr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rr; g.fillRect(0, 0, 512, 256) }
-      rg(120, 70, 150, 'rgba(150,140,255,.62)'); rg(400, 90, 160, 'rgba(140,220,190,.56)'); rg(300, 210, 160, 'rgba(255,195,150,.56)')
-      const envTex = new THREE.CanvasTexture(eq); envTex.mapping = THREE.EquirectangularReflectionMapping
-      const pmrem = new THREE.PMREMGenerator(renderer); const env = pmrem.fromEquirectangular(envTex).texture
-      scene.environment = env; envTex.dispose(); pmrem.dispose()
+      // 柔らかい光点テクスチャ（additiveでブルーム風グロー）
+      const dot = (() => {
+        const c = document.createElement('canvas'); c.width = c.height = 96; const x = c.getContext('2d')!
+        const g = x.createRadialGradient(48, 48, 0, 48, 48, 48)
+        g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.22, 'rgba(255,255,255,.9)')
+        g.addColorStop(.5, 'rgba(255,255,255,.28)'); g.addColorStop(1, 'rgba(255,255,255,0)')
+        x.fillStyle = g; x.fillRect(0, 0, 96, 96); return new THREE.CanvasTexture(c)
+      })()
 
-      const mat = (tint?: number) => mobile
-        ? new THREE.MeshPhysicalMaterial({ transmission: 0, roughness: 0.28, metalness: 0, color: 0xffffff, envMapIntensity: 1.6, clearcoat: 0.6, clearcoatRoughness: 0.35, transparent: true, opacity: 0.62 })
-        : new THREE.MeshPhysicalMaterial({ transmission: 1, ior: 1.2, thickness: 1.1, roughness: 0.22, metalness: 0, color: 0xffffff, envMapIntensity: 1.1, clearcoat: 0.5, clearcoatRoughness: 0.3, transparent: true, ...(tint ? { attenuationColor: new THREE.Color(tint), attenuationDistance: 2.4 } : {}) })
+      // 配色：インディゴ/バイオレット主体＋ブランド差し色＋価値の金
+      const PAL = [0x5646e6, 0x6d5cf5, 0x8b5cf6, 0x7c6cf0, 0x5646e6, 0x1e9e6a, 0x15917e, 0xec4899, 0xf5a524]
+      const wcol = () => { const r = Math.random(); return r < .62 ? PAL[(Math.random() * 5) | 0] : PAL[5 + ((Math.random() * 4) | 0)] }
 
       const group = new THREE.Group(); scene.add(group)
-      const shTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const cx = c.getContext('2d')!; const rr = cx.createRadialGradient(64, 64, 0, 64, 64, 64); rr.addColorStop(0, 'rgba(60,50,90,.20)'); rr.addColorStop(1, 'rgba(60,50,90,0)'); cx.fillStyle = rr; cx.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c) })()
-      type O = { m: THREE.Mesh; fx: number; ph: number; sp: number; amp: number; rot: number; sprite?: THREE.Sprite }
-      const objs: O[] = []
-      const geoFor = (k: string): THREE.BufferGeometry => k === 'sphere' ? new THREE.SphereGeometry(1, mobile ? 40 : 64, mobile ? 40 : 64) : k === 'torus' ? new THREE.TorusGeometry(0.9, 0.34, mobile ? 24 : 40, mobile ? 60 : 90) : k === 'box' ? new THREE.BoxGeometry(1.7, 1.7, 0.32) : k === 'ico' ? new THREE.IcosahedronGeometry(0.75, 0) : new THREE.TorusKnotGeometry(0.62, 0.2, 90, 14)
-      // section毎に配置（worldY = 3 - 7*section）。desktop=各2〜3 / mobile=間引き。
-      const SEC = 7
-      // [geo, section, fracX(-0.8..0.8＝可視幅の割合), z, scale, tint]。実xは可視幅から算出＝どのアスペクトでも見切れない。
-      const defs: [string, number, number, number, number, number][] = [
-        ['sphere', 0, -0.62, -0.5, 0.9, 0xbfe9d8], ['torus', 0, 0.6, 0.5, 0.9, 0xccc4ff], ['ico', 0, 0.05, 1.6, 0.62, 0xffe0cc],
-        ['box', 1, -0.58, 0.6, 0.74, 0xd7f0ff], ['sphere', 1, 0.62, -0.8, 0.7, 0xffd9bf],
-        ['torus', 2, -0.6, -0.3, 0.78, 0xbfe9d8], ['ico', 2, 0.6, 0.8, 0.66, 0xccc4ff],
-        ['knot', 3, -0.56, 0.3, 0.74, 0xffe0cc], ['sphere', 3, 0.62, -0.5, 0.78, 0xd7f0ff],
-        ['box', 4, -0.6, -0.2, 0.7, 0xccc4ff], ['torus', 4, 0.58, 0.5, 0.78, 0xffd9bf],
-        ['ico', 5, -0.56, 0.6, 0.66, 0xbfe9d8], ['sphere', 5, 0.6, -0.6, 0.74, 0xffe0cc],
-      ]
-      const use = mobile ? defs.filter((_, i) => i % 2 === 0) : defs
-      for (const [k, sec, fx, z, s, tint] of use) {
-        const sc = mobile ? s * 0.86 : s
-        const m = new THREE.Mesh(geoFor(k), mat(tint)); const wy = 1.7 - SEC * sec + (Math.random() - .5) * 1.1
-        m.position.set(0, wy, z); m.scale.setScalar(sc); group.add(m)
-        const o: O = { m, fx, ph: Math.random() * 6.28, sp: 0.45 + Math.random() * 0.5, amp: 0.13 + Math.random() * 0.08, rot: (Math.random() - .5) * 0.006 }
-        if (!mobile) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: shTex, transparent: true, depthWrite: false })); sp.scale.set(2.3 * sc, 0.95 * sc, 1); sp.position.set(0, wy - 1.5 * sc, z - 0.2); group.add(sp); o.sprite = sp }
-        objs.push(o)
+      const N = mobile ? 48 : 104
+      const SPREAD_Y = 34, SPREAD_X = mobile ? 8.5 : 15, SPREAD_Z = 5
+      const base: Float32Array = new Float32Array(N * 3)
+      const pos = new Float32Array(N * 3)
+      const col = new Float32Array(N * 3)
+      const phase = new Float32Array(N), amp = new Float32Array(N), spd = new Float32Array(N)
+      const cc = new THREE.Color()
+      for (let i = 0; i < N; i++) {
+        const x = (Math.random() - .5) * SPREAD_X, y = (Math.random() - .5) * SPREAD_Y, z = (Math.random() - .5) * SPREAD_Z
+        base[i * 3] = x; base[i * 3 + 1] = y; base[i * 3 + 2] = z
+        pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z
+        cc.setHex(wcol()); col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b
+        phase[i] = Math.random() * 6.28; amp[i] = 0.25 + Math.random() * 0.5; spd[i] = 0.2 + Math.random() * 0.5
       }
-      const layout = () => { const halfW = camera.position.z * Math.tan(camera.fov / 2 * Math.PI / 180) * camera.aspect; const k = mobile ? 0.62 : 0.84; for (const o of objs) { const x = o.fx * halfW * k; o.m.position.x = x; if (o.sprite) o.sprite.position.x = x } }
-      const SPREAD = SEC * 5
-      let targetGY = 0, gy = 0
-      const onScroll = () => { const max = Math.max(1, document.body.scrollHeight - innerHeight); targetGY = (scrollY / max) * SPREAD }
+      const nGeo = new THREE.BufferGeometry()
+      nGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+      nGeo.setAttribute('color', new THREE.BufferAttribute(col, 3))
+      const nMat = new THREE.PointsMaterial({ size: mobile ? 0.62 : 0.72, map: dot, vertexColors: true, transparent: true, opacity: 0.86, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })
+      const points = new THREE.Points(nGeo, nMat); group.add(points)
+
+      // エッジ：近傍ノードを接続（距離しきい値）
+      const pairs: [number, number][] = []
+      const TH = mobile ? 5.6 : 5.2
+      for (let i = 0; i < N; i++) {
+        let links = 0
+        for (let j = i + 1; j < N && links < 3; j++) {
+          const dx = base[i * 3] - base[j * 3], dy = base[i * 3 + 1] - base[j * 3 + 1], dz = base[i * 3 + 2] - base[j * 3 + 2]
+          if (Math.sqrt(dx * dx + dy * dy + dz * dz) < TH) { pairs.push([i, j]); links++ }
+        }
+      }
+      const E = pairs.length
+      const lPos = new Float32Array(E * 2 * 3), lCol = new Float32Array(E * 2 * 3)
+      for (let e = 0; e < E; e++) {
+        const [a, b] = pairs[e]
+        for (let k = 0; k < 3; k++) { lCol[e * 6 + k] = col[a * 3 + k] * 0.9; lCol[e * 6 + 3 + k] = col[b * 3 + k] * 0.9 }
+      }
+      const lGeo = new THREE.BufferGeometry()
+      lGeo.setAttribute('position', new THREE.BufferAttribute(lPos, 3))
+      lGeo.setAttribute('color', new THREE.BufferAttribute(lCol, 3))
+      const lMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: mobile ? 0.16 : 0.2, blending: THREE.AdditiveBlending, depthWrite: false })
+      const lines = new THREE.LineSegments(lGeo, lMat); group.add(lines)
+
+      // 金の価値パルス：エッジ上を流れる粒（つながり→価値）
+      const P = mobile ? 8 : 18
+      const pPos = new Float32Array(P * 3)
+      const pEdge = new Int32Array(P), pT = new Float32Array(P), pSpd = new Float32Array(P)
+      for (let i = 0; i < P; i++) { pEdge[i] = (Math.random() * E) | 0; pT[i] = Math.random(); pSpd[i] = 0.15 + Math.random() * 0.25 }
+      const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3))
+      const goldTex = (() => {
+        const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d')!
+        const g = x.createRadialGradient(32, 32, 0, 32, 32, 32)
+        g.addColorStop(0, 'rgba(255,240,205,1)'); g.addColorStop(.4, 'rgba(245,165,36,.85)'); g.addColorStop(1, 'rgba(245,165,36,0)')
+        x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c)
+      })()
+      const pMat = new THREE.PointsMaterial({ size: mobile ? 0.85 : 1.0, map: goldTex, color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })
+      const pulses = new THREE.Points(pGeo, pMat); group.add(pulses)
+
+      // スクロール連動（フィールドを縦に流す）＋マウス視差
+      let scrollF = 0, targetSF = 0
+      const onScroll = () => { const max = Math.max(1, document.body.scrollHeight - innerHeight); targetSF = scrollY / max }
       addEventListener('scroll', onScroll, { passive: true }); onScroll()
-      const mouse = { x: 0, y: 0 }
-      if (!mobile && !reduce) addEventListener('pointermove', e => { mouse.x = (e.clientX / innerWidth - .5) * 2; mouse.y = (e.clientY / innerHeight - .5) * 2 })
-      const onResize = () => { camera.aspect = W() / H(); camera.updateProjectionMatrix(); renderer.setSize(W(), H()); layout() }
-      addEventListener('resize', onResize); layout()
-      const RAD = Math.PI / 180; const clock = new THREE.Clock(); let raf = 0
+      const mouse = { x: 0, y: 0 }, mt = { x: 0, y: 0 }
+      if (!mobile && !reduce) addEventListener('pointermove', e => { mt.x = (e.clientX / innerWidth - .5); mt.y = (e.clientY / innerHeight - .5) })
+
+      const onResize = () => { camera.aspect = W() / H(); camera.updateProjectionMatrix(); renderer.setSize(W(), H()) }
+      addEventListener('resize', onResize)
+
+      let t = 0, raf = 0, running = true
+      const io = new IntersectionObserver(es => { running = es[0].isIntersecting }, { threshold: 0 })
+      io.observe(el)
+      const clock = new THREE.Clock()
       const frame = () => {
-        gy += (targetGY - gy) * 0.08; group.position.y = gy
-        if (!reduce) { const t = clock.getElapsedTime(); for (const o of objs) { o.m.position.y += Math.sin(t * o.sp + o.ph) * o.amp * 0.016; o.m.rotation.x += o.rot; o.m.rotation.y += o.rot * 0.8 } ; group.rotation.y += (mouse.x * 3 * RAD - group.rotation.y) * 0.05; group.rotation.x += (mouse.y * 3 * RAD - group.rotation.x) * 0.05 }
-        renderer.render(scene, camera); raf = requestAnimationFrame(frame)
+        raf = requestAnimationFrame(frame)
+        if (!running) return
+        const dt = Math.min(clock.getDelta(), 0.05); t += dt
+        scrollF += (targetSF - scrollF) * 0.06
+        group.position.y = scrollF * (SPREAD_Y - 8)   // フィールドを流す
+        mouse.x += (mt.x - mouse.x) * 0.04; mouse.y += (mt.y - mouse.y) * 0.04
+        camera.position.x = mouse.x * 2.2; camera.position.y = -mouse.y * 1.6; camera.lookAt(0, group.position.y * -0.02, 0)
+        // ノードの漂い
+        if (!reduce) for (let i = 0; i < N; i++) {
+          const ph = phase[i]
+          pos[i * 3] = base[i * 3] + Math.sin(t * spd[i] + ph) * amp[i]
+          pos[i * 3 + 1] = base[i * 3 + 1] + Math.cos(t * spd[i] * 0.9 + ph) * amp[i]
+          pos[i * 3 + 2] = base[i * 3 + 2] + Math.sin(t * spd[i] * 0.6 + ph) * amp[i] * 0.6
+        }
+        nGeo.attributes.position.needsUpdate = true
+        // エッジをノードに追従
+        for (let e = 0; e < E; e++) {
+          const [a, b] = pairs[e]
+          lPos[e * 6] = pos[a * 3]; lPos[e * 6 + 1] = pos[a * 3 + 1]; lPos[e * 6 + 2] = pos[a * 3 + 2]
+          lPos[e * 6 + 3] = pos[b * 3]; lPos[e * 6 + 4] = pos[b * 3 + 1]; lPos[e * 6 + 5] = pos[b * 3 + 2]
+        }
+        lGeo.attributes.position.needsUpdate = true
+        lMat.opacity = (mobile ? 0.14 : 0.18) + Math.sin(t * 0.6) * 0.04
+        // 金パルスがエッジ上を流れる
+        for (let i = 0; i < P; i++) {
+          pT[i] += pSpd[i] * dt
+          if (pT[i] >= 1) { pT[i] = 0; pEdge[i] = (Math.random() * E) | 0; pSpd[i] = 0.15 + Math.random() * 0.25 }
+          const [a, b] = pairs[pEdge[i]] || [0, 0]; const u = pT[i]
+          pPos[i * 3] = pos[a * 3] + (pos[b * 3] - pos[a * 3]) * u
+          pPos[i * 3 + 1] = pos[a * 3 + 1] + (pos[b * 3 + 1] - pos[a * 3 + 1]) * u
+          pPos[i * 3 + 2] = pos[a * 3 + 2] + (pos[b * 3 + 2] - pos[a * 3 + 2]) * u
+        }
+        pGeo.attributes.position.needsUpdate = true
+        pMat.opacity = 0.7 + Math.sin(t * 2.2) * 0.25
+        renderer.render(scene, camera)
       }
       frame()
-      dispose = () => { cancelAnimationFrame(raf); removeEventListener('scroll', onScroll); removeEventListener('resize', onResize); renderer.dispose(); env.dispose(); el.contains(renderer.domElement) && el.removeChild(renderer.domElement) }
+      dispose = () => {
+        cancelled = true; running = false; cancelAnimationFrame(raf)
+        io.disconnect(); removeEventListener('scroll', onScroll); removeEventListener('resize', onResize)
+        nGeo.dispose(); lGeo.dispose(); pGeo.dispose(); nMat.dispose(); lMat.dispose(); pMat.dispose()
+        dot.dispose(); goldTex.dispose(); renderer.dispose()
+        if (renderer.domElement.parentNode === el) el.removeChild(renderer.domElement)
+      }
     }).catch(() => {})
-    return () => { cancelled = true; dispose() }
+    return () => dispose()
   }, [mountRef])
 }
 
 function useMotion() {
   useEffect(() => {
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { const el = e.target as HTMLElement; el.classList.add('in'); el.querySelectorAll<HTMLElement>('[data-st]').forEach((c, i) => { c.style.transitionDelay = `${i * 70}ms`; c.classList.add('in') }); if (el.classList.contains('plp-steps')) el.classList.add('seq'); io.unobserve(el) } }), { threshold: 0.16 })
-    document.querySelectorAll('.plp-io').forEach(el => io.observe(el)); return () => io.disconnect()
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) {
+        const el = e.target as HTMLElement; el.classList.add('in')
+        el.querySelectorAll<HTMLElement>('[data-st]').forEach((c, i) => { c.style.transitionDelay = `${i * 80}ms`; c.classList.add('in') })
+        io.unobserve(el)
+      }
+    }), { threshold: 0.18 })
+    document.querySelectorAll('.plp-io').forEach(s => io.observe(s))
+    return () => io.disconnect()
   }, [])
 }
-function useCountUp(ref: React.RefObject<HTMLElement | null>, target: number, prefix = '') {
+
+function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, opts: { prefix?: string; dur?: number } = {}) {
   useEffect(() => {
     const el = ref.current; if (!el) return
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = prefix + target.toLocaleString(); return }
-    const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { const st = performance.now(); const f = (n: number) => { const p = Math.min(1, (n - st) / 900); el.textContent = prefix + Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString(); if (p < 1) requestAnimationFrame(f) }; requestAnimationFrame(f); io.disconnect() } }, { threshold: 0.6 }); io.observe(el); return () => io.disconnect()
-  }, [ref, target, prefix])
+    const dur = opts.dur ?? 1600; let started = false
+    const run = () => {
+      const t0 = performance.now()
+      const step = (now: number) => {
+        const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3)
+        el.textContent = (opts.prefix ?? '') + Math.round(to * e).toLocaleString('ja-JP')
+        if (p < 1) requestAnimationFrame(step)
+      }
+      requestAnimationFrame(step)
+    }
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !started) { started = true; run(); io.disconnect() } }), { threshold: 0.5 })
+    io.observe(el); return () => io.disconnect()
+  }, [ref, to, opts.prefix, opts.dur])
 }
-function useSticky() { const [on, setOn] = useState(false); useEffect(() => { const h = () => setOn(scrollY > 40); addEventListener('scroll', h, { passive: true }); h(); return () => removeEventListener('scroll', h) }, []); return on }
-
-const Logo = () => (<svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#5646e6" strokeWidth="3.4" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#5646e6" strokeWidth="3.4" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#17161f" strokeWidth="3.4" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#5646e6" /></svg>)
 
 export default function PartnersLP() {
-  const sceneRef = useRef<HTMLDivElement | null>(null)
-  const yenRef = useRef<HTMLSpanElement | null>(null)
-  useScene(sceneRef); useMotion(); useCountUp(yenRef, 30000, '¥')
-  const sticky = useSticky()
-  const [name, setName] = useState(''); const [org, setOrg] = useState(''); const [expertise, setExpertise] = useState('')
-  const [email, setEmail] = useState(''); const [phone, setPhone] = useState(''); const [message, setMessage] = useState('')
-  const [consent, setConsent] = useState(false); const [busy, setBusy] = useState(false); const [done, setDone] = useState(false); const [err, setErr] = useState('')
-  async function submit(e: React.FormEvent) {
-    e.preventDefault(); setErr('')
-    if (!name.trim()) { setErr('お名前を入力してください'); return }
-    if (!email.trim() && !phone.trim()) { setErr('メールか電話のいずれかをご記入ください'); return }
-    if (!consent) { setErr('同意の確認をお願いします'); return }
-    setBusy(true)
-    try { const res = await fetch('/api/partner-apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, org, expertise, email, phone, message, consent }) }); const d = await res.json().catch(() => ({})); if (!res.ok) { setErr(d.error ?? '送信に失敗しました。時間をおいて再度お試しください。'); return } setDone(true) } catch { setErr('送信に失敗しました。時間をおいて再度お試しください。') } finally { setBusy(false) }
-  }
+  const sceneRef = useRef<HTMLDivElement>(null)
+  const yenRef = useRef<HTMLSpanElement>(null)
+  const sixRef = useRef<HTMLSpanElement>(null)
+  const [sticky, setSticky] = useState(false)
+  useNetwork(sceneRef)
+  useMotion()
+  useCountUp(yenRef, 30000, { prefix: '¥' })
+  useCountUp(sixRef, DOMAINS.length, { dur: 1100 })
+
+  useEffect(() => {
+    const onScroll = () => setSticky(scrollY > 40)
+    addEventListener('scroll', onScroll, { passive: true }); onScroll()
+    return () => removeEventListener('scroll', onScroll)
+  }, [])
+
+  const [name, setName] = useState(''), [org, setOrg] = useState(''), [expertise, setExpertise] = useState('')
+  const [email, setEmail] = useState(''), [phone, setPhone] = useState(''), [message, setMessage] = useState('')
+  const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(''), [done, setDone] = useState(false)
   const scrollForm = () => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' })
 
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setErr('')
+    if (!name.trim()) return setErr('お名前をご入力ください。')
+    if (!email.trim() && !phone.trim()) return setErr('メールまたは電話番号のいずれかをご入力ください。')
+    if (!consent) return setErr('ご案内の同意にチェックをお願いします。')
+    setBusy(true)
+    try {
+      const r = await fetch('/api/partner-apply', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, org, expertise, email, phone, message, consent }),
+      })
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '送信に失敗しました。') }
+      setDone(true)
+    } catch (e2) { setErr(e2 instanceof Error ? e2.message : '送信に失敗しました。') } finally { setBusy(false) }
+  }
+
   return (
-    <div className="plp">
+    <main className="plp">
       <style>{CSS}</style>
-      <div className="plp-bg" aria-hidden />
+      <div className="plp-field" aria-hidden />
       <div ref={sceneRef} className="plp-scene" aria-hidden />
 
       <header className={`plp-hd${sticky ? ' on' : ''}`}>
-        <a href="#top" className="plp-hd-logo"><Logo /><b>MB <span>Partners</span></b></a>
+        <a className="plp-hd-logo" href="#top" aria-label="MB Partners">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3" y="3" width="7.5" height="7.5" rx="2.2" stroke="currentColor" strokeWidth="1.7" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="2.2" fill="var(--indigo)" /><circle cx="6.75" cy="17.25" r="3.75" stroke="currentColor" strokeWidth="1.7" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.2" fill="var(--indigo)" /></svg>
+          <b>MB<span> Partners</span></b>
+        </a>
         <button className="plp-hd-cta" onClick={scrollForm}>応募する</button>
       </header>
 
-      <main className="plp-main">
-        {/* HERO */}
-        <section className="plp-hero" id="top">
-          <div className="plp-hero-body plp-io">
-            <h1 className="plp-h1"><span className="plp-line" data-st><span className="plp-quote">「つながり」</span>という</span><span className="plp-line" data-st>資産を、<em>運用する。</em></span></h1>
-            <p className="plp-sub" data-st>ご紹介いただくだけ。<br className="plp-brk" />あとは、すべて私たちが。</p>
-            <div className="plp-cta-row" data-st>
-              <button className="plp-cta" onClick={scrollForm}>パートナーに応募する<span className="plp-arrow">→</span></button>
-              <span className="plp-cta-note">登録無料・審査あり</span>
+      <div className="plp-content" id="top">
+        {/* ── HERO：光のネットワークが主役。文字は最小限。 ── */}
+        <section className="plp-hero plp-io">
+          <span className="plp-eyebrow" data-st>MB PARTNERS</span>
+          <h1 className="plp-h1" data-st>「つながり」が、<br /><em>価値</em>になる。</h1>
+          <div className="plp-cta-row" data-st>
+            <button className="plp-cta" onClick={scrollForm}>パートナーに応募する<span className="plp-arrow">→</span></button>
+            <span className="plp-cta-note">登録無料・審査あり</span>
+          </div>
+          <div className="plp-scrollcue" data-st aria-hidden><span /></div>
+        </section>
+
+        {/* ── 数字：実データ主役＝6領域（拡大中）＋報酬設計（例） ── */}
+        <section className="plp-sec plp-io">
+          <div className="plp-wrap plp-stat">
+            <div className="plp-stat-hero" data-st>
+              <span className="plp-bignum" ref={sixRef}>0</span>
+              <div className="plp-stat-cap"><b>領域</b><i>＋ これからも増えていく</i></div>
+            </div>
+            <div className="plp-reward-row">
+              <div className="plp-rcard" data-st style={{ ['--rc' as string]: 'var(--indigo)' }}>
+                <span className="plp-rk">固定報酬</span>
+                <span className="plp-rv"><i>例：</i><b ref={yenRef}>¥0</b></span>
+                <span className="plp-rd">成約でお支払い</span>
+              </div>
+              <div className="plp-rcard" data-st style={{ ['--rc' as string]: 'var(--teal)' }}>
+                <span className="plp-rk">成果連動</span>
+                <span className="plp-rv rv-word">粗利に応じて</span>
+                <span className="plp-rd">成約の粗利から</span>
+              </div>
+              <div className="plp-rcard" data-st style={{ ['--rc' as string]: 'var(--gold)' }}>
+                <span className="plp-rk">継続報酬</span>
+                <span className="plp-rv rv-word">毎月、つづく</span>
+                <span className="plp-rd">契約がつづくかぎり</span>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* はじめかた */}
-        <section className="plp-sec">
+        {/* ── 領域：実ブランドの光の星座（拡大中） ── */}
+        <section className="plp-sec plp-io">
           <div className="plp-wrap">
-            <h2 className="plp-h2 plp-io" data-st>3ステップ。あとは、私たちが。</h2>
-            <div className="plp-steps plp-io">
-              {[
-                { n: '01', ic: 'intro', t: '紹介する', d: 'アプリからご紹介。リンクを送るだけでも。' },
-                { n: '02', ic: 'handle', t: 'Media Birthが対応', d: '商談も実務も、すべて当社が。' },
-                { n: '03', ic: 'reward', t: '成約で報酬', d: '成約が確定すると、報酬に。' },
-              ].map((s) => (
-                <div key={s.n} className="plp-card plp-step" data-st>
-                  <div className="plp-step-top"><span className="plp-ic"><Ic n={s.ic} /></span><span className="plp-step-n">{s.n}</span></div>
-                  <h3 className="plp-ct">{s.t}</h3><p className="plp-cd">{s.d}</p>
-                </div>
-              ))}
-              <span className="plp-thread" aria-hidden />
+            <div className="plp-constel" data-st>
+              <div className="plp-core"><span>MB</span></div>
+              {DOMAINS.map((d, i) => {
+                const a = (i / DOMAINS.length) * Math.PI * 2 - Math.PI / 2
+                const rx = 40, ry = 40
+                const x = 50 + Math.cos(a) * rx, y = 50 + Math.sin(a) * ry
+                return (
+                  <div key={d.n} className="plp-orb" style={{ left: `${x}%`, top: `${y}%`, ['--oc' as string]: d.c, animationDelay: `${i * 0.4}s` }}>
+                    <span className="plp-orb-dot" />
+                    <span className="plp-orb-name">{d.n}</span>
+                    <span className="plp-orb-kind">{d.k}</span>
+                  </div>
+                )
+              })}
+              <div className="plp-orb plp-orb-ghost" style={{ left: '50%', top: '96%' }}><span className="plp-orb-dot" /><span className="plp-orb-name">＋</span></div>
+              <svg className="plp-constel-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+                {DOMAINS.map((d, i) => {
+                  const a = (i / DOMAINS.length) * Math.PI * 2 - Math.PI / 2
+                  return <line key={i} x1="50" y1="50" x2={50 + Math.cos(a) * 40} y2={50 + Math.sin(a) * 40} stroke={d.c} strokeWidth="0.3" strokeOpacity="0.4" />
+                })}
+              </svg>
             </div>
           </div>
         </section>
 
-        {/* 報酬 */}
-        <section className="plp-sec">
-          <div className="plp-wrap">
-            <h2 className="plp-h2 plp-io" data-st>報酬は、3つのかたち。</h2>
-            <div className="plp-rewards plp-io">
-              <div className="plp-card plp-reward" data-st><span className="plp-ic"><Ic n="fixed" /></span><div className="plp-rk">固定報酬</div><div className="plp-rv"><span className="plp-vl">例：</span><span ref={yenRef} className="tnum">¥30,000</span></div><div className="plp-cd">成約時にお支払い。</div></div>
-              <div className="plp-card plp-reward" data-st><span className="plp-ic"><Ic n="perf" /></span><div className="plp-rk">成果連動</div><div className="plp-rv">粗利に応じて</div><div className="plp-cd">粗利に連動するメニューも。</div></div>
-              <div className="plp-card plp-reward" data-st><span className="plp-ic"><Ic n="recur" /></span><div className="plp-rk">継続報酬</div><div className="plp-rv">毎月つづく</div><div className="plp-cd">続くあいだ、継続的に。</div></div>
-            </div>
-            <p className="plp-fine plp-io" data-st>※ 金額・条件はメニューにより異なります。一例で、収入を保証するものではありません。</p>
+        {/* ── 流れ：3ビート（ほぼ文字なし・光で表現） ── */}
+        <section className="plp-sec plp-io">
+          <div className="plp-wrap plp-flow" data-st>
+            <div className="plp-beat"><span className="plp-beat-glyph b1" /><span className="plp-beat-t">つなぐ</span></div>
+            <span className="plp-beat-link" aria-hidden />
+            <div className="plp-beat"><span className="plp-beat-glyph b2" /><span className="plp-beat-t">私たちが対応</span></div>
+            <span className="plp-beat-link" aria-hidden />
+            <div className="plp-beat"><span className="plp-beat-glyph b3" /><span className="plp-beat-t">報酬</span></div>
           </div>
         </section>
 
-        {/* 領域 */}
-        <section className="plp-sec">
-          <div className="plp-wrap">
-            <h2 className="plp-h2 plp-io" data-st>4つの領域。</h2>
-            <div className="plp-brands plp-io">
-              {[{ ic: 'home', b: 'MOOM', d: '不動産' }, { ic: 'people', b: 'MatchHub', d: '人材' }, { ic: 'create', b: 'RESONATION', d: '制作' }, { ic: 'dx', b: 'PRAGMATION', d: 'DX支援' }].map((x) => (
-                <div key={x.b} className="plp-card plp-brand" data-st><span className="plp-ic"><Ic n={x.ic} /></span><span className="plp-bb">{x.b}</span><span className="plp-bd">{x.d}</span></div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* アプリ */}
-        <section className="plp-sec">
-          <div className="plp-wrap plp-exp plp-io">
-            <h2 className="plp-h2" data-st>すべて、<br/><span className="plp-accent">スマホで完結。</span></h2>
-            <ul className="plp-exp-list">
-              {[{ ic: 'intro', t: 'アプリからご紹介。' }, { ic: 'phone', t: '進捗を、いつでも確認。' }, { ic: 'reward', t: '報酬の受け取りまで。' }, { ic: 'apply', t: '登録無料・審査のうえご案内。' }].map((t, i) => <li key={i} className="plp-card" data-st><span className="plp-ic"><Ic n={t.ic} /></span><span>{t.t}</span></li>)}
-            </ul>
-          </div>
-        </section>
-
-        {/* 応募 */}
-        <section className="plp-sec plp-apply" id="apply">
-          <div className="plp-wrap plp-form-wrap plp-io">
+        {/* ── 応募：光が収束する一点 ── */}
+        <section id="apply" className="plp-sec plp-apply plp-io">
+          <div className="plp-wrap plp-form-wrap">
             {done ? (
-              <div className="plp-card plp-doneblock" data-st>
-                <div className="plp-check" aria-hidden><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-                <h2 className="plp-h2">応募を受け付けました。</h2><p className="plp-lead">内容を確認のうえ、担当者よりご連絡いたします。</p>
+              <div className="plp-done" data-st>
+                <div className="plp-check"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
+                <h2 className="plp-h2">受け付けました。</h2>
+                <p className="plp-lead">担当より折り返しご連絡いたします。</p>
               </div>
             ) : (
               <>
-                <div className="plp-form-head" data-st><h2 className="plp-h2">パートナーに応募する</h2><p className="plp-lead">ご入力のうえ送信してください。担当者よりご連絡いたします。</p></div>
-                <form className="plp-card plp-form" data-st onSubmit={submit}>
+                <div className="plp-form-head" data-st>
+                  <h2 className="plp-h2">はじめる。</h2>
+                </div>
+                <form className="plp-form" data-st onSubmit={submit}>
                   <label className="plp-fld"><span>お名前 <i>*</i></span><input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required /></label>
                   <div className="plp-fld-row">
                     <label className="plp-fld"><span>会社・屋号（任意）</span><input value={org} onChange={e => setOrg(e.target.value)} placeholder="〇〇会計事務所" /></label>
@@ -244,128 +363,135 @@ export default function PartnersLP() {
               </>
             )}
           </div>
+          <footer className="plp-footer">
+            <span className="plp-foot-meta">株式会社Media Birth ・ <a href="/legal/privacy">プライバシーポリシー</a></span>
+          </footer>
         </section>
-
-        <footer className="plp-footer">
-          <a href="#top" className="plp-hd-logo"><Logo /><b>MB <span>Partners</span></b></a>
-          <div className="plp-foot-meta">株式会社Media Birth ・ <a href="/legal/privacy">プライバシーポリシー</a></div>
-        </footer>
-      </main>
-    </div>
+      </div>
+    </main>
   )
 }
 
 const CSS = `
-.plp{--ink:#17161f;--ink2:#4a4a55;--mut:#8b8894;--line:rgba(23,22,31,.08);--indigo:#5646e6;--indigo2:#7c6cf0;
-  color:var(--ink);font-family:var(--font-inter),Inter,system-ui,-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;font-feature-settings:'tnum' 1;position:relative;}
+.plp{--ink:#1a1830;--ink2:#54506e;--mut:#9a95b0;--line:rgba(26,24,48,.09);
+  --indigo:#5646e6;--violet:#8b5cf6;--teal:#15917e;--gold:#f2971b;
+  color:var(--ink);font-family:var(--font-inter),Inter,system-ui,-apple-system,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;}
 .plp *{box-sizing:border-box;margin:0;}
-.tnum,.plp-rv,.plp-step-n{font-variant-numeric:tabular-nums;}
-.plp-bg{position:fixed;inset:0;z-index:0;background:radial-gradient(120% 90% at 78% 0%,#f0edfd 0%,#fafafc 46%,#f7f6fb 100%);}
+.plp-field{position:fixed;inset:0;z-index:0;background:
+  radial-gradient(58% 46% at 14% 4%,#efeaff 0%,rgba(239,234,255,0) 60%),
+  radial-gradient(52% 42% at 92% 6%,#eae4ff 0%,rgba(234,228,255,0) 58%),
+  radial-gradient(60% 55% at 78% 96%,#fff1e6 0%,rgba(255,241,230,0) 60%),
+  radial-gradient(50% 50% at 40% 60%,#f3f0ff 0%,rgba(243,240,255,0) 70%),
+  linear-gradient(180deg,#fbfaff,#f5f3ff);}
 .plp-scene{position:fixed;inset:0;z-index:1;pointer-events:none;}
-.plp-main{position:relative;z-index:2;}
-.plp-io [data-st],.plp-io[data-st]{opacity:0;transform:translateY(8px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1);}
-.plp-io.in [data-st],.plp-io.in[data-st]{opacity:1;transform:none;}
+.plp-content{position:relative;z-index:2;}
+
+.plp-io [data-st]{opacity:0;transform:translateY(14px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);}
+.plp-io.in [data-st]{opacity:1;transform:none;}
 @media (prefers-reduced-motion:reduce){.plp-io [data-st]{opacity:1!important;transform:none!important;transition:none!important;}}
 
-.plp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:16px 32px;transition:background .25s,border-color .25s;border-bottom:0.5px solid transparent;}
-.plp-hd.on{background:rgba(255,255,255,.7);backdrop-filter:blur(14px);border-bottom:0.5px solid var(--line);}
+.plp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:16px 32px;transition:background .3s,box-shadow .3s;}
+.plp-hd.on{background:rgba(251,250,255,.72);backdrop-filter:blur(16px);box-shadow:0 1px 0 var(--line);}
 .plp-hd-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);}
 .plp-hd-logo svg{height:28px;width:28px;display:block;}
 .plp-hd-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .plp-hd-logo b span{color:var(--indigo);}
-.plp-hd-cta{height:40px;padding:0 20px;border-radius:12px;background:var(--ink);color:#fff;border:none;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:transform .18s,filter .18s;}
-.plp-hd-cta:hover{transform:translateY(-2px);filter:brightness(1.12);} .plp-hd-cta:active{transform:none;}
-.plp-hd-cta:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--indigo);}
+.plp-hd-cta{height:40px;padding:0 20px;border-radius:999px;background:var(--ink);color:#fff;border:none;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:transform .18s,box-shadow .18s;}
+.plp-hd-cta:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(26,24,48,.24);} .plp-hd-cta:active{transform:none;}
 
-.plp-hero{min-height:100svh;display:flex;align-items:center;max-width:1120px;margin:0 auto;padding:128px 32px 64px;}
-.plp-hero-body{max-width:600px;}
-.plp-h1{font-size:clamp(2.7rem,4.6vw,3.5rem);font-weight:700;line-height:1.22;letter-spacing:-.035em;color:var(--ink);text-wrap:balance;}
-.plp-line{display:block;overflow:hidden;white-space:nowrap;} .plp-line{opacity:0;transform:translateY(102%);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);}
-.plp-io.in .plp-line{opacity:1;transform:none;} .plp-io.in .plp-line:nth-child(2){transition-delay:90ms;}
-.plp-quote{color:var(--indigo);}
-.plp-h1 em{font-style:normal;background:linear-gradient(100deg,#5646e6,#8a6cf5 60%,#b0a4f8);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.plp-sub{margin-top:24px;font-size:18px;line-height:1.85;letter-spacing:.01em;color:var(--ink2);font-weight:500;max-width:22em;}
-.plp-cta-row{margin-top:40px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
-.plp-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:56px;padding:0 40px;border-radius:12px;background:var(--ink);color:#fff;border:none;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:transform .18s,filter .18s,box-shadow .18s;}
-.plp-cta:hover{transform:translateY(-2px);filter:brightness(1.12);box-shadow:0 14px 34px rgba(23,22,31,.22);}
-.plp-cta:active{transform:none;filter:brightness(.94);} .plp-cta:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--indigo);}
-.plp-cta:disabled{opacity:.5;cursor:default;} .plp-cta-full{width:100%;margin-top:8px;}
+.plp-hero{min-height:100svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;max-width:1120px;margin:0 auto;padding:120px 28px 80px;}
+.plp-eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.42em;color:var(--indigo);opacity:.8;margin-bottom:26px;padding-left:.42em;}
+.plp-h1{font-size:clamp(2.9rem,7vw,5.2rem);font-weight:760;line-height:1.12;letter-spacing:-.045em;color:var(--ink);text-wrap:balance;}
+.plp-h1 em{font-style:normal;background:linear-gradient(105deg,#5646e6,#8b5cf6 46%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.plp-cta-row{margin-top:44px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;}
+.plp-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:58px;padding:0 42px;border-radius:999px;background:linear-gradient(100deg,#5646e6,#7c4ff0);color:#fff;border:none;font:inherit;font-size:15px;font-weight:650;cursor:pointer;box-shadow:0 12px 34px rgba(86,70,230,.34);transition:transform .2s,box-shadow .2s,filter .2s;}
+.plp-cta:hover{transform:translateY(-3px);box-shadow:0 20px 46px rgba(86,70,230,.44);filter:brightness(1.06);}
+.plp-cta:active{transform:none;} .plp-cta:disabled{opacity:.55;cursor:default;} .plp-cta-full{width:100%;height:60px;margin-top:6px;}
 .plp-arrow{transition:transform .22s;} .plp-cta:hover .plp-arrow{transform:translateX(5px);}
 .plp-cta-note{font-size:.78rem;color:var(--mut);}
+.plp-scrollcue{margin-top:64px;width:24px;height:38px;border-radius:14px;border:1.5px solid rgba(86,70,230,.35);position:relative;}
+.plp-scrollcue span{position:absolute;top:8px;left:50%;width:4px;height:8px;border-radius:2px;background:var(--indigo);transform:translateX(-50%);animation:cue 1.8s ease-in-out infinite;}
+@keyframes cue{0%{opacity:0;transform:translate(-50%,0)}30%{opacity:1}70%{opacity:1}100%{opacity:0;transform:translate(-50%,12px)}}
 
-.plp-sec{padding:124px 0;}
-.plp-wrap{width:100%;max-width:1120px;margin:0 auto;padding:0 32px;}
-.plp-h2{font-size:clamp(1.75rem,3vw,2.05rem);font-weight:700;line-height:1.3;letter-spacing:-.03em;color:var(--ink);margin-bottom:52px;text-wrap:balance;}
-.plp-accent{background:linear-gradient(100deg,#5646e6,#8a6cf5);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.plp-lead{margin-top:16px;font-size:15px;line-height:1.8;color:var(--ink2);}
-.plp-fine{margin-top:26px;font-size:.74rem;color:var(--mut);line-height:1.75;}
+.plp-sec{padding:clamp(90px,13vh,150px) 0;position:relative;}
+.plp-wrap{width:100%;max-width:1120px;margin:0 auto;padding:0 28px;}
 
-/* frosted glass cards（3Dを透かす） */
-.plp-card{background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:0.5px solid rgba(255,255,255,.8);border-radius:20px;box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 40px rgba(40,30,80,.06);transition:transform .18s,box-shadow .18s;}
-.plp-card:hover{transform:translateY(-4px);box-shadow:0 22px 54px rgba(86,70,230,.14);}
-.plp-ic{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:14px;background:linear-gradient(150deg,rgba(239,237,253,.9),rgba(247,245,255,.9));color:var(--indigo);border:0.5px solid rgba(124,108,240,.24);}
+/* 数字（実データ主役） */
+.plp-stat{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.plp-stat-hero{display:flex;align-items:center;gap:26px;flex-wrap:wrap;justify-content:center;}
+.plp-bignum{font-size:clamp(6rem,20vw,15rem);font-weight:820;line-height:.86;letter-spacing:-.06em;background:linear-gradient(155deg,#5646e6,#8b5cf6 55%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums;}
+.plp-stat-cap{text-align:left;}
+.plp-stat-cap b{display:block;font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;letter-spacing:-.03em;color:var(--ink);}
+.plp-stat-cap i{display:block;margin-top:8px;font-style:normal;font-size:.9rem;font-weight:600;color:var(--indigo);letter-spacing:.02em;}
+.plp-reward-row{margin-top:clamp(48px,7vw,84px);display:grid;grid-template-columns:repeat(3,1fr);gap:18px;width:100%;}
+.plp-rcard{position:relative;padding:30px 26px;border-radius:22px;background:rgba(255,255,255,.66);backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);border:0.5px solid rgba(255,255,255,.85);box-shadow:0 12px 40px rgba(40,30,80,.08);text-align:left;overflow:hidden;transition:transform .2s,box-shadow .2s;}
+.plp-rcard::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--rc);opacity:.9;}
+.plp-rcard::after{content:'';position:absolute;top:-40%;right:-20%;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,var(--rc),transparent 68%);opacity:.14;pointer-events:none;}
+.plp-rcard:hover{transform:translateY(-5px);box-shadow:0 26px 60px rgba(86,70,230,.16);}
+.plp-rk{font-size:.8rem;font-weight:700;letter-spacing:.06em;color:var(--mut);}
+.plp-rv{margin-top:14px;display:flex;align-items:baseline;gap:2px;font-size:clamp(1.9rem,4.2vw,2.5rem);font-weight:820;letter-spacing:-.04em;color:var(--ink);font-variant-numeric:tabular-nums;}
+.plp-rv i{font-size:.82rem;font-weight:700;font-style:normal;color:var(--mut);letter-spacing:0;}
+.plp-rv.rv-word{font-size:clamp(1.5rem,3.4vw,2rem);letter-spacing:-.03em;}
+.plp-rd{display:block;margin-top:12px;font-size:.82rem;color:var(--ink2);}
 
-.plp-steps{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
-.plp-step{padding:32px 28px;}
-.plp-step-top{display:flex;align-items:center;justify-content:space-between;}
-.plp-step .plp-ic{color:#cfc8ee;transition:color .4s;}
-.plp-steps.seq .plp-step:nth-child(1) .plp-ic{transition-delay:.1s;color:var(--indigo);}
-.plp-steps.seq .plp-step:nth-child(2) .plp-ic{transition-delay:.5s;color:var(--indigo);}
-.plp-steps.seq .plp-step:nth-child(3) .plp-ic{transition-delay:.9s;color:var(--indigo);}
-.plp-step-n{font-size:1rem;font-weight:800;letter-spacing:.06em;color:#c9c2e6;}
-.plp-ct{margin-top:20px;font-size:1.18rem;font-weight:700;color:var(--ink);letter-spacing:-.02em;}
-.plp-cd{margin-top:11px;font-size:15px;line-height:1.75;color:var(--ink2);}
-.plp-thread{position:absolute;top:57px;left:16%;width:68%;height:1px;background:var(--indigo2);transform:scaleX(0);transform-origin:left;opacity:.45;transition:transform 1.2s cubic-bezier(.4,0,.2,1) .1s;}
-.plp-steps.seq .plp-thread{transform:scaleX(1);}
+/* 領域：光の星座 */
+.plp-constel{position:relative;width:100%;max-width:640px;aspect-ratio:1/1;margin:0 auto;}
+.plp-constel::before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:118%;height:118%;border-radius:50%;background:radial-gradient(circle,rgba(251,250,255,.9) 0%,rgba(248,246,255,.72) 40%,rgba(248,246,255,0) 70%);z-index:0;pointer-events:none;}
+.plp-constel-lines{position:absolute;inset:0;width:100%;height:100%;z-index:1;}
+.plp-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:96px;height:96px;border-radius:50%;background:linear-gradient(150deg,#5646e6,#7c4ff0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.4rem;letter-spacing:-.02em;box-shadow:0 0 0 10px rgba(86,70,230,.08),0 18px 50px rgba(86,70,230,.4);z-index:2;}
+.plp-orb{position:absolute;transform:translate(-50%,-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px;animation:float 6s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,calc(-50% - 8px))}}
+.plp-orb-dot{width:24px;height:24px;border-radius:50%;background:var(--oc);border:2.5px solid rgba(255,255,255,.92);box-shadow:0 0 0 7px color-mix(in srgb,var(--oc) 18%,transparent),0 0 30px 4px color-mix(in srgb,var(--oc) 62%,transparent),0 6px 16px rgba(0,0,0,.1);}
+.plp-orb-name{font-size:.92rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);white-space:nowrap;}
+.plp-orb-kind{font-size:.66rem;font-weight:600;color:var(--mut);letter-spacing:.04em;}
+.plp-orb-ghost{opacity:.5;} .plp-orb-ghost .plp-orb-dot{background:transparent;border:1.5px dashed var(--mut);box-shadow:none;width:22px;height:22px;} .plp-orb-ghost .plp-orb-name{color:var(--mut);font-size:1rem;}
 
-.plp-rewards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
-.plp-reward{padding:34px 30px;}
-.plp-reward .plp-ic{margin-bottom:20px;}
-.plp-rk{font-size:.82rem;font-weight:700;letter-spacing:.05em;color:var(--mut);}
-.plp-rv{margin-top:10px;font-size:1.9rem;font-weight:800;letter-spacing:-.035em;color:var(--ink);display:flex;align-items:baseline;gap:2px;}
-.plp-vl{font-size:.9rem;font-weight:700;color:var(--mut);letter-spacing:0;}
+/* 流れ：3ビート */
+.plp-flow{display:flex;align-items:center;justify-content:center;gap:clamp(14px,3vw,44px);flex-wrap:wrap;}
+.plp-beat{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.plp-beat-glyph{width:clamp(80px,12vw,120px);height:clamp(80px,12vw,120px);border-radius:50%;position:relative;}
+.plp-beat-glyph.b1{background:radial-gradient(circle at 40% 35%,#8b5cf6,#5646e6);box-shadow:0 0 0 8px rgba(86,70,230,.08),0 16px 44px rgba(86,70,230,.34);}
+.plp-beat-glyph.b2{background:radial-gradient(circle at 40% 35%,#3ec6a0,#15917e);box-shadow:0 0 0 8px rgba(21,145,126,.08),0 16px 44px rgba(21,145,126,.32);}
+.plp-beat-glyph.b3{background:radial-gradient(circle at 40% 35%,#ffc24d,#f2971b);box-shadow:0 0 0 8px rgba(242,151,27,.1),0 16px 44px rgba(242,151,27,.34);}
+.plp-beat-glyph::after{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.5);animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.14);opacity:0}}
+.plp-beat-t{font-size:.95rem;font-weight:700;color:var(--ink);letter-spacing:-.01em;}
+.plp-beat-link{width:clamp(24px,5vw,72px);height:2px;background:linear-gradient(90deg,rgba(86,70,230,.5),rgba(242,151,27,.5));border-radius:2px;}
 
-.plp-brands{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
-.plp-brand{display:flex;flex-direction:column;gap:9px;padding:28px 24px;}
-.plp-brand .plp-ic{margin-bottom:6px;transition:transform .18s,color .4s;} .plp-brand:hover .plp-ic{transform:scale(1.03);}
-.plp-bb{font-size:1.18rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);} .plp-bd{font-size:.8rem;color:var(--mut);}
-
-.plp-exp{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
-.plp-exp .plp-h2{margin-bottom:0;}
-.plp-exp-list{list-style:none;display:flex;flex-direction:column;gap:14px;}
-.plp-exp-list li{display:flex;gap:16px;align-items:center;font-size:15px;font-weight:500;color:var(--ink);padding:18px 20px;}
-.plp-exp-list li:hover{transform:translateX(4px);}
-.plp-exp-list li .plp-ic{width:44px;height:44px;flex-shrink:0;}
-
-.plp-apply{padding-bottom:120px;}
-.plp-form-wrap{max-width:720px;}
-.plp-form-head{text-align:center;margin-bottom:40px;}
-.plp-form{display:flex;flex-direction:column;gap:16px;padding:clamp(28px,4vw,44px);}
-.plp-form:hover{transform:none;}
-.plp-fld-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+/* 応募 */
+.plp-apply{padding-bottom:40px;}
+.plp-h2{font-size:clamp(1.9rem,4.4vw,2.6rem);font-weight:800;letter-spacing:-.035em;color:var(--ink);text-align:center;}
+.plp-form-head{margin-bottom:38px;}
+.plp-lead{margin-top:12px;font-size:15px;line-height:1.8;color:var(--ink2);text-align:center;}
+.plp-form-wrap{max-width:660px;}
+.plp-form{display:flex;flex-direction:column;gap:15px;padding:clamp(26px,4vw,42px);border-radius:26px;background:rgba(255,255,255,.72);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);border:0.5px solid rgba(255,255,255,.85);box-shadow:0 24px 70px rgba(40,30,80,.12);}
+.plp-fld-row{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
 .plp-fld{display:flex;flex-direction:column;gap:8px;}
 .plp-fld>span{font-size:.74rem;font-weight:600;color:var(--ink2);} .plp-fld>span i{color:var(--indigo);font-style:normal;}
-.plp-fld input{width:100%;min-height:50px;background:rgba(255,255,255,.7);border:0.5px solid rgba(23,22,31,.14);border-radius:12px;padding:0 15px;color:var(--ink);font:inherit;font-size:.95rem;transition:border-color .18s,box-shadow .18s,background .18s;}
+.plp-fld input{width:100%;min-height:50px;background:rgba(255,255,255,.8);border:0.5px solid rgba(26,24,48,.14);border-radius:13px;padding:0 15px;color:var(--ink);font:inherit;font-size:.95rem;transition:border-color .18s,box-shadow .18s,background .18s;}
 .plp-fld input::placeholder{color:#a6a3b3;}
-.plp-fld input:focus{outline:none;border-color:var(--indigo);background:#fff;box-shadow:0 0 0 4px rgba(124,108,240,.15);}
-.plp-consent{display:flex;gap:11px;align-items:flex-start;margin-top:6px;cursor:pointer;}
+.plp-fld input:focus{outline:none;border-color:var(--indigo);background:#fff;box-shadow:0 0 0 4px rgba(124,108,240,.16);}
+.plp-consent{display:flex;gap:11px;align-items:flex-start;margin-top:4px;cursor:pointer;}
 .plp-consent input{margin-top:3px;width:16px;height:16px;accent-color:var(--indigo);flex-shrink:0;}
 .plp-consent span{font-size:.76rem;line-height:1.7;color:var(--ink2);}
 .plp-err{font-size:.8rem;color:#d64545;}
-.plp-doneblock{text-align:center;padding:44px 30px;}
-.plp-check{width:60px;height:60px;border-radius:50%;background:var(--indigo);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:0 12px 34px rgba(86,70,230,.36);}
-.plp-doneblock .plp-lead{margin:14px auto 0;}
-
-.plp-footer{border-top:0.5px solid var(--line);padding:38px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;max-width:1120px;margin:0 auto;}
-.plp-foot-meta{font-size:.72rem;color:var(--mut);} .plp-foot-meta a{color:var(--indigo);text-decoration:none;position:relative;}
-.plp-foot-meta a::after{content:'';position:absolute;left:0;bottom:-2px;width:100%;height:1px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .22s;}
-.plp-foot-meta a:hover::after{transform:scaleX(1);}
+.plp-done{text-align:center;padding:48px 24px;}
+.plp-check{width:64px;height:64px;border-radius:50%;background:linear-gradient(150deg,#5646e6,#7c4ff0);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:0 14px 40px rgba(86,70,230,.4);}
+.plp-footer{border-top:0.5px solid var(--line);margin-top:70px;padding:34px 28px;text-align:center;max-width:1120px;margin-left:auto;margin-right:auto;}
+.plp-foot-meta{font-size:.72rem;color:var(--mut);} .plp-foot-meta a{color:var(--indigo);text-decoration:none;}
+.plp-foot-meta a:hover{text-decoration:underline;}
 
 @media (max-width:820px){
-  .plp-hd{padding:12px 20px;}
-  .plp-steps,.plp-rewards,.plp-brands,.plp-exp,.plp-fld-row{grid-template-columns:1fr;}
-  .plp-brands{grid-template-columns:1fr 1fr;}
-  .plp-exp{gap:28px;}
-  .plp-hero{padding:112px 22px 48px;} .plp-hero-body{max-width:100%;} .plp-h1{font-size:clamp(2rem,8.6vw,2.35rem);line-height:1.28;} .plp-sub{font-size:16px;margin-top:20px;max-width:100%;} .plp-h2{font-size:clamp(1.4rem,6vw,1.65rem);margin-bottom:34px;}
-  .plp-sec{padding:88px 0;} .plp-thread{display:none;} .plp-cta{width:100%;} .plp-cta-row{margin-top:32px;gap:14px;}
+  .plp-hd{padding:12px 18px;}
+  .plp-hero{padding:110px 22px 60px;}
+  .plp-h1{font-size:clamp(1.85rem,8vw,2.45rem);line-height:1.18;letter-spacing:-.04em;}
+  .plp-eyebrow{letter-spacing:.34em;margin-bottom:20px;}
+  .plp-bignum{font-size:clamp(5.5rem,32vw,8rem);}
+  .plp-reward-row{grid-template-columns:1fr;gap:14px;}
+  .plp-stat-hero{gap:14px;} .plp-stat-cap{text-align:center;}
+  .plp-constel{max-width:340px;}
+  .plp-core{width:74px;height:74px;font-size:1.1rem;}
+  .plp-orb-name{font-size:.8rem;} .plp-orb-kind{font-size:.6rem;}
+  .plp-flow{gap:8px;} .plp-beat-link{width:20px;}
+  .plp-fld-row{grid-template-columns:1fr;}
 }
 `
