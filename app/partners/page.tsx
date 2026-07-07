@@ -19,13 +19,13 @@ const STATS: { key: string; to: number; prefix?: string; suffix?: string; label:
 const STEP_GLYPH: Record<string, React.ReactNode> = {
   connect: <svg viewBox="0 0 56 56" fill="none"><circle cx="16" cy="28" r="6.5" className="pg-node" /><circle cx="40" cy="28" r="6.5" className="pg-node" /><line x1="22.5" y1="28" x2="33.5" y2="28" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" opacity=".5" /><circle cx="22.5" cy="28" r="3" fill="currentColor" className="pg-travel" /></svg>,
   talk: <svg viewBox="0 0 56 56" fill="none"><path d="M13 19h26a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5H24l-8 6v-6a5 5 0 0 1-5-5v-7a5 5 0 0 1 5-5z" fill="currentColor" opacity=".16" stroke="currentColor" strokeWidth="2.2" className="pg-bubble" /><circle cx="21" cy="27.5" r="1.9" fill="currentColor" /><circle cx="27" cy="27.5" r="1.9" fill="currentColor" className="pg-blink" /><circle cx="33" cy="27.5" r="1.9" fill="currentColor" /></svg>,
-  bring: <svg viewBox="0 0 56 56" fill="none"><path d="M28 11l4.3 8.7 9.6 1.4-6.9 6.8 1.6 9.5L28 43l-8.6 4.6 1.6-9.5-6.9-6.8 9.6-1.4z" fill="currentColor" opacity=".2" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" className="pg-star" /></svg>,
+  bring: <svg viewBox="0 0 56 56" fill="none"><rect x="15.5" y="28" width="25" height="15" rx="2.6" fill="currentColor" opacity=".16" stroke="currentColor" strokeWidth="2.4" /><line x1="28" y1="30" x2="28" y2="43" stroke="currentColor" strokeWidth="2.4" /><g className="pg-lid"><rect x="12.5" y="21.5" width="31" height="8.5" rx="2.6" fill="currentColor" opacity=".26" stroke="currentColor" strokeWidth="2.4" /><path d="M28 21.5c0-5.5-7-6.6-7-2.4 0 3 4.2 3.4 7 2.4zM28 21.5c0-5.5 7-6.6 7-2.4 0 3-4.2 3.4-7 2.4z" fill="currentColor" opacity=".32" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></g><path d="M45 13.5l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="currentColor" className="pg-spark" /></svg>,
 }
 // 報酬用フラットイラスト(固定/成果/継続) — スマホ図と同じ分かりやすさ
 const REWARD_ILLUS: Record<string, React.ReactNode> = {
-  fixed: <svg viewBox="0 0 88 88" fill="none"><ellipse cx="44" cy="52" rx="24" ry="8" fill="currentColor" opacity=".14" /><circle cx="44" cy="40" r="21" fill="currentColor" opacity=".16" /><circle cx="44" cy="40" r="21" stroke="currentColor" strokeWidth="3" /><path d="M44 31v18M37 37l7 5 7-5M38 43h12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
-  perf: <svg viewBox="0 0 88 88" fill="none"><rect x="20" y="50" width="12" height="18" rx="3" fill="currentColor" opacity=".28" /><rect x="38" y="40" width="12" height="28" rx="3" fill="currentColor" opacity=".5" /><rect x="56" y="28" width="12" height="40" rx="3" fill="currentColor" /><path d="M22 40l16-10 12 6 18-16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><path d="M62 20h8v8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
-  recur: <svg viewBox="0 0 88 88" fill="none"><circle cx="44" cy="44" r="20" fill="currentColor" opacity=".14" /><path d="M60 38a18 18 0 1 0 1.5 11" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" /><path d="M61 26v13H48" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="44" cy="44" r="4.5" fill="currentColor" /></svg>,
+  fixed: <svg viewBox="0 0 88 88" fill="none"><ellipse cx="44" cy="55" rx="22" ry="6" fill="currentColor" opacity=".12" /><g className="ri-coin"><circle cx="44" cy="40" r="21" fill="currentColor" opacity=".16" /><circle cx="44" cy="40" r="21" stroke="currentColor" strokeWidth="3" /><path d="M44 31v18M37 37l7 5 7-5M38 43h12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></g></svg>,
+  perf: <svg viewBox="0 0 88 88" fill="none"><rect className="ri-bar rb1" x="20" y="50" width="12" height="18" rx="3" fill="currentColor" opacity=".3" /><rect className="ri-bar rb2" x="38" y="40" width="12" height="28" rx="3" fill="currentColor" opacity=".52" /><rect className="ri-bar rb3" x="56" y="28" width="12" height="40" rx="3" fill="currentColor" /><path d="M22 40l16-10 12 6 18-16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><path d="M62 20h8v8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  recur: <svg viewBox="0 0 88 88" fill="none"><circle cx="44" cy="44" r="20" fill="currentColor" opacity=".14" /><g className="ri-cyc"><path d="M60 38a18 18 0 1 0 1.5 11" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" /><path d="M61 26v13H48" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /></g><circle cx="44" cy="44" r="4.5" fill="currentColor" /></svg>,
 }
 
 // ── 生きた光のネットワーク(動的import・全面固定層・pointer-events:none) ──
@@ -201,6 +201,10 @@ function useCountUp(ref: React.RefObject<HTMLElement | null>, to: number, prefix
   }, [ref, to, prefix, suffix, dur])
 }
 
+function Kicker({ label }: { label: string }) {
+  return <div className="plp-kicker" data-st><span className="plp-kicker-dot" aria-hidden />{label}</div>
+}
+
 function Stat({ s }: { s: typeof STATS[number] }) {
   const ref = useRef<HTMLSpanElement>(null)
   useCountUp(ref, s.to, s.prefix ?? '', s.suffix ?? '')
@@ -276,14 +280,18 @@ export default function PartnersLP() {
 
         {/* ── 数字(実績)。field=6実値／partner・fee は仮値 ── */}
         <section className="plp-sec plp-calm plp-io">
-          <div className="plp-wrap plp-stats">
-            {STATS.map(s => <Stat key={s.key} s={s} />)}
+          <div className="plp-wrap">
+            <Kicker label="numbers" />
+            <div className="plp-stats">
+              {STATS.map(s => <Stat key={s.key} s={s} />)}
+            </div>
           </div>
         </section>
 
         {/* ── 流れ：つなげる・はなす・もたらす(動くオブジェクト) ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
+            <Kicker label="flow" />
             <div className="plp-steps">
               <span className="plp-thread" aria-hidden />
               {STEPS.map(s => (
@@ -297,10 +305,10 @@ export default function PartnersLP() {
           </div>
         </section>
 
-        {/* ── 報酬：固定・成果・継続(フラットイラスト) ── */}
+        {/* ── fee type：固定・成果・継続(動くフラットイラスト) ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <h2 className="plp-h2" data-st>報酬。</h2>
+            <Kicker label="fee type" />
             <div className="plp-rewards">
               {REWARDS.map(r => (
                 <div key={r.key} className="plp-rw" data-st style={{ ['--rc' as string]: r.c }}>
@@ -315,7 +323,9 @@ export default function PartnersLP() {
 
         {/* ── すべて、スマホで完結 ── */}
         <section className="plp-sec plp-calm plp-io">
-          <div className="plp-wrap plp-complete">
+          <div className="plp-wrap">
+            <Kicker label="mobile" />
+            <div className="plp-complete">
             <div className="plp-phone" data-st aria-hidden>
               <div className="plp-phone-body">
                 <span className="plp-phone-dot d1" /><span className="plp-phone-dot d2" /><span className="plp-phone-dot d3" />
@@ -327,12 +337,14 @@ export default function PartnersLP() {
               <h2 className="plp-h2" data-st>すべて、スマホで。</h2>
               <p className="plp-lead" data-st>紹介も、進捗も、報酬の確認も。<br />アプリひとつで完結します。</p>
             </div>
+            </div>
           </div>
         </section>
 
         {/* ── 応募 ── */}
         <section id="apply" className="plp-sec plp-apply plp-io">
           <div className="plp-wrap plp-form-wrap">
+            <Kicker label="join" />
             {done ? (
               <div className="plp-done" data-st>
                 <div className="plp-check"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
@@ -385,11 +397,19 @@ const CSS = `
 
 .plp-io [data-st]{opacity:0;transform:translateY(14px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1);}
 .plp-io.in [data-st]{opacity:1;transform:none;}
-@media (prefers-reduced-motion:reduce){.plp-io [data-st]{opacity:1!important;transform:none!important;transition:none!important;}}
+@media (prefers-reduced-motion:reduce){.plp-io [data-st]{opacity:1!important;transform:none!important;transition:none!important;} .plp *{animation:none!important;}}
 
 .plp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:15px 32px;background:rgba(251,250,255,.66);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 1px 0 var(--line);}
 .plp-hd-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);}
-.plp-hd-logo svg{height:27px;width:27px;display:block;}
+.plp-hd-logo svg{height:27px;width:27px;display:block;overflow:visible;}
+.plp-hd-logo svg rect{transition:transform .45s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;}
+.plp-hd-logo svg rect:nth-of-type(2){transition-delay:.04s;} .plp-hd-logo svg rect:nth-of-type(3){transition-delay:.08s;}
+.plp-hd-logo svg rect:nth-of-type(4){transition-delay:.12s;animation:logopulse 3.2s ease-in-out infinite;}
+.plp-hd-logo:hover svg rect:nth-of-type(1){transform:rotate(-12deg) scale(1.06);}
+.plp-hd-logo:hover svg rect:nth-of-type(2){transform:scale(1.16);}
+.plp-hd-logo:hover svg rect:nth-of-type(3){transform:scale(1.16);}
+.plp-hd-logo:hover svg rect:nth-of-type(4){transform:rotate(45deg) scale(1.1);}
+@keyframes logopulse{0%,100%{opacity:1}50%{opacity:.6}}
 .plp-hd-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .plp-hd-logo b span{color:var(--indigo);}
 .plp-hd-login{display:inline-flex;align-items:center;height:38px;padding:0 20px;border-radius:999px;border:1.4px solid rgba(86,70,230,.32);color:var(--indigo);background:rgba(255,255,255,.5);text-decoration:none;font-size:.82rem;font-weight:700;letter-spacing:.01em;transition:background .18s,border-color .18s,transform .18s;}
 .plp-hd-login:hover{background:var(--indigo);border-color:var(--indigo);color:#fff;transform:translateY(-1px);}
@@ -411,6 +431,11 @@ const CSS = `
 .plp-sec{padding:clamp(78px,11vh,130px) 0;position:relative;}
 .plp-wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 28px;}
 .plp-h2{font-size:clamp(1.75rem,3.6vw,2.4rem);font-weight:800;letter-spacing:-.035em;color:var(--ink);text-align:center;margin-bottom:clamp(40px,6vw,64px);text-wrap:balance;}
+
+/* セクションラベル(テンプレ帯を避けた識別子) */
+.plp-kicker{display:flex;align-items:center;justify-content:center;gap:9px;font-size:.72rem;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--indigo);margin-bottom:clamp(30px,4.6vw,48px);padding-left:.3em;}
+.plp-kicker-dot{width:6px;height:6px;border-radius:50%;background:var(--indigo);box-shadow:0 0 0 4px rgba(86,70,230,.14);animation:kdot 2.4s ease-in-out infinite;}
+@keyframes kdot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.6);opacity:.5}}
 
 /* 視認性ヴェール(背景シナプスを局所的に鎮める) */
 .plp-calm > .plp-wrap{position:relative;z-index:1;}
@@ -439,8 +464,10 @@ const CSS = `
 .pg-travel{animation:pgtravel 2.1s ease-in-out infinite;}
 @keyframes pgtravel{0%,100%{transform:translateX(0)}50%{transform:translateX(11px)}}
 .pg-blink{animation:pgpulse 1.5s ease-in-out infinite;}
-.pg-star{transform-box:fill-box;transform-origin:center;animation:pgstar 2.8s ease-in-out infinite;}
-@keyframes pgstar{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-3px) rotate(6deg)}}
+.pg-lid{transform-box:fill-box;transform-origin:center bottom;animation:lidlift 2.8s ease-in-out infinite;}
+@keyframes lidlift{0%,100%{transform:translateY(0)}50%{transform:translateY(-3.5px)}}
+.pg-spark{transform-box:fill-box;transform-origin:center;animation:sparktw 2.1s ease-in-out infinite;}
+@keyframes sparktw{0%,100%{opacity:.35;transform:scale(.55)}50%{opacity:1;transform:scale(1.05) rotate(90deg)}}
 .plp-step-t{font-size:1.32rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
 .plp-step-d{margin-top:10px;font-size:.92rem;line-height:1.7;color:var(--ink2);}
 
@@ -452,6 +479,14 @@ const CSS = `
 .plp-rw-card svg{width:84px;height:84px;}
 .plp-rw-t{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
 .plp-rw-d{font-size:.82rem;color:var(--ink2);margin-top:-8px;}
+/* fee type：動くオブジェクト */
+.ri-coin{transform-box:fill-box;transform-origin:center;animation:cointurn 3.6s ease-in-out infinite;}
+@keyframes cointurn{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.72)}}
+.ri-bar{transform-box:fill-box;transform-origin:bottom;animation:bargrow 2.6s ease-in-out infinite;}
+.ri-bar.rb2{animation-delay:.22s;} .ri-bar.rb3{animation-delay:.44s;}
+@keyframes bargrow{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.6)}}
+.ri-cyc{transform-box:view-box;transform-origin:44px 44px;animation:cspin 6.5s linear infinite;}
+@keyframes cspin{to{transform:rotate(360deg)}}
 
 /* スマホで完結 */
 .plp-complete{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:clamp(40px,7vw,90px);}
