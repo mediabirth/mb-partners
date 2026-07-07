@@ -101,6 +101,14 @@ export const SP_CSS = `
 .sp-rwd-item{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;}
 .sp-rwd-badge{flex-shrink:0;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:var(--rc);background:linear-gradient(150deg,color-mix(in srgb,var(--rc) 16%,#fff),color-mix(in srgb,var(--rc) 6%,#fff));border:1px solid color-mix(in srgb,var(--rc) 18%,transparent);font-weight:800;font-size:.9rem;animation:spfloaty 5s ease-in-out infinite;}
 .sp-rwd-item:nth-child(2) .sp-rwd-badge{animation-delay:.6s;} .sp-rwd-item:nth-child(3) .sp-rwd-badge{animation-delay:1.2s;}
+.sp-rwd-badge svg{width:42px;height:42px;}
+.ri-coin{transform-box:fill-box;transform-origin:center;animation:cointurn 3.6s ease-in-out infinite;}
+@keyframes cointurn{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.72)}}
+.ri-bar{transform-box:fill-box;transform-origin:bottom;animation:bargrow 2.6s ease-in-out infinite;}
+.ri-bar.rb2{animation-delay:.22s;} .ri-bar.rb3{animation-delay:.44s;}
+@keyframes bargrow{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.6)}}
+.ri-cyc{transform-box:view-box;transform-origin:44px 44px;animation:cspin 6.5s linear infinite;}
+@keyframes cspin{to{transform:rotate(360deg)}}
 .sp-rwd-t{font-size:1.15rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);} .sp-rwd-t b{color:var(--rc);}
 .sp-rwd-d{margin-top:7px;font-size:.92rem;line-height:1.7;color:var(--ink2);}
 .sp-note{margin-top:26px;font-size:.76rem;line-height:1.7;color:var(--mut);background:rgba(86,70,230,.05);border-radius:12px;padding:16px 18px;}

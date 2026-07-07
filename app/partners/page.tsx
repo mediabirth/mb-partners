@@ -53,19 +53,6 @@ const PRODUCTS = [
 ]
 
 // こんな方へ（パートナー像・動くアイコン）
-const AUDIENCE = [
-  { key: 'expert', n: '士業・専門家', d: '顧問先の課題を、価値に。', c: '#4733e6' },
-  { key: 'exec', n: '経営者・役員', d: '人脈を、新たな収益に。', c: '#1e9e6a' },
-  { key: 'sales', n: '営業・フリーランス', d: '日々の出会いを、報酬に。', c: '#8b5cf6' },
-  { key: 'company', n: '企業・団体', d: '既存の関係を、資産に。', c: '#ec4899' },
-]
-const AUDIENCE_GLYPH: Record<string, React.ReactNode> = {
-  expert: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="13" y="9" width="22" height="30" rx="3" fill="currentColor" fillOpacity="0.12" /><path d="M20 9v-2h8v2" /><circle cx="24" cy="20" r="4" fill="currentColor" fillOpacity="0.3" /><path d="M18 31c1-3.5 3.2-5 6-5s5 1.5 6 5" /></svg>,
-  exec: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 39V17l11-7 11 7v22" fill="currentColor" fillOpacity="0.12" /><path d="M20 39v-8h8v8" fill="currentColor" fillOpacity="0.28" /><path d="M19 20h2M27 20h2M19 26h2M27 26h2" /></svg>,
-  sales: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="22" cy="16" r="5" fill="currentColor" fillOpacity="0.18" /><path d="M12 37c1-6.5 5-9.5 10-9.5s9 3 10 9.5" fill="currentColor" fillOpacity="0.12" /><path d="M33 15l5-5M38 10h-4M38 10v4" /></svg>,
-  company: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="11" y="19" width="13" height="20" rx="1.5" fill="currentColor" fillOpacity="0.12" /><rect x="24" y="12" width="13" height="27" rx="1.5" fill="currentColor" fillOpacity="0.18" /><path d="M15 25h4M15 31h4M29 19h4M29 25h4M29 31h4" /></svg>,
-}
-
 // FAQ（事実の正典・収入保証や創作数字なし）
 const FAQ = [
   { q: 'どんな方に向いていますか？', a: '人とのつながりが多い方に向いています。士業・経営者・営業職など、ご紹介の機会が多い方におすすめです。' },
@@ -213,25 +200,27 @@ export default function PartnersLP() {
           </div>
         </section>
 
-        {/* ── field：業種（横スクロールし続けるbelt・拡大前提） ── */}
+        {/* ── field：領域belt（2段・逆スクロール・白タイル・広がりを表現） ── */}
         <section className="plp-sec plp-field-sec plp-io">
-          <div className="plp-wrap"><Kicker label="field" /></div>
-          <div className="plp-marquee plp-fmarquee" aria-hidden>
-            <div className="plp-mq-track plp-ftrack">
-              {Array.from({ length: 4 }).flatMap((_, r) => FIELDS.map(f => (
-                <div key={`${r}-${f.key}`} className="plp-fmq" style={{ ['--fc' as string]: f.c }}>
-                  <span className={`plp-fobj fobj-${f.key}`}>{FIELD_GLYPH[f.key]}</span>
-                  <span className="plp-fname">{f.n}</span>
-                </div>
-              )))}
+          <div className="plp-wrap"><h2 className="plp-h2" data-st>領域は、広がっていく。</h2></div>
+          {[FIELDS, [...FIELDS.slice(3), ...FIELDS.slice(0, 3)]].map((row, ri) => (
+            <div key={ri} className="plp-marquee plp-fmarquee" aria-hidden>
+              <div className={`plp-mq-track plp-ftrack${ri ? ' plp-ftrack-r' : ''}`}>
+                {Array.from({ length: 4 }).flatMap((_, r) => row.map(fl => (
+                  <div key={`${ri}-${r}-${fl.key}`} className="plp-fmq" style={{ ['--fc' as string]: fl.c }}>
+                    <span className={`plp-fobj fobj-${fl.key}`}>{FIELD_GLYPH[fl.key]}</span>
+                    <span className="plp-fname">{fl.n}</span>
+                  </div>
+                )))}
+              </div>
             </div>
-          </div>
+          ))}
         </section>
 
         {/* ── 流れ：つなげる・はなす・もたらす(動くオブジェクト) ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <Kicker label="flow" />
+            <h2 className="plp-h2" data-st>シンプルな仕組み。</h2>
             <div className="plp-steps">
               <span className="plp-thread" aria-hidden />
               {STEPS.map(s => (
@@ -245,32 +234,15 @@ export default function PartnersLP() {
           </div>
         </section>
 
-        {/* ── こんな方へ（パートナー像・動くアイコン） ── */}
-        <section className="plp-sec plp-calm plp-io">
-          <div className="plp-wrap">
-            <Kicker label="for you" />
-            <div className="plp-aud">
-              {AUDIENCE.map(a => (
-                <div key={a.key} className="plp-audcard" data-st style={{ ['--fc' as string]: a.c }}>
-                  <span className={`plp-aud-obj aud-${a.key}`} aria-hidden>{AUDIENCE_GLYPH[a.key]}</span>
-                  <span className="plp-aud-n">{a.n}</span>
-                  <span className="plp-aud-d">{a.d}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ── fee type：固定・成果・継続(動くフラットイラスト) ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
-            <Kicker label="fee type" />
+            <h2 className="plp-h2" data-st>報酬バリエーション。</h2>
             <div className="plp-rewards">
               {REWARDS.map(r => (
                 <div key={r.key} className="plp-rw" data-st style={{ ['--rc' as string]: r.c }}>
                   <span className="plp-rw-card" aria-hidden>{REWARD_ILLUS[r.key]}</span>
                   <span className="plp-rw-t">{r.t}</span>
-                  <span className="plp-rw-d">{r.d}</span>
                 </div>
               ))}
             </div>
@@ -308,6 +280,7 @@ export default function PartnersLP() {
         {/* ── すべて、スマホで（フォン図・完全中央） ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap plp-complete-c">
+            <h2 className="plp-h2" data-st>すべて、スマホで。</h2>
             <div className="plp-phone" data-st aria-hidden>
               <div className="plp-phone-body">
                 <span className="plp-phone-dot d1" /><span className="plp-phone-dot d2" /><span className="plp-phone-dot d3" />
@@ -315,7 +288,6 @@ export default function PartnersLP() {
                 <span className="plp-phone-pulse" />
               </div>
             </div>
-            <h2 className="plp-h2" data-st>すべて、スマホで。</h2>
             <p className="plp-lead" data-st>紹介も、進捗も、報酬の確認も。<br />アプリひとつで完結します。</p>
           </div>
         </section>
@@ -323,7 +295,7 @@ export default function PartnersLP() {
         {/* ── FAQ（アコーディオン） ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap plp-faq-wrap">
-            <Kicker label="faq" />
+            <h2 className="plp-h2" data-st>よくある質問。</h2>
             <Faq />
             <a className="plp-textlink" href="/partners/faq" data-st>すべての質問を見る<span className="plp-arrow">→</span></a>
           </div>
@@ -594,11 +566,12 @@ const CSS = `
 @keyframes cgcheck{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
 .cgl-reward svg{animation:cointurn 3.4s ease-in-out infinite;}
 
-/* field：色のオーラでワクワク */
-.plp-fmarquee{overflow:visible;padding:22px 0;}
-.plp-fmq .plp-fobj{position:relative;overflow:visible;background:linear-gradient(158deg,rgba(255,255,255,.94),color-mix(in srgb,var(--fc) 10%,rgba(244,242,255,.7)));border:1px solid color-mix(in srgb,var(--fc) 24%,rgba(255,255,255,.9));}
-.plp-fmq .plp-fobj::before{content:'';position:absolute;inset:-13px;border-radius:34px;background:radial-gradient(circle,color-mix(in srgb,var(--fc) 32%,transparent),transparent 70%);z-index:-1;filter:blur(7px);opacity:.7;transition:opacity .22s;}
-.plp-fmq:hover .plp-fobj::before{opacity:1;}
+/* field：白タイルで統一・2段の逆スクロールで広がりを表現 */
+.plp-fmarquee{overflow:visible;padding:11px 0;}
+.plp-fmarquee+.plp-fmarquee{margin-top:0;}
+.plp-ftrack-r{animation-direction:reverse;}
+.plp-fmq .plp-fobj{background:linear-gradient(158deg,rgba(255,255,255,.94),rgba(244,242,255,.72));border:1px solid rgba(255,255,255,.92);}
+.plp-fmq:hover .plp-fobj{transform:translateY(-6px);box-shadow:0 24px 54px color-mix(in srgb,var(--fc) 20%,rgba(40,30,80,.1));}
 .plp-fmq:hover .plp-fname{color:var(--fc);}
 
 /* 数字は中央寄せ */
