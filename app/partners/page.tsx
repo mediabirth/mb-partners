@@ -206,8 +206,8 @@ function Stat({ s }: { s: typeof STATS[number] }) {
   useCountUp(ref, s.to, s.prefix ?? '', s.suffix ?? '')
   return (
     <div className="plp-stat" data-st>
-      <span className="plp-statnum" ref={ref}>{(s.prefix ?? '') + '0' + (s.suffix ?? '')}</span>
       <span className="plp-statlab">{s.label}</span>
+      <span className="plp-statnum" ref={ref}>{(s.prefix ?? '') + '0' + (s.suffix ?? '')}</span>
     </div>
   )
 }
@@ -258,7 +258,7 @@ export default function PartnersLP() {
 
       <header className="plp-hd on">
         <a className="plp-hd-logo" href="#top" aria-label="MB Partners">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden><rect x="3" y="3" width="7.5" height="7.5" rx="2.2" stroke="currentColor" strokeWidth="1.7" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="2.2" fill="var(--indigo)" /><circle cx="6.75" cy="17.25" r="3.75" stroke="currentColor" strokeWidth="1.7" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2.2" fill="var(--indigo)" /></svg>
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" /></svg>
           <b>MB<span> Partners</span></b>
         </a>
         <a className="plp-hd-login" href="/app">ログイン</a>
@@ -267,7 +267,7 @@ export default function PartnersLP() {
       <div className="plp-content" id="top">
         {/* ── HERO ── */}
         <section className="plp-hero plp-io">
-          <h1 className="plp-h1" data-st>「つながり」が、<br /><em>価値</em>になる。</h1>
+          <h1 className="plp-h1" data-st>「つながり」が<br /><em>価値</em>になる。</h1>
           <div className="plp-cta-row" data-st>
             <button className="plp-cta" onClick={scrollForm}>パートナーに応募する<span className="plp-arrow">→</span></button>
           </div>
@@ -418,7 +418,7 @@ const CSS = `
 
 /* 数字(実績) */
 .plp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
-.plp-stat{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:14px 8px;}
+.plp-stat{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:14px 8px;}
 .plp-statnum{font-size:clamp(3.4rem,7vw,5.6rem);font-weight:820;line-height:1.04;letter-spacing:-.05em;background:linear-gradient(155deg,#5646e6,#8b5cf6 55%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums;padding:0 .06em;}
 .plp-statlab{font-size:.82rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);padding-left:.24em;}
 
