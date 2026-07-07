@@ -349,20 +349,17 @@ export default function PartnersLP() {
           </div>
         </section>
 
-        {/* ── field：業種（動くオブジェクト・拡大前提） ── */}
-        <section className="plp-sec plp-calm plp-io">
-          <div className="plp-wrap">
-            <Kicker label="field" />
-            <div className="plp-fields">
-              {FIELDS.map(f => (
-                <div key={f.key} className="plp-fchip" data-st style={{ ['--fc' as string]: f.c }}>
-                  <span className={`plp-fobj fobj-${f.key}`} aria-hidden>{FIELD_GLYPH[f.key]}</span>
+        {/* ── field：業種（横スクロールし続けるbelt・拡大前提） ── */}
+        <section className="plp-sec plp-field-sec plp-io">
+          <div className="plp-wrap"><Kicker label="field" /></div>
+          <div className="plp-marquee plp-fmarquee" aria-hidden>
+            <div className="plp-mq-track plp-ftrack">
+              {Array.from({ length: 4 }).flatMap((_, r) => FIELDS.map(f => (
+                <div key={`${r}-${f.key}`} className="plp-fmq" style={{ ['--fc' as string]: f.c }}>
+                  <span className={`plp-fobj fobj-${f.key}`}>{FIELD_GLYPH[f.key]}</span>
                   <span className="plp-fname">{f.n}</span>
                 </div>
-              ))}
-              <div className="plp-fchip plp-fchip-more" data-st>
-                <span className="plp-fobj" aria-hidden><b>＋</b><i>など</i></span>
-              </div>
+              )))}
             </div>
           </div>
         </section>
@@ -467,6 +464,11 @@ export default function PartnersLP() {
               </div>
             ) : (
               <>
+                <div className="plp-trust" data-st>
+                  {['登録無料', '審査あり', 'かんたん入力'].map(t => (
+                    <span key={t} className="plp-trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>{t}</span>
+                  ))}
+                </div>
                 <form className="plp-form" data-st onSubmit={submit}>
                   <label className="plp-fld"><span>お名前 <i>*</i></span><input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required /></label>
                   <div className="plp-fld-row">
@@ -622,12 +624,15 @@ const CSS = `
 .plp-fchip-more .plp-fobj{flex-direction:column;gap:1px;color:var(--mut);border-style:dashed;background:rgba(255,255,255,.36);box-shadow:none;animation:none;}
 .plp-fchip-more .plp-fobj b{font-size:1.7rem;font-weight:300;line-height:1;} .plp-fchip-more .plp-fobj i{font-style:normal;font-size:.66rem;font-weight:600;letter-spacing:.02em;}
 
-/* こんな方へ（パートナー像・動くアイコン） */
-.plp-aud{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:960px;margin:0 auto;}
-.plp-audcard{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:30px 18px;border-radius:22px;background:rgba(255,255,255,.62);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border:0.5px solid rgba(255,255,255,.85);box-shadow:0 12px 40px rgba(40,30,80,.07);transition:transform .2s,box-shadow .2s;}
-.plp-audcard:hover{transform:translateY(-6px);box-shadow:0 26px 56px color-mix(in srgb,var(--fc) 18%,rgba(40,30,80,.1));}
-.plp-aud-obj{width:66px;height:66px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--fc);background:linear-gradient(150deg,color-mix(in srgb,var(--fc) 14%,#fff),color-mix(in srgb,var(--fc) 5%,#fff));border:1px solid color-mix(in srgb,var(--fc) 16%,transparent);}
-.plp-aud-obj svg{width:36px;height:36px;transform-box:fill-box;transform-origin:center;}
+/* こんな方へ（枠なし・浮遊オブジェクト） */
+.plp-aud{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(16px,2.4vw,30px);max-width:920px;margin:0 auto;}
+.plp-audcard{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;}
+.plp-audcard:hover .plp-aud-obj{transform:translateY(-8px);box-shadow:0 28px 58px color-mix(in srgb,var(--fc) 24%,rgba(40,30,80,.12));}
+.plp-audcard:hover .plp-aud-n{color:var(--fc);}
+.plp-aud-obj{width:clamp(80px,9vw,96px);height:clamp(80px,9vw,96px);border-radius:26px;display:flex;align-items:center;justify-content:center;color:var(--fc);background:linear-gradient(158deg,rgba(255,255,255,.92),rgba(244,242,255,.72));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.92);box-shadow:0 18px 44px rgba(40,30,80,.1);animation:floaty 5.4s ease-in-out infinite;transition:transform .22s,box-shadow .22s;}
+.plp-audcard:nth-child(2) .plp-aud-obj{animation-delay:.6s;} .plp-audcard:nth-child(3) .plp-aud-obj{animation-delay:1.2s;} .plp-audcard:nth-child(4) .plp-aud-obj{animation-delay:1.8s;}
+.plp-aud-obj svg{width:clamp(42px,5vw,50px);height:clamp(42px,5vw,50px);transform-box:fill-box;transform-origin:center;}
+.plp-aud-n{transition:color .18s;}
 .aud-expert svg{animation:fbob 3s ease-in-out infinite;} .aud-exec svg{animation:fbeat 2.5s ease-in-out infinite;} .aud-sales svg{animation:fwiggle 3s ease-in-out infinite;} .aud-company svg{animation:fbeat 2.2s ease-in-out infinite;}
 .plp-aud-n{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
 .plp-aud-d{font-size:.82rem;line-height:1.65;color:var(--ink2);}
@@ -653,6 +658,26 @@ const CSS = `
 @keyframes marq{to{transform:translateX(-50%)}}
 .plp-mq-item{display:inline-flex;align-items:center;white-space:nowrap;font-size:clamp(1.5rem,3.2vw,2.3rem);font-weight:800;letter-spacing:-.01em;padding-right:clamp(30px,4.5vw,60px);opacity:.92;}
 .plp-mq-item::after{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.45;margin-left:clamp(30px,4.5vw,60px);}
+
+/* field belt（横スクロール・ホバーで一時停止） */
+.plp-field-sec{overflow:hidden;}
+.plp-fmarquee{margin-top:2px;}
+.plp-ftrack{animation-duration:46s;}
+.plp-fmarquee:hover .plp-mq-track{animation-play-state:paused;}
+.plp-fmq{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:13px;padding:10px clamp(22px,2.8vw,42px);}
+.plp-fmq .plp-fobj{animation:none;transition:transform .22s,box-shadow .22s;}
+.plp-fmq:hover .plp-fobj{transform:translateY(-7px);box-shadow:0 24px 54px color-mix(in srgb,var(--fc) 22%,rgba(40,30,80,.1));}
+.plp-fmq .plp-fname{transition:color .18s;} .plp-fmq:hover .plp-fname{color:var(--fc);}
+
+/* ホバー磨き込み */
+.plp-stat{transition:transform .28s cubic-bezier(.22,1,.36,1);} .plp-stat:hover{transform:translateY(-5px);}
+.plp-mq-item{transition:opacity .2s;} .plp-marquee:hover .plp-mq-item{opacity:.72;} .plp-mq-item:hover{opacity:1;}
+.plp-foot-meta a{transition:color .18s;} .plp-foot-meta a:hover{color:var(--violet);}
+
+/* 安心の一行 */
+.plp-trust{display:flex;justify-content:center;flex-wrap:wrap;gap:10px 22px;margin-bottom:24px;}
+.plp-trust-item{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;color:var(--ink2);transition:color .18s;}
+.plp-trust-item:hover{color:var(--ink);} .plp-trust-item svg{color:var(--indigo);}
 
 /* スマホで完結 */
 .plp-complete{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:clamp(40px,7vw,90px);}
@@ -713,7 +738,7 @@ const CSS = `
   .plp-complete-txt .plp-h2,.plp-complete .plp-lead{text-align:center;}
   .plp-complete .plp-lead br{display:none;}
   .plp-fld-row{grid-template-columns:1fr;}
-  .plp-aud{grid-template-columns:1fr 1fr;gap:12px;} .plp-audcard{padding:22px 12px;gap:11px;} .plp-aud-obj{width:56px;height:56px;} .plp-aud-obj svg{width:30px;height:30px;} .plp-aud-n{font-size:.92rem;} .plp-aud-d{font-size:.74rem;}
+  .plp-aud{grid-template-columns:1fr 1fr;gap:26px 12px;} .plp-audcard{gap:12px;} .plp-aud-obj{width:72px;height:72px;border-radius:20px;} .plp-aud-obj svg{width:40px;height:40px;} .plp-aud-n{font-size:.92rem;} .plp-aud-d{font-size:.74rem;}
   .plp-faq-q{font-size:.9rem;padding:16px 18px;} .plp-faq-a p{padding:0 18px 18px;font-size:.84rem;}
 }
 `
