@@ -56,35 +56,38 @@ function useScene(mountRef: React.RefObject<HTMLDivElement | null>) {
 
       const group = new THREE.Group(); scene.add(group)
       const shTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const cx = c.getContext('2d')!; const rr = cx.createRadialGradient(64, 64, 0, 64, 64, 64); rr.addColorStop(0, 'rgba(60,50,90,.20)'); rr.addColorStop(1, 'rgba(60,50,90,0)'); cx.fillStyle = rr; cx.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c) })()
-      type O = { m: THREE.Mesh; ph: number; sp: number; amp: number; rot: number }
+      type O = { m: THREE.Mesh; fx: number; ph: number; sp: number; amp: number; rot: number; sprite?: THREE.Sprite }
       const objs: O[] = []
       const geoFor = (k: string): THREE.BufferGeometry => k === 'sphere' ? new THREE.SphereGeometry(1, mobile ? 40 : 64, mobile ? 40 : 64) : k === 'torus' ? new THREE.TorusGeometry(0.9, 0.34, mobile ? 24 : 40, mobile ? 60 : 90) : k === 'box' ? new THREE.BoxGeometry(1.7, 1.7, 0.32) : k === 'ico' ? new THREE.IcosahedronGeometry(0.75, 0) : new THREE.TorusKnotGeometry(0.62, 0.2, 90, 14)
       // section毎に配置（worldY = 3 - 7*section）。desktop=各2〜3 / mobile=間引き。
       const SEC = 7
+      // [geo, section, fracX(-0.8..0.8＝可視幅の割合), z, scale, tint]。実xは可視幅から算出＝どのアスペクトでも見切れない。
       const defs: [string, number, number, number, number, number][] = [
-        // [geo, section, x, z, scale, tint]
-        ['sphere', 0, -3.3, -0.5, 0.95, 0xbfe9d8], ['torus', 0, 2.7, 0.4, 0.95, 0xccc4ff], ['ico', 0, 0.4, 1.5, 0.7, 0xffe0cc],
-        ['box', 1, -3.0, 0.6, 0.78, 0xd7f0ff], ['sphere', 1, 3.1, -1.0, 0.72, 0xffd9bf],
-        ['torus', 2, -3.2, -0.4, 0.8, 0xbfe9d8], ['ico', 2, 3.0, 0.8, 0.72, 0xccc4ff],
-        ['knot', 3, -2.9, 0.3, 0.8, 0xffe0cc], ['sphere', 3, 3.2, -0.6, 0.82, 0xd7f0ff],
-        ['box', 4, -3.1, -0.3, 0.72, 0xccc4ff], ['torus', 4, 3.0, 0.5, 0.82, 0xffd9bf],
-        ['ico', 5, -2.8, 0.6, 0.72, 0xbfe9d8], ['sphere', 5, 3.1, -0.8, 0.78, 0xffe0cc],
+        ['sphere', 0, -0.62, -0.5, 0.9, 0xbfe9d8], ['torus', 0, 0.6, 0.5, 0.9, 0xccc4ff], ['ico', 0, 0.05, 1.6, 0.62, 0xffe0cc],
+        ['box', 1, -0.58, 0.6, 0.74, 0xd7f0ff], ['sphere', 1, 0.62, -0.8, 0.7, 0xffd9bf],
+        ['torus', 2, -0.6, -0.3, 0.78, 0xbfe9d8], ['ico', 2, 0.6, 0.8, 0.66, 0xccc4ff],
+        ['knot', 3, -0.56, 0.3, 0.74, 0xffe0cc], ['sphere', 3, 0.62, -0.5, 0.78, 0xd7f0ff],
+        ['box', 4, -0.6, -0.2, 0.7, 0xccc4ff], ['torus', 4, 0.58, 0.5, 0.78, 0xffd9bf],
+        ['ico', 5, -0.56, 0.6, 0.66, 0xbfe9d8], ['sphere', 5, 0.6, -0.6, 0.74, 0xffe0cc],
       ]
-      const use = mobile ? defs.filter((_, i) => i % 2 === 0 || i < 3) : defs
-      for (const [k, sec, x, z, s, tint] of use) {
-        const m = new THREE.Mesh(geoFor(k), mat(tint)); const wy = 3 - SEC * sec + (Math.random() - .5) * 1.4
-        m.position.set(x, wy, z); m.scale.setScalar(s); group.add(m)
-        objs.push({ m, ph: Math.random() * 6.28, sp: 0.45 + Math.random() * 0.5, amp: 0.13 + Math.random() * 0.08, rot: (Math.random() - .5) * 0.006 })
-        if (!mobile) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: shTex, transparent: true, depthWrite: false })); sp.scale.set(2.3 * s, 0.95 * s, 1); sp.position.set(x, wy - 1.5 * s, z - 0.2); group.add(sp) }
+      const use = mobile ? defs.filter((_, i) => i % 2 === 0) : defs
+      for (const [k, sec, fx, z, s, tint] of use) {
+        const sc = mobile ? s * 0.86 : s
+        const m = new THREE.Mesh(geoFor(k), mat(tint)); const wy = 1.7 - SEC * sec + (Math.random() - .5) * 1.1
+        m.position.set(0, wy, z); m.scale.setScalar(sc); group.add(m)
+        const o: O = { m, fx, ph: Math.random() * 6.28, sp: 0.45 + Math.random() * 0.5, amp: 0.13 + Math.random() * 0.08, rot: (Math.random() - .5) * 0.006 }
+        if (!mobile) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: shTex, transparent: true, depthWrite: false })); sp.scale.set(2.3 * sc, 0.95 * sc, 1); sp.position.set(0, wy - 1.5 * sc, z - 0.2); group.add(sp); o.sprite = sp }
+        objs.push(o)
       }
+      const layout = () => { const halfW = camera.position.z * Math.tan(camera.fov / 2 * Math.PI / 180) * camera.aspect; const k = mobile ? 0.62 : 0.84; for (const o of objs) { const x = o.fx * halfW * k; o.m.position.x = x; if (o.sprite) o.sprite.position.x = x } }
       const SPREAD = SEC * 5
       let targetGY = 0, gy = 0
       const onScroll = () => { const max = Math.max(1, document.body.scrollHeight - innerHeight); targetGY = (scrollY / max) * SPREAD }
       addEventListener('scroll', onScroll, { passive: true }); onScroll()
       const mouse = { x: 0, y: 0 }
       if (!mobile && !reduce) addEventListener('pointermove', e => { mouse.x = (e.clientX / innerWidth - .5) * 2; mouse.y = (e.clientY / innerHeight - .5) * 2 })
-      const onResize = () => { camera.aspect = W() / H(); camera.updateProjectionMatrix(); renderer.setSize(W(), H()) }
-      addEventListener('resize', onResize)
+      const onResize = () => { camera.aspect = W() / H(); camera.updateProjectionMatrix(); renderer.setSize(W(), H()); layout() }
+      addEventListener('resize', onResize); layout()
       const RAD = Math.PI / 180; const clock = new THREE.Clock(); let raf = 0
       const frame = () => {
         gy += (targetGY - gy) * 0.08; group.position.y = gy
@@ -148,8 +151,8 @@ export default function PartnersLP() {
         {/* HERO */}
         <section className="plp-hero" id="top">
           <div className="plp-hero-body plp-io">
-            <h1 className="plp-h1"><span className="plp-line" data-st><span className="plp-quote">「つながり」</span>という資産を、</span><span className="plp-line" data-st><em>運用する。</em></span></h1>
-            <p className="plp-sub" data-st>ご紹介いただくだけ。あとは、すべて私たちが。</p>
+            <h1 className="plp-h1"><span className="plp-line" data-st><span className="plp-quote">「つながり」</span>という</span><span className="plp-line" data-st>資産を、<em>運用する。</em></span></h1>
+            <p className="plp-sub" data-st>ご紹介いただくだけ。<br className="plp-brk" />あとは、すべて私たちが。</p>
             <div className="plp-cta-row" data-st>
               <button className="plp-cta" onClick={scrollForm}>パートナーに応募する<span className="plp-arrow">→</span></button>
               <span className="plp-cta-note">登録無料・審査あり</span>
@@ -273,15 +276,15 @@ const CSS = `
 .plp-hd-cta:hover{transform:translateY(-2px);filter:brightness(1.12);} .plp-hd-cta:active{transform:none;}
 .plp-hd-cta:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--indigo);}
 
-.plp-hero{min-height:100svh;display:flex;align-items:center;max-width:1120px;margin:0 auto;padding:120px 32px 56px;}
-.plp-hero-body{max-width:34em;}
-.plp-h1{font-size:60px;font-weight:680;line-height:1.15;letter-spacing:-.02em;color:var(--ink);}
-.plp-line{display:block;overflow:hidden;} .plp-line{opacity:0;transform:translateY(102%);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);}
+.plp-hero{min-height:100svh;display:flex;align-items:center;max-width:1120px;margin:0 auto;padding:128px 32px 64px;}
+.plp-hero-body{max-width:600px;}
+.plp-h1{font-size:clamp(2.7rem,4.6vw,3.5rem);font-weight:700;line-height:1.22;letter-spacing:-.035em;color:var(--ink);text-wrap:balance;}
+.plp-line{display:block;overflow:hidden;white-space:nowrap;} .plp-line{opacity:0;transform:translateY(102%);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);}
 .plp-io.in .plp-line{opacity:1;transform:none;} .plp-io.in .plp-line:nth-child(2){transition-delay:90ms;}
 .plp-quote{color:var(--indigo);}
 .plp-h1 em{font-style:normal;background:linear-gradient(100deg,#5646e6,#8a6cf5 60%,#b0a4f8);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.plp-sub{margin-top:26px;font-size:19px;line-height:1.8;color:var(--ink2);font-weight:500;}
-.plp-cta-row{margin-top:38px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.plp-sub{margin-top:24px;font-size:18px;line-height:1.85;letter-spacing:.01em;color:var(--ink2);font-weight:500;max-width:22em;}
+.plp-cta-row{margin-top:40px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
 .plp-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:56px;padding:0 40px;border-radius:12px;background:var(--ink);color:#fff;border:none;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:transform .18s,filter .18s,box-shadow .18s;}
 .plp-cta:hover{transform:translateY(-2px);filter:brightness(1.12);box-shadow:0 14px 34px rgba(23,22,31,.22);}
 .plp-cta:active{transform:none;filter:brightness(.94);} .plp-cta:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--indigo);}
@@ -289,9 +292,9 @@ const CSS = `
 .plp-arrow{transition:transform .22s;} .plp-cta:hover .plp-arrow{transform:translateX(5px);}
 .plp-cta-note{font-size:.78rem;color:var(--mut);}
 
-.plp-sec{padding:112px 0;}
+.plp-sec{padding:124px 0;}
 .plp-wrap{width:100%;max-width:1120px;margin:0 auto;padding:0 32px;}
-.plp-h2{font-size:32px;font-weight:700;line-height:1.24;letter-spacing:-.03em;color:var(--ink);margin-bottom:48px;}
+.plp-h2{font-size:clamp(1.75rem,3vw,2.05rem);font-weight:700;line-height:1.3;letter-spacing:-.03em;color:var(--ink);margin-bottom:52px;text-wrap:balance;}
 .plp-accent{background:linear-gradient(100deg,#5646e6,#8a6cf5);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .plp-lead{margin-top:16px;font-size:15px;line-height:1.8;color:var(--ink2);}
 .plp-fine{margin-top:26px;font-size:.74rem;color:var(--mut);line-height:1.75;}
@@ -362,7 +365,7 @@ const CSS = `
   .plp-steps,.plp-rewards,.plp-brands,.plp-exp,.plp-fld-row{grid-template-columns:1fr;}
   .plp-brands{grid-template-columns:1fr 1fr;}
   .plp-exp{gap:28px;}
-  .plp-hero{padding:108px 22px 40px;} .plp-h1{font-size:36px;} .plp-sub{font-size:16px;} .plp-h2{font-size:24px;margin-bottom:32px;}
-  .plp-sec{padding:80px 0;} .plp-thread{display:none;} .plp-cta{width:100%;}
+  .plp-hero{padding:112px 22px 48px;} .plp-hero-body{max-width:100%;} .plp-h1{font-size:clamp(2rem,8.6vw,2.35rem);line-height:1.28;} .plp-sub{font-size:16px;margin-top:20px;max-width:100%;} .plp-h2{font-size:clamp(1.4rem,6vw,1.65rem);margin-bottom:34px;}
+  .plp-sec{padding:88px 0;} .plp-thread{display:none;} .plp-cta{width:100%;} .plp-cta-row{margin-top:32px;gap:14px;}
 }
 `
