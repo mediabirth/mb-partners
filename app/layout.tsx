@@ -18,17 +18,20 @@ const zenKaku = Zen_Kaku_Gothic_New({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://mb-partners.app'),
   title: 'MB Partners',
   description: 'Media Birth Partner Program',
   applicationName: 'MB Partners',
   // PWA: アイコン + apple-touch-icon
   icons: {
     icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: [{ url: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/apple-icon-180.png', sizes: '180x180', type: 'image/png' }],
   },
   // ③ iOS: ホーム画面追加で全画面・ステータスバー・タイトル
   appleWebApp: {
