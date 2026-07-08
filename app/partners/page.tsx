@@ -334,11 +334,6 @@ export default function PartnersLP() {
               </div>
             ) : (
               <>
-                <div className="plp-trust" data-st>
-                  {['登録無料', '審査あり', 'かんたん入力'].map(t => (
-                    <span key={t} className="plp-trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>{t}</span>
-                  ))}
-                </div>
                 <form className="plp-form" data-st onSubmit={submit}>
                   <label className="plp-fld"><span>お名前 <i>*</i></span><input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required /></label>
                   <div className="plp-fld-row">
@@ -364,11 +359,10 @@ export default function PartnersLP() {
                   <svg viewBox="0 0 48 48" fill="none" aria-hidden><g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" /></svg>
                   <b>MB<span> Partners</span></b>
                 </a>
-                <p className="plp-foot-tag">「つながり」を、価値に。</p>
+                <p className="plp-foot-tag">「つながり」を、資産に。</p>
               </div>
               <dl className="plp-foot-info">
                 <div><dt>運営会社</dt><dd>株式会社Media Birth</dd></div>
-                <div><dt>所在地</dt><dd>大阪府吹田市</dd></div>
                 <div><dt>事業内容</dt><dd>パートナープログラム「MB Partners」の運営／ブランディング・制作・DX・人材など各領域の支援</dd></div>
               </dl>
             </div>
