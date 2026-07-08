@@ -29,11 +29,13 @@ export const metadata: Metadata = {
     locale: 'ja_JP',
     siteName: 'MB Partners',
     url: 'https://mb-partners.app',
+    images: [{ url: '/og.png', width: 2400, height: 1260, alt: 'MB Partners — 「つながり」が、資産になる。' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'MB Partners',
     description: '「つながり」が、資産になる。ご紹介いただくだけ。あとは、私たちが。',
+    images: ['/og.png'],
   },
   // PWA: アイコン + apple-touch-icon
   icons: {
