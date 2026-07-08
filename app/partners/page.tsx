@@ -11,7 +11,7 @@ import { useNetwork, useMotion, useInteractions } from './scene'
 // ── 数字セクション。field=6は実値(services active)。partner/fee は仮値＝実データに差し替え可。 ──
 // fee は K表記(千円単位)。to=3200 → "3,200K"（＝¥3,200,000相当）。
 const STATS: { key: string; to: number; prefix?: string; suffix?: string; label: string; real?: boolean }[] = [
-  { key: 'field', to: 6, prefix: '+', label: 'field', real: true },
+  { key: 'field', to: 10, prefix: '+', label: 'field', real: true },
   { key: 'partner', to: 40, prefix: '+', label: 'partner' },
   { key: 'fee', to: 3200, prefix: '+', suffix: 'K', label: 'fee' },
 ]
@@ -31,21 +31,30 @@ const REWARD_ILLUS: Record<string, React.ReactNode> = {
 
 // field：業種（動くオブジェクト＋名称）。実領域カテゴリ＝拡大前提。
 const FIELDS = [
-  { key: 'estate', n: '不動産', c: '#4733e6' },
-  { key: 'talent', n: '人材', c: '#1e9e6a' },
-  { key: 'create', n: '制作', c: '#8b5cf6' },
-  { key: 'ops', n: '業務改善', c: '#15917e' },
-  { key: 'marke', n: 'マーケ', c: '#6d5cf5' },
-  { key: 'enta', n: 'エンタメ', c: '#ec4899' },
+  { key: 'brand', n: 'ブランディング', c: '#8b5cf6' },
+  { key: 'design', n: 'デザイン', c: '#ec4899' },
+  { key: 'web', n: 'Web制作', c: '#4733e6' },
+  { key: 'video', n: '映像', c: '#f2971b' },
+  { key: 'dev', n: 'システム開発', c: '#15917e' },
+  { key: 'ops', n: '業務設計', c: '#6d5cf5' },
+  { key: 'dx', n: 'DX導入', c: '#1e9e6a' },
+  { key: 'bpo', n: 'BPO', c: '#8b5cf6' },
+  { key: 'hr', n: '人材・採用', c: '#1e9e6a' },
+  { key: 'growth', n: 'グロース', c: '#ec4899' },
 ]
 const FIELD_GLYPH: Record<string, React.ReactNode> = {
-  estate: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 23L24 10l15 13" /><path d="M13 21v15h22V21" fill="currentColor" fillOpacity="0.13" /><path d="M20 36v-8h8v8" fill="currentColor" fillOpacity="0.3" /></svg>,
-  talent: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="5" fill="currentColor" fillOpacity="0.18" /><circle cx="31" cy="20" r="4.3" fill="currentColor" fillOpacity="0.18" /><path d="M9 37c1-6 5-9 9-9s8 3 9 9" /><path d="M27 35c1-5 4-7.5 7-7.5s6 2.5 7 7.5" /></svg>,
-  create: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 35l3-8L32 11l5 5-16 16-8 3z" fill="currentColor" fillOpacity="0.14" /><path d="M28 15l5 5" /></svg>,
+  brand: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M24 8l4 12 12 4-12 4-4 12-4-12-12-4 12-4z" fill="currentColor" fillOpacity="0.16" /></svg>,
+  design: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 35l3-8L32 11l5 5-16 16-8 3z" fill="currentColor" fillOpacity="0.14" /><path d="M28 15l5 5" /></svg>,
+  web: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="11" width="32" height="26" rx="3" fill="currentColor" fillOpacity="0.13" /><path d="M8 18h32" /><circle cx="13" cy="14.5" r="1.1" fill="currentColor" stroke="none" /><circle cx="17.5" cy="14.5" r="1.1" fill="currentColor" stroke="none" /></svg>,
+  video: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="12" width="32" height="24" rx="4" fill="currentColor" fillOpacity="0.13" /><path d="M21 19.5l8.5 4.5-8.5 4.5z" fill="currentColor" stroke="none" /></svg>,
+  dev: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="11" width="32" height="26" rx="4" fill="currentColor" fillOpacity="0.12" /><path d="M19 20l-5 4 5 4M29 20l5 4-5 4" /></svg>,
   ops: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="7.5" fill="currentColor" fillOpacity="0.16" /><circle cx="24" cy="24" r="7.5" /><path d="M24 10v5M24 33v5M38 24h-5M10 24h5" /></svg>,
-  marke: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21v6l19 8V13z" fill="currentColor" fillOpacity="0.16" /><path d="M31 19c4 1.5 4 8.5 0 10" /><path d="M15 27v7h5v-5" /></svg>,
-  enta: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="24" cy="24" r="14" fill="currentColor" fillOpacity="0.14" /><path d="M20.5 18l9 6-9 6z" fill="currentColor" stroke="none" /></svg>,
+  dx: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="14" y="14" width="20" height="20" rx="3" fill="currentColor" fillOpacity="0.16" /><path d="M20 10v4M28 10v4M20 34v4M28 34v4M10 20h4M10 28h4M34 20h4M34 28h4" /></svg>,
+  bpo: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="10" y="13" width="15" height="15" rx="3" fill="currentColor" fillOpacity="0.14" /><path d="M31 17a9 9 0 1 0 3 8" /><path d="M31 11v6h-6" /></svg>,
+  hr: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="5" fill="currentColor" fillOpacity="0.18" /><circle cx="31" cy="20" r="4.3" fill="currentColor" fillOpacity="0.18" /><path d="M9 37c1-6 5-9 9-9s8 3 9 9" /><path d="M27 35c1-5 4-7.5 7-7.5s6 2.5 7 7.5" /></svg>,
+  growth: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 33l9-8 6 5 13-13" /><path d="M32 17h6v6" /><path d="M10 38h29" opacity="0.35" /></svg>,
 }
+
 // MBプロダクト（横スクロール・実ブランド配色）
 const PRODUCTS = [
   { n: 'MOOM', c: '#4733e6' }, { n: 'MatchHub', c: '#1e9e6a' }, { n: 'RESONATION', c: '#8b5cf6' },
@@ -470,9 +479,11 @@ const CSS = `
 .plp-fchip:nth-child(2) .plp-fobj{animation-delay:.5s;} .plp-fchip:nth-child(3) .plp-fobj{animation-delay:1s;} .plp-fchip:nth-child(4) .plp-fobj{animation-delay:1.5s;} .plp-fchip:nth-child(5) .plp-fobj{animation-delay:.8s;} .plp-fchip:nth-child(6) .plp-fobj{animation-delay:1.3s;}
 .plp-fchip:hover .plp-fobj{transform:translateY(-7px);box-shadow:0 26px 56px color-mix(in srgb,var(--fc) 22%,rgba(40,30,80,.1));}
 .plp-fobj svg{width:clamp(38px,5vw,46px);height:clamp(38px,5vw,46px);transform-box:fill-box;transform-origin:center;}
-.fobj-estate svg{animation:fbob 3s ease-in-out infinite;} .fobj-talent svg{animation:fbeat 2.4s ease-in-out infinite;}
-.fobj-create svg{animation:fwiggle 3s ease-in-out infinite;} .fobj-ops svg{animation:fspin 8s linear infinite;}
-.fobj-marke svg{animation:fshake 2.6s ease-in-out infinite;} .fobj-enta svg{animation:fbeat 2s ease-in-out infinite;}
+.fobj-brand svg{animation:fbeat 2.6s ease-in-out infinite;} .fobj-design svg{animation:fwiggle 3s ease-in-out infinite;}
+.fobj-web svg{animation:fbob 3s ease-in-out infinite;} .fobj-video svg{animation:fbeat 2.2s ease-in-out infinite;}
+.fobj-dev svg{animation:fbob 3.2s ease-in-out infinite;} .fobj-ops svg{animation:fspin 8s linear infinite;}
+.fobj-dx svg{animation:fbeat 2.4s ease-in-out infinite;} .fobj-bpo svg{animation:fspin 9s linear infinite;}
+.fobj-hr svg{animation:fbeat 2.6s ease-in-out infinite;} .fobj-growth svg{animation:fbob 3s ease-in-out infinite;}
 @keyframes fbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes fbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
 @keyframes fwiggle{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
@@ -526,6 +537,7 @@ const CSS = `
 .plp-fmq .plp-fobj{animation:none;transition:transform .22s,box-shadow .22s;}
 .plp-fmq:hover .plp-fobj{transform:translateY(-7px);box-shadow:0 24px 54px color-mix(in srgb,var(--fc) 22%,rgba(40,30,80,.1));}
 .plp-fmq .plp-fname{transition:color .18s;} .plp-fmq:hover .plp-fname{color:var(--fc);}
+.plp-fmq .plp-fname{white-space:nowrap;font-size:.92rem;}
 
 /* ホバー磨き込み */
 .plp-stat{transition:transform .28s cubic-bezier(.22,1,.36,1);} .plp-stat:hover{transform:translateY(-5px);}
@@ -573,6 +585,7 @@ const CSS = `
 .plp-fmq .plp-fobj{background:linear-gradient(158deg,rgba(255,255,255,.94),rgba(244,242,255,.72));border:1px solid rgba(255,255,255,.92);}
 .plp-fmq:hover .plp-fobj{transform:translateY(-6px);box-shadow:0 24px 54px color-mix(in srgb,var(--fc) 20%,rgba(40,30,80,.1));}
 .plp-fmq:hover .plp-fname{color:var(--fc);}
+.plp-fmq .plp-fname{white-space:nowrap;font-size:.92rem;}
 
 /* 数字は中央寄せ */
 .plp-stat>*{width:100%;}
