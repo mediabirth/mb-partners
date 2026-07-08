@@ -20,8 +20,21 @@ const zenKaku = Zen_Kaku_Gothic_New({
 export const metadata: Metadata = {
   metadataBase: new URL('https://mb-partners.app'),
   title: 'MB Partners',
-  description: 'Media Birth Partner Program',
+  description: '「つながり」が、資産になる。株式会社Media Birth のパートナープログラム「MB Partners」。',
   applicationName: 'MB Partners',
+  openGraph: {
+    title: 'MB Partners',
+    description: '「つながり」が、資産になる。ご紹介いただくだけ。あとは、私たちが。',
+    type: 'website',
+    locale: 'ja_JP',
+    siteName: 'MB Partners',
+    url: 'https://mb-partners.app',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MB Partners',
+    description: '「つながり」が、資産になる。ご紹介いただくだけ。あとは、私たちが。',
+  },
   // PWA: アイコン + apple-touch-icon
   icons: {
     icon: [
