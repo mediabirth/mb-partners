@@ -65,10 +65,17 @@ export const SP_CSS = `
 @keyframes spup{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .sp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:15px 28px;background:rgba(251,250,255,.66);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 1px 0 var(--line);}
 .sp-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);} .sp-logo svg{height:27px;width:27px;display:block;overflow:visible;}
-.sp-logo svg circle,.sp-logo svg rect{transition:transform .4s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;} .sp-logo svg circle:nth-of-type(1){animation:sppulse 3s ease-in-out infinite;}
-.sp-logo svg g line{transition:opacity .4s ease;}
-.sp-logo:hover svg circle,.sp-logo:hover svg rect{transform:scale(1.14);} .sp-logo:hover svg g line{opacity:.75!important;}
-@keyframes sppulse{0%,100%{opacity:1}50%{opacity:.5}}
+.sp-logo svg circle,.sp-logo svg rect{transition:transform .4s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;}
+.sp-logo svg g{transition:opacity .5s ease;animation:splink 4.4s ease-in-out infinite;}
+.sp-logo:hover svg circle,.sp-logo:hover svg rect{transform:scale(1.14);} .sp-logo:hover svg g{opacity:.8!important;}
+.sp-logo svg rect:nth-of-type(1){animation:sptwinkle 3.4s ease-in-out infinite;animation-delay:0s;}
+.sp-logo svg circle:nth-of-type(1){animation:sptwinkle 3.4s ease-in-out infinite;animation-delay:.6s;}
+.sp-logo svg rect:nth-of-type(2){animation:sptwinkle 3.4s ease-in-out infinite;animation-delay:1.2s;}
+.sp-logo svg circle:nth-of-type(2){animation:sptwinkle 3.4s ease-in-out infinite;animation-delay:1.8s;}
+.sp-logo svg circle:nth-of-type(3){animation:sptwinkle 3.4s ease-in-out infinite;animation-delay:2.4s;}
+@keyframes sptwinkle{0%,100%{opacity:.6}16%{opacity:1}}
+@keyframes splink{0%,100%{opacity:.32}50%{opacity:.58}}
+@media (prefers-reduced-motion:reduce){.sp-logo svg *{animation:none!important}}
 .sp-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .sp-logo b span{color:var(--indigo);}
 .sp-login{display:inline-flex;align-items:center;height:38px;padding:0 20px;border-radius:999px;border:1.4px solid rgba(86,70,230,.32);color:var(--indigo);background:rgba(255,255,255,.5);text-decoration:none;font-size:.82rem;font-weight:700;transition:background .18s,color .18s,transform .18s;}
 .sp-login:hover{background:var(--indigo);border-color:var(--indigo);color:#fff;transform:translateY(-1px);}

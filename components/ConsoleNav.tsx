@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useConsoleSession } from '@/components/ConsoleSession'
 import Avatar from '@/components/ui/Avatar'
+import BrandMark from '@/components/ui/BrandMark'
 
 // G: レスポンシブ。<=900px ではサイドバーをドロワー化＋ハンバーガー。
 // コンテンツ余白(inline margin-left:230)は aside[data-cnav]~* を !important で上書き。
@@ -101,17 +102,12 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
     <div onClick={() => setOpen(false)} className={`cnav-scrim${open ? ' cnav-open' : ''}`}
       style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.4)', backdropFilter: 'blur(2px)', zIndex: 45 }} />
     <aside data-cnav className={open ? 'cnav-open' : ''} style={{
-      width: 230, background: '#fff', borderRight: '1px solid var(--line)',
+      width: 230, background: 'linear-gradient(180deg,#fbfaff,#ffffff 26%)', borderRight: '1px solid var(--line)',
       padding: '22px 14px', position: 'fixed', top: 0, bottom: 0,
       display: 'flex', flexDirection: 'column', gap: 2, zIndex: 50, overflowY: 'auto',
     }}>
       <Link href="/console" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 12px 18px', textDecoration: 'none' }}>
-        <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
-          <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="3"/>
-          <rect x="28" y="6"  width="14" height="14" rx="7"  stroke="#4733E6" strokeWidth="3"/>
-          <rect x="6"  y="28" width="14" height="14" rx="7"  stroke="#0E0E14" strokeWidth="3"/>
-          <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
-        </svg>
+        <BrandMark size={26} />
         <div>
           <b className="cq-brand" style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.98rem', color: 'var(--txt)' }}>
             MB <span style={{ color: 'var(--c-blue)' }}>Partners</span>

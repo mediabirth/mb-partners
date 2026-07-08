@@ -8,7 +8,7 @@ export default function ConsoleMain({ children, style }: {
 }) {
   const path = usePathname()
   return (
-    <div key={path} className="page-anim" style={{ flex: 1, marginLeft: 230, ...style }}>
+    <div key={path} className="page-anim mb-field-bg" style={{ flex: 1, marginLeft: 230, ...style }}>
       {children}
     </div>
   )

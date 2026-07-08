@@ -558,6 +558,34 @@ body {
   }
 }
 
+/* ============================================================
+   BRAND ATMOSPHERE — /partners LP の世界観を3面（app/console/vendor）へ共有。
+   視覚のみ・money非接触。明るいグラデ光の面＋ブランドマークの常時アニメ。
+   ============================================================ */
+/* LPのグラデフィールド（純CSS・GPU負荷ゼロ）。白カードの背後に敷く airy な光の面。 */
+.mb-field-bg {
+  background:
+    radial-gradient(58% 46% at 14% 2%,  #efeaff 0%, rgba(239,234,255,0) 60%),
+    radial-gradient(52% 42% at 94% 4%,  #eae4ff 0%, rgba(234,228,255,0) 58%),
+    radial-gradient(60% 55% at 82% 98%, #fff1e6 0%, rgba(255,241,230,0) 60%),
+    linear-gradient(180deg, #fbfaff, #f5f3ff);
+}
+/* ブランドマーク（案3）常時アニメ：衛星ノードが順に瞬く＋リンク明滅＝“生きたネットワーク”。 */
+@keyframes mbmarkTwinkle { 0%, 100% { opacity: .6; } 16% { opacity: 1; } }
+@keyframes mbmarkLink    { 0%, 100% { opacity: .32; } 50% { opacity: .58; } }
+.mbmark svg circle, .mbmark svg rect { transform-box: fill-box; transform-origin: center; transition: transform .4s cubic-bezier(.34,1.56,.64,1); }
+.mbmark svg g { animation: mbmarkLink 4.4s ease-in-out infinite; transition: opacity .5s ease; }
+.mbmark svg rect:nth-of-type(1)   { animation: mbmarkTwinkle 3.4s ease-in-out infinite; animation-delay: 0s; }
+.mbmark svg circle:nth-of-type(1) { animation: mbmarkTwinkle 3.4s ease-in-out infinite; animation-delay: .6s; }
+.mbmark svg rect:nth-of-type(2)   { animation: mbmarkTwinkle 3.4s ease-in-out infinite; animation-delay: 1.2s; }
+.mbmark svg circle:nth-of-type(2) { animation: mbmarkTwinkle 3.4s ease-in-out infinite; animation-delay: 1.8s; }
+.mbmark svg circle:nth-of-type(3) { animation: mbmarkTwinkle 3.4s ease-in-out infinite; animation-delay: 2.4s; }
+a:hover .mbmark svg circle, a:hover .mbmark svg rect { transform: scale(1.1); }
+@media (prefers-reduced-motion: reduce) {
+  .mbmark svg circle, .mbmark svg rect { opacity: 1 !important; animation: none !important; }
+  .mbmark svg g { animation: none !important; }
+}
+
 /* SYNAPSE: 同心円リングのパルス／拡散（スキャン中・HOMEノードの“動いている”雰囲気）。 */
 @keyframes synPulse { 0%, 100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.14); opacity: .95; } }
 @keyframes synRing  { 0% { transform: scale(.7); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }

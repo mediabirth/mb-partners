@@ -10,7 +10,7 @@
  * get the latest version without manual cache clearing.
  */
 
-const CACHE_NAME = 'mbp-static-v27'
+const CACHE_NAME = 'mbp-static-v28'
 
 // Only cache /_next/static/ assets — they are content-hashed and immutable
 const isStaticAsset = (url) => url.pathname.startsWith('/_next/static/')

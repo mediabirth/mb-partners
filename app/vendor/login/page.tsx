@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import BrandMark from '@/components/ui/BrandMark'
 
 export default function VendorLoginPage() {
   const router = useRouter()
@@ -23,11 +24,10 @@ export default function VendorLoginPage() {
 
   // v2.2：三重オービット装飾・radial drift は撤去＝静かな単色の面。minHeight は 100dvh。
   return (
-    <div style={{ background: '#E9E9ED', minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
-      <div style={{
+    <div className="mb-field-bg" style={{ minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
+      <div className="mb-field-bg" style={{
         width: '100%',
         maxWidth: 430,
-        background: '#fff',
         minHeight: '100dvh',
         position: 'relative',
         boxShadow: '0 0 48px rgba(14,14,20,.12)',
@@ -41,12 +41,9 @@ export default function VendorLoginPage() {
         {/* Content */}
         <div style={{ position: 'relative' }}>
           {/* Logo mark */}
-          <svg width="50" height="50" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 24 }}>
-            <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="2.6"/>
-            <rect x="28" y="6"  width="14" height="14" rx="7"  stroke="#4733E6" strokeWidth="2.6"/>
-            <rect x="6"  y="28" width="14" height="14" rx="7"  stroke="#0E0E14" strokeWidth="2.6"/>
-            <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
-          </svg>
+          <div style={{ marginBottom: 24 }}>
+            <BrandMark size={50} />
+          </div>
 
           <div className="eyebrow">
             Media Birth Partner Program

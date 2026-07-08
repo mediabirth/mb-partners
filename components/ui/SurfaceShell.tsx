@@ -5,14 +5,14 @@
  */
 import React from 'react'
 import Link from 'next/link'
+import BrandMark from '@/components/ui/BrandMark'
 
 // レスポンシブ・プログラム: ≥1024px（PC）でのみ適用（<1024 は従来のスマホシェルと完全一致＝mediaで無影響）。
 //   430pxの電話カラムを解いて、左レール(SurfaceNav)＋広い中央コンテンツへ。読み物は最大820px中央。
 const SHELL_PC = `
 @media (min-width: 1024px){
-  .surf-bg{ background: var(--bg2) !important; }
-  .surf-col{ max-width: none !important; box-shadow: none !important; margin-left: 84px; background: var(--bg2) !important; }
-  .surf-header{ background: rgba(255,255,255,.9) !important; padding-left: 40px !important; padding-right: 40px !important; }
+  .surf-col{ max-width: none !important; box-shadow: none !important; margin-left: 84px; }
+  .surf-header{ background: rgba(255,255,255,.72) !important; padding-left: 40px !important; padding-right: 40px !important; }
   .surf-header .surf-brand{ font-size: 1.02rem !important; }
   .surf-main{ padding-bottom: 40px !important; }
   .surf-main > *{ max-width: 900px; margin-left: auto; margin-right: auto; }
@@ -34,18 +34,13 @@ export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name,
   children: React.ReactNode
 }) {
   return (
-    <div className="surf-bg" style={{ background: '#E9E9ED', minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
+    <div className="surf-bg mb-field-bg" style={{ minHeight: '100dvh', display: 'flex', justifyContent: 'center' }}>
       <style>{SHELL_PC}</style>
-      <div className="surf-col" style={{ width: '100%', maxWidth: 430, background: 'var(--s-0)', minHeight: '100dvh', display: 'flex', flexDirection: 'column', boxShadow: '0 0 48px rgba(14,14,20,.12)', position: 'relative' }}>
+      <div className="surf-col mb-field-bg" style={{ width: '100%', maxWidth: 430, minHeight: '100dvh', display: 'flex', flexDirection: 'column', boxShadow: '0 0 48px rgba(14,14,20,.10)', position: 'relative' }}>
         {/* PWA: standalone の上端ノッチ帯を避ける。padding-top を safe-area と現状(12px)の大きい方に。 */}
-        <header className="surf-header" style={{ background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(12px)', padding: 'max(12px, env(safe-area-inset-top)) 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, borderBottom: '1px solid var(--line)' }}>
+        <header className="surf-header" style={{ background: 'rgba(255,255,255,.72)', backdropFilter: 'blur(16px) saturate(1.3)', WebkitBackdropFilter: 'blur(16px) saturate(1.3)', padding: 'max(12px, env(safe-area-inset-top)) 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50, borderBottom: '1px solid var(--line)' }}>
           <Link href={homeHref} aria-label="ホーム" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', color: 'inherit' }}>
-            <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
-              <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" />
-              <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" />
-              <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" />
-              <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
-            </svg>
+            <BrandMark size={25} />
             <b className="surf-brand" style={{ fontFamily: 'var(--font-sans), Inter', fontWeight: 700, fontSize: '.95rem' }}>MB <span style={{ color: 'var(--c-blue)' }}>Partners</span></b>
           </Link>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

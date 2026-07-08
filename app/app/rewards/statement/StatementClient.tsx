@@ -86,10 +86,7 @@ export default function StatementClient({
                 <small style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted)', marginTop: 3 }}>株式会社Media Birth / 大阪府吹田市</small>
               </div>
               <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
-                <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3"/>
-                <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3"/>
-                <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3"/>
-                <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6"/>
+                <g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" />
               </svg>
             </div>
             <div style={{ fontSize: '1.05rem', fontWeight: 500, letterSpacing: '.3em', textAlign: 'center', margin: '6px 0 20px' }}>支払明細書</div>
@@ -146,10 +143,7 @@ export default function StatementClient({
                 <small style={{ display: 'block', fontSize: '.58rem', color: 'var(--muted)', marginTop: 3 }}>株式会社Media Birth / 大阪府吹田市</small>
               </div>
               <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
-                <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3"/>
-                <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3"/>
-                <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3"/>
-                <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6"/>
+                <g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" />
               </svg>
             </div>
             <div style={{ fontSize: '1.05rem', fontWeight: 500, letterSpacing: '.3em', textAlign: 'center', margin: '6px 0 20px' }}>年間支払集計 {yearLabel}</div>

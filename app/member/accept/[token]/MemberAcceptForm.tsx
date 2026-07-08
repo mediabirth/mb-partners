@@ -31,10 +31,7 @@ export default function MemberAcceptForm({ email, defaultName, token }: { email:
     <div style={{ minHeight: '100vh', background: 'radial-gradient(120% 90% at 85% 0%, var(--blue-bg2) 0%, var(--bg2) 55%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: 420, maxWidth: '100%', background: '#fff', border: '1px solid var(--line)', borderRadius: 18, padding: '34px 30px', boxShadow: '0 28px 80px rgba(14,14,20,.12)' }}>
         <svg width="40" height="40" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 14 }}>
-          <rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="2.6" />
-          <rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="2.6" />
-          <rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="2.6" />
-          <rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" />
+          <g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" />
         </svg>
         <h1 style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: 4 }}>MBメンバー登録</h1>
         <p style={{ fontSize: '.72rem', color: 'var(--muted2)', marginBottom: 20 }}>{email} 宛の招待です。パスワードを設定してください。</p>

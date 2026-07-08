@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import BrandMark from '@/components/ui/BrandMark'
 
 export default function ConsoleLoginPage() {
   const router = useRouter()
@@ -30,9 +31,8 @@ export default function ConsoleLoginPage() {
 
   /* ---- UI ---- */
   return (
-    <div style={{
+    <div className="mb-field-bg" style={{
       minHeight: '100vh',
-      background: 'radial-gradient(120% 90% at 85% 0%, var(--blue-bg2) 0%, var(--bg2) 55%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -54,12 +54,7 @@ export default function ConsoleLoginPage() {
         boxShadow: '0 28px 80px rgba(14,14,20,.12)',
       }}>
         {/* Logo */}
-        <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
-          <rect x="6"  y="6"  width="14" height="14" rx="3"  stroke="#4733E6" strokeWidth="2.6"/>
-          <rect x="28" y="6"  width="14" height="14" rx="7"  stroke="#4733E6" strokeWidth="2.6"/>
-          <rect x="6"  y="28" width="14" height="14" rx="7"  stroke="#0E0E14" strokeWidth="2.6"/>
-          <rect x="28" y="28" width="14" height="14" rx="3"  fill="#4733E6"/>
-        </svg>
+        <BrandMark size={44} />
 
         <h2 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '14px 0 4px', letterSpacing: '-.012em' }}>
           MB Partners <span style={{ color: 'var(--blue)' }}>Console</span>

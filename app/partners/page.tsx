@@ -415,11 +415,17 @@ const CSS = `
 .plp-hd-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);}
 .plp-hd-logo svg{height:27px;width:27px;display:block;overflow:visible;}
 .plp-hd-logo svg circle,.plp-hd-logo svg rect{transition:transform .4s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;}
-.plp-hd-logo svg g line{transition:opacity .4s ease;}
+.plp-hd-logo svg g{transition:opacity .5s ease;animation:mblink 4.4s ease-in-out infinite;}
 .plp-hd-logo:hover svg circle,.plp-hd-logo:hover svg rect{transform:scale(1.14);}
-.plp-hd-logo:hover svg g line{opacity:.75!important;}
-.plp-hd-logo svg circle:nth-of-type(1){animation:logopulse 3s ease-in-out infinite;}
-@keyframes logopulse{0%,100%{opacity:1}50%{opacity:.5}}
+.plp-hd-logo:hover svg g{opacity:.8!important;}
+.plp-hd-logo svg rect:nth-of-type(1){animation:mbtwinkle 3.4s ease-in-out infinite;animation-delay:0s;}
+.plp-hd-logo svg circle:nth-of-type(1){animation:mbtwinkle 3.4s ease-in-out infinite;animation-delay:.6s;}
+.plp-hd-logo svg rect:nth-of-type(2){animation:mbtwinkle 3.4s ease-in-out infinite;animation-delay:1.2s;}
+.plp-hd-logo svg circle:nth-of-type(2){animation:mbtwinkle 3.4s ease-in-out infinite;animation-delay:1.8s;}
+.plp-hd-logo svg circle:nth-of-type(3){animation:mbtwinkle 3.4s ease-in-out infinite;animation-delay:2.4s;}
+@keyframes mbtwinkle{0%,100%{opacity:.6}16%{opacity:1}}
+@keyframes mblink{0%,100%{opacity:.32}50%{opacity:.58}}
+@media (prefers-reduced-motion:reduce){.plp-hd-logo svg *{animation:none!important}}
 .plp-hd-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .plp-hd-logo b span{color:var(--indigo);}
 .plp-hd-actions{display:flex;align-items:center;gap:10px;}
 .plp-hd-apply{height:38px;padding:0 20px;border-radius:999px;background:linear-gradient(100deg,#5646e6,#7c4ff0);color:#fff;border:none;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(86,70,230,.28);transition:transform .18s,box-shadow .18s,filter .18s;}
