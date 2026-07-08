@@ -60,9 +60,13 @@ const FIELD_GLYPH: Record<string, React.ReactNode> = {
 }
 
 // MBプロダクト（横スクロール・実ブランド配色）
-const PRODUCTS = [
-  { n: 'MOOM', c: '#4733e6' }, { n: 'MatchHub', c: '#1e9e6a' }, { n: 'RESONATION', c: '#8b5cf6' },
-  { n: 'PRAGMATION', c: '#15917e' }, { n: 'EMANATION', c: '#6d5cf5' }, { n: 'ENTERSOLOGY', c: '#ec4899' },
+const PRODUCTS: { n: string; c: string; logo?: string }[] = [
+  { n: 'MOOM', c: '#4733e6', logo: '/logos/moom.svg' },
+  { n: 'MatchHub', c: '#1e9e6a', logo: '/logos/matchhub.svg' },
+  { n: 'RESONATION', c: '#8b5cf6', logo: '/logos/resonation.svg' },
+  { n: 'PRAGMATION', c: '#15917e' },
+  { n: 'EMANATION', c: '#6d5cf5' },
+  { n: 'ENTERSOLOGY', c: '#ec4899', logo: '/logos/entersology.svg' },
 ]
 
 // こんな方へ（パートナー像・動くアイコン）
@@ -271,7 +275,9 @@ export default function PartnersLP() {
           <div className="plp-marquee" aria-hidden>
             <div className="plp-mq-track">
               {[...PRODUCTS, ...PRODUCTS, ...PRODUCTS, ...PRODUCTS].map((p, i) => (
-                <span key={i} className="plp-mq-item" style={{ color: p.c }}>{p.n}</span>
+                p.logo
+                  ? <span key={i} className="plp-mq-logo"><img src={p.logo} alt={p.n} /></span>
+                  : <span key={i} className="plp-mq-item" style={{ ['--c' as string]: p.c }}>{p.n}</span>
               ))}
             </div>
           </div>
@@ -553,8 +559,11 @@ const CSS = `
 .plp-marquee{width:100%;overflow:hidden;-webkit-mask:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);}
 .plp-mq-track{display:flex;width:max-content;animation:marq 34s linear infinite;}
 @keyframes marq{to{transform:translateX(-50%)}}
-.plp-mq-item{display:inline-flex;align-items:center;white-space:nowrap;font-size:clamp(1.5rem,3.2vw,2.3rem);font-weight:800;letter-spacing:-.01em;padding-right:clamp(30px,4.5vw,60px);opacity:.92;}
-.plp-mq-item::after{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.45;margin-left:clamp(30px,4.5vw,60px);}
+.plp-mq-item{display:inline-flex;align-items:center;white-space:nowrap;font-size:clamp(1.5rem,3.2vw,2.3rem);font-weight:800;letter-spacing:-.01em;padding-right:clamp(40px,5.5vw,72px);color:var(--mut);transition:color .3s;}
+.plp-mq-item:hover{color:var(--c);}
+.plp-mq-logo{display:inline-flex;align-items:center;padding-right:clamp(40px,5.5vw,72px);}
+.plp-mq-logo img{height:clamp(26px,3vw,38px);width:auto;display:block;filter:grayscale(1) opacity(.6);transition:filter .3s,opacity .3s;}
+.plp-mq-logo:hover img{filter:grayscale(0) opacity(1);}
 
 /* field belt（横スクロール・ホバーで一時停止） */
 .plp-field-sec{overflow:hidden;}
@@ -569,7 +578,6 @@ const CSS = `
 
 /* ホバー磨き込み */
 .plp-stat{transition:transform .28s cubic-bezier(.22,1,.36,1);} .plp-stat:hover{transform:translateY(-5px);}
-.plp-mq-item{transition:opacity .2s;} .plp-marquee:hover .plp-mq-item{opacity:.72;} .plp-mq-item:hover{opacity:1;}
 .plp-foot-meta a{transition:color .18s;} .plp-foot-meta a:hover{color:var(--violet);}
 
 /* 安心の一行 */
