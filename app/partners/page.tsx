@@ -192,7 +192,7 @@ export default function PartnersLP() {
 
       <header className="plp-hd on">
         <a className="plp-hd-logo" href="#top" aria-label="MB Partners">
-          <svg viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" /></svg>
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden><g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" /></svg>
           <b>MB<span> Partners</span></b>
         </a>
         <div className="plp-hd-actions">
@@ -361,7 +361,7 @@ export default function PartnersLP() {
             <div className="plp-foot-top">
               <div className="plp-foot-brand">
                 <a className="plp-hd-logo" href="#top" aria-label="MB Partners">
-                  <svg viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" /></svg>
+                  <svg viewBox="0 0 48 48" fill="none" aria-hidden><g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" /></svg>
                   <b>MB<span> Partners</span></b>
                 </a>
                 <p className="plp-foot-tag">「つながり」を、価値に。</p>
@@ -414,14 +414,12 @@ const CSS = `
 .plp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:15px 32px;background:rgba(251,250,255,.66);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 1px 0 var(--line);}
 .plp-hd-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);}
 .plp-hd-logo svg{height:27px;width:27px;display:block;overflow:visible;}
-.plp-hd-logo svg rect{transition:transform .45s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;}
-.plp-hd-logo svg rect:nth-of-type(2){transition-delay:.04s;} .plp-hd-logo svg rect:nth-of-type(3){transition-delay:.08s;}
-.plp-hd-logo svg rect:nth-of-type(4){transition-delay:.12s;animation:logopulse 3.2s ease-in-out infinite;}
-.plp-hd-logo:hover svg rect:nth-of-type(1){transform:rotate(-12deg) scale(1.06);}
-.plp-hd-logo:hover svg rect:nth-of-type(2){transform:scale(1.16);}
-.plp-hd-logo:hover svg rect:nth-of-type(3){transform:scale(1.16);}
-.plp-hd-logo:hover svg rect:nth-of-type(4){transform:rotate(45deg) scale(1.1);}
-@keyframes logopulse{0%,100%{opacity:1}50%{opacity:.6}}
+.plp-hd-logo svg circle,.plp-hd-logo svg rect{transition:transform .4s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;}
+.plp-hd-logo svg g line{transition:opacity .4s ease;}
+.plp-hd-logo:hover svg circle,.plp-hd-logo:hover svg rect{transform:scale(1.14);}
+.plp-hd-logo:hover svg g line{opacity:.75!important;}
+.plp-hd-logo svg circle:nth-of-type(1){animation:logopulse 3s ease-in-out infinite;}
+@keyframes logopulse{0%,100%{opacity:1}50%{opacity:.5}}
 .plp-hd-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .plp-hd-logo b span{color:var(--indigo);}
 .plp-hd-actions{display:flex;align-items:center;gap:10px;}
 .plp-hd-apply{height:38px;padding:0 20px;border-radius:999px;background:linear-gradient(100deg,#5646e6,#7c4ff0);color:#fff;border:none;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(86,70,230,.28);transition:transform .18s,box-shadow .18s,filter .18s;}

@@ -7,7 +7,7 @@ import { useRef, type ReactNode } from 'react'
 import { useNetwork, useInteractions } from './scene'
 
 const LOGO = (
-  <svg viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" /></svg>
+  <svg viewBox="0 0 48 48" fill="none" aria-hidden><g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round" opacity="0.4"><line x1="24" y1="24" x2="24" y2="7" /><line x1="24" y1="24" x2="39" y2="14" /><line x1="24" y1="24" x2="37" y2="37" /><line x1="24" y1="24" x2="10" y2="37" /><line x1="24" y1="24" x2="8" y2="21" /></g><rect x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" /><circle cx="39" cy="14" r="3.6" fill="#8B5CF6" /><rect x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" /><circle cx="10" cy="37" r="4" fill="#4733E6" /><circle cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" /><rect x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" /></svg>
 )
 
 export function SubShell({ kicker, title, lead, children }: { kicker: string; title: string; lead?: string; children: ReactNode }) {
@@ -65,9 +65,10 @@ export const SP_CSS = `
 @keyframes spup{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .sp-hd{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:15px 28px;background:rgba(251,250,255,.66);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 1px 0 var(--line);}
 .sp-logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);} .sp-logo svg{height:27px;width:27px;display:block;overflow:visible;}
-.sp-logo svg rect{transition:transform .45s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;} .sp-logo svg rect:nth-of-type(4){animation:sppulse 3.2s ease-in-out infinite;}
-.sp-logo:hover svg rect:nth-of-type(1){transform:rotate(-12deg) scale(1.06);} .sp-logo:hover svg rect:nth-of-type(2),.sp-logo:hover svg rect:nth-of-type(3){transform:scale(1.16);} .sp-logo:hover svg rect:nth-of-type(4){transform:rotate(45deg) scale(1.1);}
-@keyframes sppulse{0%,100%{opacity:1}50%{opacity:.6}}
+.sp-logo svg circle,.sp-logo svg rect{transition:transform .4s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center;} .sp-logo svg circle:nth-of-type(1){animation:sppulse 3s ease-in-out infinite;}
+.sp-logo svg g line{transition:opacity .4s ease;}
+.sp-logo:hover svg circle,.sp-logo:hover svg rect{transform:scale(1.14);} .sp-logo:hover svg g line{opacity:.75!important;}
+@keyframes sppulse{0%,100%{opacity:1}50%{opacity:.5}}
 .sp-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .sp-logo b span{color:var(--indigo);}
 .sp-login{display:inline-flex;align-items:center;height:38px;padding:0 20px;border-radius:999px;border:1.4px solid rgba(86,70,230,.32);color:var(--indigo);background:rgba(255,255,255,.5);text-decoration:none;font-size:.82rem;font-weight:700;transition:background .18s,color .18s,transform .18s;}
 .sp-login:hover{background:var(--indigo);border-color:var(--indigo);color:#fff;transform:translateY(-1px);}

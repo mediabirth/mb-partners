@@ -88,19 +88,19 @@ export default function RootLayout({
         ` }} />
         <div id="mbp-splash" aria-hidden="true">
           <svg viewBox="0 0 48 48" fill="none">
-            <g stroke="#4733E6" strokeWidth="1.1" strokeLinecap="round">
-              <line className="mbp-spl-link" style={{ animationDelay: '.2s' }} x1="24" y1="24" x2="9" y2="13" />
-              <line className="mbp-spl-link" style={{ animationDelay: '.55s' }} x1="24" y1="24" x2="40" y2="11" />
-              <line className="mbp-spl-link" style={{ animationDelay: '.9s' }} x1="24" y1="24" x2="38" y2="37" />
-              <line className="mbp-spl-link" style={{ animationDelay: '1.25s' }} x1="24" y1="24" x2="10" y2="36" />
-              <line className="mbp-spl-link" style={{ animationDelay: '1.6s' }} x1="24" y1="24" x2="24" y2="6" />
+            <g stroke="#4733E6" strokeWidth="2.2" strokeLinecap="round">
+              <line className="mbp-spl-link" style={{ animationDelay: '.35s' }} x1="24" y1="24" x2="24" y2="7" />
+              <line className="mbp-spl-link" style={{ animationDelay: '.7s' }} x1="24" y1="24" x2="39" y2="14" />
+              <line className="mbp-spl-link" style={{ animationDelay: '1.05s' }} x1="24" y1="24" x2="37" y2="37" />
+              <line className="mbp-spl-link" style={{ animationDelay: '1.4s' }} x1="24" y1="24" x2="10" y2="37" />
+              <line className="mbp-spl-link" style={{ animationDelay: '1.75s' }} x1="24" y1="24" x2="8" y2="21" />
             </g>
-            <circle className="mbp-spl-node" style={{ animationDelay: '0s' }} cx="24" cy="24" r="4.2" fill="#4733E6" />
-            <circle className="mbp-spl-node" style={{ animationDelay: '.35s' }} cx="9" cy="13" r="2.6" fill="#3D2BCC" />
-            <circle className="mbp-spl-node" style={{ animationDelay: '.7s' }} cx="40" cy="11" r="2.2" fill="#7F77DD" />
-            <circle className="mbp-spl-node" style={{ animationDelay: '1.05s' }} cx="38" cy="37" r="2.8" fill="#4733E6" />
-            <circle className="mbp-spl-node" style={{ animationDelay: '1.4s' }} cx="10" cy="36" r="2.2" fill="#3D2BCC" />
-            <circle className="mbp-spl-node" style={{ animationDelay: '1.75s' }} cx="24" cy="6" r="2" fill="#7F77DD" />
+            <rect className="mbp-spl-node" style={{ animationDelay: '.5s' }} x="20.5" y="4" width="7" height="7" rx="1.8" fill="#4733E6" />
+            <circle className="mbp-spl-node" style={{ animationDelay: '.85s' }} cx="39" cy="14" r="3.6" fill="#8B5CF6" />
+            <rect className="mbp-spl-node" style={{ animationDelay: '1.2s' }} x="33.5" y="33.5" width="7.5" height="7.5" rx="2.2" stroke="#4733E6" strokeWidth="2.4" />
+            <circle className="mbp-spl-node" style={{ animationDelay: '1.55s' }} cx="10" cy="37" r="4" fill="#4733E6" />
+            <circle className="mbp-spl-node" style={{ animationDelay: '1.9s' }} cx="8" cy="21" r="2.8" stroke="#4733E6" strokeWidth="2.4" />
+            <rect className="mbp-spl-node" style={{ animationDelay: '0s' }} x="18.5" y="18.5" width="11" height="11" rx="3" fill="#4733E6" />
           </svg>
           <span className="mbp-spl-lbl">MB Partners</span>
         </div>
