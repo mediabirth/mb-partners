@@ -11,7 +11,7 @@ import { useNetwork, useMotion, useInteractions } from './scene'
 // ── 数字セクション。field=6は実値(services active)。partner/fee は仮値＝実データに差し替え可。 ──
 // fee は K表記(千円単位)。to=3200 → "3,200K"（＝¥3,200,000相当）。
 const STATS: { key: string; to: number; prefix?: string; suffix?: string; label: string; real?: boolean }[] = [
-  { key: 'field', to: 10, prefix: '+', label: 'field', real: true },
+  { key: 'field', to: 12, prefix: '+', label: 'field', real: true },
   { key: 'partner', to: 40, prefix: '+', label: 'partner' },
   { key: 'fee', to: 3200, prefix: '+', suffix: 'K', label: 'fee' },
 ]
@@ -41,6 +41,8 @@ const FIELDS = [
   { key: 'bpo', n: 'BPO', c: '#8b5cf6' },
   { key: 'hr', n: '人材・採用', c: '#1e9e6a' },
   { key: 'growth', n: 'グロース', c: '#ec4899' },
+  { key: 'estate', n: '不動産', c: '#4733e6' },
+  { key: 'enta', n: 'エンタメ', c: '#ff5a8a' },
 ]
 const FIELD_GLYPH: Record<string, React.ReactNode> = {
   brand: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M24 8l4 12 12 4-12 4-4 12-4-12-12-4 12-4z" fill="currentColor" fillOpacity="0.16" /></svg>,
@@ -53,6 +55,8 @@ const FIELD_GLYPH: Record<string, React.ReactNode> = {
   bpo: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="10" y="13" width="15" height="15" rx="3" fill="currentColor" fillOpacity="0.14" /><path d="M31 17a9 9 0 1 0 3 8" /><path d="M31 11v6h-6" /></svg>,
   hr: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="18" r="5" fill="currentColor" fillOpacity="0.18" /><circle cx="31" cy="20" r="4.3" fill="currentColor" fillOpacity="0.18" /><path d="M9 37c1-6 5-9 9-9s8 3 9 9" /><path d="M27 35c1-5 4-7.5 7-7.5s6 2.5 7 7.5" /></svg>,
   growth: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 33l9-8 6 5 13-13" /><path d="M32 17h6v6" /><path d="M10 38h29" opacity="0.35" /></svg>,
+  estate: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 21v15h22V21" fill="currentColor" fillOpacity="0.13" /><path d="M9 23L24 10l15 13" /><path d="M20 36v-8h8v8" fill="currentColor" fillOpacity="0.3" /></svg>,
+  enta: <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="20" y="8" width="8" height="18" rx="4" fill="currentColor" fillOpacity="0.16" /><path d="M15 22a9 9 0 0 0 18 0" /><path d="M24 31v6M19 37h10" /></svg>,
 }
 
 // MBプロダクト（横スクロール・実ブランド配色）
@@ -187,7 +191,10 @@ export default function PartnersLP() {
           <svg viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" /></svg>
           <b>MB<span> Partners</span></b>
         </a>
-        <a className="plp-hd-login" href="/app">ログイン</a>
+        <div className="plp-hd-actions">
+          <a className="plp-hd-login" href="/app">ログイン</a>
+          <button className="plp-hd-apply" onClick={scrollForm}>応募する</button>
+        </div>
       </header>
 
       <div className="plp-content" id="top">
@@ -313,7 +320,6 @@ export default function PartnersLP() {
         {/* ── 応募 ── */}
         <section id="apply" className="plp-sec plp-apply plp-io">
           <div className="plp-wrap plp-form-wrap">
-            <Kicker label="join" />
             {done ? (
               <div className="plp-done" data-st>
                 <div className="plp-check"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
@@ -346,12 +352,30 @@ export default function PartnersLP() {
             )}
           </div>
           <footer className="plp-footer">
-            <nav className="plp-foot-nav">
-              <a href="/partners/guide">はじめてガイド</a>
-              <a href="/partners/rewards">報酬について</a>
-              <a href="/partners/faq">よくある質問</a>
-            </nav>
-            <span className="plp-foot-meta">株式会社Media Birth ・ <a href="/legal/privacy">プライバシーポリシー</a></span>
+            <div className="plp-foot-top">
+              <div className="plp-foot-brand">
+                <a className="plp-hd-logo" href="#top" aria-label="MB Partners">
+                  <svg viewBox="0 0 48 48" fill="none" aria-hidden><rect x="6" y="6" width="14" height="14" rx="3" stroke="#4733E6" strokeWidth="3" /><rect x="28" y="6" width="14" height="14" rx="7" stroke="#4733E6" strokeWidth="3" /><rect x="6" y="28" width="14" height="14" rx="7" stroke="#0E0E14" strokeWidth="3" /><rect x="28" y="28" width="14" height="14" rx="3" fill="#4733E6" /></svg>
+                  <b>MB<span> Partners</span></b>
+                </a>
+                <p className="plp-foot-tag">「つながり」を、価値に。</p>
+              </div>
+              <dl className="plp-foot-info">
+                <div><dt>運営会社</dt><dd>株式会社Media Birth</dd></div>
+                <div><dt>所在地</dt><dd>大阪府吹田市</dd></div>
+                <div><dt>事業内容</dt><dd>パートナープログラム「MB Partners」の運営／ブランディング・制作・DX・人材など各領域の支援</dd></div>
+              </dl>
+            </div>
+            <div className="plp-foot-bottom">
+              <nav className="plp-foot-nav">
+                <a href="/partners/guide">はじめてガイド</a>
+                <a href="/partners/rewards">報酬について</a>
+                <a href="/partners/faq">よくある質問</a>
+                <a href="/legal/privacy">プライバシーポリシー</a>
+                <a href="/legal/terms">利用規約</a>
+              </nav>
+              <span className="plp-foot-copy">© 2026 株式会社Media Birth</span>
+            </div>
           </footer>
         </section>
       </div>
@@ -393,6 +417,9 @@ const CSS = `
 .plp-hd-logo:hover svg rect:nth-of-type(4){transform:rotate(45deg) scale(1.1);}
 @keyframes logopulse{0%,100%{opacity:1}50%{opacity:.6}}
 .plp-hd-logo b{font-weight:800;font-size:1rem;letter-spacing:-.02em;} .plp-hd-logo b span{color:var(--indigo);}
+.plp-hd-actions{display:flex;align-items:center;gap:10px;}
+.plp-hd-apply{height:38px;padding:0 20px;border-radius:999px;background:linear-gradient(100deg,#5646e6,#7c4ff0);color:#fff;border:none;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(86,70,230,.28);transition:transform .18s,box-shadow .18s,filter .18s;}
+.plp-hd-apply:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(86,70,230,.4);filter:brightness(1.05);}
 .plp-hd-login{display:inline-flex;align-items:center;height:38px;padding:0 20px;border-radius:999px;border:1.4px solid rgba(86,70,230,.32);color:var(--indigo);background:rgba(255,255,255,.5);text-decoration:none;font-size:.82rem;font-weight:700;letter-spacing:.01em;transition:background .18s,border-color .18s,transform .18s;}
 .plp-hd-login:hover{background:var(--indigo);border-color:var(--indigo);color:#fff;transform:translateY(-1px);}
 
@@ -484,6 +511,7 @@ const CSS = `
 .fobj-dev svg{animation:fbob 3.2s ease-in-out infinite;} .fobj-ops svg{animation:fspin 8s linear infinite;}
 .fobj-dx svg{animation:fbeat 2.4s ease-in-out infinite;} .fobj-bpo svg{animation:fspin 9s linear infinite;}
 .fobj-hr svg{animation:fbeat 2.6s ease-in-out infinite;} .fobj-growth svg{animation:fbob 3s ease-in-out infinite;}
+.fobj-estate svg{animation:fbob 3.4s ease-in-out infinite;} .fobj-enta svg{animation:fbeat 2.3s ease-in-out infinite;}
 @keyframes fbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes fbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
 @keyframes fwiggle{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
@@ -597,7 +625,7 @@ const CSS = `
 .plp-textlink .plp-arrow{transition:transform .2s;} .plp-textlink:hover .plp-arrow{transform:translateX(3px);}
 
 /* フッターナビ */
-.plp-foot-nav{display:flex;justify-content:center;flex-wrap:wrap;gap:12px 26px;margin-bottom:18px;}
+.plp-foot-nav{display:flex;flex-wrap:wrap;gap:12px 22px;}
 .plp-foot-nav a{font-size:.8rem;font-weight:600;color:var(--ink2);text-decoration:none;transition:color .18s;}
 .plp-foot-nav a:hover{color:var(--indigo);}
 
@@ -635,9 +663,15 @@ const CSS = `
 .plp-err{font-size:.8rem;color:#d64545;}
 .plp-done{text-align:center;padding:48px 24px;}
 .plp-check{width:64px;height:64px;border-radius:50%;background:linear-gradient(150deg,#5646e6,#7c4ff0);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:0 14px 40px rgba(86,70,230,.4);}
-.plp-footer{border-top:0.5px solid var(--line);margin:70px auto 0;padding:34px 28px;text-align:center;max-width:1080px;}
-.plp-foot-meta{font-size:.72rem;color:var(--mut);} .plp-foot-meta a{color:var(--indigo);text-decoration:none;}
-.plp-foot-meta a:hover{text-decoration:underline;}
+.plp-footer{border-top:0.5px solid var(--line);margin:84px auto 0;padding:48px 28px 40px;max-width:1080px;}
+.plp-foot-top{display:grid;grid-template-columns:1fr 1.5fr;gap:44px;align-items:start;}
+.plp-foot-brand .plp-hd-logo{margin-bottom:14px;}
+.plp-foot-tag{font-size:.82rem;color:var(--ink2);line-height:1.7;}
+.plp-foot-info{display:flex;flex-direction:column;gap:13px;}
+.plp-foot-info>div{display:grid;grid-template-columns:88px 1fr;gap:16px;font-size:.82rem;line-height:1.75;}
+.plp-foot-info dt{color:var(--mut);font-weight:600;} .plp-foot-info dd{color:var(--ink2);}
+.plp-foot-bottom{margin-top:38px;padding-top:24px;border-top:0.5px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px 24px;}
+.plp-foot-copy{font-size:.74rem;color:var(--mut);}
 
 @media (max-width:820px){
   .plp-hd{padding:11px 18px;}
@@ -664,5 +698,10 @@ const CSS = `
   .plp-faq-q{font-size:.9rem;padding:16px 18px;} .plp-faq-a p{padding:0 18px 18px;font-size:.84rem;}
   .plp-reasons{grid-template-columns:1fr!important;gap:26px;}
   .plp-sim-total{font-size:clamp(2.2rem,11vw,3rem);}
+  .plp-hd-actions{gap:8px;} .plp-hd-login,.plp-hd-apply{height:34px;padding:0 14px;font-size:.76rem;}
+  .plp-hd-logo b{font-size:.94rem;}
+  .plp-foot-top{grid-template-columns:1fr;gap:28px;}
+  .plp-foot-info>div{grid-template-columns:76px 1fr;gap:12px;}
+  .plp-foot-bottom{flex-direction:column;align-items:flex-start;gap:16px;}
 }
 `
