@@ -88,7 +88,8 @@ export function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
       const pulses = new THREE.Points(pGeo, pMat); group.add(pulses)
 
       let scrollF = 0, targetSF = 0
-      const onScroll = () => { const max = Math.max(1, document.body.scrollHeight - innerHeight); targetSF = scrollY / max }
+      // スクロール「実ピクセル」に比例した穏やかなパララックス（ページ長に依存せず＝短い下層でも大移動しない）
+      const onScroll = () => { targetSF = scrollY }
       addEventListener('scroll', onScroll, { passive: true }); onScroll()
       const mouse = { x: 0, y: 0 }, mt = { x: 0, y: 0 }
       if (!mobile && !reduce) addEventListener('pointermove', e => { mt.x = (e.clientX / innerWidth - .5); mt.y = (e.clientY / innerHeight - .5) })
@@ -103,7 +104,7 @@ export function useNetwork(mountRef: React.RefObject<HTMLDivElement | null>) {
         if (!running) return
         const dt = Math.min(clock.getDelta(), 0.05); t += dt
         scrollF += (targetSF - scrollF) * 0.06
-        group.position.y = scrollF * (SPREAD_Y - 8)
+        group.position.y = scrollF * 0.0045
         mouse.x += (mt.x - mouse.x) * 0.04; mouse.y += (mt.y - mouse.y) * 0.04
         camera.position.x = mouse.x * 2.2; camera.position.y = -mouse.y * 1.6; camera.lookAt(0, group.position.y * -0.02, 0)
         if (!reduce) for (let i = 0; i < N; i++) {
