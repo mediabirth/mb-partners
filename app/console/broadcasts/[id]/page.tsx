@@ -1,6 +1,8 @@
 'use client'
 export const runtime = 'edge'
 import { useEffect, useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_BROADCAST_DETAIL } from '@/lib/console-guides'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ConsoleNav from '@/components/ConsoleNav'
@@ -74,7 +76,7 @@ export default function BroadcastDetailPage() {
             </Link>
             <div>
               <div className="eyebrow">配信</div>
-              <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信詳細</h1>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信詳細</h1><PageGuide data={GUIDE_BROADCAST_DETAIL} /></span>
             </div>
           </div>
           {broadcast && !broadcast.sent_at && (

@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_TEMPLATES } from '@/lib/console-guides'
 import Button from '@/components/ui/Button'
 import type { Template } from '../../messages/MessagesClient'
 import { ChannelBadge, useIsNarrow, BlockBuilder, BlocksPreview, templateToBlocks, cleanBlocks, type EditBlock } from '../messaging-shared'
@@ -134,7 +136,7 @@ export default function TemplatesScreen({ initial, signedUrls = {}, initialSel =
     <div style={{ maxWidth: 980, margin: '0 auto', padding: '28px 28px 60px' }}>
       <div style={{ marginBottom: 18 }}>
         <a href="/console/settings" style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none' }}>← 設定に戻る</a>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 500, marginTop: 6 }}>自由送信テンプレート</h1>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.4rem', fontWeight: 500, marginTop: 6 }}>自由送信テンプレート</h1><PageGuide data={GUIDE_TEMPLATES} /></span>
       </div>
       {narrow ? (showEditor ? EditorPane : ListPane) : (
         <div style={{ display: 'flex', alignItems: 'flex-start' }}>{ListPane}{EditorPane}</div>

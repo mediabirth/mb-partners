@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_AUTO_MESSAGES } from '@/lib/console-guides'
 import Button from '@/components/ui/Button'
 import type { Template } from '../../messages/MessagesClient'
 import { ChannelBadge, EventIcon, useIsNarrow, BlockBuilder, BlockAddBar, BlocksPreview, templateToBlocks, cleanBlocks, blocksFromDefaultText, type EditBlock } from '../messaging-shared'
@@ -167,7 +169,7 @@ export default function AutoMessagesScreen({ byCategory, signedUrls = {}, initia
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 28px 60px' }}>
       <div style={{ marginBottom: 18 }}>
         <a href="/console/settings" style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none' }}>← 設定に戻る</a>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 500, marginTop: 6 }}>自動メッセージ</h1>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.4rem', fontWeight: 500, marginTop: 6 }}>自動メッセージ</h1><PageGuide data={GUIDE_AUTO_MESSAGES} /></span>
       </div>
       {narrow ? (section ? EditorPane : ListPane) : (
         <div style={{ display: 'flex', alignItems: 'flex-start' }}>{ListPane}{EditorPane}</div>

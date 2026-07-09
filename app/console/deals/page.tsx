@@ -15,10 +15,12 @@ import { engagementLabel } from '@/lib/engagement-labels'
 import { statusTranslation, projectLaneTranslation, transitionForecast, forecastLine, statusEntryEffects, OPS_NEXT_ACTION, DEAL_STATUS_KEYS } from '@/lib/status-effects'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_DEALS } from '@/lib/console-guides'
 // 通水P2「束削減」: 詳細ドロワーは案件クリック時のみ取得（dynamic ssr:false）＝ボード初期バンドルから分離。
 const DealDrawer = dynamic(() => import('./DealDrawer'), { ssr: false, loading: () => <div style={{ position: 'fixed', top: 0, right: 0, width: 720, maxWidth: '96vw', height: '100%', background: '#fff', borderLeft: '0.5px solid var(--line)', zIndex: 80 }} className="page-anim" /> })
 // 通水P2「束削減」: ステータス×3面マトリクスは参照時のみ取得（dynamic）＝初期バンドルから分離。
-const StatusMatrixModal = dynamic(() => import('./StatusMatrixModal'), { ssr: false })
+const StatusMatrixBody = dynamic(() => import('./StatusMatrixBody'), { ssr: false })
 import { LOST_REASONS, continuousInfo, rateInfo, needsBase, baseWord, grossBeforeReward, menuLabelOf, lostReasonLabel, COLS, MappingTip, PIPELINE_LANES, laneKeyOf, DeliveryOptGroups, type Deal, type Service, type Director, type DeliveryOpt, type SvcWithMenus, type Status } from './_parts'
 export default function DealsPage() {
   const [deals, setDeals]           = useState<Deal[]>([])
@@ -53,8 +55,6 @@ export default function DealsPage() {
   // 静音化v2(A2): 動詞CTA・管理操作の確認ダイアログ（本文=forecastLine＋precondition・実行する/キャンセル）。
   //   reopen=true は lost→in_progress の復活（reopenDeal＝lost_*クリア）。承認後は既存ガード分岐が関数内で活きる。
   const [ctaConfirm, setCtaConfirm] = useState<{ deal: Deal; to: Status; from: string; precondition?: string; reopen?: boolean } | null>(null)
-  // 実装3: ステータスマトリクス（3面写像＋通知メール）のⓘシート。
-  const [matrixOpen, setMatrixOpen] = useState(false)
   // N: 不成立化モーダル（理由＋メモ）
   const [lostModal, setLostModal] = useState<Deal | null>(null)
   const [lostReason, setLostReason] = useState<string>('')
@@ -541,14 +541,7 @@ export default function DealsPage() {
               <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>{view === 'board' ? '案件ボード' : 'アーカイブ'}</h1>
               {/* 実装3: ステータスマトリクス（3面写像＋通知メール）を開くⓘ（SVG・絵文字不使用） */}
               {view === 'board' && (
-                <button onClick={() => setMatrixOpen(true)} title="ステータスと3面の表示" aria-label="ステータスと3面の表示を開く"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 0, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <circle cx="12" cy="12" r="9" />
-                    <line x1="12" y1="11" x2="12" y2="16" />
-                    <circle cx="12" cy="7.6" r="0.5" fill="currentColor" stroke="none" />
-                  </svg>
-                </button>
+                <PageGuide data={GUIDE_DEALS} width={680}><StatusMatrixBody /></PageGuide>
               )}
             </div>
           </div>
@@ -965,7 +958,6 @@ export default function DealsPage() {
 
       {/* 実装3: ステータスマトリクス — 行=DEAL_STATUS_KEYS＋project_status注記行、列=運営/パートナー/デリバリー/通知メール。
           値は正典（statusTranslation / statusEntryEffects / projectLaneTranslation）から導出・ハードコードなし。 */}
-      {matrixOpen && <StatusMatrixModal onClose={() => setMatrixOpen(false)} />}
 
       {/* F-3a: 直営業プロジェクト起票モーダル。intake=direct → API が MB直営(is_system)・confirmed・amount=0・未着手 で作成。
            受注額は deal_items.revenue（MB粗利）へ／パートナー報酬には非流入。MB直営は裏方で一覧に出さない。 */}

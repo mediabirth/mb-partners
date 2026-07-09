@@ -1,5 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_BROADCAST_NEW } from '@/lib/console-guides'
 import { useRouter } from 'next/navigation'
 import ConsoleNav from '@/components/ConsoleNav'
 import { createClient } from '@/lib/supabase/client'
@@ -78,7 +80,7 @@ export default function NewBroadcastPage() {
           </button>
           <div>
             <div className="eyebrow">配信</div>
-            <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>新規配信作成</h1>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>新規配信作成</h1><PageGuide data={GUIDE_BROADCAST_NEW} /></span>
           </div>
         </div>
 

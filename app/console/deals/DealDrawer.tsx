@@ -8,6 +8,8 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import RewardPill from '@/components/ui/RewardPill'
 import Button from '@/components/ui/Button'
 import { customerHonorific } from '@/lib/customer'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_DEAL_DRAWER } from '@/lib/console-guides'
 import { phaseOf, PHASE_LABEL } from '@/lib/phase'
 import { DEAL_STATUS, assignStatus } from '@/lib/status'
 import { engagementLabel } from '@/lib/engagement-labels'
@@ -29,7 +31,7 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                 ? <ServiceAvatar logoPath={(deal.services as any).logo_path ?? null} icon={deal.services.icon} color={deal.services.color} name={deal.services.name} size={36} />
                 : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={36} />}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(deal)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ fontSize: 16, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customerHonorific(deal)}</div><PageGuide data={GUIDE_DEAL_DRAWER} /></div>
                 {/* ライフサイクル: 素性行＝「ブランド ─ メニュー・報酬条件・トリガー」を常時表示（reward_snapshot/正典から導出） */}
                 <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {[

@@ -1,4 +1,6 @@
 import { Suspense } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_DASHBOARD } from '@/lib/console-guides'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
@@ -252,7 +254,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
         {/* Top bar */}
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>ダッシュボード</h1>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>ダッシュボード</h1><PageGuide data={GUIDE_DASHBOARD} /></span>
             <MonthSelector months={monthOptions} selected={selectedYm} current={ym} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_INQUIRIES } from '@/lib/console-guides'
 import Link from 'next/link'
 import ConsoleNav from '@/components/ConsoleNav'
 
@@ -63,7 +65,7 @@ export default function ConsoleInquiriesPage() {
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#4733E6'} />
       <main className="page-anim" style={{ marginLeft: 230, flex: 1, padding: '32px 32px', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 500 }}>問い合わせ</h1>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.25rem', fontWeight: 500 }}>問い合わせ</h1><PageGuide data={GUIDE_INQUIRIES} /></span>
           {openCount > 0 && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,

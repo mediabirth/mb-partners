@@ -1,4 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_PARTNER_DETAIL } from '@/lib/console-guides'
 import Link from 'next/link'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
@@ -121,7 +123,7 @@ export default async function PartnerDetailPage({
             ← パートナー一覧
           </Link>
           <span style={{ color: 'var(--line)' }}>/</span>
-          <h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>{p.profiles?.name ?? p.code}</h1>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>{p.profiles?.name ?? p.code}</h1><PageGuide data={GUIDE_PARTNER_DETAIL} /></span>
           {pendingBankCount > 0 && (
             <span style={{ fontSize: '.6rem', fontWeight: 500, background: 'var(--amber)', color: '#fff', borderRadius: 20, padding: '2px 8px' }}>
               口座申請 {pendingBankCount}件

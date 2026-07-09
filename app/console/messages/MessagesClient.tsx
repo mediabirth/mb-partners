@@ -1,5 +1,7 @@
 'use client'
 import { useState, useMemo, type ChangeEvent } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_MESSAGES } from '@/lib/console-guides'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -102,7 +104,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
       <div style={{ width: 300, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: 'var(--s-0)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 18px 12px', borderBottom: '0.5px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>メッセージ</h1>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>メッセージ</h1><PageGuide data={GUIDE_MESSAGES} /></span>
             <a href="/console/settings/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ設定</a>
           </div>
         </div>

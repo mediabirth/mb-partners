@@ -3,6 +3,8 @@ export const runtime = 'edge'
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
 import ConsoleNav from '@/components/ConsoleNav'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_INQUIRY_DETAIL } from '@/lib/console-guides'
 
 type Message = {
   id: string
@@ -147,6 +149,7 @@ export default function ConsoleInquiryDetailPage({ params }: { params: Promise<{
                     <span style={{ fontSize: '.92rem', fontWeight: 500, color: 'var(--txt)' }}>
                       {inquiry.partners?.profiles?.name ?? '-'}
                     </span>
+                    <PageGuide data={GUIDE_INQUIRY_DETAIL} />
                     <span style={{ fontSize: '.64rem', color: 'var(--muted2)', opacity: .8 }}>({inquiry.partners?.code})</span>
                     <span style={{
                       fontSize: '.62rem', fontWeight: 500, padding: '2px 9px', borderRadius: 20,

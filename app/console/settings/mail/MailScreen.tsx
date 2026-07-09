@@ -7,6 +7,8 @@
  * v2.2: 0.5px罫線・weight400/500・塗りなし・ドット+テキスト。
  */
 import { useEffect, useMemo, useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_MAIL } from '@/lib/console-guides'
 import { MAIL_REGISTRY, MAIL_REGISTRY_BY_KEY, fillVars, sampleVars, mailMatrix, type MailTemplateDef } from '@/lib/mail-registry'
 import { bodyToBrandedHtml } from '@/lib/mail-render'
 
@@ -94,7 +96,7 @@ export default function MailScreen() {
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1100 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-        <h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>メール</h1>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>メール</h1><PageGuide data={GUIDE_MAIL} /></span>
         <a href="/console/settings" style={{ fontSize: '.68rem', color: 'var(--muted2)', textDecoration: 'none' }}>← 設定</a>
       </div>
       <p style={{ fontSize: '.7rem', color: 'var(--muted2)', margin: '0 0 16px' }}>

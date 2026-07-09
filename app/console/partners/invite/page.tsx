@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_INVITE } from '@/lib/console-guides'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
@@ -40,7 +42,7 @@ export default async function InvitePage() {
             ← パートナー一覧
           </Link>
           <span style={{ color: 'var(--line)' }}>/</span>
-          <h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>招待を作成</h1>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, margin: 0 }}>招待を作成</h1><PageGuide data={GUIDE_INVITE} /></span>
         </div>
 
         <div className="page-anim">

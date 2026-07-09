@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_FUNNEL } from '@/lib/console-guides'
 import Link from 'next/link'
 import { createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
@@ -47,7 +49,7 @@ export default async function ConsoleFunnelPage() {
       <ConsoleNav />
       <ConsoleMain>
         <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>紹介ファネル</h1>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>紹介ファネル</h1><PageGuide data={GUIDE_FUNNEL} /></span>
           <Link href="/console" className="ui-btn ui-btn--secondary ui-btn--lg" style={{ fontSize: '.7rem', fontWeight: 500, padding: '7px 14px', textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
 

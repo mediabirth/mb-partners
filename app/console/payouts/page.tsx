@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState, useTransition, type ReactNode } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_PAYOUTS } from '@/lib/console-guides'
 import useSWR from 'swr'
 import ConsoleNav from '@/components/ConsoleNav'
 import StatusDot from '../StatusDot'
@@ -228,7 +230,7 @@ export default function PayoutsPage() {
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
-          <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>支払管理</h1>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>支払管理</h1><PageGuide data={GUIDE_PAYOUTS} /></span>
         </div>
 
         <div className="page-anim" style={{ padding: '26px 28px', maxWidth: 880 }}>

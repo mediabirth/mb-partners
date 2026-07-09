@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+import { GUIDE_BROADCASTS } from '@/lib/console-guides'
 import Link from 'next/link'
 import ConsoleNav from '@/components/ConsoleNav'
 
@@ -62,7 +64,7 @@ export default function BroadcastsPage() {
         }}>
           <div>
             <div className="eyebrow">CONSOLE</div>
-            <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信</h1>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信</h1><PageGuide data={GUIDE_BROADCASTS} /></span>
           </div>
           <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
             fontSize: '.75rem', fontWeight: 500, padding: '8px 16px', borderRadius: 9,
