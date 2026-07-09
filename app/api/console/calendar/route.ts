@@ -6,6 +6,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { MB_DEFAULTS } from '@/lib/mb-calendar'
+import { decryptTokens, encryptTokens, type StoredTokens } from '@/lib/google-token'
+import { getValidAccessToken } from '@/lib/google-calendar'
+
+// 連携の“実際の生死”を判定：トークンを実際に更新試行し、成功=有効/例外=要再連携。
+// 期限切れなら refresh を実行（＝失効したリフレッシュトークンをここで検出）。成功時は更新後トークンを保存。
+async function checkLinkHealthy(admin: Awaited<ReturnType<typeof createServiceRoleClient>>, userId: string, oauthTokens: unknown): Promise<boolean> {
+  try {
+    const tokens = decryptTokens(oauthTokens as StoredTokens)
+    await getValidAccessToken(tokens, async (refreshed) => {
+      const updated = encryptTokens({ access_token: refreshed.access_token, refresh_token: tokens.refresh_token, expires_at: refreshed.expires_at })
+      await admin.from('member_calendar_links').update({ oauth_tokens: updated, updated_at: new Date().toISOString() }).eq('user_id', userId)
+    })
+    return true
+  } catch { return false }
+}
 
 async function requireOwner(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,16 +39,19 @@ export async function GET() {
 
   // 段階2：MBメンバー（owner/manager）×各自のカレンダー連携状況。oauth_tokens は返さない（連携有無のみ）。
   // is_self＝ログイン本人の行（連携/解除ボタンを出す対象）。
-  const members: { user_id: string; name: string | null; role: string; color: string | null; avatar_url: string | null; connected: boolean; google_email: string | null; is_self: boolean }[] = []
+  const members: { user_id: string; name: string | null; role: string; color: string | null; avatar_url: string | null; connected: boolean; healthy: boolean; google_email: string | null; is_self: boolean }[] = []
   try {
     const { data: profs } = await admin.from('profiles').select('id, name, role, color, avatar_url').in('role', ['owner', 'manager']).order('role').order('name')
-    const { data: links } = await admin.from('member_calendar_links').select('user_id, google_email, active')
+    const { data: links } = await admin.from('member_calendar_links').select('user_id, google_email, active, oauth_tokens')
     const linkBy = new Map((links ?? []).map(l => [l.user_id as string, l]))
     for (const p of (profs ?? [])) {
-      const lk = linkBy.get(p.id) as { google_email: string | null; active: boolean } | undefined
+      const lk = linkBy.get(p.id) as { google_email: string | null; active: boolean; oauth_tokens: unknown } | undefined
+      const connected = !!(lk && lk.active && lk.google_email)
+      // 実態表示（張りぼて根絶）：連携行があっても実トークンが失効なら healthy=false＝「要再連携」。
+      const healthy = connected && !!lk?.oauth_tokens ? await checkLinkHealthy(admin, p.id, lk.oauth_tokens) : false
       members.push({
         user_id: p.id, name: p.name, role: p.role, color: p.color, avatar_url: (p as any).avatar_url ?? null,
-        connected: !!(lk && lk.active && lk.google_email), google_email: lk?.google_email ?? null, is_self: p.id === me.id,
+        connected, healthy, google_email: lk?.google_email ?? null, is_self: p.id === me.id,
       })
     }
   } catch { /* member_calendar_links 未作成でもメンバー一覧は返す */ }

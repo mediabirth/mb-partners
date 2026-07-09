@@ -14,7 +14,7 @@ type Settings = {
   slot_minutes: number; buffer_minutes: number
   google_email?: string | null
 }
-type Member = { user_id: string; name: string | null; role: string; color: string | null; avatar_url: string | null; connected: boolean; google_email: string | null; is_self: boolean }
+type Member = { user_id: string; name: string | null; role: string; color: string | null; avatar_url: string | null; connected: boolean; healthy: boolean; google_email: string | null; is_self: boolean }
 const ROLE_JP: Record<string, string> = { owner: 'オーナー', manager: 'マネージャー', admin: '管理者', staff: 'スタッフ' }
 
 export default function ConsoleCalendarCard() {
@@ -102,14 +102,23 @@ export default function ConsoleCalendarCard() {
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name ?? '—'}</span>
                     <span style={{ fontSize: '.56rem', fontWeight: 700, color: 'var(--muted2)', flexShrink: 0 }}>{ROLE_JP[m.role] ?? m.role}{m.is_self ? '・あなた' : ''}</span>
                   </div>
-                  <div style={{ fontSize: '.62rem', marginTop: 1, color: m.connected ? 'var(--green)' : 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {m.connected ? `✓ 連携済み（${m.google_email}）` : '未連携'}
+                  {/* 実態表示（張りぼて根絶）：連携行があっても実トークンが失効なら「要再連携」を明示。 */}
+                  <div style={{ fontSize: '.62rem', marginTop: 1, color: !m.connected ? 'var(--muted2)' : m.healthy ? 'var(--green)' : 'var(--amber)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {!m.connected
+                      ? '未連携'
+                      : m.healthy
+                        ? `✓ 有効（${m.google_email}）`
+                        : `⚠ 要再連携（トークン失効）— ${m.google_email}`}
                   </div>
                 </div>
                 <div style={{ flexShrink: 0 }}>
                   {m.is_self ? (
                     m.connected ? (
-                      <button onClick={unlinkMine} disabled={unlinking} style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontFamily: 'inherit', opacity: unlinking ? .6 : 1 }}>解除</button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {/* 解除せずに再連携（OAuthを prompt=consent で再実行＝新しいリフレッシュトークンを再取得）。 */}
+                        <a href="/api/auth/google?mode=member" style={{ display: 'inline-block', background: m.healthy ? 'var(--bg2)' : '#4285F4', color: m.healthy ? 'var(--txt)' : '#fff', border: m.healthy ? '1px solid var(--line)' : 'none', borderRadius: 8, padding: '7px 13px', fontSize: '.7rem', fontWeight: 700, textDecoration: 'none' }}>再連携</a>
+                        <button onClick={unlinkMine} disabled={unlinking} style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--muted2)', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontFamily: 'inherit', opacity: unlinking ? .6 : 1 }}>解除</button>
+                      </div>
                     ) : (
                       <a href="/api/auth/google?mode=member" style={{ display: 'inline-block', background: '#4285F4', color: '#fff', borderRadius: 8, padding: '7px 13px', fontSize: '.7rem', fontWeight: 700, textDecoration: 'none' }}>連携する</a>
                     )
