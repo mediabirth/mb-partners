@@ -2,10 +2,14 @@
 /**
  * PageGuide — コンソール各ページの「見方・意味・主要操作」を需要時（ⓘ押下時）だけ出す共通ガイド。
  * 静音化原則：常設説明文は増やさず、ⓘを押した時だけモーダル（モバイルは全画面シート）で現れる。
- * 文法は案件ボードの既存ⓘ／マトリクスモーダルを踏襲・一般化（見出し横のⓘ→中央カード＋overlay）。
+ *
+ * ★配置は transform中央ではなく flexオーバーレイ中央（過去の .modal-pop 上部見切れ事故と同族の再発を構造的に防止）。
+ *   モーダルは flex-column：ヘッダ（タイトル＋閉じる）は固定、本文だけ内部 overflow-y:auto。
+ *   max-height はオーバーレイの内側（PC=100dvh−余白 / モバイル=100dvh）＝縦長コンテンツでも上下が画面外に出ない。
  * 内容はコード定数（PageGuideData）としてページとセットで進化させる。純プレゼンテーション。
  */
 import { useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 
 export type GuideSection = { h: string; items: (string | { b: string; t: string })[] }
@@ -18,13 +22,15 @@ export type PageGuideData = {
 }
 
 const CSS = `
-.pg-ov{position:fixed;inset:0;background:rgba(14,14,20,.3);z-index:200;animation:pgFade .16s ease;}
-.pg-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:var(--pgw,560px);max-width:94vw;max-height:86vh;overflow-y:auto;background:#fff;border-radius:16px;z-index:201;box-shadow:0 24px 60px rgba(14,14,20,.22);padding:22px 24px;animation:pgPop .2s cubic-bezier(.22,1,.36,1);}
-.pg-head{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;}
+.pg-ov{position:fixed;inset:0;z-index:200;background:rgba(14,14,20,.3);display:grid;place-items:center;padding:24px;animation:pgFade .16s ease;}
+/* モーダル自体が単一スクロール＋ヘッダsticky。配置はgridオーバーレイ中央（transform中央を排除＝縦長でも上下が画面外に出ない）。 */
+.pg-modal{width:var(--pgw,560px);max-width:100%;max-height:calc(100dvh - 48px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(14,14,20,.22);padding:0 0 22px;animation:pgPop .2s cubic-bezier(.22,1,.36,1);}
+.pg-head{position:sticky;top:0;z-index:1;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:20px 24px 12px;}
 .pg-title{font-size:.92rem;font-weight:700;}
 .pg-x{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .pg-x:hover{background:var(--bg2);}
-.pg-lead{font-size:.68rem;color:var(--muted2);margin-top:5px;line-height:1.6;}
+.pg-body{padding:0 24px;}
+.pg-lead{font-size:.68rem;color:var(--muted2);line-height:1.6;}
 .pg-sec{margin-top:16px;}
 .pg-sec-h{font-size:.66rem;font-weight:700;letter-spacing:.02em;color:var(--txt);margin-bottom:7px;}
 .pg-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
@@ -34,10 +40,11 @@ const CSS = `
 .pg-note{font-size:.64rem;color:var(--muted2);margin-top:10px;line-height:1.7;}
 .pg-link{color:var(--c-blue);text-decoration:underline;text-underline-offset:3px;}
 @keyframes pgFade{from{opacity:0}to{opacity:1}}
-@keyframes pgPop{from{opacity:0;transform:translate(-50%,-46%) scale(.98)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes pgPop{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 @media (max-width:560px){
-  .pg-modal{top:0;left:0;transform:none;width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding:calc(16px + env(safe-area-inset-top)) 18px 24px;animation:pgSheet .24s cubic-bezier(.22,1,.36,1);}
-  .pg-head{padding-bottom:6px;}
+  .pg-ov{padding:0;}
+  .pg-modal{width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding-bottom:calc(22px + env(safe-area-inset-bottom));animation:pgSheet .24s cubic-bezier(.22,1,.36,1);}
+  .pg-head{padding-top:calc(20px + env(safe-area-inset-top));}
 }
 @keyframes pgSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @media (prefers-reduced-motion:reduce){.pg-ov,.pg-modal{animation:none!important}}
@@ -75,18 +82,24 @@ export default function PageGuide({ data, width = 560, children }: { data: PageG
           <circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><circle cx="12" cy="7.6" r="0.5" fill="currentColor" stroke="none" />
         </svg>
       </button>
-      {open && (
+      {open && typeof document !== 'undefined' && createPortal(
         <>
+          {/* ★body直下へポータル：コンソールtopbar等の backdrop-filter/transform が position:fixed の
+              包含ブロックになる問題（＝オーバーレイがviewportでなく帯の中に閉じ込められ上部が見切れる）を回避。 */}
           <style>{CSS}</style>
-          <div className="pg-ov" onClick={() => setOpen(false)} />
-          <div className="pg-modal" style={{ ['--pgw' as string]: `${width}px` }} role="dialog" aria-modal="true" aria-label={data.title}>
-            <div className="pg-head">
-              <b className="pg-title">{data.title}</b>
-              <button className="pg-x" onClick={() => setOpen(false)} aria-label="閉じる">✕</button>
+          <div className="pg-ov" onClick={() => setOpen(false)}>
+            <div className="pg-modal" style={{ ['--pgw' as string]: `${width}px` }} role="dialog" aria-modal="true" aria-label={data.title} onClick={e => e.stopPropagation()}>
+              <div className="pg-head">
+                <b className="pg-title">{data.title}</b>
+                <button className="pg-x" onClick={() => setOpen(false)} aria-label="閉じる">✕</button>
+              </div>
+              <div className="pg-body">
+                <GuideBody data={data}>{children}</GuideBody>
+              </div>
             </div>
-            <GuideBody data={data}>{children}</GuideBody>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </>
   )
