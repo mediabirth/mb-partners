@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createServiceRoleClient, getCachedUid } from '@/lib/supabase/server'
 import ConsoleNav from '@/components/ConsoleNav'
 import ConsoleMain from '@/components/ConsolePageTransition'
-import ActivateApplicationButton from './ActivateApplicationButton'
+import ApplicationStatusCell from './ApplicationStatusCell'
 
 // B1：外向けLP /join の応募一覧（console専用・読み取り）。Feature E(E-3)で「承認＝仲間化」アクションを追加（非金銭）。
 // ★partner_applications のみ。お金・deals・status・frontier・/r帰属には一切関与しない。3サイト分離は不変。
@@ -22,6 +22,9 @@ type Application = {
   source: string | null
   referrer_partner_id: string | null
   activated_at: string | null
+  status: string | null
+  interview_at: string | null
+  interview_meet_url: string | null
   referrer: { code: string | null; profiles: { name: string | null } | null } | null
 }
 
@@ -54,7 +57,7 @@ export default async function ConsoleApplicationsPage() {
 
   const { data } = await admin
     .from('partner_applications')
-    .select('id, created_at, name, org, expertise, email, phone, message, consent, source, referrer_partner_id, activated_at, referrer:partners!partner_applications_referrer_partner_id_fkey(code, profiles(name))')
+    .select('id, created_at, name, org, expertise, email, phone, message, consent, source, referrer_partner_id, activated_at, status, interview_at, interview_meet_url, referrer:partners!partner_applications_referrer_partner_id_fkey(code, profiles(name))')
     .order('created_at', { ascending: false })
 
   const rows = (data ?? []) as unknown as Application[]
@@ -93,7 +96,7 @@ export default async function ConsoleApplicationsPage() {
                       <th style={TH}>同意</th>
                       <th style={TH}>流入元</th>
                       <th style={TH}>紹介元</th>
-                      <th style={TH}>承認</th>
+                      <th style={{ ...TH, minWidth: 180 }}>ステータス・対応</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -118,9 +121,9 @@ export default async function ConsoleApplicationsPage() {
                             ? <span style={{ fontSize: '.64rem', fontWeight: 500 }}>{r.referrer.profiles.name}{r.referrer.code ? <span style={{ color: 'var(--muted2)', fontWeight: 400 }}> ({r.referrer.code})</span> : ''}</span>
                             : <span style={{ color: 'var(--muted)' }}>—</span>}
                         </td>
-                        {/* Feature E（E-3）：承認＝仲間化。紹介元があれば賞賛通知を1件（冪等）。お金/status/frontier 非接触。 */}
+                        {/* Feature F：ステータス制（応募→面談予約→承認で招待）。承認＝招待発行（リファラルへ）。money非接触。 */}
                         <td style={TD}>
-                          <ActivateApplicationButton id={r.id} activated={!!r.activated_at} hasReferrer={!!r.referrer_partner_id} />
+                          <ApplicationStatusCell id={r.id} status={r.status ?? (r.activated_at ? 'approved' : 'applied')} interviewAt={r.interview_at} interviewMeetUrl={r.interview_meet_url} hasReferrer={!!r.referrer_partner_id} />
                         </td>
                       </tr>
                     ))}

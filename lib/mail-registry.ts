@@ -177,6 +177,23 @@ export const MAIL_REGISTRY: MailTemplateDef[] = [
     defaultBody: '${name} 様\n\nMB Partners の業務委託先としてご登録のご案内です。下記のリンクからパスワードを設定し、登録を完了してください。\n\n${url}\n\n有効期限：${expires}',
     buttons: [{ label: 'パスワードを設定する', urlVar: 'url' }],
   },
+  // ── パートナー応募（招待制の起点：応募→面談→承認で招待） ──────────
+  {
+    key: 'application-received', name: '応募完了・面談予約のご案内（応募者）', audience: 'invitee',
+    event: 'パートナー応募', trigger: 'LPからパートナー応募があったとき（応募者へ自動送信）',
+    vars: [V.name('お名前'), V.link],
+    defaultSubject: '【MB Partners】ご応募ありがとうございます｜面談予約のご案内',
+    defaultBody: '${name} 様\n\nこの度は MB Partners にご応募いただき、誠にありがとうございます。\n確かに受付いたしました。\n\nMB Partners は、ご紹介いただく信頼をお預かりするプログラムです。\nまずは一度、オンラインで顔合わせの面談をさせてください。\n下記より、ご都合のよい日時をお選びいただけます（所要 30 分・オンライン）。\n\n▼ 面談を予約する\n${link}\n\nお会いできますことを楽しみにしております。\n— MB Partners（株式会社Media Birth）',
+    buttons: [{ label: '面談を予約する', urlVar: 'link' }],
+  },
+  {
+    key: 'interview-booked', name: '面談予約の確定（応募者）', audience: 'invitee',
+    event: '面談予約', trigger: '応募者が面談日時を予約したとき',
+    vars: [V.name('お名前'), V.when, V.meetingUrl],
+    defaultSubject: '【MB Partners】面談のご予約を承りました',
+    defaultBody: '${name} 様\n\n面談のご予約を承りました。当日はどうぞよろしくお願いいたします。\n\n・日時：${when}\n・オンライン会議：${meetingUrl}\n\n上記リンクより、お時間になりましたらご参加ください。\nご都合が変わった場合は、お手数ですが本メールへご返信ください。\n\n— MB Partners（株式会社Media Birth）',
+    buttons: [{ label: 'オンライン会議に参加する', urlVar: 'meetingUrl' }],
+  },
   // ── 業務委託 ───────────────────────────────────────────────
   {
     key: 'delivery-payout', name: '委託費確定（業務委託先）', audience: 'vendor',

@@ -158,7 +158,7 @@ export default function PartnersLP() {
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setErr('')
     if (!name.trim()) return setErr('お名前をご入力ください。')
-    if (!email.trim() && !phone.trim()) return setErr('メールまたは電話番号のいずれかをご入力ください。')
+    if (!email.trim()) return setErr('メールアドレスをご入力ください。')
     if (!consent) return setErr('ご案内の同意にチェックをお願いします。')
     setBusy(true)
     try {
@@ -167,8 +167,9 @@ export default function PartnersLP() {
         body: JSON.stringify({ name, org, expertise, email, phone, message, consent }),
       })
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '送信に失敗しました。') }
-      setDone(true)
-    } catch (e2) { setErr(e2 instanceof Error ? e2.message : '送信に失敗しました。') } finally { setBusy(false) }
+      // 完了は専用ページへ（丁寧な受付＋期待感の演出）。応募完了メール＝面談予約リンクはサーバ側で送信済み。
+      window.location.assign('/partners/thanks')
+    } catch (e2) { setErr(e2 instanceof Error ? e2.message : '送信に失敗しました。'); setBusy(false) }
   }
 
   const STEPS = [
@@ -341,8 +342,8 @@ export default function PartnersLP() {
                     <label className="plp-fld"><span>ご専門（任意）</span><input value={expertise} onChange={e => setExpertise(e.target.value)} placeholder="例：税理士" /></label>
                   </div>
                   <div className="plp-fld-row">
-                    <label className="plp-fld"><span>メールアドレス</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="contact@example.com" autoComplete="off" /></label>
-                    <label className="plp-fld"><span>電話番号</span><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" /></label>
+                    <label className="plp-fld"><span>メールアドレス <i>*</i></span><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="contact@example.com" autoComplete="off" required /></label>
+                    <label className="plp-fld"><span>電話番号（任意）</span><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" /></label>
                   </div>
                   <label className="plp-fld"><span>ひとこと（任意）</span><input value={message} onChange={e => setMessage(e.target.value)} placeholder="例：顧問先からの相談が増えています" /></label>
                   <label className="plp-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>株式会社Media Birth からのご連絡に同意します。いただいた情報はご案内のためにのみ使用します。</span></label>
@@ -561,6 +562,8 @@ const CSS = `
 .plp-mq-item:hover{color:var(--c);}
 .plp-mq-logo{display:inline-flex;align-items:center;padding-right:clamp(40px,5.5vw,72px);}
 .plp-mq-logo img{height:clamp(26px,3vw,38px);width:auto;display:block;filter:grayscale(1) opacity(.6);transition:filter .3s,opacity .3s;}
+/* ENTERSOLOGYは字形がviewBox全高いっぱいで一つだけ大きく見えるため、視覚的キャップハイトを他ロゴに合わせて縮小 */
+.plp-mq-logo img[src*="entersology"]{height:clamp(20px,2.35vw,30px);}
 .plp-mq-logo:hover img{filter:grayscale(0) opacity(1);}
 
 /* field belt（横スクロール・ホバーで一時停止） */
