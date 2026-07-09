@@ -58,22 +58,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
     const whenJa = new Date(start_at).toLocaleString('ja', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', weekday: 'short', timeZone: 'Asia/Tokyo' })
 
-    // 応募者へ確定メール（best-effort・Meetリンク同梱）
+    // 応募者へ確定メール（best-effort）。★Meetリンクの有無で文面を分岐＝リンク無し時に「上記リンクより」と矛盾させない。
     try {
+      const nm = app.name ?? 'ご応募者'
+      const head = `${nm} 様\n\n面談のご予約を承りました。当日はどうぞよろしくお願いいたします。\n\n・日時：${whenJa}`
+      const text = meetingUrl
+        ? `${head}\n・オンライン会議：${meetingUrl}\n\nお時間になりましたら、上記リンクよりご参加ください。\nご都合が変わった場合は、お手数ですが本メールへご返信ください。\n\n— MB Partners（株式会社Media Birth）`
+        : `${head}\n\nオンライン会議のURLは、面談日が近づきましたら担当より改めてお送りいたします。\nご都合が変わった場合は、お手数ですが本メールへご返信ください。\n\n— MB Partners（株式会社Media Birth）`
       const { sendTemplatedEmail } = await import('@/lib/mail-send')
       await sendTemplatedEmail({
         key: 'interview-booked', to: app.email, toRole: 'invitee',
-        vars: { name: app.name ?? 'ご応募者', when: whenJa, meetingUrl: meetingUrl ?? '（別途ご案内します）' },
+        vars: { name: nm, when: whenJa, meetingUrl: meetingUrl ?? '' },
+        fallback: { subject: '【MB Partners】面談のご予約を承りました', text },
         buttons: meetingUrl ? [{ label: 'オンライン会議に参加する', url: meetingUrl }] : undefined,
         meta: { application_id: app.id },
       })
     } catch { /* best-effort */ }
 
-    // 運営へ通知（best-effort）
+    // 運営へ通知（best-effort）。Meet自動発行に失敗した場合は手動対応を促す警告を付す。
     try {
       const { sendSlack, sendOpsEmail } = await import('@/lib/notify')
-      await sendSlack(`🗓️ 面談予約: ${app.name ?? '応募者'} — ${whenJa}${meetingUrl ? `\nMeet: ${meetingUrl}` : ''}`)
-      await sendOpsEmail(`【MB Partners】面談予約: ${app.name ?? '応募者'}`, `パートナー応募者が面談を予約しました。\n・お名前：${app.name ?? '—'}\n・メール：${app.email ?? '—'}\n・日時：${whenJa}${meetingUrl ? `\n・Meet：${meetingUrl}` : ''}\n\nコンソール「パートナー応募」でご確認ください。`)
+      const warn = meetingUrl ? '' : '\n⚠ Meetリンクが自動発行されませんでした。Googleカレンダー連携（コンソール設定）をご確認のうえ、必要に応じて応募者へ会議URLを手動でお送りください。'
+      await sendSlack(`🗓️ 面談予約: ${app.name ?? '応募者'} — ${whenJa}${meetingUrl ? `\nMeet: ${meetingUrl}` : ''}${warn}`)
+      await sendOpsEmail(`【MB Partners】面談予約: ${app.name ?? '応募者'}`, `パートナー応募者が面談を予約しました。\n・お名前：${app.name ?? '—'}\n・メール：${app.email ?? '—'}\n・日時：${whenJa}${meetingUrl ? `\n・Meet：${meetingUrl}` : ''}${warn}\n\nコンソール「パートナー応募」でご確認ください。`)
     } catch { /* best-effort */ }
 
     return NextResponse.json({ ok: true, meetingUrl, when: whenJa })

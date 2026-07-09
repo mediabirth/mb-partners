@@ -104,7 +104,9 @@ export default function InterviewPage({ params }: { params: Promise<{ token: str
               <>
                 <p className="iv-lead">{st.name ? `${st.name} 様、` : ''}面談のご予約を承っております。当日はどうぞよろしくお願いいたします。</p>
                 {st.when && <div className="iv-selected" style={{ marginTop: 16 }}>🗓 {fmtConfirm(st.when)}</div>}
-                {st.meetingUrl && <a className="iv-meet" href={st.meetingUrl} target="_blank" rel="noreferrer">オンライン会議に参加する</a>}
+                {st.meetingUrl
+                  ? <a className="iv-meet" href={st.meetingUrl} target="_blank" rel="noreferrer">オンライン会議に参加する</a>
+                  : <p className="iv-muted">オンライン会議のURLは、面談日が近づきましたら担当より改めてメールでお送りします。</p>}
                 <p className="iv-muted">日時のご変更をご希望の場合は、応募完了メールへご返信ください。</p>
               </>
             ) : (
@@ -141,7 +143,9 @@ export default function InterviewPage({ params }: { params: Promise<{ token: str
             <h1 className="iv-h1">面談のご予約を承りました</h1>
             <div className="iv-selected" style={{ marginTop: 16, textAlign: 'center' }}>🗓 {st.when}</div>
             <p className="iv-lead">確認のメールをお送りしました。当日はどうぞよろしくお願いいたします。</p>
-            {st.meetingUrl && <a className="iv-meet" href={st.meetingUrl} target="_blank" rel="noreferrer">オンライン会議に参加する</a>}
+            {st.meetingUrl
+              ? <a className="iv-meet" href={st.meetingUrl} target="_blank" rel="noreferrer">オンライン会議に参加する</a>
+              : <p className="iv-muted">オンライン会議のURLは、面談日が近づきましたら担当より改めてメールでお送りします。</p>}
           </div>
         )}
       </div>
