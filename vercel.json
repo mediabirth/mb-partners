@@ -24,6 +24,18 @@
     {
       "path": "/api/warm",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/monitor?tier=1",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/monitor?tier=2",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/monitor?tier=3",
+      "schedule": "0 22 * * *"
     }
   ],
   "headers": [
