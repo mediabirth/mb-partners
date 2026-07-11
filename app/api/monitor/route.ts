@@ -153,7 +153,7 @@ async function tier3(admin: Awaited<ReturnType<typeof createServiceRoleClient>>)
       if (probeInv?.token) {
         const r = await fetch(`${APEX}/api/invite/accept`, {
           method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store',
-          body: JSON.stringify({ token: probeInv.token, email: OPS_EMAIL, password: 'MonitorProbe1!', lastName: '監視', firstName: '歩哨', phone: '0', address: '-', agreeTerms: true, agreePrivacy: true }),
+          body: JSON.stringify({ token: probeInv.token, email: OPS_EMAIL, password: 'MonitorProbe1!', lastName: '監視', firstName: '歩哨', phone: '0', address: '-', taxType: 'individual', bankName: 'x', branchName: 'x', accountType: '普通', accountNumber: '1', accountHolder: 'x', agreeTerms: true, agreePrivacy: true }),
         })
         guardOk = r.status === 409
         detail2 = `accept応答 ${r.status}（期待409=拒否）`
