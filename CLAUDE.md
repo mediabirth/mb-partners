@@ -38,10 +38,12 @@
 2. **3面到達**: 未認証で `/app`・`/console`・`/vendor` が 307（ログインへ）
 3. **webhook**: 無署名 POST `/api/line/webhook` が 401
 4. **page errors []**: 主要画面の実ブラウザで JS エラーゼロ
-5. **money 証明**: 恒久不変＝`menu_rewards` 16行 sum=340,100・報酬計算式の意味・確定ガード・reward_snapshot 非接触・勝彦deals（created_by=bfb3c027）3件。
-   deals 報酬ハッシュ（`select md5(string_agg(reward_snapshot::text||amount::text, ',' order by id)) from deals`）は
-   **バッチ開始時にスナップショットし、CC の作業でそれが変わっていないこと**を確認する（＝CCが金額を勝手に触っていない証明）。
-   ※固定値の絶対pinはしない——勝彦/米井が製品を正当に使えば（成約・起票等で）自然に変わるため。変化を見たら「誰の操作か」を必ず突合する。
+5. **money 証明**（2026-07-11 系統連動レートP0-a承認に伴い方式改定）: 恒久不変＝報酬計算式の意味・確定ガード・reward_snapshot 非接触・勝彦deals（created_by=bfb3c027）3件。
+   **バッチ開始時に以下3ハッシュをスナップショットし、CCの作業で変わっていないこと**を確認する（＝CCが金額を勝手に触っていない証明）:
+   - **menu_rewards 全行ハッシュ**: `select md5(string_agg(id::text||reward_type||reward_value::text||coalesce(reward_base,'')||active::text, ',' order by id)) from menu_rewards`（サプライヤー行含む全行＝旧「16行/¥340,100」固定チェックの置換。**MB seed補助チェック**＝supplierサービス配下を除いた集計が16行/sum=340,100 であることを併記確認）
+   - **deals 報酬ハッシュ**: `select md5(string_agg(reward_snapshot::text||amount::text, ',' order by id)) from deals`
+   - **fee-hash（サプライヤー請求）**: `select coalesce(md5(string_agg(snapshot::text||amount::text, ',' order by id)),'(empty)') from supplier_charges`
+   ※固定値の絶対pinはしない——勝彦/米井が製品を正当に使えば（成約・起票・メニュー追加・請求クローズ等で）自然に変わるため。変化を見たら「誰の操作か」を必ず突合する。
 6. **canon**: `pnpm test:canon`（status-effects 61 assertion）green
 
 **★公開ページの本番検証（2026-07-07 追加・/partners 404 事故の再発防止）**:

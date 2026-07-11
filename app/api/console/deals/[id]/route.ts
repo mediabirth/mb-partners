@@ -143,6 +143,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // P0-a: 系統連動レートの条件を再凍結（confirmを通過するたび上書き＝差し戻し→再成約も同一規則・best-effort）。仕様正典 v2 §2。
+  if (confirming) {
+    try {
+      const { freezeFeeSnapshot } = await import('@/lib/supplier-fee')
+      const { data: cur } = await admin.from('deals').select('partner_id, service_id').eq('id', id).single()
+      await freezeFeeSnapshot(admin, id, { partnerId: (cur?.partner_id as string | null) ?? null, serviceId: (cur?.service_id as string | null) ?? null })
+    } catch { /* best-effort */ }
+  }
+
   // L2: 確定時に報酬を「明細の合算」で恒久化（凍結対象 deals.amount に反映）。回帰ゼロ設計：
   //   - 明細1件 → 上で算出した legacy 確定額（deal.amount/base_amount）へ明細を同期するだけ（金額は legacy と同一・L1 driftも解消）。
   //   - 明細複数 → effectiveKind を全明細に適用して再集計し deals.amount を上書き（複数明細dealのみ・既存単一には無影響）。

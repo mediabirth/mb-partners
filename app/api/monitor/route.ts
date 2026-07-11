@@ -109,7 +109,33 @@ async function tier3(admin: Awaited<ReturnType<typeof createServiceRoleClient>>)
     await anon.auth.signOut().catch(() => {})
   } catch (e) { authOk = false; detail = e instanceof Error ? e.message : 'auth smoke error' }
 
-  return [{ key: 't3.auth_read_smoke', label: '認証 read-only スモーク', ok: authOk, detail, where: '監視専用アカウント（partner・読み取りのみ）', next: 'Supabase Auth / RLS / 接続を確認' }]
+  const out: CheckResult[] = [{ key: 't3.auth_read_smoke', label: '認証 read-only スモーク', ok: authOk, detail, where: '監視専用アカウント（partner・読み取りのみ）', next: 'Supabase Auth / RLS / 接続を確認' }]
+
+  // P0-a: 系統連動レートの健全性（仕様正典 v2 §7-9）。テーブル未作成/エラーは監視対象外（ok・fail-open）。
+  try {
+    // (i) supplierメニューの confirmed/paid で fee_snapshot=null（凍結漏れ）
+    const { data: svs } = await admin.from('services').select('id').not('supplier_partner_id', 'is', null)
+    const sids = (svs ?? []).map((s: { id: string }) => s.id)
+    if (sids.length) {
+      const { count } = await admin.from('deals').select('id', { count: 'exact', head: true }).in('status', ['confirmed', 'paid']).in('service_id', sids).is('fee_snapshot', null)
+      out.push({ key: 't3.fee_snapshot_null', label: 'fee_snapshot 凍結漏れ', ok: (count ?? 0) === 0, detail: `${count ?? 0}件のサプライヤー案件が条件未凍結`, where: 'deals（supplierメニュー・confirmed/paid）', next: '該当案件の成約を開き直して再確定（confirmで再凍結）' })
+    }
+    // (ii) 請求凍結行の自己整合（amount=round(base×rate)）＋fee-hash（情報）
+    const { data: chs } = await admin.from('supplier_charges').select('id, kind, base_amount, rate, amount, status, period, frozen_at')
+    if (chs) {
+      const rows = chs as { id: string; kind: string; base_amount: number; rate: number | null; amount: number; status: string; period: string; frozen_at: string }[]
+      const broken = rows.filter(r => r.rate != null && Math.round(Number(r.base_amount) * Number(r.rate)) !== Number(r.amount))
+      out.push({ key: 't3.fee_integrity', label: 'サプライヤー請求の自己整合', ok: broken.length === 0, detail: broken.length ? `${broken.length}件で amount≠round(base×rate)` : `OK（${rows.length}行）`, where: 'supplier_charges', next: '請求行の改変を突合（凍結後の直接更新は禁止）' })
+      // (iii) unbilled滞留: 前々月以前 or 前月分が凍結後7日超も未請求
+      const now = new Date()
+      const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const prev = ym(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+      const stale = rows.filter(r => r.status === 'unbilled' && (r.period < prev || (r.period === prev && (Date.now() - new Date(r.frozen_at).getTime()) > 7 * 86400_000)))
+      out.push({ key: 't3.unbilled_stale', label: 'サプライヤー請求の未請求滞留', ok: stale.length === 0, detail: stale.length ? `${stale.length}件が未請求のまま滞留` : 'OK', where: 'コンソール→サプライヤー請求', next: '請求書を発行し「請求済みにする」を実行' })
+    }
+  } catch { /* fail-open（テーブル未作成等） */ }
+
+  return out
 }
 
 export async function GET(req: NextRequest) {

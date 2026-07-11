@@ -47,7 +47,11 @@ export async function POST(req: NextRequest) {
     active: b.active !== false,
   }
   const admin = await createServiceRoleClient()
+  // P0-a: 逆ザヤ防止（サプライヤーメニュー＝rate/continuousは50%硬上限・fixedは警告）。仕様正典 v2 §7-7。
+  const { validateSupplierReward } = await import('@/lib/supplier-fee')
+  const guard = await validateSupplierReward(admin, b.menu_id, rewardType, Number(row.reward_value))
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: 400 })
   const { data, error } = await admin.from('menu_rewards').insert(row).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ reward: data })
+  return NextResponse.json({ reward: data, warning: guard.warning ?? null })
 }

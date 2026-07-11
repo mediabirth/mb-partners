@@ -158,6 +158,14 @@ export async function submitPartnerReferral(formData: FormData) {
     if (cErr) { /* 列未追加 等は無視 */ }
   }
 
+  // P0-a: 系統連動レートの条件凍結（第1段・金額なし・best-effort＝作成を壊さない）。仕様正典 v2 §2。
+  // service-role で解決（RLSで他パートナー行の rate_card が読めないケースを排除）。
+  try {
+    const [{ freezeFeeSnapshot }, { createServiceRoleClient }] = await Promise.all([import('@/lib/supplier-fee'), import('@/lib/supabase/server')])
+    const feeAdmin = await createServiceRoleClient()
+    await freezeFeeSnapshot(feeAdmin, deal!.id, { partnerId: partner.id, serviceId: isConsultation ? null : serviceId })
+  } catch { /* best-effort */ }
+
   // B-2: 顧客メールを保存（任意）。customer_email 列が未追加(DDL前)でも deal 作成を壊さないよう
   // 本体insertとは分離した best-effort update（列なし時はエラーを無視）。
   if (customerEmail) {

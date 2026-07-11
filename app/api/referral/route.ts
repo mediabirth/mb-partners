@@ -65,6 +65,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create deal' }, { status: 500 })
     }
 
+    // P0-a: 系統連動レートの条件凍結（第1段・金額なし・best-effort＝作成を壊さない）。仕様正典 v2 §2。
+    try {
+      const { freezeFeeSnapshot } = await import('@/lib/supplier-fee')
+      await freezeFeeSnapshot(supabase, deal.id, { partnerId: link.partner_id, serviceId: link.service_id })
+    } catch { /* best-effort */ }
+
     // ③ 信頼ランディングのB2B任意項目を additive 保存（帰属insertは上記で完了・不変＝この別updateは
     //    partner_id/channel/source/consent/amount に一切触れない）。列未追加でも作成を壊さない best-effort。
     {

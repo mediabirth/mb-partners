@@ -41,6 +41,7 @@ const ITEMS = [
   { href: '/console/applications', id: 'applications', label: 'パートナー応募', icon: 'apply' },
   { href: '/console/services',  id: 'svcs',     label: 'サービスマスタ', icon: 'svcs' },
   { href: '/console/payouts',     id: 'payouts',     label: '支払管理',       icon: 'payouts' },
+  { href: '/console/supplier-charges', id: 'supplier', label: 'サプライヤー請求', icon: 'payouts' },
   { href: '/console/broadcasts', id: 'broadcasts', label: '配信',           icon: 'broadcasts' },
   { href: '/console/inquiries', id: 'inquiries',  label: '問い合わせ',     icon: 'inquiries' },
   { href: '/console/messages',  id: 'messages',   label: 'メッセージ',     icon: 'inquiries' },

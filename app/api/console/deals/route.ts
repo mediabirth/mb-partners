@@ -49,6 +49,11 @@ export async function POST(req: Request) {
         .select('id').single()
       item = (it as { id: string } | null) ?? null
     } catch { /* best-effort */ }
+    // P0-a: 系統連動レートの条件凍結（直営=confirmed直行のためここで確定条件を凍結・best-effort）。仕様正典 v2 §2。
+    try {
+      const { freezeFeeSnapshot } = await import('@/lib/supplier-fee')
+      await freezeFeeSnapshot(admin, d.id, { partnerId: sysId, serviceId: service_id })
+    } catch { /* best-effort */ }
     await notifySlackEvent('new_deal', `🆕 直営業プロジェクト起票: ${customer_name}`)
     return NextResponse.json({ deal: d, item })
   }
@@ -77,6 +82,12 @@ export async function POST(req: Request) {
     await createDealItem(admin, {
       deal_id: deal.id, service_id, menu_id: null, kind: 'fixed', amount: amount ?? 0, base_amount: null,
     })
+  } catch { /* best-effort */ }
+
+  // P0-a: 系統連動レートの条件凍結（手動登録=パートナー無し・暫定条件・best-effort）。仕様正典 v2 §2。
+  try {
+    const [{ freezeFeeSnapshot }, { createServiceRoleClient: mkAdmin }] = await Promise.all([import('@/lib/supplier-fee'), import('@/lib/supabase/server')])
+    await freezeFeeSnapshot(await mkAdmin(), deal.id, { partnerId: null, serviceId: service_id })
   } catch { /* best-effort */ }
 
   await notifySlackEvent('new_deal', `🆕 新規案件（手動登録）: ${customer_name}`)

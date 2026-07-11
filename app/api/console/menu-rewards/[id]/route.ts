@@ -29,9 +29,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (typeof b.active === 'boolean') patch.active = b.active
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   const admin = await createServiceRoleClient()
+  // P0-a: 逆ザヤ防止（サプライヤーメニュー＝rate/continuousは50%硬上限・fixedは警告）。仕様正典 v2 §7-7。
+  let warning: string | null = null
+  try {
+    const { data: curRow } = await admin.from('menu_rewards').select('menu_id, reward_type, reward_value').eq('id', id).single()
+    if (curRow) {
+      const effType = (patch.reward_type as string) ?? curRow.reward_type
+      const effValue = (patch.reward_value as number) ?? Number(curRow.reward_value)
+      const { validateSupplierReward } = await import('@/lib/supplier-fee')
+      const guard = await validateSupplierReward(admin, curRow.menu_id, effType, effValue)
+      if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: 400 })
+      warning = guard.warning ?? null
+    }
+  } catch { /* fail-open */ }
   const { data, error } = await admin.from('menu_rewards').update(patch).eq('id', id).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ reward: data })
+  return NextResponse.json({ reward: data, warning })
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
