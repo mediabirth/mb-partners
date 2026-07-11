@@ -11,6 +11,19 @@ export const STD_RATE_CARD = 'std-v1'
 export const OMNIS_FOUNDING_RATE_CARD = 'omnis-founding-v1'
 export const OMNIS_MONTHLY_FEE = 50000 // 税別（設計§4(d)）
 
+export type RateCard = { id: string; half_commission_rate: number; payment_fee_rate: number | null; monthly_fee: number | null; override_rate: number }
+/** レートカードをDBから読む（Feature I・不変版方式）。読取失敗は既存定数へフォールバック（fail-safe）。 */
+export async function loadRateCard(db: Db, id: string | null | undefined): Promise<RateCard> {
+  const cardId = id || STD_RATE_CARD
+  try {
+    const { data } = await db.from('rate_cards').select('id, half_commission_rate, payment_fee_rate, monthly_fee, override_rate').eq('id', cardId).maybeSingle()
+    if (data) return { id: data.id, half_commission_rate: Number(data.half_commission_rate), payment_fee_rate: data.payment_fee_rate == null ? null : Number(data.payment_fee_rate), monthly_fee: data.monthly_fee == null ? null : Number(data.monthly_fee), override_rate: Number(data.override_rate) }
+  } catch { /* fallback */ }
+  return cardId === OMNIS_FOUNDING_RATE_CARD
+    ? { id: cardId, half_commission_rate: 0.5, payment_fee_rate: null, monthly_fee: OMNIS_MONTHLY_FEE, override_rate: 0.10 }
+    : { id: cardId, half_commission_rate: 0.5, payment_fee_rate: 0.05, monthly_fee: null, override_rate: 0.10 }
+}
+
 export const FEE_RATE = {
   half_commission: 0.5,   // 折半＝粗利(税抜)の50%（設計§4(a)）
   payment_fee_5: 0.05,    // 決済手数料＝パートナー支払報酬総額(税抜・源泉前)の5%（設計§4(b)）
@@ -59,28 +72,30 @@ export async function resolveFeeSnapshot(db: Db, args: { partnerId: string | nul
     const selfService = !!referrerFrontierId && !!menuSupplierId && referrerFrontierId === menuSupplierId
     const crossSupplier = frontierIsSupplier && !!menuSupplierId && referrerFrontierId !== menuSupplierId
 
-    // サプライヤーの料率カード（メニュー側サプライヤー基準・null=std）
-    let rateCard = STD_RATE_CARD
+    // サプライヤーの料率カード（メニュー側サプライヤー基準・null=std）。Feature I: 値はrate_cardsから（不変版）。
+    let rateCardId = STD_RATE_CARD
     if (menuSupplierId) {
       const { data: sp } = await db.from('partners').select('supplier_rate_card').eq('id', menuSupplierId).maybeSingle()
-      rateCard = (sp?.supplier_rate_card as string | null) ?? STD_RATE_CARD
+      rateCardId = (sp?.supplier_rate_card as string | null) ?? STD_RATE_CARD
     }
+    const card = await loadRateCard(db, menuSupplierId ? rateCardId : (referrerFrontierId && frontierIsSupplier ? (await db.from('partners').select('supplier_rate_card').eq('id', referrerFrontierId).maybeSingle()).data?.supplier_rate_card ?? STD_RATE_CARD : STD_RATE_CARD))
 
-    // レート種別の決定（標準レートカード・設計§0表）
+    // レート種別の決定（レートカード駆動・設計§0表）
     let rate_kind: FeeSnapshot['rate_kind'] = 'none'
     let direction: FeeSnapshot['direction'] = 'none'
     let rate: number | null = null
     if (!menuSupplierId) {
       // MBメニュー：サプライヤー系統からなら法人override（条件③・発火はP0-b・ここは条件記録のみ）
-      if (referrerFrontierId && frontierIsSupplier) { rate_kind = 'corporate_override'; direction = 'pay'; rate = FEE_RATE.corporate_override }
+      if (referrerFrontierId && frontierIsSupplier) { rate_kind = 'corporate_override'; direction = 'pay'; rate = card.override_rate }
     } else if (selfService) {
-      // 同系統×自社メニュー（条件④／特例d）。override無効はこの self_service フラグが正典。
-      if (rateCard === OMNIS_FOUNDING_RATE_CARD) { rate_kind = 'omnis_monthly'; direction = 'charge'; rate = null }
-      else { rate_kind = 'payment_fee_5'; direction = 'charge'; rate = FEE_RATE.payment_fee_5 }
+      // 同系統×自社メニュー（条件④／特例d）。月額モデル（monthly_fee非null）は 'omnis_monthly'（互換名・汎用月額）。
+      if (card.monthly_fee != null) { rate_kind = 'omnis_monthly'; direction = 'charge'; rate = null }
+      else { rate_kind = 'payment_fee_5'; direction = 'charge'; rate = card.payment_fee_rate ?? FEE_RATE.payment_fee_5 }
     } else {
       // 他系統(MB含む)→サプライヤーメニュー（条件②）
-      rate_kind = 'half_commission'; direction = 'charge'; rate = FEE_RATE.half_commission
+      rate_kind = 'half_commission'; direction = 'charge'; rate = card.half_commission_rate
     }
+    const rateCard = card.id
 
     return {
       version: 2,

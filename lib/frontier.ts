@@ -16,7 +16,7 @@ type DealLike = {
 }
 type PartnerLink = { frontier_id: string | null; frontier_linked_at: string | null }
 /** サプライヤー（services.supplier_partner_id 結線のある会社フロンティア）のメタ。active=契約有効（partners.status='active'）。 */
-export type SupplierFrontiers = Record<string, { active: boolean }>
+export type SupplierFrontiers = Record<string, { active: boolean; rate?: number }>
 
 /** deal の帰属月（fixed_month 優先、なければ created_at）。YYYY-MM */
 export function dealMonth(d: DealLike): string {
@@ -67,7 +67,8 @@ export function computeOverrides(
       const ref = d.fixed_month ?? d.created_at
       if (!withinWindow(link.frontier_linked_at, ref)) continue
     }
-    out[link.frontier_id] = (out[link.frontier_id] ?? 0) + Math.round(d.amount * OVERRIDE_RATE)
+    const ovRate = (supplierFrontiers?.[link.frontier_id]?.rate ?? OVERRIDE_RATE)
+    out[link.frontier_id] = (out[link.frontier_id] ?? 0) + Math.round(d.amount * ovRate)
   }
   return out
 }

@@ -21,13 +21,15 @@ export function dealFrontierOverride(deal: DealForOverride, link: FrontierLink |
   if (deal.partner_id && deal.partner_id === link.frontier_id) return 0  // 自己紐づけ除外
   if (deal.fee_snapshot?.self_service === true) return 0                 // P0-b①: 自己サービス抑止（凍結条件が正典）
   const sup = supplierFrontiers?.[link.frontier_id]
+  let ovRate = OVERRIDE_RATE
   if (sup) {
     if (!sup.active) return 0                                            // P0-b②: 契約停止（suspended）で以後発生しない
+    if (sup.rate != null) ovRate = sup.rate                              // Feature I: レートカードのoverride率
   } else {
     const ref = deal.fixed_month ?? deal.created_at
     if (!withinWindow(link.frontier_linked_at, ref)) return 0            // 個人フロンティア＝従来12ヶ月窓（不変）
   }
-  return Math.round((deal.amount || 0) * OVERRIDE_RATE)
+  return Math.round((deal.amount || 0) * ovRate)
 }
 
 export type ProjectPnl = {

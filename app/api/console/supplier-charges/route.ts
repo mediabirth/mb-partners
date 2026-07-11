@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { supplierChargeBase, chargePeriodOf, FEE_RATE, OMNIS_MONTHLY_FEE, OMNIS_FOUNDING_RATE_CARD, STD_RATE_CARD } from '@/lib/supplier-fee'
+import { supplierChargeBase, chargePeriodOf, FEE_RATE, loadRateCard, STD_RATE_CARD } from '@/lib/supplier-fee'
 
 export const runtime = 'nodejs'
 
@@ -63,12 +63,14 @@ async function computeCharges(admin: Awaited<ReturnType<typeof createServiceRole
       deliveryExpense = (exp ?? []).reduce((s: number, e: { amount: number | null }) => s + (Number(e.amount) || 0), 0)
     }
     const base = supplierChargeBase({ revenue, deliveryCost, deliveryExpense, otherCost: Number(d.other_cost) || 0 })
-    const amount = Math.round(Math.max(0, base) * FEE_RATE.half_commission)
+    // Feature I: 率は凍結済みfee_snapshot.rateを正とする（レートカード改定が確定済み案件に波及しない）
+    const frozenRate = Number((d.fee_snapshot as { rate?: number }).rate) || FEE_RATE.half_commission
+    const amount = Math.round(Math.max(0, base) * frozenRate)
     // base≦0（受注額未入力等）は凍結しない＝0円でロックせず、入力後の再クローズで拾える（凍結済みskipの対象外のため）。
     if (amount <= 0) continue
     rows.push({
       supplier_partner_id: supplierId, deal_id: d.id, kind: 'half_commission', period,
-      base_amount: base, rate: FEE_RATE.half_commission, amount,
+      base_amount: base, rate: frozenRate, amount,
       snapshot: { customer: d.company_name || d.customer_name, components: { revenue, deliveryCost, deliveryExpense, otherCost: Number(d.other_cost) || 0 }, fee_snapshot: d.fee_snapshot },
     })
   }
@@ -83,21 +85,23 @@ async function computeCharges(admin: Awaited<ReturnType<typeof createServiceRole
     const cont = (cps ?? []).reduce((s: number, c: { confirmed_amount: number | null }) => s + (Number(c.confirmed_amount) || 0), 0)
     if (cont > 0) { base += cont; parts.continuous_amount = cont }
     if (base <= 0) continue
-    const amount = Math.round(base * FEE_RATE.payment_fee_5)
+    const p5Rate = Number((d.fee_snapshot as { rate?: number }).rate) || FEE_RATE.payment_fee_5
+    const amount = Math.round(base * p5Rate)
     rows.push({
       supplier_partner_id: supplierId, deal_id: d.id, kind: 'payment_fee_5', period,
-      base_amount: base, rate: FEE_RATE.payment_fee_5, amount,
+      base_amount: base, rate: p5Rate, amount,
       snapshot: { customer: d.company_name || d.customer_name, components: parts, fee_snapshot: d.fee_snapshot, note: 'パートナー受取からは一切控除しない（上乗せ請求）' },
     })
   }
 
-  // (d) ファウンディング月額（オムニス: ¥50,000 税別）
+  // (d) 月額固定（レートカード駆動: monthly_fee 非nullのカード＝クローズ時点の現行カード基準・設計§4(d)）
   const { data: sp } = await admin.from('partners').select('supplier_rate_card').eq('id', supplierId).maybeSingle()
-  if ((sp?.supplier_rate_card ?? STD_RATE_CARD) === OMNIS_FOUNDING_RATE_CARD) {
+  const card = await loadRateCard(admin, (sp?.supplier_rate_card as string | null) ?? STD_RATE_CARD)
+  if (card.monthly_fee != null) {
     rows.push({
       supplier_partner_id: supplierId, deal_id: null, kind: 'omnis_monthly', period,
-      base_amount: OMNIS_MONTHLY_FEE, rate: null, amount: OMNIS_MONTHLY_FEE,
-      snapshot: { note: 'ファウンディング・サプライヤー月額（決済手数料5%に代えて・税別）', rate_card: OMNIS_FOUNDING_RATE_CARD },
+      base_amount: card.monthly_fee, rate: null, amount: card.monthly_fee,
+      snapshot: { note: '月額固定（決済手数料に代えて・税別）', rate_card: card.id },
     })
   }
 

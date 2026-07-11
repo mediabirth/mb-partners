@@ -420,6 +420,13 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const [submitting, startTrans] = useTransition()
   // 一覧v2：トーストを {msg, undo?} 型へ拡張（undo付き＝8秒表示・deals ボードと同文法）。
   const [toast, setToast]        = useState<{ msg: string; undo?: () => void } | null>(null)
+  // Feature I: 供給元（サプライヤー）一覧。console専用API＝partner/vendor面の共有クエリには一切載せない（面公開禁止）。
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; brands: { id: string }[] }[]>([])
+  useEffect(() => { fetch('/api/console/suppliers').then(r => r.json()).then(d => setSuppliers(d.suppliers ?? [])).catch(() => {}) }, [])
+  const supplierOfBrand = (brandId: string): { id: string; name: string } | null => {
+    for (const sp of suppliers) if (sp.brands.some(b => b.id === brandId)) return { id: sp.id, name: sp.name }
+    return null
+  }
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [svcError, setSvcError]  = useState('')
   // 一覧v2：ブランド行DnD（HTML5 draggable・deals/page.tsx ボードの流儀）。
@@ -487,10 +494,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
     setNavSel(prev => typeof prev === 'number' ? (prev === i ? 'basic' : prev > i ? prev - 1 : prev) : prev)
   }
   // 保存：draft を menus＋menu_rewards＋報酬単位タスク(reward_id)に反映。money計算式には触れない。
-  // 戻り値＝反映後のメニュー（service_menu_id別・一覧の即時更新用の表示構築のみ。DBの正はサーバ）。
-  async function reconcileMenus(): Promise<Record<string, Menu[]>> {
+  // 戻り値＝反映後のメニュー（service_menu_id別・一覧の即時更新用の表示構築のみ。DBの正はサーバ）＋警告（逆ザヤ等）。
+  // ★警告は途中でトースト表示しない（showToastは単一枠＝直後の「保存しました」に置換されて見えない）→収集して最終トーストに合流。
+  async function reconcileMenus(): Promise<{ rebuilt: Record<string, Menu[]>; warnings: string[] }> {
+    const warnSet = new Set<string>()
     const rebuilt: Record<string, Menu[]> = {}
-    if (!editing) return rebuilt
+    if (!editing) return { rebuilt, warnings: [] }
     // 一覧の即時更新用：既存メニューの sort/short_description を id で引けるように（表示のみ・保存対象外）。
     const origMenuById = new Map<string, Menu>()
     for (const sm of editing.service_menus) for (const m of (sm.menus ?? [])) origMenuById.set(m.id, m)
@@ -526,12 +535,18 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         const r = d.rewards[k]
         const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'fixed' ? null : '粗利', reward_trigger: r.reward_trigger.trim() || null, default_months: r.reward_type === 'continuous' ? (parseAmount(r.reward_months) || null) : null, sort: k }
         let rewardId = r.id
-        if (rewardId) await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {})
+        if (rewardId) {
+          const pr = await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => null)
+          const pj = pr ? await pr.json().catch(() => ({})) : {}
+          if (pr && !pr.ok) showToast(`報酬保存に失敗: ${pj?.error ?? pr.status}`, { duration: 5000 })
+          else if (pj?.warning) warnSet.add(String(pj.warning))
+        }
         else {
           const res = await fetch('/api/console/menu-rewards', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ menu_id: menuId, ...payload }) })
           const jd = await res.json().catch(() => ({}))
           rewardId = jd?.reward?.id ?? null
-          if (!rewardId) { showToast(`報酬保存に失敗: ${jd?.error ?? res.status}`); continue }
+          if (!rewardId) { showToast(`報酬保存に失敗: ${jd?.error ?? res.status}`, { duration: 5000 }); continue }
+          if (jd?.warning) warnSet.add(String(jd.warning))
         }
         builtRewards.push({ id: rewardId, menu_id: menuId, active: true, ...payload })
         const existing = origTasks[r.id ?? ''] ?? []
@@ -549,7 +564,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         description: desc, rewards: builtRewards,
       })
     }
-    return rebuilt
+    return { rebuilt, warnings: [...warnSet] }
   }
 
   // トースト（undo付きは8秒表示・既存 showToast('文字列') 呼び出しはそのまま動く）。
@@ -596,11 +611,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       if (!res.ok) { setSvcError(await res.text()); return }
       const data = await res.json()
       if (editing) {
-        const rebuilt = await reconcileMenus()   // 確定モック：メニュー＋協力タスク紐付けを一括反映
+        const { rebuilt, warnings } = await reconcileMenus()   // 確定モック：メニュー＋協力タスク紐付けを一括反映
         setServices(prev => prev.map(s => s.id === editing.id
           ? { ...s, ...data.service, service_menus: s.service_menus.map(sm => ({ ...sm, menus: rebuilt[sm.id] ?? [] })) }
           : s))
-        showToast('保存しました')
+        // 逆ザヤ等の警告は「保存しました」に合流させて表示（単一枠トーストの置換で消えないように）
+        showToast(warnings.length ? `保存しました ／ ⚠ ${warnings[0]}` : '保存しました', warnings.length ? { duration: 8000 } : undefined)
         closeDrawer()
       } else {
         let backbone: MenuRow | null = null
@@ -734,6 +750,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   </div>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, width: 44 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, background: svc.active ? 'var(--c-blue)' : 'transparent', border: svc.active ? 'none' : '1px solid var(--muted)' }} />
+                    {supplierOfBrand(svc.id) && <span style={{ fontSize: 11, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '2px 8px' }}>供給: {supplierOfBrand(svc.id)!.name}</span>}
                     <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc.active ? '公開' : '停止'}</span>
                   </span>
                   <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
@@ -850,6 +867,23 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         labelB="公開中"
                       />
                     </Fld>
+                    {/* Feature I: 供給元（MB自社／サプライヤー）＝ services.supplier_partner_id 結線のUI化。即時PATCH。 */}
+                    {editing && (
+                      <Fld label="供給元">
+                        <select
+                          value={supplierOfBrand(editing.id)?.id ?? ''}
+                          onChange={async e => {
+                            const v = e.target.value || null
+                            const r = await fetch(`/api/console/services/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ supplier_partner_id: v }) })
+                            if (r.ok) { showToast(v ? '供給元を結線しました（以後に確定する案件から適用）' : '供給元を解除しました'); fetch('/api/console/suppliers').then(x => x.json()).then(d => setSuppliers(d.suppliers ?? [])).catch(() => {}) }
+                            else { const j = await r.json().catch(() => ({})); showToast(`供給元の変更に失敗: ${j?.error ?? r.status}`) }
+                          }}
+                          style={{ width: '100%', padding: '9px 11px', borderRadius: 9, border: '0.5px solid var(--line)', fontSize: '.82rem', fontFamily: 'inherit', background: '#fff' }}>
+                          <option value="">MB自社</option>
+                          {suppliers.map(sp => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+                        </select>
+                      </Fld>
+                    )}
                     {/* 担当（ブランド既定・一覧v2でインライン担当selectをここへ移設。既存 setBrandMember 配線＝即時PATCH） */}
                     {editing && calMembers.length > 0 && (
                       <Fld label="担当">

@@ -16,9 +16,14 @@ export async function loadSupplierFrontiers(admin: AnyClient): Promise<SupplierF
     const { data: sv } = await admin.from('services').select('supplier_partner_id').not('supplier_partner_id', 'is', null)
     const ids = [...new Set((sv ?? []).map((s: { supplier_partner_id: string }) => s.supplier_partner_id))]
     if (!ids.length) return {}
-    const { data: ps } = await admin.from('partners').select('id, status').in('id', ids)
+    const { data: ps } = await admin.from('partners').select('id, status, supplier_rate_card').in('id', ids)
+    const { data: cards } = await admin.from('rate_cards').select('id, override_rate')
+    const rateBy: Record<string, number> = {}
+    for (const c of (cards ?? []) as { id: string; override_rate: number }[]) rateBy[c.id] = Number(c.override_rate)
     const out: SupplierFrontiers = {}
-    for (const p of (ps ?? []) as { id: string; status: string | null }[]) out[p.id] = { active: p.status === 'active' }
+    for (const p of (ps ?? []) as { id: string; status: string | null; supplier_rate_card: string | null }[]) {
+      out[p.id] = { active: p.status === 'active', rate: rateBy[p.supplier_rate_card ?? 'std-v1'] }
+    }
     return out
   } catch { return {} }
 }
