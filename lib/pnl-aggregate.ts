@@ -8,6 +8,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeProjectPnl, dealFrontierOverride } from './pnl'
+import { loadSupplierFrontiers } from './frontier-payout'
 
 export type DealPnl = {
   id: string
@@ -36,7 +37,7 @@ export type PnlAggregate = {
 /** 成約(confirmed/paid)案件を対象に、案件別の正確なP&L行を返す。 */
 export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregate> {
   // ① 案件本体（P&L列込み・段階フォールバック）。他クエリと結果依存が無い → 取得のみ並列化。
-  const SEL = 'id, customer_name, channel, status, amount, fixed_month, created_at, partner_id'
+  const SEL = 'id, customer_name, channel, status, amount, fixed_month, created_at, partner_id, fee_snapshot'
   const dealsP: Promise<Record<string, unknown>[]> = (async () => {
     const r = await admin.from('deals').select(`${SEL}, director_id, other_cost`).in('status', ['confirmed', 'paid'])
     let d = r.data as Record<string, unknown>[] | null
@@ -113,6 +114,9 @@ export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregat
   const directorName: Record<string, string> = {}
   for (const p of (profilesRes.data ?? []) as Array<{ id: string; name: string }>) directorName[p.id] = p.name
 
+  // P0-b: サプライヤー窓バイパス/自己サービス抑止を表示側にも同一規則で反映（支払との乖離ゼロ）
+  const supplierFrontiers = await loadSupplierFrontiers(admin)
+
   const rows: DealPnl[] = deals.map(d => {
     const id = d.id as string
     const items = itemsByDeal[id] ?? []
@@ -120,8 +124,9 @@ export async function loadProjectPnl(admin: SupabaseClient): Promise<PnlAggregat
     const deliveryCost = feeByDeal[id] ?? 0
     const deliveryExpense = approvedExpenseByDeal[id] ?? 0
     const frontierOverride = dealFrontierOverride(
-      d as { status: string; amount: number; partner_id?: string | null; fixed_month?: string | null; created_at: string },
+      d as { status: string; amount: number; partner_id?: string | null; fixed_month?: string | null; created_at: string; fee_snapshot?: { self_service?: boolean } | null },
       partnerLink[(d.partner_id as string) ?? ''] ?? null,
+      supplierFrontiers,
     )
     const pnl = computeProjectPnl({
       items, partnerReward: Number(d.amount ?? 0), frontierOverride, otherCost, deliveryCost, deliveryExpense,

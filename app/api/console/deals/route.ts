@@ -112,7 +112,7 @@ export async function GET() {
   const admin = await createServiceRoleClient()
   const SEL_BASE = `
       id, customer_name, customer_type, company_name, contact_name, contact_title, customer_email, channel, source, status, amount, base_amount,
-      fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot, reward_ref, continuous_months,
+      fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot, reward_ref, continuous_months, fee_snapshot,
       service_menus(name, coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, logo_path),
       partners(code, frontier_id, frontier_linked_at, profiles(name, color))`
@@ -195,14 +195,18 @@ export async function GET() {
   } catch { /* best-effort（menus 未作成時は service_menus 名にフォールバック） */ }
 
   // A1: 各案件のフロンティアoverride を読取で算出して付与（既存lib/frontierの式・保存値非接触）。
+  // P0-b: 自己サービス抑止＋サプライヤー窓バイパスを支払計算(computeOverrides)と同一規則で表示にも反映（乖離ゼロ）。
   const { dealFrontierOverride } = await import('@/lib/pnl')
+  const { loadSupplierFrontiers } = await import('@/lib/frontier-payout')
+  const supplierFrontiers = await loadSupplierFrontiers(admin)
   const withOverride = (deals ?? []).map((d: Record<string, unknown>) => {
     const dv = deliveryByDeal[d.id as string]
     return {
       ...d,
       _frontier_override: dealFrontierOverride(
-        d as { status: string; amount: number; partner_id?: string | null; fixed_month?: string | null; created_at: string },
+        d as { status: string; amount: number; partner_id?: string | null; fixed_month?: string | null; created_at: string; fee_snapshot?: { self_service?: boolean } | null },
         (d.partners as { frontier_id?: string | null; frontier_linked_at?: string | null } | null) ?? null,
+        supplierFrontiers,
       ),
       _deliveries: (dv?.rows ?? []).map(a => ({
         ...a,

@@ -11,8 +11,12 @@ type DealLike = {
   status: string
   fixed_month?: string | null
   created_at: string
+  // P0-b: 系統連動レートの条件凍結（設計正典 docs/design/lineage-rate-design.md v2 §2）。self_service 判定の正典。
+  fee_snapshot?: { self_service?: boolean } | null
 }
 type PartnerLink = { frontier_id: string | null; frontier_linked_at: string | null }
+/** サプライヤー（services.supplier_partner_id 結線のある会社フロンティア）のメタ。active=契約有効（partners.status='active'）。 */
+export type SupplierFrontiers = Record<string, { active: boolean }>
 
 /** deal の帰属月（fixed_month 優先、なければ created_at）。YYYY-MM */
 export function dealMonth(d: DealLike): string {
@@ -39,6 +43,7 @@ export function computeOverrides(
   deals: DealLike[],
   partnerById: Record<string, PartnerLink>,
   ym: string,
+  supplierFrontiers?: SupplierFrontiers,
 ): Record<string, number> {
   const out: Record<string, number> = {}
   for (const d of deals) {
@@ -48,8 +53,20 @@ export function computeOverrides(
     const link = partnerById[d.partner_id]
     if (!link?.frontier_id || !link.frontier_linked_at) continue
     if (d.partner_id === link.frontier_id) continue // 自己紐づけは無視
-    const ref = d.fixed_month ?? d.created_at
-    if (!withinWindow(link.frontier_linked_at, ref)) continue
+    // P0-b①: 自己サービス抑止（設計v2 §4(c)改修1）——同系統×自社メニューは override 無効。
+    //   判定の正典＝deal確定時に凍結された fee_snapshot.self_service（後からの系統/メニュー変更に波及しない）。
+    //   fee_snapshot=null（P0-a以前の従来案件）は抑止しない＝後方互換。
+    if (d.fee_snapshot?.self_service === true) continue
+    const sup = supplierFrontiers?.[link.frontier_id]
+    if (sup) {
+      // P0-b②: サプライヤー（会社フロンティア）への override は12ヶ月窓を適用しない＝契約ベース（設計v2 §4(c)改修2）。
+      //   契約状態は partners.status を正とし、suspended（解約・停止）で以後発生しない。
+      if (!sup.active) continue
+    } else {
+      // 個人フロンティア＝従来の12ヶ月窓（完全不変）。
+      const ref = d.fixed_month ?? d.created_at
+      if (!withinWindow(link.frontier_linked_at, ref)) continue
+    }
     out[link.frontier_id] = (out[link.frontier_id] ?? 0) + Math.round(d.amount * OVERRIDE_RATE)
   }
   return out

@@ -7,19 +7,26 @@
  * フロンティアoverride は既存 lib/frontier の式（OVERRIDE_RATE・withinWindow）をそのまま読取で再現。
  * 経費は status='approved' のみ粗利に反映（submitted/rejected は含めない）。
  */
-import { OVERRIDE_RATE, withinWindow } from './frontier'
+import { OVERRIDE_RATE, withinWindow, type SupplierFrontiers } from './frontier'
 
 export type PnlItem = { revenue: number | null }
 export type FrontierLink = { frontier_id?: string | null; frontier_linked_at?: string | null }
-export type DealForOverride = { status: string; amount: number; partner_id?: string | null; fixed_month?: string | null; created_at: string }
+export type DealForOverride = { status: string; amount: number; partner_id?: string | null; fixed_month?: string | null; created_at: string; fee_snapshot?: { self_service?: boolean } | null }
 
-/** 1案件が生むフロンティアoverride（既存 lib/frontier.computeOverrides と同一規則・読取専用）。 */
-export function dealFrontierOverride(deal: DealForOverride, link: FrontierLink | null | undefined): number {
+/** 1案件が生むフロンティアoverride（既存 lib/frontier.computeOverrides と同一規則・読取専用）。
+ *  P0-b: 自己サービス抑止＋サプライヤー窓バイパスを computeOverrides と同一規則で反映（設計v2 §4(c)）＝支払と表示の乖離ゼロ。 */
+export function dealFrontierOverride(deal: DealForOverride, link: FrontierLink | null | undefined, supplierFrontiers?: SupplierFrontiers): number {
   if (deal.status !== 'confirmed' && deal.status !== 'paid') return 0
   if (!link?.frontier_id || !link.frontier_linked_at) return 0
   if (deal.partner_id && deal.partner_id === link.frontier_id) return 0  // 自己紐づけ除外
-  const ref = deal.fixed_month ?? deal.created_at
-  if (!withinWindow(link.frontier_linked_at, ref)) return 0
+  if (deal.fee_snapshot?.self_service === true) return 0                 // P0-b①: 自己サービス抑止（凍結条件が正典）
+  const sup = supplierFrontiers?.[link.frontier_id]
+  if (sup) {
+    if (!sup.active) return 0                                            // P0-b②: 契約停止（suspended）で以後発生しない
+  } else {
+    const ref = deal.fixed_month ?? deal.created_at
+    if (!withinWindow(link.frontier_linked_at, ref)) return 0            // 個人フロンティア＝従来12ヶ月窓（不変）
+  }
   return Math.round((deal.amount || 0) * OVERRIDE_RATE)
 }
 
