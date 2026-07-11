@@ -135,6 +135,36 @@ async function tier3(admin: Awaited<ReturnType<typeof createServiceRoleClient>>)
     }
   } catch { /* fail-open（テーブル未作成等） */ }
 
+  // 根絶第2層（2026-07-11・招待セッション事故）: 乗っ取りガードの歩哨。
+  // 監視専用の非partnerアカウント（manager・恒久インフラ）のメールでパートナー招待受諾を実行し、
+  // **拒否される（409）こと**を毎日実測。200が返る＝ガード退行＝コンソール自動ログアウト事故が再発可能な状態→即発報。
+  try {
+    const OPS_EMAIL = 'cc-monitor-ops@mb-system.internal'
+    const { data: l2 } = await admin.auth.admin.listUsers()
+    let opsU = (l2?.users || []).find((x: { email?: string }) => x.email === OPS_EMAIL)
+    if (!opsU) {
+      const c2 = await admin.auth.admin.createUser({ email: OPS_EMAIL, email_confirm: true, app_metadata: { role: 'manager', monitor: true } })
+      opsU = c2.data?.user ?? undefined
+      if (opsU) await admin.from('profiles').upsert({ id: opsU.id, name: '監視(運営役)', role: 'manager', email: OPS_EMAIL, color: '#888888' })
+    }
+    if (opsU) {
+      const { data: probeInv } = await admin.from('invites').insert({ email: OPS_EMAIL, kind: 'partner', role: 'partner' }).select('token').single()
+      let guardOk = false, detail2 = ''
+      if (probeInv?.token) {
+        const r = await fetch(`${APEX}/api/invite/accept`, {
+          method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store',
+          body: JSON.stringify({ token: probeInv.token, email: OPS_EMAIL, password: 'MonitorProbe1!', lastName: '監視', firstName: '歩哨', phone: '0', address: '-', agreeTerms: true, agreePrivacy: true }),
+        })
+        guardOk = r.status === 409
+        detail2 = `accept応答 ${r.status}（期待409=拒否）`
+        // 万一 200 が返った場合の復旧掃除（partner行が作られていたら除去・パスワードは監視専用アカウントのため実害なし）
+        if (r.ok) { try { await admin.from('partners').delete().eq('profile_id', opsU.id) } catch {} }
+        await admin.from('invites').delete().eq('token', probeInv.token)
+      } else { detail2 = 'probe招待の作成に失敗' }
+      out.push({ key: 't3.invite_hijack_guard', label: '招待の乗っ取りガード（非partnerメール拒否）', ok: guardOk, detail: detail2, where: '/api/invite/accept', next: 'ガード退行の疑い。accept経路の existingRole チェックを確認（コンソール自動ログアウト事故が再発可能な状態）' })
+    }
+  } catch { /* fail-open */ }
+
   return out
 }
 

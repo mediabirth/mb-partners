@@ -32,6 +32,14 @@ export async function POST(req: NextRequest) {
   if (!email?.trim()) return NextResponse.json({ error: 'email は必須です' }, { status: 400 })
 
   const service = await createServiceRoleClient()
+  // ★乗っ取り防止の早期チェック（2026-07-11）: 既存の運営/委託先アカウントのメールにはパートナー招待を発行しない
+  //（受諾時に updateUserById がその人のパスワードを上書き＝全セッション失効事故になるため。accept側にも同ガードあり）。
+  {
+    const { data: exist } = await service.from('profiles').select('role').ilike('email', email.trim()).maybeSingle()
+    if (exist?.role && exist.role !== 'partner') {
+      return NextResponse.json({ error: `このメールアドレスは既存の${exist.role === 'vendor' ? '委託先' : '運営'}アカウントで使用されています。パートナー招待には別のメールアドレスを指定してください。` }, { status: 400 })
+    }
+  }
   const { data: invite, error } = await service
     .from('invites')
     .insert({

@@ -14,6 +14,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { surfaceFor, cookieNameFor, SURFACE_HEADER, UID_HEADER } from '@/lib/supabase/surface'
+import { enforceAuthCookiePolicy } from '@/lib/supabase/cookie-guard'
 
 const APP_HOST = 'mb-partners.app'
 const CONSOLE_HOST = 'console.mb-partners.app'
@@ -64,9 +65,11 @@ export async function proxy(request: NextRequest) {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // 根絶第1層: 面×cookie名の許可表で検閲（違反は剥奪・Domainはhost-only強制）。
+          const vetted = enforceAuthCookiePolicy(surface, cookiesToSet as never) as typeof cookiesToSet
+          vetted.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request: { headers: requestHeaders } })
-          cookiesToSet.forEach(({ name, value, options }) =>
+          vetted.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )
         },

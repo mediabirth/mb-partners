@@ -31,6 +31,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (app.status === 'approved' || app.invited_at) return NextResponse.json({ ok: true, already: true })
     if (app.status === 'rejected') return NextResponse.json({ error: '見送り済みの応募です' }, { status: 409 })
     if (!app.email) return NextResponse.json({ error: 'メールアドレスが無いため招待できません' }, { status: 400 })
+    // ★乗っ取り防止（2026-07-11）: 既存の運営/委託先メールには招待を発行しない（invites POST・accept と同ガード）。
+    {
+      const { data: exist } = await admin.from('profiles').select('role').ilike('email', app.email.trim()).maybeSingle()
+      if (exist?.role && exist.role !== 'partner') {
+        return NextResponse.json({ error: 'この応募のメールアドレスは既存の運営/委託先アカウントで使用されています。別のメールで再応募いただくか、運用でご対応ください。' }, { status: 409 })
+      }
+    }
 
     // パートナー招待を発行（invites）。実アカウント作成は受諾時（/invite/accept）。
     const { data: invite, error: invErr } = await admin

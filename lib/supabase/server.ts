@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 import { surfaceFor, cookieNameFor, SURFACE_HEADER, UID_HEADER, type Surface } from './surface'
+import { enforceAuthCookiePolicy } from './cookie-guard'
 
 type CookieAdapter = Parameters<typeof createServerClient>[2]['cookies']
 
@@ -12,10 +13,15 @@ type CookieAdapter = Parameters<typeof createServerClient>[2]['cookies']
  * cookieAdapter は文脈依存（Server Component=read-only cookies / Route Handler=書込可）なので呼び出し側が渡す。
  */
 export function makeSurfaceServerClient(surface: Surface, cookieAdapter: CookieAdapter) {
+  // 根絶第1層（2026-07-11）: setAll を許可表ガードでラップ＝面違いの auth cookie 書込を通信層で剥奪（cookie-guard.ts）。
+  const guarded: CookieAdapter = {
+    getAll: () => cookieAdapter.getAll(),
+    setAll: (cookiesToSet) => cookieAdapter.setAll?.(enforceAuthCookiePolicy(surface, cookiesToSet as never) as never),
+  }
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookieOptions: { name: cookieNameFor(surface) }, cookies: cookieAdapter }
+    { cookieOptions: { name: cookieNameFor(surface) }, cookies: guarded }
   )
 }
 

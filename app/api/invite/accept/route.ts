@@ -117,9 +117,15 @@ export async function POST(req: NextRequest) {
     // Prefer this over admin.listUsers() which is paginated and slower.
     const { data: profileRow, error: profileLookupErr } = await service
       .from('profiles')
-      .select('id')
+      .select('id, role')
       .ilike('email', email)   // case-insensitive match
       .maybeSingle()
+
+    // ★アカウント乗っ取りガード（2026-07-11・招待セッション事故の根因修理）:
+    //   既存ユーザーのメールに対するパートナー招待受諾は、既存 role が partner の場合のみ許可。
+    //   運営（owner/manager/admin）や委託先（vendor）のメールを再利用すると、下の updateUserById が
+    //   その人のパスワードを上書き＝全セッション失効（コンソール自動ログアウト事故）を起こすため、ここで遮断する。
+    let existingRole: string | null = (profileRow as { role?: string } | null)?.role ?? null
 
     if (profileRow?.id) {
       userId = profileRow.id
@@ -155,6 +161,14 @@ export async function POST(req: NextRequest) {
       }
 
       userId = existing.id
+      existingRole = ((existing.app_metadata as { role?: string } | null)?.role) ?? existingRole
+    }
+
+    if (existingRole && existingRole !== 'partner') {
+      return NextResponse.json({
+        error: 'このメールアドレスは既に運営または委託先のアカウントで使用されています。パートナー登録には別のメールアドレスをご利用ください（お心当たりがない場合は招待の送り主へご連絡ください）。',
+        code: 'email-in-use-by-non-partner',
+      }, { status: 409 })
     }
 
     // Update password so the user can sign in with the new credentials

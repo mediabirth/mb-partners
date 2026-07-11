@@ -29,6 +29,8 @@ const ACC = {
 }
 // 二重ロール（同一メールで partner+vendor）テスト用アカウント
 const DUAL = { email: 'cc-dual-throwaway@mb-system.internal', name: '二重テスト太郎', deliveryName: '二重テスト委託先（throwaway）' }
+// [7] 運営者実環境ケース（招待セッション事故の恒久回帰・2026-07-11）用の新規登録者
+const INVITEE = { email: 'cc-sess-invitee-throwaway@mb-system.internal' }
 let pass = 0, fail = 0
 const ok = (c, n, d = '') => { if (c) { pass++; console.log('  ✓', n) } else { fail++; console.log('  ✗', n, String(d).slice(0, 200)) } }
 
@@ -82,14 +84,16 @@ async function ensureFixtures() {
 }
 async function teardownFixtures() {
   const { data: list } = await admin.auth.admin.listUsers()
-  const emails = [...Object.keys(ACC).filter(k => ACC[k]).map(k => ACC[k].email), DUAL.email]
+  const emails = [...Object.keys(ACC).filter(k => ACC[k]).map(k => ACC[k].email), DUAL.email, INVITEE.email]
   // dual の delivery/invite（auth_user 未紐づけ経路も）を掃除
   await admin.from('deliveries').delete().eq('name', DUAL.deliveryName).then(() => {}, () => {})
   await admin.from('invites').delete().ilike('token', 'cc-dual-tok-%').then(() => {}, () => {})
+  await admin.from('invites').delete().eq('email', INVITEE.email).then(() => {}, () => {})
   for (const email of emails) {
     const u = (list?.users || []).find(x => x.email === email)
     if (!u) continue
     await admin.from('deliveries').delete().eq('auth_user_id', u.id).then(() => {}, () => {})
+    await admin.from('audit_logs').delete().eq('actor_profile_id', u.id).then(() => {}, () => {})
     await admin.from('partners').delete().eq('profile_id', u.id).then(() => {}, () => {})
     await admin.from('profiles').delete().eq('id', u.id).then(() => {}, () => {})
     await admin.auth.admin.deleteUser(u.id).then(() => {}, () => {})
@@ -223,6 +227,45 @@ async function main() {
     ok(await isAlive(dpage, 'vendor'), '★dual: vendor面 も生存（delivery linkageで本人性・role非依存）')
     ok(await isAlive(dpage, 'app'), '★dual: partner面 も同時生存（vendorログインが上書きしない）')
     await dctx.close()
+
+    console.log('[7] 運営者実環境（consoleログイン済み同一ブラウザで新規パートナー登録）＝招待セッション事故の恒久回帰')
+    // 事故の実機序（2026-07-11・勝彦実機で再現）: 運営メールへの招待受諾が updateUserById(password) で
+    // 運営アカウントを乗っ取り→全セッション失効（コンソール自動ログアウト）→role bounceでコンソール誤誘導。
+    const octx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    const opage = await octx.newPage()
+    await login(opage, 'console')
+    ok(await isAlive(opage, 'console'), '[7] console ログイン成立（運営者状態）')
+    // (a) 新規メールの招待→受諾→appログイン。console セッションは無傷であること。
+    await admin.from('invites').delete().eq('email', INVITEE.email)
+    const { data: inv7 } = await admin.from('invites').insert({ email: INVITEE.email, kind: 'partner', role: 'partner', is_frontier: true }).select('token').single()
+    const accNew = await opage.evaluate(async (args) => {
+      const r = await fetch('/api/invite/accept', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: args.token, email: args.email, password: args.pw, lastName: '登録', firstName: '検証', phone: '09000000000', address: '大阪府吹田市1-1-1', taxType: 'individual', bankName: '検証銀行', branchName: '本店', accountType: '普通', accountNumber: '1234567', accountHolder: 'トウロク ケンショウ', agreeTerms: true, agreePrivacy: true }) })
+      return r.status
+    }, { token: inv7.token, email: INVITEE.email, pw: PW })
+    ok(accNew === 200, '[7]a 新規メールの招待受諾 200', String(accNew))
+    // 同一ブラウザで app に新規パートナーとしてログイン（登録フローの signIn 相当）
+    await opage.goto(APP + '/login', { waitUntil: 'domcontentloaded' }); await opage.waitForTimeout(600)
+    const hasForm7 = await opage.locator('input[type="email"]').count().catch(() => 0)
+    if (hasForm7) {
+      await opage.locator('input[type="email"]').fill(INVITEE.email)
+      await opage.locator('input[type="password"]').fill(PW)
+      await opage.locator('button[type="submit"], button:has-text("ログイン")').first().click()
+      await opage.waitForURL(u => !/\/login(\?|$)/.test(new URL(u).pathname), { timeout: 20000 }).catch(() => {})
+      await opage.waitForTimeout(1200)
+    }
+    ok(await isAlive(opage, 'app'), '[7]a 新規パートナーの app ログイン成立（/app 着地）')
+    ok(await isAlive(opage, 'console'), '★[7]a console セッション無傷（登録フローが破壊しない）')
+    // (b) 運営（console オーナー）のメールで受諾を試みる → 乗っ取りガードが 409 で遮断・console 生存。
+    await admin.from('invites').delete().eq('email', ACC.console.email)
+    const { data: inv7b } = await admin.from('invites').insert({ email: ACC.console.email, kind: 'partner', role: 'partner' }).select('token').single()
+    const accOwn = await opage.evaluate(async (args) => {
+      const r = await fetch('/api/invite/accept', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: args.token, email: args.email, password: 'Hijack!12345', lastName: '乗', firstName: '取', phone: '0', address: '-', taxType: 'individual', bankName: 'x', branchName: 'x', accountType: '普通', accountNumber: '1', accountHolder: 'x', agreeTerms: true, agreePrivacy: true }) })
+      return r.status
+    }, { token: inv7b.token, email: ACC.console.email })
+    ok(accOwn === 409, '★[7]b 運営メールの受諾は 409 で遮断（乗っ取りガード）', String(accOwn))
+    ok(await isAlive(opage, 'console'), '★[7]b console セッション生存（パスワード上書きが起きていない）')
+    await admin.from('invites').delete().eq('email', ACC.console.email)
+    await octx.close()
   } catch (e) { fatal = e } finally {
     await browser.close().catch(() => {})
     if (!OWN) await teardownFixtures()
