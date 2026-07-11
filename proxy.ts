@@ -42,6 +42,10 @@ export async function proxy(request: NextRequest) {
     if (pathname === '/') return NextResponse.redirect(new URL('/console', request.url))
     if (pathname === '/login') return NextResponse.redirect(new URL('/console/login', request.url))
     if (pathname.startsWith('/app') || pathname.startsWith('/vendor')) return xApp(pathname) // apex 所属
+    // 招待動線修理（2026-07-11）: パートナー向け受諾/公開パスは console ホストで開かせない（apexへ強制）。
+    // console ホストで /invite を開くと signIn cookie が mb-auth-console に書かれ APP セッションが成立しない
+    // （完了CTA→/app がログインへ落ちる）。member/accept（運営メンバー招待）のみ console 所属として残す。
+    if (pathname.startsWith('/invite') || pathname.startsWith('/partners') || pathname.startsWith('/join') || pathname.startsWith('/r/')) return xApp(pathname)
   }
   if (isAppHost) {
     if (pathname.startsWith('/console')) return xConsole(pathname) // console belongs to the subdomain
@@ -137,5 +141,10 @@ export const config = {
     '/login',
     '/console/login',
     '/api/:path*',
+    // 招待動線修理（2026-07-11）: console ホスト封じ込めのため受諾/公開パスも proxy を通す。
+    '/invite/:path*',
+    '/partners/:path*',
+    '/join',
+    '/r/:path*',
   ],
 }
