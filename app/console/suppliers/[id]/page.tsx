@@ -40,6 +40,20 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   const [ovTarget, setOvTarget] = useState('')   // reward_id or '' = 全メニュー（率）
   const [ovValue, setOvValue] = useState('')
   const [ovNote, setOvNote] = useState('')
+  // B: 自己設定の変更申請（承認キュー）
+  const [reqs, setReqs] = useState<{ id: string; kind: string; menu_id: string | null; menu_name: string | null; service_id: string; payload: { value?: unknown }; status: string; reason: string | null; created_at: string }[]>([])
+  const loadReqs = async () => { try { const j = await fetch(`/api/console/supplier-requests?supplier=${id}`).then(r => r.json()); setReqs(j.requests ?? []) } catch { /* 表示のみ */ } }
+  async function decide(rid: string, action: 'approve' | 'reject') {
+    if (busy) return
+    let reason: string | null = null
+    if (action === 'reject') { reason = prompt('見送りの理由（サプライヤー本人に表示されます）') ?? ''; if (reason === '') return }
+    if (action === 'approve' && !confirm('この申請を承認して反映します。よろしいですか？')) return
+    setBusy(true)
+    const r = await fetch('/api/console/supplier-requests', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: rid, action, reason }) })
+    const j = await r.json().catch(() => ({}))
+    setNote(r.ok ? (action === 'approve' ? '承認して反映しました' : '見送りにしました') : (j.error ?? '失敗しました'))
+    await loadReqs(); await load(); setBusy(false)
+  }
   const loadOv = async () => { try { const j = await fetch(`/api/console/reward-overrides?supplier=${id}`).then(r => r.json()); setOv(j) } catch { /* 表示のみ */ } }
   async function addOverride() {
     if (busy || !ovPartner || !ovValue) return
@@ -81,7 +95,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     const sv = await fetch('/api/console/services-list').then(r => r.json()).catch(() => ({ services: [] }))
     setAllBrands((sv.services ?? []).map((s: { id: string; name: string }) => ({ id: s.id, name: s.name, supplier: owned[s.id] ?? null })))
   }
-  useEffect(() => { load(); loadOv() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); loadOv(); loadReqs() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function changeCard() {
     if (!d || !selCard || selCard === d.supplier.rate_card || busy) return
@@ -215,6 +229,31 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                   <button onClick={addOverride} disabled={busy || !ovPartner || !ovValue} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '8px 14px' }}>設定</button>
                 </div>
                 <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 8 }}>値のみ上書き（型・基準はメニュー正典のまま）。適用は以後に作成される案件から＝受付済み・確定済みには波及しません。全操作は監査ログに記録されます。</p>
+              </div>
+
+              <div style={CARD}>
+                <div style={H}>変更申請（サプライヤー本人からの自己設定・承認キュー）</div>
+                {reqs.length === 0 ? (
+                  <p style={{ fontSize: '.7rem', color: 'var(--muted2)' }}>申請はありません。ポータル「サービス設定」からの申請がここに並びます（報酬額・社内メモは即時反映＝監査ログ参照）。</p>
+                ) : reqs.map(rq => {
+                  const KJ = { public_description: '顧客向け説明', image: 'イメージ画像', menu_name: 'メニュー名', visibility: '公開/非公開' } as Record<string, string>
+                  return (
+                    <div key={rq.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '0.5px solid var(--line)', fontSize: '.72rem', opacity: rq.status === 'pending' ? 1 : .6 }}>
+                      <span style={{ fontWeight: 700, flexShrink: 0 }}>{KJ[rq.kind] ?? rq.kind}</span>
+                      <span style={{ flex: 1, minWidth: 0, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {rq.menu_name ? `${rq.menu_name} ・ ` : ''}{typeof rq.payload?.value === 'boolean' ? (rq.payload.value ? '公開にする' : '非公開にする') : String(rq.payload?.value ?? '').slice(0, 60)}
+                      </span>
+                      {rq.status === 'pending' ? (
+                        <>
+                          <button onClick={() => decide(rq.id, 'approve')} disabled={busy} style={{ fontSize: '.6rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', flexShrink: 0 }}>承認して反映</button>
+                          <button onClick={() => decide(rq.id, 'reject')} disabled={busy} style={{ fontSize: '.6rem', color: 'var(--muted2)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', flexShrink: 0 }}>見送り</button>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '.58rem', fontWeight: 500, color: rq.status === 'approved' ? '#0f9d76' : 'var(--muted2)', flexShrink: 0 }}>{rq.status === 'approved' ? '反映済み' : `見送り${rq.reason ? `（${rq.reason}）` : ''}`}</span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
               <div style={CARD}>

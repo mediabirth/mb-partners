@@ -141,37 +141,19 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
             <KV label="税区分" value={taxLabel} last />
           </div>
 
-          {isSupplier && (
-            <a href="/app/supplier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
+          {(isFrontier || isSupplier) && (
+            <a href="/app/dashboard" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
               <span style={{ color: 'var(--c-blue)', display: 'flex', flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" /><path d="M9 21V12h6v9" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>サプライヤー ポータル</div>
-                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>自社メニューの案件・月次のお金を確認</div>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>ダッシュボード</div>
+                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>{isSupplier ? '会社・網・紹介の成果をまとめて確認' : '網と紹介の成果をまとめて確認'}</div>
               </div>
               <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
             </a>
           )}
 
-          {isFrontier && (
-            <a href="/app/frontier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
-              <span style={{ color: 'var(--c-blue)', display: 'flex', flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
-                  <rect x="19" y="19" width="10" height="10" rx="3" fill="currentColor" />
-                  <rect x="6" y="6" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
-                  <rect x="34" y="6" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
-                  <rect x="6" y="34" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
-                  <rect x="34" y="34" width="8" height="8" rx="2.5" stroke="currentColor" strokeWidth="2.4" />
-                </svg>
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>フロンティア ダッシュボード</div>
-                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>チームの招待・オーバーライドを管理</div>
-              </div>
-              <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
-            </a>
-          )}
 
           <div style={{ padding: '0 20px 8px' }}>
             <h2 style={{ fontSize: '.78rem', fontWeight: 500, marginBottom: 0 }}>振込先口座</h2>
