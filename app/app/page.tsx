@@ -10,7 +10,7 @@ import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
 import SynapseCrest from './synapse/SynapseCrest'
 import PushOptIn from '@/components/PushOptIn'
-import SupplierHome from './home/SupplierHome'
+import SupplierConsoleHome from './home/SupplierConsoleHome'
 import FrontierHomeTop from './home/FrontierHomeTop'
 
 export const runtime = 'edge'
@@ -39,7 +39,7 @@ export default async function AppPage() {
   const { data: personaBrand } = await admin.from('services').select('id').eq('supplier_partner_id', partner.id).limit(1)
   const personaSupplier = !!(personaRow?.supplier_rate_card || (personaBrand ?? []).length)
   const personaFrontier = !!personaRow?.is_frontier && !personaSupplier
-  if (personaSupplier) return <SupplierHome />
+  if (personaSupplier) return <SupplierConsoleHome />
   // ★HOME clean：SYNAPSE の件数/示唆/先回りは一覧側へ集約（HOMEは控えめな導線pillのみ）。
 
   // Stats

@@ -70,8 +70,24 @@ export async function GET() {
       }
     }
   }
+  // 案件（自社スコープ・受注額入力用）: 紹介者の系統（網から/MB側）を fee_snapshot から表示
+  let deals: { id: string; customer: string; status: string; brand: string; created_at: string; revenue: number; item_id: string | null; from_network: boolean }[] = []
+  if (svIds.length) {
+    const { data: ds } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, service_id, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100)
+    const { customerHonorific } = await import('@/lib/customer')
+    deals = ((ds ?? []) as Record<string, unknown>[]).map(d => ({
+      id: d.id as string,
+      customer: customerHonorific(d as never),
+      status: d.status as string,
+      brand: (brands ?? []).find(b => b.id === d.service_id)?.name ?? '',
+      created_at: d.created_at as string,
+      revenue: (((d.deal_items as { revenue: number | null }[] | null) ?? [])).reduce((s2, it) => s2 + (Number(it.revenue) || 0), 0),
+      item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
+      from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
+    }))
+  }
   const { data: reqs } = await admin.from('supplier_change_requests').select('id, service_id, menu_id, kind, payload, status, reason, created_at').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false }).limit(20)
-  return NextResponse.json({ brands: brands ?? [], menus, rewards, requests: reqs ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ brands: brands ?? [], menus, rewards, deals, requests: reqs ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -97,6 +113,29 @@ export async function PATCH(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     await notify(admin, me, 'update', `reward:${r.id}`, { before: r.reward_value, after: value, menu_id: r.menu_id })
     return NextResponse.json({ ok: true, warning: g.warning ?? null })
+  }
+
+  // 即時③: 成約案件の受注額（Phase 0の運営代行入力を本人化・2026-07-13）。
+  //   ★凍結済み請求への波及なしは既存の2段凍結（supplier_charges凍結後skip）が構造的に保証。
+  //   出所はコンソール案件タイムライン（deal_events）と audit_logs に記録＝「サプライヤー入力」が運営から見える。
+  if (typeof b.deal_id === 'string' && b.revenue != null) {
+    const { data: d } = await admin.from('deals').select('id, service_id, status, customer_name, deal_items(id)').eq('id', b.deal_id).maybeSingle()
+    if (!d) return NextResponse.json({ error: '案件が見つかりません' }, { status: 404 })
+    if (!(await ownService(admin, me.partnerId, d.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみ入力できます' }, { status: 403 })
+    if (d.status !== 'confirmed' && d.status !== 'paid') return NextResponse.json({ error: '受注額は成約後の案件に入力できます' }, { status: 400 })
+    const revenue = Math.round(Number(b.revenue))
+    if (!Number.isFinite(revenue) || revenue < 0 || revenue > 1_000_000_000) return NextResponse.json({ error: '受注額が不正です' }, { status: 400 })
+    const item = ((d.deal_items as { id: string }[] | null) ?? [])[0]
+    if (item) {
+      const { error } = await admin.from('deal_items').update({ revenue }).eq('id', item.id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    } else {
+      const { error } = await admin.from('deal_items').insert({ deal_id: d.id, service_id: d.service_id, kind: 'referral', amount: 0, revenue, sort: 0 })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    try { await admin.from('deal_events').insert({ deal_id: d.id, body: `受注額をサプライヤー本人が入力: ¥${revenue.toLocaleString()}（${me.name}）`, visible_to_partner: false, created_by: null }) } catch { /* best-effort */ }
+    await notify(admin, me, 'update', `deal-revenue:${d.id}`, { customer: d.customer_name, revenue })
+    return NextResponse.json({ ok: true })
   }
 
   // 即時②: 社内向けメモ（自社ブランド）
