@@ -10,6 +10,8 @@ import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
 import SynapseCrest from './synapse/SynapseCrest'
 import PushOptIn from '@/components/PushOptIn'
+import SupplierHome from './home/SupplierHome'
+import FrontierHomeTop from './home/FrontierHomeTop'
 
 export const runtime = 'edge'
 
@@ -32,6 +34,12 @@ export default async function AppPage() {
   // Redirecting to /login here would loop: login→/app→/login for admins.
   if (!partnerResult) redirect('/')
   const { partner, deals } = partnerResult
+  // ペルソナ・ホーム（2026-07-13）: 役割でホームが変わる。リファラル（役割なし）は以下の従来本文を一切変えない（追加行のみ＝diffで証明）。
+  const { data: personaRow } = await admin.from('partners').select('is_frontier, supplier_rate_card').eq('id', partner.id).maybeSingle()
+  const { data: personaBrand } = await admin.from('services').select('id').eq('supplier_partner_id', partner.id).limit(1)
+  const personaSupplier = !!(personaRow?.supplier_rate_card || (personaBrand ?? []).length)
+  const personaFrontier = !!personaRow?.is_frontier && !personaSupplier
+  if (personaSupplier) return <SupplierHome />
   // ★HOME clean：SYNAPSE の件数/示唆/先回りは一覧側へ集約（HOMEは控えめな導線pillのみ）。
 
   // Stats
@@ -101,6 +109,7 @@ export default async function AppPage() {
 
   return (
     <div>
+      {personaFrontier && <FrontierHomeTop />}
       {/* Balance card */}
       <div style={{
         margin: '18px 20px 0',

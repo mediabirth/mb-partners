@@ -141,18 +141,7 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
             <KV label="税区分" value={taxLabel} last />
           </div>
 
-          {(isFrontier || isSupplier) && (
-            <a href="/app/dashboard" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
-              <span style={{ color: 'var(--c-blue)', display: 'flex', flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>ダッシュボード</div>
-                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>{isSupplier ? '会社・網・紹介の成果をまとめて確認' : '網と紹介の成果をまとめて確認'}</div>
-              </div>
-              <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
-            </a>
-          )}
+          {/* ペルソナ・ホーム（2026-07-13）: 役割導線カードは撤去＝ホーム自体が役割適応（/app） */}
 
 
           <div style={{ padding: '0 20px 8px' }}>

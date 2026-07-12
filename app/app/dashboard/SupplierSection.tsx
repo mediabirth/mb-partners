@@ -29,7 +29,7 @@ const CHG_ST: Record<string, { label: string; color: string }> = {
 }
 
 /** あなたの会社（旧 /app/supplier の本体・統合ダッシュボードのセクション）。非サプライヤーは null。 */
-export default async function SupplierSection() {
+export default async function SupplierSection({ hideBrandChips = false }: { hideBrandChips?: boolean } = {}) {
   const user = await getCachedUser()
   if (!user) return null
   const supabase = await createClient()
@@ -103,7 +103,7 @@ export default async function SupplierSection() {
       {/* 1. 自社メニューの案件（読み取り専用） */}
       <div style={{ padding: '18px 20px 0' }}>
         <h2 style={H}>自社メニューの案件</h2>
-        {brands.length > 0 && (
+        {!hideBrandChips && brands.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '0 0 8px' }}>
             {brands.map(b => (
               <span key={b.id} style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: LINE, borderRadius: 999, padding: '3px 10px' }}>

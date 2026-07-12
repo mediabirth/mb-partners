@@ -24,11 +24,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .select('name, color, avatar_url')
     .eq('id', uid)
     .single()
+  // ペルソナ・ホーム（2026-07-13）: サプライヤーはナビ差し替え（会社タブ）。判定は本人行のみ＝軽量。
+  const { data: navP } = await supabase.from('partners').select('id, supplier_rate_card').eq('profile_id', uid).maybeSingle()
+  let navSupplier = !!navP?.supplier_rate_card
+  if (!navSupplier && navP) {
+    const { createServiceRoleClient } = await import('@/lib/supabase/server')
+    const adminNav = await createServiceRoleClient()
+    const { data: sv } = await adminNav.from('services').select('id').eq('supplier_partner_id', navP.id).limit(1)
+    navSupplier = !!sv?.length
+  }
 
   // BR-V3：シェル chrome は単一ソース SurfaceShell。差分はルート/名前/色/ナビ config のみ。
   // SYNAPSE：ヘッダーのアイコンは撤去（導線は HOME ヒーローのノードへ移設）。既存ナビは不変。
   return (
-    <SurfaceShell homeHref="/app" mypageHref="/app/mypage" settingsHref="/app/settings" name={profile?.name ?? null} color={profile?.color ?? null} avatarUrl={profile?.avatar_url ?? null} nav={<AppNav />}>
+    <SurfaceShell homeHref="/app" mypageHref="/app/mypage" settingsHref="/app/settings" name={profile?.name ?? null} color={profile?.color ?? null} avatarUrl={profile?.avatar_url ?? null} nav={<AppNav supplier={navSupplier} />}>
       {/* v3.1 デザイン規律：/app 本文のみ、共有部品由来の太字(b/見出し/ボタン/チップ/タグ)を500へ静音化。
           ★この <style> は /app レイアウト内のみ読み込まれ、セレクタも .app-quiet 配下に限定＝ベンダー/コンソールは不変。
           ★ロゴ「MB Partners」・アバター頭文字・ナビは SurfaceShell(この配下外)＝従来700のまま（ブランド表現）。 */}
