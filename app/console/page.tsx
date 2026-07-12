@@ -63,6 +63,15 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   ])
   const profile = profileRes.data
   const recentEvents = recentEventsRes.data
+  // 監視の最終実行（dead-man安全弁・読み取りのみ・テーブル未作成/空なら非表示にしない＝空もstale扱い）
+  let monitorStale = false
+  try {
+    const { data: ms, error: msErr } = await admin.from('monitor_state').select('updated_at').order('updated_at', { ascending: false }).limit(1)
+    if (!msErr) {
+      const last = ms?.[0]?.updated_at
+      monitorStale = !last || (Date.now() - new Date(last).getTime()) > 24 * 3600 * 1000
+    }
+  } catch { /* 監視バナーはbest-effort（ダッシュボード本体を壊さない） */ }
   const dealById = Object.fromEntries(deals.map(d => [d.id, d])) as Record<string, typeof deals[number]>
 
   // KPIs
@@ -267,6 +276,14 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
         {/* Content */}
         <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
+
+          {/* 安全弁: 監視が24時間以上実行されていない場合のみ警告（dead-man＝Slackハートビート廃止の引き継ぎ先） */}
+          {monitorStale && (
+            <div style={{ background: 'rgba(216,64,64,.08)', border: '0.5px solid rgba(216,64,64,.4)', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', flexShrink: 0 }} />
+              <span style={{ fontSize: '.74rem' }}><b>自己監視が24時間以上 実行されていません。</b><Link href="/console/settings/monitor" style={{ color: 'var(--c-blue)', marginLeft: 8 }}>監視の状態を確認 →</Link></span>
+            </div>
+          )}
 
           {/* ① ヒーロー：今月のMB粗利（正確）＋前月比＋月間目標進捗 */}
           <div className="page-anim shine card-hover" style={{

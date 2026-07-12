@@ -56,7 +56,5 @@ export async function recordCheck(admin: Admin, r: CheckResult): Promise<{ key: 
   return { key: r.key, ok: false, alerted, recovered: false, streak }
 }
 
-/** dead-man 用ハートビート（監視自身の死を検知するため、日次で「稼働中」を1行）。 */
-export async function heartbeat(text: string): Promise<void> {
-  await sendSlack(text).catch(() => {})
-}
+// heartbeat（日次「稼働中」Slack）は2026-07-12静音化で廃止。
+// dead-man検出は コンソール設定→監視（最終実行表示）＋ダッシュボードの24時間バナー（lib/monitor-checks.MONITOR_STALE_HOURS）。

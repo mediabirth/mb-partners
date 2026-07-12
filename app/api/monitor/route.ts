@@ -1,13 +1,13 @@
 /**
  * GET /api/monitor?tier=1|2|3 — 本番システムの自己巡回（synthetic monitoring）。
  * Vercel Cron が Authorization: Bearer <CRON_SECRET> で叩く（手動確認は ?key=<CRON_SECRET> でも可）。
- * 異常は2回連続で運営Slackへ発報・復旧で1通（lib/monitor）。★実ユーザー送信ゼロ・money非接触・読み取り主体。
+ * 異常は2回連続で運営Slackへ発報・復旧で1通（lib/monitor）。日次ハートビートは廃止（dead-man＝コンソール監視タブ＋ダッシュボード24hバナー）。★実ユーザー送信ゼロ・money非接触・読み取り主体。
  *  Tier1(15分): 公開面の到達性＋DB到達  Tier2(1時間): カレンダー連携生死＋メール基盤疎通  Tier3(日次): 認証read-onlyスモーク＋稼働ハートビート
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSb } from '@supabase/supabase-js'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { recordCheck, heartbeat, jstNow, type CheckResult } from '@/lib/monitor'
+import { recordCheck, type CheckResult } from '@/lib/monitor'
 import { decryptTokens, type StoredTokens } from '@/lib/google-token'
 import { getValidAccessToken } from '@/lib/google-calendar'
 
@@ -192,11 +192,8 @@ export async function GET(req: NextRequest) {
   const outcomes = []
   for (const c of checks) outcomes.push(await recordCheck(admin, c))
 
-  // Tier3 は dead-man ハートビートを1行（全チェック結果の要約付き）。
-  if (tier === '3') {
-    const failed = outcomes.filter(o => !o.ok).length
-    await heartbeat(`🟢 MB Partners 自己監視 稼働中｜Tier3巡回 ${failed === 0 ? '異常なし' : `${failed}件 異常`}｜${jstNow()} JST`)
-  }
+  // 静音化（2026-07-12）: 日次ハートビート（異常なし連絡）は廃止。Slackは「異常（2回連続）」と「復旧」のみ。
+  // dead-man検出は コンソール設定→監視 の最終実行表示＋ダッシュボードの24時間バナーへ移譲。
 
   const failed = outcomes.filter(o => !o.ok)
   return NextResponse.json({ ok: failed.length === 0, tier, checked: outcomes.length, failed: failed.length, results: checks.map((c, i) => ({ key: c.key, ok: c.ok, detail: c.detail, streak: outcomes[i].streak, alerted: outcomes[i].alerted })) })

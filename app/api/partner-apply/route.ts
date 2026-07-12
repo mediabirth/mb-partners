@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
       } catch { /* 無効refは黙って null */ }
     }
 
+    // LP種別: パートナー応募（既定）/ 出品の相談（サプライヤー）。それ以外の値は既定に丸める。
+    const kind = b.kind === 'supplier' ? 'supplier' : 'partner'
     const { data: inserted, error } = await admin.from('partner_applications').insert({
+      kind,
       name,
       org: typeof b.org === 'string' ? b.org.trim().slice(0, 200) : null,
       expertise: typeof b.expertise === 'string' ? b.expertise.trim().slice(0, 200) : null,
@@ -59,7 +62,7 @@ export async function POST(req: NextRequest) {
       })
       // 運営にも着信（best-effort）
       const { sendOpsEmail } = await import('@/lib/notify')
-      await sendOpsEmail('【MB Partners】新規パートナー応募', `新しい応募がありました。\n・お名前：${name}\n・メール：${email}${phone ? `\n・電話：${phone}` : ''}\n\nコンソール「パートナー応募」でステータスをご確認ください。`)
+      await sendOpsEmail(kind === 'supplier' ? '【MB Partners】出品の相談（サプライヤー）' : '【MB Partners】新規パートナー応募', `${kind === 'supplier' ? '出品の相談' : '新しい応募'}がありました。\n・お名前：${name}\n・メール：${email}${phone ? `\n・電話：${phone}` : ''}\n\nコンソール「パートナー応募」でステータスをご確認ください。`)
     } catch { /* best-effort：メール失敗でも応募は成立 */ }
 
     return NextResponse.json({ ok: true })

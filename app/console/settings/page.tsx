@@ -258,6 +258,16 @@ export default function SettingsPage() {
               </div>
               <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
             </a>
+            <a href="/console/settings/monitor" className="card-hover ui-card" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 18px', marginTop: 10, textDecoration: 'none', color: 'inherit' }}>
+              <span style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(21,145,126,.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f9d76" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.84rem', fontWeight: 500 }}>監視</div>
+                <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 4 }}>自己監視（Tier1/2/3）の稼働状態と直近の結果</div>
+              </div>
+              <span style={{ color: 'var(--t-tertiary)', flexShrink: 0 }}>›</span>
+            </a>
           </div>
 
           {/* 支払サイクルは「月末締め翌月末払い」固定（UIは撤去） */}

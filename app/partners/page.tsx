@@ -153,6 +153,8 @@ export default function PartnersLP() {
   const [email, setEmail] = useState(''), [phone, setPhone] = useState(''), [message, setMessage] = useState('')
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false)
   const [err, setErr] = useState(''), [done, setDone] = useState(false)
+  // LP種別（既存問い合わせ経路への接続・出品CTAで supplier に切替）
+  const [kind, setKind] = useState<'partner' | 'supplier'>('partner')
   const scrollForm = () => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' })
 
   async function submit(e: React.FormEvent) {
@@ -164,7 +166,7 @@ export default function PartnersLP() {
     try {
       const r = await fetch('/api/partner-apply', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, org, expertise, email, phone, message, consent }),
+        body: JSON.stringify({ name, org, expertise, email, phone, message, consent, kind }),
       })
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '送信に失敗しました。') }
       // 完了は専用ページへ（丁寧な受付＋期待感の演出）。応募完了メール＝面談予約リンクはサーバ側で送信済み。
@@ -324,6 +326,17 @@ export default function PartnersLP() {
           </div>
         </section>
 
+        {/* ── サプライヤー（出品・控えめな1節。文言は正典＝生成禁止） ── */}
+        <section className="plp-sec plp-calm plp-io">
+          <div className="plp-wrap plp-supplier">
+            <h2 className="plp-h2" data-st>サービスを、紹介の流通網へ。</h2>
+            <p className="plp-lead" data-st>自社のサービスをMB Partnersに出品し、パートナーの紹介ネットワークを通じてお客さまと出会う。紹介者への報酬管理も、お支払いも、すべてMB Partnersが代行します。</p>
+            <div className="plp-cta-row" data-st>
+              <button className="plp-cta2" onClick={() => { setKind('supplier'); scrollForm() }}>出品について問い合わせる<span className="plp-arrow">→</span></button>
+            </div>
+          </div>
+        </section>
+
         {/* ── 応募 ── */}
         <section id="apply" className="plp-sec plp-apply plp-io">
           <div className="plp-wrap plp-form-wrap">
@@ -336,6 +349,11 @@ export default function PartnersLP() {
             ) : (
               <>
                 <form className="plp-form" data-st onSubmit={submit}>
+                  <div className="plp-kind" role="radiogroup" aria-label="種別">
+                    {([['partner', 'パートナー応募'], ['supplier', '出品の相談']] as const).map(([v, l]) => (
+                      <button key={v} type="button" className={`plp-kind-chip${kind === v ? ' on' : ''}`} onClick={() => setKind(v)}>{l}</button>
+                    ))}
+                  </div>
                   <label className="plp-fld"><span>お名前 <i>*</i></span><input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required /></label>
                   <div className="plp-fld-row">
                     <label className="plp-fld"><span>会社・屋号（任意）</span><input value={org} onChange={e => setOrg(e.target.value)} placeholder="〇〇会計事務所" /></label>
@@ -348,7 +366,7 @@ export default function PartnersLP() {
                   <label className="plp-fld"><span>ひとこと（任意）</span><input value={message} onChange={e => setMessage(e.target.value)} placeholder="例：顧問先からの相談が増えています" /></label>
                   <label className="plp-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>株式会社Media Birth からのご連絡に同意します。いただいた情報はご案内のためにのみ使用します。</span></label>
                   {err && <p className="plp-err">{err}</p>}
-                  <button className="plp-cta plp-cta-full" type="submit" disabled={busy}>{busy ? '送信中…' : 'パートナーに応募する'}</button>
+                  <button className="plp-cta plp-cta-full" type="submit" disabled={busy}>{busy ? '送信中…' : kind === 'supplier' ? '送信する' : 'パートナーに応募する'}</button>
                 </form>
               </>
             )}
@@ -659,6 +677,13 @@ const CSS = `
 .plp-apply{padding-bottom:40px;}
 .plp-form-head{margin-bottom:34px;}
 .plp-form-wrap{max-width:640px;}
+.plp-supplier{text-align:center;max-width:720px;margin:0 auto;}
+.plp-cta2{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 34px;border-radius:999px;background:rgba(255,255,255,.7);color:var(--indigo);border:1.5px solid rgba(86,70,230,.35);font:inherit;font-size:14.5px;font-weight:650;cursor:pointer;backdrop-filter:blur(10px);transition:transform .2s,box-shadow .2s;}
+.plp-cta2:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(86,70,230,.18);}
+.plp-cta2:hover .plp-arrow{transform:translateX(5px);}
+.plp-kind{display:flex;gap:8px;}
+.plp-kind-chip{font:inherit;font-size:.8rem;font-weight:600;padding:9px 18px;border-radius:999px;border:1.5px solid rgba(40,30,80,.14);background:rgba(255,255,255,.6);color:var(--mut);cursor:pointer;transition:all .18s;}
+.plp-kind-chip.on{border-color:var(--indigo);background:rgba(86,70,230,.08);color:var(--indigo);}
 .plp-form{display:flex;flex-direction:column;gap:15px;padding:clamp(26px,4vw,42px);border-radius:26px;background:rgba(255,255,255,.72);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);border:0.5px solid rgba(255,255,255,.85);box-shadow:0 24px 70px rgba(40,30,80,.12);}
 .plp-fld-row{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
 .plp-fld{display:flex;flex-direction:column;gap:8px;}

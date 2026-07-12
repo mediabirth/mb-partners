@@ -17,6 +17,7 @@ type Application = {
   name: string | null
   org: string | null
   expertise: string | null
+  kind?: string | null
   email: string | null
   phone: string | null
   message: string | null
@@ -59,7 +60,7 @@ export default async function ConsoleApplicationsPage() {
 
   const { data } = await admin
     .from('partner_applications')
-    .select('id, created_at, name, org, expertise, email, phone, message, consent, source, referrer_partner_id, activated_at, status, interview_at, interview_meet_url, referrer:partners!partner_applications_referrer_partner_id_fkey(code, profiles(name))')
+    .select('id, created_at, name, org, expertise, email, phone, message, consent, source, kind, referrer_partner_id, activated_at, status, interview_at, interview_meet_url, referrer:partners!partner_applications_referrer_partner_id_fkey(code, profiles(name))')
     .order('created_at', { ascending: false })
 
   const rows = (data ?? []) as unknown as Application[]
@@ -105,7 +106,7 @@ export default async function ConsoleApplicationsPage() {
                     {rows.map(r => (
                       <tr key={r.id}>
                         <td style={{ ...TD, whiteSpace: 'nowrap', fontFamily: 'Inter', color: 'var(--muted2)' }}>{fmtJst(r.created_at)}</td>
-                        <td style={{ ...TD, fontWeight: 500, whiteSpace: 'nowrap' }}>{r.name || '—'}</td>
+                        <td style={{ ...TD, fontWeight: 500, whiteSpace: 'nowrap' }}>{r.name || '—'}{r.kind === 'supplier' && <span style={{ fontSize: '.54rem', fontWeight: 700, color: 'var(--c-blue)', border: '0.5px solid var(--line)', borderRadius: 20, padding: '1px 7px', marginLeft: 6 }}>出品の相談</span>}</td>
                         <td style={TD}>{r.org || '—'}</td>
                         <td style={TD}>{r.expertise || '—'}</td>
                         <td style={TD}>{r.email ? <a href={`mailto:${r.email}`} style={{ color: 'var(--c-blue)' }}>{r.email}</a> : '—'}</td>
