@@ -34,6 +34,39 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   const [attachBrand, setAttachBrand] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  // P1 パートナー別報酬率（個別条件）: 一覧＋設定材料は /api/console/reward-overrides に集約
+  const [ov, setOv] = useState<{ overrides: { id: string; partner_id: string; reward_id: string | null; override_value: number; note: string | null; active: boolean }[]; rewards: { id: string; menu_id: string; menu_name: string; service_name: string; reward_type: string; reward_value: number; reward_base: string | null }[]; partners: { id: string; code: string; name: string }[] } | null>(null)
+  const [ovPartner, setOvPartner] = useState('')
+  const [ovTarget, setOvTarget] = useState('')   // reward_id or '' = 全メニュー（率）
+  const [ovValue, setOvValue] = useState('')
+  const [ovNote, setOvNote] = useState('')
+  const loadOv = async () => { try { const j = await fetch(`/api/console/reward-overrides?supplier=${id}`).then(r => r.json()); setOv(j) } catch { /* 表示のみ */ } }
+  async function addOverride() {
+    if (busy || !ovPartner || !ovValue) return
+    const tgt = ov?.rewards.find(r => r.id === ovTarget)
+    const label = tgt ? `${tgt.service_name}／${tgt.menu_name}（${tgt.reward_type === 'fixed' ? '固定' : tgt.reward_base === '売上' ? '受注額%' : '率'}・正典 ${tgt.reward_value}）` : '全メニュー（率報酬のみに適用）'
+    if (!confirm(`個別条件を設定します。
+
+・対象: ${label}
+・値: ${ovValue}
+・以後に作成される案件から適用（受付済み・確定済みには波及しません）
+
+よろしいですか？`)) return
+    setBusy(true)
+    const r = await fetch('/api/console/reward-overrides', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ supplier_partner_id: id, partner_id: ovPartner, reward_id: ovTarget || null, override_value: Number(ovValue), note: ovNote || null }) })
+    const j = await r.json().catch(() => ({}))
+    setNote(r.ok ? (j.warning ? `個別条件を設定しました ／ ⚠ ${j.warning}` : '個別条件を設定しました') : (j.error ?? '失敗しました'))
+    if (r.ok) { setOvValue(''); setOvNote(''); await loadOv() }
+    setBusy(false)
+  }
+  async function toggleOverride(o: { id: string; active: boolean }) {
+    if (busy) return
+    if (!confirm(o.active ? '個別条件を停止します。以後に作成される案件から正典値に戻ります（凍結済みは不変）。' : '個別条件を再開します。以後の案件から適用されます。')) return
+    setBusy(true)
+    const r = await fetch('/api/console/reward-overrides', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: o.id, active: !o.active }) })
+    setNote(r.ok ? (o.active ? '停止しました' : '再開しました') : '失敗しました')
+    await loadOv(); setBusy(false)
+  }
 
   const load = async () => {
     const [dd, cc, sup] = await Promise.all([
@@ -48,7 +81,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     const sv = await fetch('/api/console/services-list').then(r => r.json()).catch(() => ({ services: [] }))
     setAllBrands((sv.services ?? []).map((s: { id: string; name: string }) => ({ id: s.id, name: s.name, supplier: owned[s.id] ?? null })))
   }
-  useEffect(() => { load() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); loadOv() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function changeCard() {
     if (!d || !selCard || selCard === d.supplier.rate_card || busy) return
@@ -147,6 +180,41 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                   </select>
                   <button onClick={attach} disabled={busy || !attachBrand} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '8px 14px' }}>結線</button>
                 </div>
+              </div>
+
+              <div style={CARD}>
+                <div style={H}>個別条件（パートナー別報酬・このサプライヤーの供給メニュー限定）</div>
+                {(ov?.overrides ?? []).length === 0 ? (
+                  <p style={{ fontSize: '.7rem', color: 'var(--muted2)' }}>個別条件はありません。サプライヤーの依頼があるときだけ設定します。</p>
+                ) : (ov!.overrides.map(o => {
+                  const p = ov!.partners.find(x => x.id === o.partner_id)
+                  const t = o.reward_id ? ov!.rewards.find(x => x.id === o.reward_id) : null
+                  return (
+                    <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '0.5px solid var(--line)', fontSize: '.72rem', opacity: o.active ? 1 : .55 }}>
+                      <span style={{ fontWeight: 700, flexShrink: 0 }}>{p?.name ?? o.partner_id.slice(0, 8)}</span>
+                      <span style={{ flex: 1, minWidth: 0, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {t ? `${t.service_name}／${t.menu_name}（正典 ${t.reward_value}${t.reward_type === 'fixed' ? '円' : '%'}）` : '全メニュー（率報酬のみ）'}{o.note ? ` ・ ${o.note}` : ''}
+                      </span>
+                      <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 700 }}>{Number(o.override_value).toLocaleString()}{t?.reward_type === 'fixed' ? '円' : '%'}</span>
+                      {!o.active && <span style={{ fontSize: '.56rem', color: 'var(--muted2)' }}>停止中</span>}
+                      <button onClick={() => toggleOverride(o)} disabled={busy} style={{ fontSize: '.6rem', color: 'var(--muted2)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 7, padding: '3px 9px', cursor: 'pointer', flexShrink: 0 }}>{o.active ? '停止' : '再開'}</button>
+                    </div>
+                  )
+                }))}
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select value={ovPartner} onChange={e => setOvPartner(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '0.5px solid var(--line)', fontSize: '.72rem', fontFamily: 'inherit', maxWidth: 180 }}>
+                    <option value="">対象パートナー…</option>
+                    {(ov?.partners ?? []).map(p => <option key={p.id} value={p.id}>{p.name}（{p.code}）</option>)}
+                  </select>
+                  <select value={ovTarget} onChange={e => setOvTarget(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '0.5px solid var(--line)', fontSize: '.72rem', fontFamily: 'inherit', maxWidth: 260 }}>
+                    <option value="">全メニュー（率報酬のみ）</option>
+                    {(ov?.rewards ?? []).map(r => <option key={r.id} value={r.id}>{r.service_name}／{r.menu_name}：{r.reward_type === 'fixed' ? `固定 ${Number(r.reward_value).toLocaleString()}円` : `${r.reward_base === '売上' ? '受注額' : '粗利'} ${r.reward_value}%`}</option>)}
+                  </select>
+                  <input value={ovValue} onChange={e => setOvValue(e.target.value)} inputMode="numeric" placeholder="値" style={{ width: 90, padding: '8px 10px', borderRadius: 8, border: '0.5px solid var(--line)', fontSize: '.72rem', fontFamily: 'Inter', textAlign: 'right' }} />
+                  <input value={ovNote} onChange={e => setOvNote(e.target.value)} placeholder="メモ（依頼の出自）" style={{ flex: 1, minWidth: 140, padding: '8px 10px', borderRadius: 8, border: '0.5px solid var(--line)', fontSize: '.72rem', fontFamily: 'inherit' }} />
+                  <button onClick={addOverride} disabled={busy || !ovPartner || !ovValue} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '8px 14px' }}>設定</button>
+                </div>
+                <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 8 }}>値のみ上書き（型・基準はメニュー正典のまま）。適用は以後に作成される案件から＝受付済み・確定済みには波及しません。全操作は監査ログに記録されます。</p>
               </div>
 
               <div style={CARD}>

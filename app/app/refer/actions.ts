@@ -114,14 +114,25 @@ export async function submitPartnerReferral(formData: FormData) {
   if (rewardRefRaw) {
     const { data: mr } = await supabase.from('menu_rewards').select('*').eq('id', rewardRefRaw).single()
     if (mr) {
+      // P1 パートナー別報酬率: 有効値を解決して焼く（個別＞全メニュー＞正典・失敗時は正典値＝fail-safe）。
+      // 仕様正典: docs/design/partner-reward-override-design.md §2-A。型・ベースは正典のまま＝値のみ差し替え。
+      let effValue = Number(mr.reward_value || 0)
+      let overrideApplied: { override_id: string; original_value: number } | null = null
+      try {
+        const [{ resolveEffectiveReward }, { createServiceRoleClient: mkAdmin2 }] = await Promise.all([import('@/lib/reward-override'), import('@/lib/supabase/server')])
+        const eff = await resolveEffectiveReward(await mkAdmin2(), { partnerId: partner.id, reward: { id: mr.id, menu_id: mr.menu_id, reward_type: mr.reward_type, reward_value: Number(mr.reward_value || 0) } })
+        effValue = eff.value
+        if (eff.overridden && eff.override_id) overrideApplied = { override_id: eff.override_id, original_value: eff.original_value }
+      } catch { /* fail-safe: 正典値 */ }
       // fixed=即額／rate・continuous=確定時(または月次)に算出＝作成時 amount は 0。継続も 0（毎月は continuous_payouts）。
-      amount = mr.reward_type === 'fixed' ? Number(mr.reward_value || 0) : 0
+      amount = mr.reward_type === 'fixed' ? effValue : 0
       rewardSnapshot = {
         ...mr,
-        reward_type: mr.reward_type, reward_value: mr.reward_value, reward_base: mr.reward_base, reward_trigger: mr.reward_trigger,
-        ref_type: mr.reward_type, ref_value: mr.reward_value, ref_base: mr.reward_base,
+        reward_type: mr.reward_type, reward_value: effValue, reward_base: mr.reward_base, reward_trigger: mr.reward_trigger,
+        ref_type: mr.reward_type, ref_value: effValue, ref_base: mr.reward_base,
         // 継続条件を凍結（メニュー側の率・期間が後で変わっても確定済み月は不変）。
         months: mr.reward_type === 'continuous' ? (mr.default_months ?? null) : null,
+        ...(overrideApplied ? { override_applied: overrideApplied } : {}),
       }
       if (mr.reward_type === 'continuous') continuousMonths = mr.default_months ?? null
     }

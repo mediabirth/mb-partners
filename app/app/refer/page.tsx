@@ -1,5 +1,5 @@
 'use client'
-import { Fragment, useEffect, useRef, useState, useTransition } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
@@ -55,8 +55,33 @@ function serviceRewardRange(svc: ServiceWithMenus): string {
 
 export default function ReferPage() {
   const router = useRouter()
-  const { data: services = [], error: svcError, isLoading: svcLoading, mutate: refetchServices } =
+  const { data: servicesRaw = [], error: svcError, isLoading: svcLoading, mutate: refetchServices } =
     useSWR<ServiceWithMenus[]>('/api/services', { shouldRetryOnError: true, errorRetryCount: 10, errorRetryInterval: 1500 })
+  // P1 パートナー別報酬率（設計§4）: /api/services は共有キャッシュの正典＝個別値を混ぜない（恒久禁止）。
+  // 本人の差分は認証必須 no-store の /api/my-reward-overrides から取り、ここで1箇所だけ表示マージする（値のみ）。
+  const { data: myOv } = useSWR<{ byReward: Record<string, number>; bySupplier: Record<string, number>; supplierByMenu: Record<string, string> }>('/api/my-reward-overrides')
+  const services = useMemo(() => {
+    if (!myOv || (!Object.keys(myOv.byReward ?? {}).length && !Object.keys(myOv.bySupplier ?? {}).length)) return servicesRaw
+    return servicesRaw.map(s => ({
+      ...s,
+      service_menus: s.service_menus.map(sm => ({
+        ...sm,
+        menus: (sm.menus ?? []).map(m => ({
+          ...m,
+          rewards: (m.rewards ?? []).map(r => {
+            const exact = myOv.byReward?.[r.id]
+            if (exact != null) return { ...r, reward_value: exact }
+            if (r.reward_type === 'rate' || r.reward_type === 'continuous') {
+              const sup = myOv.supplierByMenu?.[m.id]
+              const all = sup ? myOv.bySupplier?.[sup] : undefined
+              if (all != null) return { ...r, reward_value: all }
+            }
+            return r
+          }),
+        })),
+      })),
+    }))
+  }, [servicesRaw, myOv])
   const [step, setStep]                   = useState<Step>('select')
   const [expandedSvc, setExpandedSvc]     = useState<string | null>(null)   // グリッドで展開中のブランド
   const [selSvc, setSelSvc]               = useState<ServiceWithMenus | null>(null)

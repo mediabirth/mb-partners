@@ -36,7 +36,25 @@ export async function POST(req: NextRequest) {
       .order('sort')
       .limit(1)
 
-    const menu = menus?.[0] ?? null
+    let menu = menus?.[0] ?? null
+    // P1 パートナー別報酬率（設計§2-B・P1注記）: /r/ は legacy ref_* を焼くため、
+    // 適用できるのは「サプライヤー全メニュー上書き（rate型）」のみ（個別 reward_id 上書きは anchor 無し）。
+    if (menu && menu.ref_type === 'rate' && link.partner_id) {
+      try {
+        const { data: sv } = await supabase.from('services').select('supplier_partner_id').eq('id', link.service_id).maybeSingle()
+        if (sv?.supplier_partner_id) {
+          const { data: all } = await supabase
+            .from('partner_reward_overrides')
+            .select('id, override_value')
+            .eq('partner_id', link.partner_id)
+            .eq('supplier_partner_id', sv.supplier_partner_id)
+            .is('reward_id', null)
+            .eq('active', true)
+            .maybeSingle()
+          if (all) menu = { ...menu, ref_value: Number(all.override_value), override_applied: { override_id: all.id, original_value: Number(menus![0].ref_value) } }
+        }
+      } catch { /* fail-safe: 正典値 */ }
+    }
     const amount = menu?.ref_type === 'fixed' ? Number(menu.ref_value) : 0
     const source = via === 'qr' ? 'qr' : 'link'
 

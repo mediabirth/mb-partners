@@ -66,7 +66,7 @@ resolveEffectiveReward(admin, { partnerId, reward }): Promise<{
 | # | 経路 | ファイル | 現状 | 改修 |
 |---|---|---|---|---|
 | A | 案件作成（APP紹介） | `app/app/refer/actions.ts`（rewardRef→menu_rewards取得→amount/reward_snapshot） | 正典値を焼く | **mr取得後に resolveEffectiveReward を挿入**。fixed は `amount` にも反映。snapshot に `override_applied: { override_id, original_value }` を追記（監査痕跡・rateInfo互換キーは値差し替えのみ） |
-| B | 案件作成（/r/ 顧客相談） | `app/api/referral/route.ts` | 同上構造 | A と同一の挿入 |
+| B | 案件作成（/r/ 顧客相談） | `app/api/referral/route.ts` | **実装時判明**: /r/ は menu_rewards を選択せず legacy service_menus（ref_*）を snapshot に焼く | **全メニュー上書き（rate型）のみ**を legacy ref_value に適用（個別 reward_id 上書きは anchor が無く適用外＝P1注記）。/r/ の新報酬モデル移行時に個別上書きも自然合流 |
 | C | 確定・報酬計算 | `app/api/console/deals/[id]/route.ts` L74-125 | rate は `menu?.ref_type ?? snap?.ref_type` と**menuライブ優先**の枝がある | **snapshot に override_applied がある案件は snapshot 優先**へ順序変更（1行）。これを怠ると、確定時に menu ライブ値で個別率が上書き戻りする（本設計の最大の落とし穴・リスク表①） |
 | D | 継続の月次確定 | `app/api/console/continuous-payouts/route.ts` | `snap.reward_value` を正（凍結済） | **変更不要**（Aで焼いた値が自動で流れる）。なお標準サプライヤーは継続型を禁止済みのため対象は折半カードのみ |
 | E | 明細（複数deal_items） | `lib/deal-reward.ts` computeDealReward（menusByIdライブ参照） | 複数明細の見積/再計算のみ・単一明細はlegacy(snapshot)計算 | **Phase 1 は対象外と明記**（サプライヤー紹介案件は単一明細）。コンソールで supplier 案件に明細を追加する運用が始まる場合は menusById 解決に override を注入（Phase 2） |

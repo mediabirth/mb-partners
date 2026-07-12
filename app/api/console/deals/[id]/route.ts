@@ -72,9 +72,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   let rate: number | null = null        // 料率(%)案件 → base 必要
   let fixedAmount: number | null = null // 固定 → amount=固定額
   let baseLabel = '売上'
-  const refType  = menu?.ref_type ?? snap?.ref_type
-  const refValue = Number(menu?.ref_value ?? snap?.ref_value ?? 0)
-  const refBase  = menu?.ref_base ?? snap?.ref_base ?? '売上'
+  // P1 パートナー別報酬率（設計§2-C・リスク①）: 個別率が snapshot に焼かれた案件（override_applied あり）は
+  // menu ライブ値でなく snapshot を正とする。これを怠ると確定時に個別率が正典値へ上書き戻りする。
+  const snapFirst = !!(snap as { override_applied?: unknown } | null)?.override_applied
+  const refType  = snapFirst ? (snap?.ref_type ?? menu?.ref_type) : (menu?.ref_type ?? snap?.ref_type)
+  const refValue = Number((snapFirst ? (snap?.ref_value ?? menu?.ref_value) : (menu?.ref_value ?? snap?.ref_value)) ?? 0)
+  const refBase  = (snapFirst ? (snap?.ref_base ?? menu?.ref_base) : (menu?.ref_base ?? snap?.ref_base)) ?? '売上'
   if (effectiveKind === 'cooperation' && menu?.coop_enabled) {
     baseLabel = menu.coop_base ?? '売上'
     if ((menu.coop_type ?? 'rate') === 'fixed') fixedAmount = Number(menu.coop_value ?? 0)

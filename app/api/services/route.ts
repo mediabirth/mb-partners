@@ -6,6 +6,8 @@ export const runtime = 'edge'
 
 // services/menus は全ユーザー共通の不変マスタ。Cookie非依存(service role)で取得し
 // CDNキャッシュ可能に（s-maxage=300）→ アイドル後の cold start を回避。認証データは含まない。
+// ★恒久禁止（P1 パートナー別報酬率・設計§4.2）: 本レスポンスに個別条件（partner_reward_overrides）を混ぜないこと。
+//   共有キャッシュに個別値が焼かれ他パートナーへ漏出する。個別化は /api/my-reward-overrides（no-store）＋クライアントマージのみ。
 export async function GET() {
   const supabase = await createServiceRoleClient()
   const services = await getServicesWithMenus(supabase)

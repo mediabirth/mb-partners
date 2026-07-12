@@ -10,7 +10,7 @@ async function pidOf(email:string){const {data:pr}=await admin.from('profiles').
   if(!pr)return null; const {data:pa}=await admin.from('partners').select('id').eq('profile_id',pr.id).maybeSingle(); return pa?.id??null}
 async function cleanup(){
   const supId=await pidOf(SUPMAIL)
-  if(supId){await admin.from('supplier_charges').delete().eq('supplier_partner_id',supId);await admin.from('supplier_card_events').delete().eq('supplier_partner_id',supId)}
+  if(supId){await admin.from('supplier_charges').delete().eq('supplier_partner_id',supId);await admin.from('supplier_card_events').delete().eq('supplier_partner_id',supId);await admin.from('partner_reward_overrides').delete().eq('supplier_partner_id',supId)}
   await admin.from('deals').delete().like('customer_name','CCE2E%')
   const {data:svc}=await admin.from('services').select('id').eq('name','CC-E2Eブランド').maybeSingle()
   if(svc){const smIds=(await admin.from('service_menus').select('id').eq('service_id',svc.id)).data?.map((x:any)=>x.id)??[]
@@ -263,7 +263,7 @@ const menuId4=(await admin.from('menus').select('id').eq('name','CC-E2Eメニュ
 const vr=await pg.evaluate(`(async()=>{const mk=(b)=>fetch('/api/console/menu-rewards',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.status)
   const a=await mk({menu_id:'${menuId4}',reward_type:'continuous',reward_value:10})
   const b=await mk({menu_id:'${menuId4}',reward_type:'rate',reward_value:10,reward_base:'粗利'})
-  const c=await mk({menu_id:'${menuId4}',reward_type:'rate',reward_value:10,reward_base:'売上'})
+  const c=await mk({menu_id:'${menuId4}',reward_type:'rate',reward_value:10,reward_base:'売上',sort:5})
   return [a,b,c]})()`) as number[]
 ok(vr[0]===400&&vr[1]===400&&vr[2]===200,'継続=400・粗利%=400・受注額%=200',JSON.stringify(vr))
 console.log('[14] サプライヤーポータル（/app/supplier）表示・データ境界・ビューポート')
@@ -300,6 +300,124 @@ await lin.goto(BASE+'/app/supplier',{waitUntil:'domcontentloaded'});await lin.wa
 ok(!lin.url().includes('/app/supplier'),'非サプライヤーの直打ち→リダイレクト',lin.url())
 const lint=await lin.evaluate(`document.body.innerText`) as string
 ok(!lint.includes('サプライヤー ポータル'),'非サプライヤーのmypage系にポータル語なし（この画面）')
+console.log('[15] パートナー別報酬率P1: 設定UI・リスク①・4象限・fail-safe・境界・監査')
+// 対象報酬（fixed 10000）と受注額10%（[13]でPOST済み）のid
+const {data:mrows}=await admin.from('menu_rewards').select('id, reward_type, reward_value, reward_base').eq('menu_id',menuId4).order('sort')
+const fixedR=(mrows??[]).find((x:any)=>x.reward_type==='fixed')
+const rateR=(mrows??[]).find((x:any)=>x.reward_type==='rate'&&x.reward_base==='売上')
+ok(!!fixedR&&!!rateR,'対象報酬（fixed/受注額%）が存在')
+// a. 詳細ページに個別条件セクション＋UIで設定（LIN×fixed→15000）
+await pg.goto(BASE+'/console/suppliers/'+supId,{waitUntil:'domcontentloaded'});await pg.waitForTimeout(3000)
+ok(((await pg.evaluate(`document.body.innerText`)) as string).includes('個別条件'),'詳細: 個別条件セクション表示')
+const uiSet=await pg.evaluate(`(async()=>{
+  const sels=[...document.querySelectorAll('select')]
+  const pSel=sels.find(s=>[...s.options].some(o=>o.text.includes('系統 検証')))
+  const tSel=sels.find(s=>[...s.options].some(o=>o.text.startsWith('全メニュー')))
+  if(!pSel||!tSel)return 'select不在'
+  const set=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value').set
+  const pOpt=[...pSel.options].find(o=>o.text.includes('系統 検証'))
+  set.call(pSel,pOpt.value);pSel.dispatchEvent(new Event('change',{bubbles:true}))
+  const tOpt=[...tSel.options].find(o=>o.text.includes('固定'))
+  set.call(tSel,tOpt.value);tSel.dispatchEvent(new Event('change',{bubbles:true}))
+  const inp=[...document.querySelectorAll('input')].find(i=>i.placeholder==='値')
+  const iset=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set
+  iset.call(inp,'15000');inp.dispatchEvent(new Event('input',{bubbles:true}))
+  return 'ok'})()`) as string
+ok(uiSet==='ok','設定フォーム入力',uiSet)
+const ovResp:string[]=[]
+const onResp=async(r:any)=>{if(r.url().includes('reward-overrides')&&r.request().method()==='POST')ovResp.push(r.status()+':'+(await r.text().catch(()=>'')).slice(0,200))}
+pg.on('response',onResp)
+await pg.evaluate(`(()=>{const btns=[...document.querySelectorAll('button')].filter(b=>b.textContent.trim()==='設定');const b=btns[btns.length-1];if(b)b.click();return btns.length})()`)
+await pg.waitForTimeout(2800)
+pg.off('response',onResp)
+if(ovResp.length)console.log('   POST resp:',ovResp.join(' | '))
+else console.log('   POST未発火。note圏:',(((await pg.evaluate(`document.body.innerText`)) as string).match(/個別条件[\s\S]{0,200}/)?.[0]??'').replace(/\n/g,'/').slice(0,200))
+const {data:ov1}=await admin.from('partner_reward_overrides').select('id, override_value, reward_id, active').eq('supplier_partner_id',supId).eq('partner_id',linId).eq('reward_id',fixedR!.id).maybeSingle()
+ok(Number(ov1?.override_value)===15000&&ov1?.active===true,'UI設定: override行（fixed 15000）',JSON.stringify(ov1))
+// b. ガード実測（本人拒否・fixed範囲・rate>100）
+const gcodes=await pg.evaluate(`(async()=>{const mk=(b)=>fetch('/api/console/reward-overrides',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(r=>r.status)
+  const a=await mk({supplier_partner_id:'${supId}',partner_id:'${supId}',reward_id:'${fixedR!.id}',override_value:20000})
+  const b2=await mk({supplier_partner_id:'${supId}',partner_id:'${linId}',reward_id:'${rateR!.id}',override_value:150})
+  const c2=await mk({supplier_partner_id:'${supId}',partner_id:'${linId}',reward_id:null,override_value:0})
+  return [a,b2,c2]})()`) as number[]
+ok(gcodes[0]===400&&gcodes[1]===400&&gcodes[2]===400,'ガード: 本人拒否400・率150%→400・率0→400',JSON.stringify(gcodes))
+// c. ★リスク①: override付き案件が確定・支払を跨いで個別率を維持
+const r5=await referAs(lin,'CCE2E-E'); ok(/案件|ありがとう|完了|受け付け/.test(r5),'override有の紹介送信(deal5)')
+const {data:d5a}=await admin.from('deals').select('id, amount, reward_snapshot').eq('customer_name','CCE2E-E').maybeSingle()
+ok(Number(d5a?.amount)===15000&&Number(d5a?.reward_snapshot?.override_applied?.original_value)===10000,'deal5作成: amount=15000・override_applied焼き込み',JSON.stringify({a:d5a?.amount,ov:d5a?.reward_snapshot?.override_applied}))
+// メニュー正典を12000へ変更（確定がliveを読む旧枝なら12000に戻るはず）
+const p12=await pg.evaluate(`fetch('/api/console/menu-rewards/${fixedR!.id}',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({reward_value:12000})}).then(async r=>r.status+':'+(await r.text()).slice(0,120))`)
+console.log('   menu→12000:',p12)
+await pg.waitForTimeout(800)
+await confirmDeal('CCE2E-E')
+const {data:d5b}=await admin.from('deals').select('amount, status').eq('customer_name','CCE2E-E').maybeSingle()
+ok(d5b?.status==='confirmed'&&Number(d5b?.amount)===15000,'★リスク①: 確定を跨いで15000維持（正典12000に戻らない）',JSON.stringify(d5b))
+await pg.goto(BASE+'/console/deals',{waitUntil:'domcontentloaded'});await pg.waitForTimeout(3000)
+await pg.locator('text=CCE2E-E').first().click();await pg.waitForTimeout(1200)
+await pg.locator('button',{hasText:'支払済にする'}).first().click();await pg.waitForTimeout(700)
+await pg.locator('button',{hasText:'実行する'}).click();await pg.waitForTimeout(1800)
+await pg.keyboard.press('Escape');await pg.waitForTimeout(400)
+const {data:d5c}=await admin.from('deals').select('amount, status').eq('customer_name','CCE2E-E').maybeSingle()
+ok(d5c?.status==='paid'&&Number(d5c?.amount)===15000,'★リスク①: 支払済まで15000維持')
+// d. 対比（override無し案件は従来どおりmenuライブ枝＝挙動不変の証明）
+await pg.goto(BASE+'/console/suppliers/'+supId,{waitUntil:'domcontentloaded'});await pg.waitForTimeout(2500)
+await pg.locator('button',{hasText:'停止'}).last().click();await pg.waitForTimeout(2000)
+const {data:ov1b}=ov1?await admin.from('partner_reward_overrides').select('active').eq('id',ov1.id).maybeSingle():{data:null}
+ok(ov1b?.active===false,'UI停止: active=false（無効化は削除でなくフラグ）')
+const r6=await referAs(lin,'CCE2E-F'); ok(/案件|ありがとう|完了|受け付け/.test(r6),'override停止後の紹介送信(deal6)')
+const {data:d6a}=await admin.from('deals').select('amount, reward_snapshot').eq('customer_name','CCE2E-F').maybeSingle()
+ok(Number(d6a?.amount)===12000&&!d6a?.reward_snapshot?.override_applied,'deal6作成: 正典12000（fail-safe方向＝停止で正典へ）',JSON.stringify({a:d6a?.amount,ov:!!d6a?.reward_snapshot?.override_applied}))
+const p13=await pg.evaluate(`fetch('/api/console/menu-rewards/${fixedR!.id}',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({reward_value:13000})}).then(async r=>r.status+':'+(await r.text()).slice(0,120))`)
+console.log('   menu→13000:',p13)
+await pg.waitForTimeout(800)
+await confirmDeal('CCE2E-F')
+const {data:d6b}=await admin.from('deals').select('amount').eq('customer_name','CCE2E-F').maybeSingle()
+// 対比: override無し案件も従来どおり作成時凍結（menuを13000に変えても確定で12000のまま＝既存挙動が不変）
+ok(Number(d6b?.amount)===12000,'対比: override無し案件は作成時正典12000のまま（menu変更13000が波及しない=従来挙動不変）',JSON.stringify(d6b))
+// e. 再開＋全メニュー上書き（率25%）→本人表示・境界
+await pg.goto(BASE+'/console/suppliers/'+supId,{waitUntil:'domcontentloaded'});await pg.waitForTimeout(2500)
+await pg.locator('button',{hasText:'再開'}).last().click();await pg.waitForTimeout(2000)
+const allCode=await pg.evaluate(`fetch('/api/console/reward-overrides',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({supplier_partner_id:'${supId}',partner_id:'${linId}',reward_id:null,override_value:25})}).then(r=>r.status)`) as number
+ok(allCode===200,'全メニュー上書き（率25%）設定=200')
+const myOv=await lin.evaluate(`fetch('/api/my-reward-overrides').then(r=>r.json())`) as any
+ok(Number(Object.values(myOv.byReward??{})[0])===15000&&Number(Object.values(myOv.bySupplier??{})[0])===25,'本人差分API: byReward=15000/bySupplier=25',JSON.stringify(myOv).slice(0,120))
+await lin.goto(BASE+'/app/refer',{waitUntil:'domcontentloaded'});await lin.waitForTimeout(3000)
+await lin.locator('text=CC-E2Eブランド').first().click();await lin.waitForTimeout(1000)
+const linTxt=await lin.evaluate(`document.body.innerText`) as string
+ok(linTxt.includes('15,000'),'本人表示: fixed=個別値¥15,000（メニュー行ピル）',linTxt.match(/¥[\d,]+|受注額[^\n]{0,12}/g)?.slice(0,8).join('|')??'')
+ok(!linTxt.includes('13,000'),'本人表示: 正典13,000は出ない（fixedはexact優先）')
+// 受注額%への全メニュー上書きは解決関数の実測で確認（メニュー行ピルは先頭報酬のみ表示のため）
+const { resolveEffectiveReward: rer } = await import('../lib/reward-override')
+const effRate=await rer(admin as any,{partnerId:linId!,reward:{id:rateR!.id,menu_id:menuId4!,reward_type:'rate',reward_value:10}})
+ok(effRate.value===25&&effRate.overridden===true,'全メニュー上書き: 受注額%の有効値=25（解決関数実測）',JSON.stringify(effRate))
+// 他パートナー（サプライヤー本人＝別コンテキストでAPPログイン）には正典のみ
+const octx=await b.newContext({viewport:{width:1024,height:768}})
+const supApp=await octx.newPage()
+await supApp.goto(BASE+'/app/login',{waitUntil:'domcontentloaded'});await supApp.waitForTimeout(1200)
+await supApp.locator('input[type="email"]').fill(SUPMAIL);await supApp.locator('input[type="password"]').fill(PW)
+await supApp.locator('button[type="submit"]').first().click();await supApp.waitForTimeout(3000)
+await supApp.goto(BASE+'/app/refer',{waitUntil:'domcontentloaded'});await supApp.waitForTimeout(3000)
+await supApp.locator('text=CC-E2Eブランド').first().click().catch(()=>{});await supApp.waitForTimeout(1000)
+const supTxt=await supApp.evaluate(`document.body.innerText`) as string
+ok(!supTxt.includes('15,000')&&!supTxt.includes('の25%'),'他者表示: 個別値15,000/25%が漏れない',supTxt.match(/受注額[^\n]*|13,000|15,000/g)?.join('|')??'')
+ok(supTxt.includes('13,000')||supTxt.includes('受注額（税抜）の10%'),'他者表示: 正典値のみ')
+await octx.close()
+// f. 折半カード下の50%硬上限（カード付け替え→率60拒否・率30許可）
+await pg.goto(BASE+'/console/suppliers/'+supId,{waitUntil:'domcontentloaded'});await pg.waitForTimeout(2500)
+await pg.evaluate(`(()=>{const sels=[...document.querySelectorAll('select')];for(const s of sels){const o=[...s.options].find(o=>o.value==='omnis-founding-v1');if(o){const set=Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,'value').set;set.call(s,'omnis-founding-v1');s.dispatchEvent(new Event('change',{bubbles:true}));return true}}return false})()`)
+await pg.waitForTimeout(500)
+await pg.locator('button',{hasText:'付け替える'}).click();await pg.waitForTimeout(2500)
+const halfCodes=await pg.evaluate(`(async()=>{const mk=(v)=>fetch('/api/console/reward-overrides',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({supplier_partner_id:'${supId}',partner_id:'${linId}',reward_id:'${rateR!.id}',override_value:v})}).then(r=>r.status)
+  return [await mk(60), await mk(30)]})()`) as number[]
+ok(halfCodes[0]===400&&halfCodes[1]===200,'折半カード: 率60→400（50%硬上限）・率30→200',JSON.stringify(halfCodes))
+// g. fail-safe（解決関数に壊れたDBを渡す→正典値へ）
+const { resolveEffectiveReward } = await import('../lib/reward-override')
+const broken={from:()=>{throw new Error('db down')}} as any
+const fs1=await resolveEffectiveReward(broken,{partnerId:linId,reward:{id:fixedR!.id,menu_id:menuId4,reward_type:'fixed',reward_value:13000}})
+ok(fs1.value===13000&&fs1.overridden===false,'fail-safe: 解決失敗→正典値13000で継続')
+// h. 監査ログ
+const {count:ac}=await admin.from('audit_logs').select('id',{count:'exact',head:true}).eq('category','reward_override')
+ok((ac??0)>=5,'audit_logs: reward_override記録（create/停止/再開/全メニュー/折半）',String(ac))
 console.log('RESULT-B: '+pass+'/'+(pass+fail)+' pageerrors='+JSON.stringify(errs.slice(0,3)))
 await b.close()
 // 残置ゼロ（撤去は 系統→サプライヤー→運営 の順＝frontier_id FK）

@@ -32,6 +32,7 @@ export async function sendBookingConfirmEmail(params: {
   startAt: string
   meetingUrl?: string | null
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return { sent: false, skipped: 'CC_MAIL_SUPPRESS（検証標準・実送信抑止）' }
   const key = process.env.RESEND_API_KEY
   if (!params.to) return { sent: false, skipped: 'no recipient' }
   const when = new Date(params.startAt).toLocaleString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
@@ -107,6 +108,7 @@ export async function sendReceiptEmail(params: {
   meetingUrl?: string | null
   caseUrl?: string | null   // v3.1：案件ページURL（本文で「進捗はこちら」）
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return { sent: false, skipped: 'CC_MAIL_SUPPRESS（検証標準・実送信抑止）' }
   const key = process.env.RESEND_API_KEY
   if (!params.to) return { sent: false, skipped: 'no recipient' }
 
@@ -211,6 +213,7 @@ export async function sendInviteEmail(params: {
   expiresAt?: string | null
   kind?: InviteKind
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return { sent: false, skipped: 'CC_MAIL_SUPPRESS（検証標準・実送信抑止）' }
   const key = process.env.RESEND_API_KEY
 
   const copy = INVITE_COPY[params.kind ?? 'partner'] ?? INVITE_COPY.partner

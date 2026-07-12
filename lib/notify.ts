@@ -28,6 +28,7 @@ export function fmtJST(iso: string): string {
 
 /** 運営Slack（SLACK_WEBHOOK_URL）。未設定ならスキップ。例外は投げない。 */
 export async function sendSlack(text: string): Promise<SendResult> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return { sent: false, skipped: 'CC_MAIL_SUPPRESS（検証標準・実送信抑止）' }
   if (!process.env.SLACK_WEBHOOK_URL) return { sent: false, skipped: 'SLACK_WEBHOOK_URL 未設定' }
   try {
     await notifySlack(text)
@@ -43,6 +44,7 @@ export async function sendEmail(params: {
   attachments?: { filename: string; content: string }[]   // additive：base64 content。省略時は従来と完全同一動作（既存呼び出し不変）。
   buttons?: { label: string; url: string }[]   // additive：URLボタン。省略時は従来と完全同一（既定HTML時のみ反映）。
 }): Promise<SendResult> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return { sent: false, skipped: 'CC_MAIL_SUPPRESS（検証標準・実送信抑止）' }
   const key = process.env.RESEND_API_KEY
   if (!key) return { sent: false, skipped: 'RESEND_API_KEY 未設定' }
   if (!params.to) return { sent: false, skipped: '宛先なし' }

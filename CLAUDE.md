@@ -43,6 +43,7 @@
    - **menu_rewards 全行ハッシュ**: `select md5(string_agg(id::text||reward_type||reward_value::text||coalesce(reward_base,'')||active::text, ',' order by id)) from menu_rewards`（サプライヤー行含む全行＝旧「16行/¥340,100」固定チェックの置換。**MB seed補助チェック**＝supplierサービス配下を除いた集計が16行/sum=340,100 であることを併記確認）
    - **deals 報酬ハッシュ**: `select md5(string_agg(reward_snapshot::text||amount::text, ',' order by id)) from deals`
    - **fee-hash（サプライヤー請求）**: `select coalesce(md5(string_agg(snapshot::text||amount::text, ',' order by id)),'(empty)') from supplier_charges`
+   - **override-hash（パートナー別報酬・2026-07-12追加）**: `select coalesce(md5(string_agg(id::text||partner_id::text||coalesce(reward_id::text,'')||override_value::text||active::text, ',' order by id)),'(empty)') from partner_reward_overrides`（CCが個別条件を勝手に触っていない証明。勝彦の正当な設定操作では変わる）
    ※固定値の絶対pinはしない——勝彦/米井が製品を正当に使えば（成約・起票・メニュー追加・請求クローズ等で）自然に変わるため。変化を見たら「誰の操作か」を必ず突合する。
 6. **canon**: `pnpm test:canon`（status-effects 61 assertion）green
 
@@ -58,6 +59,8 @@
    - throwaway 3アカウント（partner/vendor/owner）は初回自動生成・実行後自動撤去（実データ非接触）。
 
 **残置ゼロ**: 検証で作った throwaway・書込は必ず原状復帰。money 意味は不変（入力UI/配線の改善は可、計算の意味・確定値は不変）。
+
+**★検証メールの抑止（恒久・2026-07-12 追加）**: E2E・検証スクリプトからのメール送信は、**抑止フラグ（環境変数 `CC_MAIL_SUPPRESS=1` で lib/email・lib/notify の全送信入口が no-op）** または **内部シンク宛（@mb-system.internal のみ）** を標準とする。検証時はローカルサーバを `CC_MAIL_SUPPRESS=1` で起動すること。throwaway 宛でも実プロバイダ送信（バウンス発生）を伴う検証は、抑止が構造的に不可能な場合に限り、件数を明示して報告する。本フラグは本番には設定しない（設定＝全メール停止のため、監視Tier2が異常を検知する）。
 
 **★PageGuide 追随（恒久・2026-07-09 追加）**: コンソール各ページのⓘ（ページガイド）内容は `lib/console-guides.ts` の構造化定数が単一ソース。**UI（要素・操作・波及・ラベル）を変更するバッチは、該当ページの PageGuide 定数を同一バッチで追随更新すること**。ガイドは実UIと1対1（存在しない機能・古い名称を書かない）。ⓘは需要時表示（押した時だけモーダル／モバイルは全画面シート）＝静音化原則を維持し、常設説明文を増やさない。
 
