@@ -1,0 +1,257 @@
+{
+ "seeded_at": "2026-07-12T06:43:21.321Z",
+ "supplier": "7751b302-334e-4f3e-8949-3604e288cd3c",
+ "note": "サプライヤーデモ投入台帳（撤去時はこの逆順で削除）",
+ "entities": [
+  {
+   "type": "menu_reward",
+   "id": "c00919d5-0a35-433d-a27c-34e5fa4fe6b5",
+   "name": "投資用マンション: 固定¥200,000",
+   "extra": ""
+  },
+  {
+   "type": "menu_reward",
+   "id": "a5fbfb18-dc65-45ea-ae8e-9e5849592b9e",
+   "name": "保険: 受注額の10%",
+   "extra": ""
+  },
+  {
+   "type": "invite",
+   "id": "3c341347-a4fe-4f25-b5f9-5cfa5ea335c1",
+   "name": "demo.sasaki.ren@mb-system.internal",
+   "extra": ""
+  },
+  {
+   "type": "partner",
+   "id": "f9f64696-1177-48fe-bb26-7a712fd586dc",
+   "name": "佐々木 蓮（ZZ5926・系統=ZZ6153）",
+   "extra": ""
+  },
+  {
+   "type": "auth_user/profile",
+   "id": "74790077-4046-4d02-9373-cff968de485a",
+   "name": "demo.sasaki.ren@mb-system.internal",
+   "extra": ""
+  },
+  {
+   "type": "invite",
+   "id": "8ec4c608-fb6e-4779-8507-0ce0c8d25d33",
+   "name": "demo.takahashi.misaki@mb-system.internal",
+   "extra": ""
+  },
+  {
+   "type": "partner",
+   "id": "610bbc99-1eb9-4ece-acd2-d933906bb24f",
+   "name": "高橋 美咲（ZZ4292・系統=ZZ6153）",
+   "extra": ""
+  },
+  {
+   "type": "auth_user/profile",
+   "id": "1d6c2aa7-72fd-48c0-b00b-c1cef80f7429",
+   "name": "demo.takahashi.misaki@mb-system.internal",
+   "extra": ""
+  },
+  {
+   "type": "invite",
+   "id": "63784ec8-12fa-41c0-89db-5a6b2021cf63",
+   "name": "demo.nakamura.daiki@mb-system.internal",
+   "extra": ""
+  },
+  {
+   "type": "partner",
+   "id": "7e8d60eb-b02a-4147-9056-48c81d1517e2",
+   "name": "中村 大輝（ZZ3169・系統=ZZ6153）",
+   "extra": ""
+  },
+  {
+   "type": "auth_user/profile",
+   "id": "0872a24c-a417-411e-ad51-3d4b9fa477bf",
+   "name": "demo.nakamura.daiki@mb-system.internal",
+   "extra": ""
+  },
+  {
+   "type": "reward_override",
+   "id": "a6e4a36b-1947-4a76-a010-928c8f88f7f4",
+   "name": "高橋 美咲×保険: 受注額12%（正典10%）",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "203f1a7f-e1bd-48f7-8df6-71543050543a",
+   "name": "青山 直人（投資用マンション・received・報酬¥200,000）",
+   "extra": "{\"rate_kind\":\"omnis_monthly\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "16f2c6fb-0e35-4b82-9314-a31c45cc21d6",
+   "name": "青山 直人 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "a138005f-eea4-4258-b402-c17a349b55cd",
+   "name": "株式会社フォレスト商事（保険・received・報酬¥0）",
+   "extra": "{\"rate_kind\":\"half_commission\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "dd38f978-a79f-41b0-bc08-9ef47fa1a920",
+   "name": "株式会社フォレスト商事 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "ff0aacd3-6181-412c-b1dc-98143ee4d618",
+   "name": "村田 沙織（保険・in_progress・報酬¥0）",
+   "extra": "{\"rate_kind\":\"omnis_monthly\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "041026b5-f381-458b-9839-3392ad0b3948",
+   "name": "村田 沙織 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "803c0e5a-ad01-4bd6-99e8-aa7d065d2a1c",
+   "name": "伊藤 剛（投資用マンション・in_progress・報酬¥200,000）",
+   "extra": "{\"rate_kind\":\"half_commission\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "d7585804-3149-43b6-af58-1a1053ec4f92",
+   "name": "伊藤 剛 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "b2788e62-b542-4b33-8884-5f483e970157",
+   "name": "西田 幸子（投資用マンション・confirmed・報酬¥200,000・受注¥3,800,000）",
+   "extra": "{\"rate_kind\":\"omnis_monthly\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "459e13e1-936a-43eb-aed1-956f249a34b4",
+   "name": "西田 幸子 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "140e655e-704f-46b4-90b9-1acb8fbf170d",
+   "name": "株式会社ライトハウス不動産（投資用マンション・confirmed・報酬¥200,000・受注¥2,600,000）",
+   "extra": "{\"rate_kind\":\"half_commission\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "2648bf21-6353-4aaf-b475-6137b4a695dc",
+   "name": "株式会社ライトハウス不動産 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "f2342afb-cf53-44fb-8d13-301bbaf8f19e",
+   "name": "小野 拓真（保険・confirmed・報酬¥90,000・受注¥900,000）",
+   "extra": "{\"rate_kind\":\"omnis_monthly\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "0c1102dc-815a-4a3b-bb91-1c913f47f563",
+   "name": "小野 拓真 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "78882620-d72b-43c1-988c-c45d7e79ef17",
+   "name": "藤井 恵（保険・paid・報酬¥180,000・受注¥1,500,000）",
+   "extra": "{\"rate_kind\":\"omnis_monthly\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "67a711cc-deab-42b5-9420-3040a726263d",
+   "name": "藤井 恵 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "2bbf0bbd-31f7-49d8-944c-af5ac926448d",
+   "name": "株式会社サンライズ企画（保険・paid・報酬¥80,000・受注¥800,000）",
+   "extra": "{\"rate_kind\":\"half_commission\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "6333d989-7a95-4526-8c43-a1fe6a3bf778",
+   "name": "株式会社サンライズ企画 明細",
+   "extra": ""
+  },
+  {
+   "type": "deal",
+   "id": "2d59a8d2-ba33-4463-b7d0-82da557eba99",
+   "name": "岡本 涼平（投資用マンション・paid・報酬¥200,000・受注¥1,200,000）",
+   "extra": "{\"rate_kind\":\"omnis_monthly\"}"
+  },
+  {
+   "type": "deal_item",
+   "id": "fe7930b1-f28f-422f-9c78-b12e41667c95",
+   "name": "岡本 涼平 明細",
+   "extra": ""
+  },
+  {
+   "type": "delivery",
+   "id": "4711b2e1-9fc7-45d6-8c42-4c8637bccbde",
+   "name": "株式会社デモ設備メンテナンス",
+   "extra": ""
+  },
+  {
+   "type": "assignment",
+   "id": "71398edc-e744-41a0-a86b-d4855fffbea2",
+   "name": "ライトハウス不動産 委託¥300,000（了承済）",
+   "extra": ""
+  },
+  {
+   "type": "assignment",
+   "id": "b8c06428-5bb7-4d1e-be7b-1e0a219a5796",
+   "name": "西田幸子 委託¥450,000（納品済）",
+   "extra": ""
+  },
+  {
+   "type": "expense_claim",
+   "id": "57072b11-3c36-416a-806c-745a6ec1e36a",
+   "name": "交通費¥28,400（申請済・未承認）",
+   "extra": ""
+  },
+  {
+   "type": "supplier_charge",
+   "id": "37163fef-0c6f-4cc0-ba18-a056380c8ef3",
+   "name": "half_commission ¥1,150,000（2026-07）",
+   "extra": ""
+  },
+  {
+   "type": "supplier_charge",
+   "id": "7e060c83-dfca-4090-b44d-3348aa34294f",
+   "name": "half_commission ¥400,000（2026-07）",
+   "extra": ""
+  },
+  {
+   "type": "supplier_charge",
+   "id": "da83b185-ea97-4aaf-80e4-5f37216a1bb1",
+   "name": "omnis_monthly ¥50,000（2026-07）",
+   "extra": ""
+  }
+ ],
+ "money_hashes": {
+  "before": {
+   "menu_rewards": "c5317c594d08ee0afea4a4764082876c",
+   "deals": "c75ac4dfc6e5f693240e7b24ca8e256e",
+   "fee": "(empty)",
+   "override": "(empty)"
+  },
+  "after": {
+   "menu_rewards": "bb94d30546ab15ef5e39f8bdeb76528e",
+   "deals": "f59856b4050381d13adaf5350400c5d0",
+   "fee": "4b17cc905c8346133a0ab55a1291ce9b",
+   "override": "d758d5166d3fec06fdfd6ffd0437c39c"
+  },
+  "mb_seed_auxiliary": "16行/¥340,100（不変＝MB側報酬非接触の証明）",
+  "note": "変化は本指示（デモ投入 2026-07-12）による正当なもの。撤去時はこの台帳の逆順で削除し before ハッシュへの復帰を確認する。"
+ }
+}
