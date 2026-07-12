@@ -16,12 +16,13 @@ async function requireSupplierId(): Promise<string> {
 
 import PageGuide from '@/components/PageGuide'
 import { SG_SETTINGS } from '@/lib/supplier-guides'
+import BankCard from './BankCard'
 // 設定: 会社情報・変更申請履歴・通知先
 const KIND_JP: Record<string, string> = { public_description: '顧客向け説明', image: 'イメージ画像', menu_name: 'メニュー名', visibility: '公開/非公開' }
 export default async function SupplierSettingsPage() {
   const supplierId = await requireSupplierId()
   const admin = await createServiceRoleClient()
-  const { data: p } = await admin.from('partners').select('code, tax_type, phone, profiles(name, email)').eq('id', supplierId).maybeSingle()
+  const { data: p } = await admin.from('partners').select('code, tax_type, phone, bank, profiles(name, email)').eq('id', supplierId).maybeSingle()
   const prof = (p?.profiles ?? null) as { name?: string | null; email?: string | null } | null
   const { data: reqs } = await admin.from('supplier_change_requests').select('id, kind, payload, status, reason, created_at').eq('supplier_partner_id', supplierId).order('created_at', { ascending: false }).limit(30)
   const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13 }
@@ -40,7 +41,17 @@ export default async function SupplierSettingsPage() {
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>通知先メール</span><span>{prof?.email ?? '—'}</span></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>電話番号</span><span>{p?.phone ?? '—'}</span></div>
       </div>
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 2px 16px' }}>ご連絡先の変更はマイページから。社名・税区分の変更はMBまでご連絡ください。</p>
+      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 2px 16px' }}>社名・税区分・通知先の変更はMB Partnersまでご連絡ください。</p>
+
+      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>振込先口座</h2>
+      <BankCard bank={(p as { bank?: Record<string, string> | null })?.bank ?? null} />
+
+      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '16px 0 8px' }}>ログイン情報</h2>
+      <div style={{ ...CARD, overflow: 'hidden', marginBottom: 16 }}>
+        <div style={{ ...ROW, borderTop: 'none' }}><span style={{ color: 'var(--muted2)' }}>ログインメール</span><span>{prof?.email ?? '—'}</span></div>
+        <div style={{ ...ROW, alignItems: 'center' }}><span style={{ color: 'var(--muted2)' }}>パスワード</span><a href="/app/settings" style={{ color: 'var(--c-blue)', textDecoration: 'none' }}>変更する →</a></div>
+      </div>
+
       <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>変更申請の履歴</h2>
       <div style={{ ...CARD, overflow: 'hidden' }}>
         {(reqs ?? []).length === 0 ? (

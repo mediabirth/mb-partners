@@ -16,7 +16,7 @@ async function requireSupplierId(): Promise<string> {
 
 import PageGuide from '@/components/PageGuide'
 import { SG_PRODUCTS } from '@/lib/supplier-guides'
-import SupplierSettings from '../../dashboard/SupplierSettings'
+import ProductsClient from './ProductsClient'
 // 商品: ブランド/メニューの管理（即時系＋申請系を1画面に・「申請中」バッジ・PC=2ペインはSupplierSettings page変種）
 export default async function SupplierProductsPage() {
   await requireSupplierId()
@@ -26,7 +26,7 @@ export default async function SupplierProductsPage() {
         <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>商品</h1>
         <PageGuide data={SG_PRODUCTS} />
       </div>
-      <SupplierSettings variant="page" />
+      <ProductsClient />
     </div>
   )
 }

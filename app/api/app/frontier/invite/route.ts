@@ -22,12 +22,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const email = (body.email as string | undefined)?.trim().toLowerCase()
   const name  = (body.name as string | undefined)?.trim()
-  if (!email) return NextResponse.json({ error: 'email は必須です' }, { status: 400 })
+  // v2(2026-07-13): メール無し＝リンクのみ発行（「リンクをコピー」主体・メール招待は副）。
 
   const service = await createServiceRoleClient()
   const { data: invite, error } = await service
     .from('invites')
-    .insert({ email, kind: 'partner', role: 'partner', name: name || null, created_by: user.id })
+    .insert({ email: email || null, kind: 'partner', role: 'partner', name: name || null, created_by: user.id })
     .select('token, expires_at')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
 
   // 招待メール（best-effort：失敗しても招待発行・成功は不変）。
   let emailed = false
+  if (!email) return NextResponse.json({ invite_url, token: invite.token, emailed: false }, { status: 201 })
   try {
     const r = await sendInviteEmail({ to: email, name: name || null, url: invite_url, expiresAt: invite.expires_at, kind: 'frontier' })
     emailed = r.sent

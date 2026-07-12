@@ -71,19 +71,27 @@ export async function GET() {
     }
   }
   // 案件（自社スコープ・受注額入力用）: 紹介者の系統（網から/MB側）を fee_snapshot から表示
-  let deals: { id: string; customer: string; status: string; brand: string; created_at: string; revenue: number; item_id: string | null; from_network: boolean }[] = []
+  let deals: { id: string; customer: string; status: string; brand: string; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: { status: string | null }[] }[] = []
   if (svIds.length) {
-    const { data: ds } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, service_id, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100)
+    const { data: ds } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, fixed_month, service_id, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100)
     const { customerHonorific } = await import('@/lib/customer')
+    const ids = (ds ?? []).map((x: { id: string }) => x.id)
+    // 凍結済み（既にその案件の請求行が凍結されている）＝受注額は読み取り表示（§0(d)。是正しても凍結値は不変のため編集を閉じる）
+    const { data: fr } = ids.length ? await admin.from('supplier_charges').select('deal_id').eq('supplier_partner_id', me.partnerId).in('deal_id', ids) : { data: [] }
+    const frozenSet = new Set((fr ?? []).map((x: { deal_id: string | null }) => x.deal_id))
+    const { data: asg } = ids.length ? await admin.from('delivery_assignments').select('deal_id, status').in('deal_id', ids) : { data: [] }
     deals = ((ds ?? []) as Record<string, unknown>[]).map(d => ({
       id: d.id as string,
       customer: customerHonorific(d as never),
       status: d.status as string,
       brand: (brands ?? []).find(b => b.id === d.service_id)?.name ?? '',
       created_at: d.created_at as string,
+      fixed_month: (d.fixed_month as string | null) ?? null,
       revenue: (((d.deal_items as { revenue: number | null }[] | null) ?? [])).reduce((s2, it) => s2 + (Number(it.revenue) || 0), 0),
       item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
       from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
+      frozen: frozenSet.has(d.id as string),
+      assignments: ((asg ?? []) as { deal_id: string; status: string | null }[]).filter(a => a.deal_id === d.id).map(a => ({ status: a.status })),
     }))
   }
   const { data: reqs } = await admin.from('supplier_change_requests').select('id, service_id, menu_id, kind, payload, status, reason, created_at').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false }).limit(20)
@@ -122,7 +130,9 @@ export async function PATCH(req: NextRequest) {
     const { data: d } = await admin.from('deals').select('id, service_id, status, customer_name, deal_items(id)').eq('id', b.deal_id).maybeSingle()
     if (!d) return NextResponse.json({ error: '案件が見つかりません' }, { status: 404 })
     if (!(await ownService(admin, me.partnerId, d.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみ入力できます' }, { status: 403 })
-    if (d.status !== 'confirmed' && d.status !== 'paid') return NextResponse.json({ error: '受注額は成約後の案件に入力できます' }, { status: 400 })
+    if (d.status !== 'confirmed') return NextResponse.json({ error: d.status === 'paid' ? 'この案件は確定済みです（受注額の変更はMB Partnersへご連絡ください）' : '受注額は成約後の案件に入力できます' }, { status: 400 })
+    const { data: frozenRow } = await admin.from('supplier_charges').select('id').eq('supplier_partner_id', me.partnerId).eq('deal_id', d.id).limit(1)
+    if (frozenRow?.length) return NextResponse.json({ error: 'この案件の請求は締め済みです（確定済み・変更はMB Partnersへ）' }, { status: 400 })
     const revenue = Math.round(Number(b.revenue))
     if (!Number.isFinite(revenue) || revenue < 0 || revenue > 1_000_000_000) return NextResponse.json({ error: '受注額が不正です' }, { status: 400 })
     const item = ((d.deal_items as { id: string }[] | null) ?? [])[0]

@@ -2,7 +2,6 @@ import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supa
 import CountUp from '@/components/CountUp'
 import PageGuide from '@/components/PageGuide'
 import { SG_HOME } from '@/lib/supplier-guides'
-import FrontierInvite from '../frontier/FrontierInvite'
 import { customerHonorific } from '@/lib/customer'
 import { DEAL_STATUS } from '@/lib/status'
 
@@ -35,13 +34,19 @@ export default async function SupplierConsoleHome() {
   const monthClosed = deals.filter(d => (d.status === 'confirmed' || d.status === 'paid') && inMonth(d))
   const companyRevenue = monthClosed.reduce((s, d) => s + revOf(d), 0)
   const inProgress = deals.filter(d => d.status === 'received' || d.status === 'in_progress').length
+  // 前月比（±%・表示のみ）
+  const last = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const lastYm = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}`
+  const lastRevenue = deals.filter(d => (d.status === 'confirmed' || d.status === 'paid') && ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === lastYm).reduce((s, d) => s + revOf(d), 0)
+  const momPct = lastRevenue > 0 ? Math.round((companyRevenue - lastRevenue) / lastRevenue * 100) : null
 
   // 網（支払と同一規則）
-  let teamN = 0, monthOverride = 0
+  let teamN = 0, monthOverride = 0, teamNew = 0
   if (me.is_frontier) {
     const [{ computeOverrides }, { loadSupplierFrontiers }] = await Promise.all([import('@/lib/frontier'), import('@/lib/frontier-payout')])
     const { data: subs } = await admin.from('partners').select('id, frontier_id, frontier_linked_at').eq('frontier_id', me.id)
     teamN = (subs ?? []).length
+    teamNew = (subs ?? []).filter(s => (s.frontier_linked_at ?? '').slice(0, 7) === ym).length
     if (teamN) {
       const subIds = (subs ?? []).map(s => s.id)
       const { data: sd } = await admin.from('deals').select('partner_id, amount, status, fixed_month, created_at, fee_snapshot').in('partner_id', subIds)
@@ -80,9 +85,9 @@ export default async function SupplierConsoleHome() {
       {/* 数字4枚 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
         {[
-          { l: '今月の成約受注額', v: companyRevenue, yen: true, sub: `${monthClosed.length}件` },
+          { l: '今月の売上（成約受注額）', v: companyRevenue, yen: true, sub: momPct == null ? `${monthClosed.length}件` : `${monthClosed.length}件 ・ 前月比${momPct >= 0 ? '+' : ''}${momPct}%` },
           { l: '進行中の案件', v: inProgress, yen: false, sub: '件' },
-          { l: '網（配下と還元）', v: monthOverride, yen: true, sub: `${teamN}名` },
+          { l: '網のメンバー', v: teamN, yen: false, sub: `名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}` },
           { l: '今月のお支払い見込み', v: previewTotal, yen: true, sub: '月末締め' },
         ].map(c => (
           <div key={c.l} style={{ ...CARD, padding: '13px 15px' }}>
@@ -94,22 +99,22 @@ export default async function SupplierConsoleHome() {
         ))}
       </div>
 
-      {/* 主アクション: リファラル獲得を常に前へ */}
-      <div style={{ ...CARD, marginTop: 12, padding: '13px 15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-          <div style={{ flex: 1, fontSize: '.76rem', fontWeight: 700 }}>リファラルを招待</div>
-          <a href="/app/refer" style={{ flexShrink: 0, fontSize: '.7rem', fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, padding: '8px 16px', textDecoration: 'none', minHeight: 28, display: 'inline-flex', alignItems: 'center' }}>紹介する →</a>
+      {/* 網への導線（カード1枚・ボタンのみ＝フォームは網ページに一本化・§0(b)/§2） */}
+      <div style={{ ...CARD, marginTop: 12, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '.76rem', fontWeight: 700 }}>網を広げるほど、売上が積み上がります</div>
+          <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>招待リンクの共有・自分の紹介は「網」から</div>
         </div>
-        <FrontierInvite />
+        <a href="/app/s/network" style={{ flexShrink: 0, fontSize: '.72rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, minHeight: 44, padding: '0 18px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>網を広げる →</a>
       </div>
 
       <div className="sup-2col" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 16 }}>
         {/* 要対応 */}
         <div>
-          <h2 style={H2}>要対応</h2>
+          <h2 style={H2}>次の一手</h2>
           <div style={{ ...CARD, overflow: 'hidden' }}>
             {needRevenue.length === 0 && awaitingDelivery === 0 && (rejReqs ?? []).length === 0 ? (
-              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>いま対応が必要なものはありません。</p>
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>今日は対応が必要な項目はありません。</p>
             ) : (
               <>
                 {needRevenue.slice(0, 5).map((d, i) => (
@@ -122,7 +127,7 @@ export default async function SupplierConsoleHome() {
                 {awaitingDelivery > 0 && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '11px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
                     <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--c-blue)', flexShrink: 0 }} />
-                    <span>納品待ちの委託が {awaitingDelivery} 件あります（進行はMBが担当）</span>
+                    <span>納品待ちの委託が {awaitingDelivery} 件あります（進行はMB Partnersが担当）</span>
                   </div>
                 )}
                 {(rejReqs ?? []).map(r => (
@@ -139,7 +144,7 @@ export default async function SupplierConsoleHome() {
 
         {/* 最近の動き */}
         <div>
-          <h2 style={H2}>最近の動き</h2>
+          <h2 style={H2}>今月の流れ</h2>
           <div style={{ ...CARD, overflow: 'hidden' }}>
             {deals.length === 0 ? (
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>まだ案件がありません。メニューが公開されるとここに並びます。</p>
