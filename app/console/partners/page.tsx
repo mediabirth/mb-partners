@@ -147,7 +147,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
         <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>パートナー</h1><PageGuide data={GUIDE_PARTNERS} /></span>
-            <Link href={`/console/partners/invite?kind=${filter === 'frontier' ? 'frontier' : filter === 'delivery' ? 'delivery' : 'partner'}`} className="ui-btn ui-btn--primary ui-btn--lg" style={{ fontSize: '.72rem', padding: '7px 14px' }}>招待する</Link>
+            <Link href={`/console/partners/invite?kind=${filter === 'frontier' ? 'frontier' : filter === 'supplier' ? 'supplier' : filter === 'delivery' ? 'delivery' : 'partner'}`} className="ui-btn ui-btn--primary ui-btn--lg" style={{ fontSize: '.72rem', padding: '7px 14px' }}>招待する</Link>
           </div>
           {/* BR-C2：種別タブ→統一リストのフィルタ（既定=すべて）。役職は行内 StatusPill で識別。 */}
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg2)', borderRadius: 9, padding: 3, width: 'fit-content' }}>

@@ -32,6 +32,14 @@ export async function POST(req: NextRequest) {
   if (!email?.trim()) return NextResponse.json({ error: 'email は必須です' }, { status: 400 })
 
   const service = await createServiceRoleClient()
+  // B: サプライヤー招待（契約済み前提）＝登録完了時に自動昇格するカードを招待に永続化
+  let supplierCard: string | null = null
+  if (typeof body.supplier_card === 'string' && body.supplier_card) {
+    const { data: card } = await service.from('rate_cards').select('id, deprecated').eq('id', body.supplier_card).maybeSingle()
+    if (!card) return NextResponse.json({ error: 'レートカードが見つかりません' }, { status: 400 })
+    if (card.deprecated) return NextResponse.json({ error: 'このレートカードは廃止済みです（standard-v2等を選択）' }, { status: 400 })
+    supplierCard = card.id
+  }
   // ★乗っ取り防止の早期チェック（2026-07-11）: 既存の運営/委託先アカウントのメールにはパートナー招待を発行しない
   //（受諾時に updateUserById がその人のパスワードを上書き＝全セッション失効事故になるため。accept側にも同ガードあり）。
   {
@@ -47,7 +55,8 @@ export async function POST(req: NextRequest) {
       kind:       'partner',
       role,
       name:       name?.trim() || null,
-      is_frontier: isFrontier,
+      is_frontier: isFrontier || !!supplierCard,
+      supplier_rate_card: supplierCard,
       created_by: user.id,
     })
     .select('token, email, name, expires_at')

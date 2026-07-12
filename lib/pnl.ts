@@ -1,6 +1,6 @@
 /**
  * MBプロジェクトP&L（読取専用集計）。
- * MB粗利 = Σ受注額(明細) − 紹介/協力報酬(既存 deals.amount) − フロンティアoverride − その他原価
+ * MB粗利 = Σ受注額(明細) − パートナー報酬(既存 deals.amount) − フロンティアoverride − その他原価
  *          − デリバリー委託費(A-2a, Σ base_fee) − デリバリー経費(A-2b, Σ承認済 expense_claims.amount)
  *
  * 重要：表示専用。deals.amount / frozen / payout_items / payout_overrides の保存値には一切書き込まない。

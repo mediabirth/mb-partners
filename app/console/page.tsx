@@ -7,7 +7,6 @@ import { createClient, createServiceRoleClient, getCachedUid } from '@/lib/supab
 import { getAllDeals } from '@/lib/supabase/queries'
 import { loadProjectPnl, sumMonth } from '@/lib/pnl-aggregate'
 import ConsoleNav from '@/components/ConsoleNav'
-import ChannelMark from '@/components/ChannelMark'
 import GlobalSearchClient from './GlobalSearchClient'
 import MonthSelector from './MonthSelector'
 import { customerHonorific } from '@/lib/customer'
@@ -432,7 +431,6 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
                       <b style={{ flex: 1, minWidth: 0, fontSize: '.74rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {e.deals ? customerHonorific(e.deals) : ''}
                       </b>
-                      {e.deals?.channel && <ChannelMark channel={e.deals.channel} showLabel={false} />}
                       {dealById[e.deal_id]?.partners?.profiles?.name && (
                         <span style={{ flexShrink: 0, fontSize: '.58rem', color: 'var(--muted2)', whiteSpace: 'nowrap' }}>担当: {dealById[e.deal_id]!.partners!.profiles!.name}</span>
                       )}

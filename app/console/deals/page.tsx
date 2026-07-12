@@ -2,7 +2,6 @@
 // 静音化v2.1: 稟議ステージ(review_stage)は概念廃止＝UI/保存関数を撤去（API /review-stage・DB列・既存データは残置＝コードから到達不能のdeprecate）。
 import { useEffect, useState, useTransition, useRef } from 'react'
 import ServiceAvatar from '@/components/ServiceAvatar'
-import ChannelMark from '@/components/ChannelMark'
 import ConsoleNav from '@/components/ConsoleNav'
 import { customerHonorific } from '@/lib/customer'
 import { phaseOf, PHASE_LABEL } from '@/lib/phase'
@@ -634,7 +633,6 @@ export default function DealsPage() {
                           {d.services?.name}{menuLabelOf(d) ? ` ─ ${menuLabelOf(d)}` : ''}{d.status === 'lost' && d.lost_reason ? ` ・ 理由: ${lostReasonLabel(d.lost_reason)}` : ''}
                         </div>
                       </div>
-                      <ChannelMark channel={d.channel} showLabel={false} />
                       {/* v2.2：ステータスは6pxドット＋テキスト（塗りピル廃止・色は --st-* 意味色） */}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
                         <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${DEAL_STATUS[d.status]?.tone ?? 'neutral'})`, flexShrink: 0 }} />

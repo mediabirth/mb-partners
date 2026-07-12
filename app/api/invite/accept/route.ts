@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   // ── 招待トークン検証 ──────────────────────────────────────────────────────
   const { data: invite, error: inviteErr } = await service
     .from('invites')
-    .select('id, email, role, expires_at, used_at, is_frontier')
+    .select('id, email, role, expires_at, used_at, is_frontier, supplier_rate_card')
     .eq('token', token)
     .single()
 
@@ -212,8 +212,11 @@ export async function POST(req: NextRequest) {
     // A1: フロンティア判定は招待レコード（invites.is_frontier）を真実とする。
     // URLパラメータ（?role=frontier）はメールの素のリンクでは失われるため補助扱い（後方互換で OR）。
     const isFrontierInvite = (invite as { is_frontier?: boolean }).is_frontier === true || frontierFlag === true
+    // B: サプライヤー招待＝登録完了と同時に自動昇格（is_frontier＋カード。招待レコードが真実）
+    const inviteSupplierCard = (invite as { supplier_rate_card?: string | null }).supplier_rate_card ?? null
     const frontierFields: Record<string, unknown> = {}
     if (isFrontierInvite) frontierFields.is_frontier = true
+    if (inviteSupplierCard) { frontierFields.is_frontier = true; frontierFields.supplier_rate_card = inviteSupplierCard }
     if (typeof frontierId === 'string' && frontierId) {
       frontierFields.frontier_id = frontierId
       frontierFields.frontier_linked_at = nowIso
@@ -252,6 +255,17 @@ export async function POST(req: NextRequest) {
       if (fullRegistration) {
         await service.from('partners').update(partnerFields).eq('id', existingPartner.id)
       }
+    }
+
+    // B: サプライヤー自動昇格の履歴＋監査（best-effort＝登録は壊さない）
+    if (inviteSupplierCard) {
+      try {
+        const { data: pRow } = await service.from('partners').select('id, code').eq('profile_id', userId).maybeSingle()
+        if (pRow) {
+          await service.from('supplier_card_events').insert({ supplier_partner_id: pRow.id, event: 'promoted', from_card: null, to_card: inviteSupplierCard, changed_by: null })
+          await service.from('audit_logs').insert({ actor_profile_id: null, actor_name: '招待受諾（自動昇格）', category: 'supplier', target: `partner:${pRow.code}`, action: 'auto_promote', meta: { card: inviteSupplierCard, invite_email: invite.email } })
+        }
+      } catch { /* best-effort */ }
     }
 
     // Terms: 同意した規約バージョンを記録（terms_version 列が未追加(DDL前)でも登録を壊さない best-effort）。

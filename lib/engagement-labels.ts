@@ -8,5 +8,5 @@ export type Channel = 'referral' | 'cooperation' | 'direct' | string
 
 /** channel 値 → 表示ラベル。区分語は出さない（direct のみ実態として「直販」）。 */
 export function engagementLabel(channel: Channel): string {
-  return channel === 'direct' ? '直販' : ''
+  return channel === 'direct' ? '直営業' : ''  // 語彙浄化(2026-07-12): 「直販」→現行正典「直営業」
 }

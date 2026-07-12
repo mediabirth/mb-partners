@@ -1,0 +1,283 @@
+{
+ "seeded_at": "2026-07-12T07:46:24.670Z",
+ "note": "全面デモ台帳v2（v1=demo_seed_manifest_20260712.jsonと合わせて逆順撤去）",
+ "entities": [
+  {
+   "type": "deal",
+   "id": "0d2397b9-d1c6-4e33-a6e3-d6ca3ec2feec",
+   "name": "長谷川 誠"
+  },
+  {
+   "type": "deal",
+   "id": "f384a097-4236-4a0b-bef8-575aa32538b5",
+   "name": "株式会社アークヒューマン"
+  },
+  {
+   "type": "deal",
+   "id": "c17a07c2-ec5d-4ca3-ae34-dd03153d3d7a",
+   "name": "株式会社パレット管理"
+  },
+  {
+   "type": "continuous_payout",
+   "id": "a750b4ae-d2a0-4632-a5a7-88b6b2e691c8",
+   "name": "パレット管理 2026-06"
+  },
+  {
+   "type": "continuous_payout",
+   "id": "e0253095-67e1-421d-b250-9c5dcd6b69ec",
+   "name": "パレット管理 2026-07"
+  },
+  {
+   "type": "reward_override",
+   "id": "8002c797-726f-4526-9f1e-2ba00a8a3a47",
+   "name": "中村×投資用マンション ¥250,000"
+  },
+  {
+   "type": "partner_application",
+   "id": "82e2681e-bef8-4056-a6ea-93632dfb460c",
+   "name": "渡辺行政書士事務所"
+  },
+  {
+   "type": "partner_application",
+   "id": "f78890ca-59fa-4db4-952c-7b0efc360ed6",
+   "name": "株式会社グリーンフィールド少短"
+  },
+  {
+   "type": "inquiry",
+   "id": "521d6bbe-d1dc-4c6f-9d7d-c3e96261d940",
+   "name": "西田様の物件内覧の進捗について"
+  },
+  {
+   "type": "inquiry",
+   "id": "92ffd671-e37f-4c8d-92df-c346ce383542",
+   "name": "保険案件の報酬明細の見方"
+  },
+  {
+   "type": "broadcast(draft)",
+   "id": "d59950b7-66dd-403a-9d50-2495a039b5eb",
+   "name": "夏季の対応スケジュール（下書き）"
+  },
+  {
+   "type": "broadcast(sent)",
+   "id": "f79c1912-9894-4bc3-bcfa-d5edb0c5f99d",
+   "name": "新ブランド取り扱い開始（送信済み風）"
+  },
+  {
+   "type": "mail_log",
+   "id": 1336,
+   "name": "application-received→demo.watanabe"
+  },
+  {
+   "type": "mail_log",
+   "id": 1337,
+   "name": "interview-booked→demo.watanabe"
+  },
+  {
+   "type": "mail_log",
+   "id": 1338,
+   "name": "deal-received→demo.sasaki.ren"
+  },
+  {
+   "type": "mail_log",
+   "id": 1339,
+   "name": "payout-paid→demo.nakamura.daiki"
+  },
+  {
+   "type": "payout_batch",
+   "id": "f16522a3-597a-487f-81c6-5ff409915be1",
+   "name": "2026-04（paid）"
+  },
+  {
+   "type": "payout_item",
+   "id": "7dbcd05b-eec3-411d-a975-60310a505791",
+   "name": "ZZ5926 ¥90,000（2026-04）"
+  },
+  {
+   "type": "payout_item",
+   "id": "f35e661f-fc5e-4510-bcf4-764149a60fcf",
+   "name": "ZZ4292 ¥150,000（2026-04）"
+  },
+  {
+   "type": "payout_item",
+   "id": "e218b2c5-bc29-48fd-994c-5a02849df8a0",
+   "name": "ZZ3169 ¥60,000（2026-04）"
+  },
+  {
+   "type": "payout_batch",
+   "id": "854de500-73c0-4574-8b52-b1c2d3a68ea3",
+   "name": "2026-05（closed）"
+  },
+  {
+   "type": "payout_item",
+   "id": "f3f1c39a-75d5-492c-ba83-eaace5cee2ce",
+   "name": "ZZ5926 ¥90,000（2026-05）"
+  },
+  {
+   "type": "payout_item",
+   "id": "65bbc372-5d0c-4475-a64c-93b705d92f62",
+   "name": "ZZ4292 ¥150,000（2026-05）"
+  },
+  {
+   "type": "payout_item",
+   "id": "224c5d0a-d222-4dec-baef-3e4fe3cce527",
+   "name": "ZZ3169 ¥60,000（2026-05）"
+  },
+  {
+   "type": "expense_claim",
+   "id": "6c4fd671-0422-45e5-a28f-05677be3cd74",
+   "name": "宿泊費¥12,800（承認済）"
+  },
+  {
+   "type": "expense_claim",
+   "id": "efbba9d8-ecd4-4a2d-b5d8-a353debf71d5",
+   "name": "備品¥5,500（却下済）"
+  },
+  {
+   "type": "funnel_event",
+   "id": "f97713c1-4312-4dff-94fa-a149e5b5ba63",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "d3455091-63e5-42c7-9d22-1ade682934e4",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "3b78c3d4-c491-4a6f-9368-09b675eed9e3",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "ec94a652-e790-4647-8ad4-6adf3b6dd15b",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "5430dd88-cd9b-4f5e-ab05-af90a2feaec5",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "201eb5b2-5496-42c4-9a78-a25695a04525",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "bc1a198e-7d97-4418-b918-f18846e204c8",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "95acd5de-e55f-408e-9283-dd8f56a0463d",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "dd3f51d1-ddca-4d0c-ae89-2a593df3c271",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "4a5183b4-1a82-4ddb-8d5e-72910dce9124",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "c0274d53-25e3-4706-bf7d-ff62b6fc1dba",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "7bfe2c4c-113f-42c6-b6a6-197b0ef58101",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "0f2e43ed-5965-4624-b2bd-311fef8dde16",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "dc4ee8df-f098-4d0f-be06-7172dcecd3d5",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "46fe7d5c-babd-4429-b80a-bee339037ed6",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "f6f5a642-5a8d-4e62-9820-b7bda5dc2285",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "d6590609-0b22-45ac-bc1c-332b34993548",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "182d2683-f03f-466b-8757-e8915efe7ba6",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "1b503633-f23a-4c88-a114-98b664e657c5",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "8588a98d-d2bb-45fc-9850-35a2a6403c3c",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "e275eaf6-3566-4738-b6c8-3ba4e4f665be",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "d2b6b285-43b7-4202-b27c-b3299dd0125e",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "9e131388-188a-4f42-8616-b098278dd85e",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "a54cb569-4503-4f56-b92f-2fd6461fb86c",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "e392450a-f790-45c7-8310-cb78b2359d95",
+   "name": "growth履歴"
+  },
+  {
+   "type": "funnel_event",
+   "id": "99a48655-09bb-4543-81a8-235df1eb90fc",
+   "name": "growth履歴"
+  }
+ ],
+ "money_hashes": {
+  "before(=v1 after)": {
+   "menu_rewards": "bb94d30546ab15ef5e39f8bdeb76528e",
+   "deals": "f59856b4050381d13adaf5350400c5d0",
+   "fee": "4b17cc905c8346133a0ab55a1291ce9b",
+   "override": "d758d5166d3fec06fdfd6ffd0437c39c"
+  },
+  "after": {
+   "menu_rewards": "bb94d30546ab15ef5e39f8bdeb76528e",
+   "deals": "9fbfe8bfebad04bb2183c14ecf35311e",
+   "fee": "4b17cc905c8346133a0ab55a1291ce9b",
+   "override": "0fd767f4ec2d0dde13a3cacb441fb734"
+  },
+  "mb_seed": "16行/¥340,100 不変",
+  "note": "menu_rewards/fee不変＝メニュー正典・凍結請求に非接触。deals/overrideの変化は本投入分のみ。"
+ },
+ "removal": "撤去順: funnel_events→expense_claims→payout_items→payout_batches→mail_log→broadcasts→inquiry_messages→inquiries→partner_applications→partner_reward_overrides(+audit)→continuous_payouts→deal_items→deals→（v1台帳へ続く）"
+}
