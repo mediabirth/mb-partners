@@ -59,7 +59,7 @@ export default async function SupplierNetworkPage() {
   return (
     <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 720, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>網（リファラル）</h1>
+        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>紹介者</h1>
         <PageGuide data={SG_NETWORK} />
       </div>
 
@@ -68,21 +68,21 @@ export default async function SupplierNetworkPage() {
 
       {/* ヒーロー: 網が今月生んだ売上 */}
       <div className="shine" style={{ margin: '12px 0 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 16, padding: '18px 20px 15px', overflow: 'hidden' }}>
-        <div style={{ fontSize: '.56rem', letterSpacing: '.2em', opacity: .85, textTransform: 'uppercase', marginBottom: 7 }}>あなたの網が今月生んだ売上</div>
+        <div style={{ fontSize: '.56rem', letterSpacing: '.2em', opacity: .85, textTransform: 'uppercase', marginBottom: 7 }}>あなたの紹介者が今月生んだ売上</div>
         <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.9rem', letterSpacing: '-.02em', lineHeight: 1.05 }}>
           <span style={{ fontSize: '.9rem', opacity: .8, marginRight: 4 }}>¥</span><CountUp value={netRevenue} />
         </div>
         <div style={{ display: 'flex', gap: 18, marginTop: 11, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.28)' }}>
           <div style={{ fontSize: '.6rem', opacity: .85 }}>成約<span className="tnum" style={{ display: 'block', fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 500, marginTop: 2 }}>{netCount}件</span></div>
-          <div style={{ fontSize: '.6rem', opacity: .85 }}>網のメンバー<span className="tnum" style={{ display: 'block', fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 500, marginTop: 2 }}>{subList.length}名</span></div>
+          <div style={{ fontSize: '.6rem', opacity: .85 }}>紹介者<span className="tnum" style={{ display: 'block', fontFamily: 'Inter', fontSize: '.86rem', fontWeight: 500, marginTop: 2 }}>{subList.length}名</span></div>
         </div>
       </div>
 
       {/* チーム一覧: 今月の成約n件・売上¥X */}
-      <h2 style={{ fontSize: '.82rem', fontWeight: 700, margin: '18px 0 8px' }}>網のメンバー</h2>
+      <h2 style={{ fontSize: '.82rem', fontWeight: 700, margin: '18px 0 8px' }}>あなたの紹介者</h2>
       {subList.length === 0 ? (
         <div style={{ ...CARD, padding: '16px 16px' }}>
-          <p style={{ fontSize: '.74rem', color: 'var(--muted2)', margin: 0, lineHeight: 1.8 }}>まだメンバーがいません。上の招待リンクを共有すると、登録した方がここに並びます。</p>
+          <p style={{ fontSize: '.74rem', color: 'var(--muted2)', margin: 0, lineHeight: 1.8 }}>まだ紹介者がいません。上の招待リンクを共有すると、登録した方がここに並びます。</p>
         </div>
       ) : (
         <div style={{ ...CARD, overflow: 'hidden' }}>
@@ -106,7 +106,7 @@ export default async function SupplierNetworkPage() {
       <div style={{ ...CARD, marginTop: 12, padding: '12px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '.68rem', fontWeight: 500 }}>MB Partnersのサービスを紹介した分の還元</div>
-          <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 2 }}>網のメンバーがMB Partnersのメニューを成約すると、契約期間中は還元が発生します（今月分）</div>
+          
         </div>
         <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 700, flexShrink: 0 }}>¥{mbKickback.toLocaleString()}</div>
       </div>

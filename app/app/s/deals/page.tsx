@@ -62,7 +62,7 @@ export default function SupplierDealsPage() {
                   <tr key={d.id} onClick={() => setDetail(d)} style={{ cursor: 'pointer' }} className="row-hover">
                     <td style={{ fontSize: '.74rem', fontWeight: 500, padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.customer}</td>
                     <td style={{ fontSize: '.68rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.brand}</td>
-                    <td style={{ fontSize: '.62rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.from_network ? 'あなたの網' : 'MB Partnersの紹介'}</td>
+                    <td style={{ fontSize: '.62rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.from_network ? 'あなたの紹介者' : 'MB Partnersの紹介'}</td>
                     <td style={{ padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
                       <span style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 9px' }}>{DEAL_STATUS[d.status]?.label ?? d.status}</span>
                     </td>
@@ -104,7 +104,7 @@ export default function SupplierDealsPage() {
               </button>
             </div>
             {([['メニュー', detail.brand],
-               ['紹介経路', detail.from_network ? 'あなたの網' : 'MB Partnersの紹介'],
+               ['紹介経路', detail.from_network ? 'あなたの紹介者' : 'MB Partnersの紹介'],
                ['状態', DEAL_STATUS[detail.status]?.label ?? detail.status],
                ['受付日', new Date(detail.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })],
                ['成約月', detail.fixed_month ? detail.fixed_month.slice(0, 7).replace('-', '年') + '月' : '—'],
@@ -122,7 +122,6 @@ export default function SupplierDealsPage() {
                 </span>
               ))}
             </div>
-            <p style={{ fontSize: '.6rem', color: 'var(--muted2)', lineHeight: 1.7 }}>お客さま対応・進行はMB Partnersが担当します。</p>
           </div>
         </>
       )}

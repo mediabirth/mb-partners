@@ -87,7 +87,7 @@ export default async function SupplierConsoleHome() {
         {[
           { l: '今月の売上（成約受注額）', v: companyRevenue, yen: true, sub: momPct == null ? `${monthClosed.length}件` : `${monthClosed.length}件 ・ 前月比${momPct >= 0 ? '+' : ''}${momPct}%` },
           { l: '進行中の案件', v: inProgress, yen: false, sub: '件' },
-          { l: '網のメンバー', v: teamN, yen: false, sub: `名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}` },
+          { l: '紹介者', v: teamN, yen: false, sub: `名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}` },
           { l: '今月のお支払い見込み', v: previewTotal, yen: true, sub: '月末締め' },
         ].map(c => (
           <div key={c.l} style={{ ...CARD, padding: '13px 15px' }}>
@@ -99,13 +99,10 @@ export default async function SupplierConsoleHome() {
         ))}
       </div>
 
-      {/* 網への導線（カード1枚・ボタンのみ＝フォームは網ページに一本化・§0(b)/§2） */}
+      {/* 紹介者への導線（カード1枚・ボタンのみ＝フォームは紹介者ページに一本化・v3静音） */}
       <div style={{ ...CARD, marginTop: 12, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '.76rem', fontWeight: 700 }}>網を広げるほど、売上が積み上がります</div>
-          <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>招待リンクの共有・自分の紹介は「網」から</div>
-        </div>
-        <a href="/app/s/network" style={{ flexShrink: 0, fontSize: '.72rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, minHeight: 44, padding: '0 18px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>網を広げる →</a>
+        <div style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 700 }}>紹介者が増えるほど、売上が積み上がります</div>
+        <a href="/app/s/network" style={{ flexShrink: 0, fontSize: '.72rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, minHeight: 44, padding: '0 18px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>紹介者を増やす →</a>
       </div>
 
       <div className="sup-2col" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 16 }}>

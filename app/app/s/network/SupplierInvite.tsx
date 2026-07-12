@@ -28,8 +28,7 @@ export default function SupplierInvite() {
 
   return (
     <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13, padding: '14px 16px' }}>
-      <div style={{ fontSize: '.78rem', fontWeight: 700, marginBottom: 3 }}>リファラルを招待</div>
-      <p style={{ fontSize: '.64rem', color: 'var(--muted2)', margin: '0 0 10px', lineHeight: 1.7 }}>リンクを共有するだけ。登録した方があなたの網に入ります。</p>
+      <div style={{ fontSize: '.78rem', fontWeight: 700, marginBottom: 10 }}>紹介者を招待</div>
       <button onClick={() => createLink()} disabled={busy}
         style={{ width: '100%', minHeight: 44, fontFamily: 'inherit', fontSize: '.78rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', border: 'none', borderRadius: 10, cursor: 'pointer' }}>
         {busy ? '作成中…' : copied ? 'コピーしました ✓' : '招待リンクを作成してコピー'}

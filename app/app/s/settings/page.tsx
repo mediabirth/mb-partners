@@ -41,15 +41,13 @@ export default async function SupplierSettingsPage() {
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>通知先メール</span><span>{prof?.email ?? '—'}</span></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>電話番号</span><span>{p?.phone ?? '—'}</span></div>
       </div>
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 2px 16px' }}>社名・税区分・通知先の変更はMB Partnersまでご連絡ください。</p>
 
       <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>振込先口座</h2>
       <BankCard bank={(p as { bank?: Record<string, string> | null })?.bank ?? null} />
 
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '16px 0 8px' }}>ログイン情報</h2>
-      <div style={{ ...CARD, overflow: 'hidden', marginBottom: 16 }}>
-        <div style={{ ...ROW, borderTop: 'none' }}><span style={{ color: 'var(--muted2)' }}>ログインメール</span><span>{prof?.email ?? '—'}</span></div>
-        <div style={{ ...ROW, alignItems: 'center' }}><span style={{ color: 'var(--muted2)' }}>パスワード</span><a href="/app/settings" style={{ color: 'var(--c-blue)', textDecoration: 'none' }}>変更する →</a></div>
+      <div style={{ ...CARD, padding: '11px 15px', marginTop: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ flex: 1, fontSize: '.72rem' }}>あなた自身のこと（プロフィール・連絡先・パスワード）</span>
+        <a href="/app/mypage" style={{ flexShrink: 0, fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>マイページ →</a>
       </div>
 
       <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>変更申請の履歴</h2>

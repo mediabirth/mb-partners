@@ -24,6 +24,7 @@ type Props = {
   phone: string | null; address: string | null; invoiceNumber: string | null
   isFrontier?: boolean
   isSupplier?: boolean
+  hideBank?: boolean
 }
 
 const LINE = '0.5px solid var(--line)'
@@ -38,7 +39,7 @@ const LOCK = (
   </span>
 )
 
-export default function MypageClient({ name: initialName, email, avatarUrl, avatarColor, partnerCode, taxType, bank, phone: initialPhone, address: initialAddress, invoiceNumber: initialInvoice, isFrontier, isSupplier }: Props) {
+export default function MypageClient({ name: initialName, email, avatarUrl, avatarColor, partnerCode, taxType, bank, phone: initialPhone, address: initialAddress, invoiceNumber: initialInvoice, isFrontier, isSupplier, hideBank }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [avatar, setAvatar] = useState<string | null>(avatarUrl)
@@ -144,9 +145,15 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
           {/* ペルソナ・ホーム（2026-07-13）: 役割導線カードは撤去＝ホーム自体が役割適応（/app） */}
 
 
-          <div style={{ padding: '0 20px 8px' }}>
+          {hideBank && (
+            <div style={{ margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ flex: 1, fontSize: '.74rem' }}>振込先口座（会社のこと）は設定で管理しています</span>
+              <a href="/app/s/settings" style={{ flexShrink: 0, fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>設定 →</a>
+            </div>
+          )}
+          {!hideBank && <div style={{ padding: '0 20px 8px' }}>
             <h2 style={{ fontSize: '.78rem', fontWeight: 500, marginBottom: 0 }}>振込先口座</h2>
-          </div>
+          </div>}
           <div style={{ margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, overflow: 'hidden' }}>
             <KV label="銀行 / 支店" value={bankDisplay || '未登録'} muted={!bankDisplay} />
             <KV label="口座" value={accountDisplay || '未登録'} muted={!accountDisplay} />

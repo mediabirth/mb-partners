@@ -37,6 +37,7 @@ export default async function MypagePage() {
       invoiceNumber={p.invoice_number ?? null}
       isFrontier={p.is_frontier ?? false}
       isSupplier={!!p.supplier_rate_card}
+      hideBank={!!p.supplier_rate_card}
     />
   )
 }

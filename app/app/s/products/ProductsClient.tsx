@@ -87,7 +87,7 @@ export default function ProductsClient() {
             )
           })}
           <div style={{ padding: '10px 14px', borderTop: LINE }}>
-            <div style={LBL}>社内向けメモ（すぐ反映・お客さまには表示されません）</div>
+            <div style={LBL}>社内向けメモ</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <textarea rows={2} value={d('memo:' + br.id, br.supplier_memo ?? '')} onChange={e => setDraft(p => ({ ...p, ['memo:' + br.id]: e.target.value }))} style={{ ...FLD, resize: 'vertical', minHeight: 52 }} />
               <button disabled={busy} onClick={() => call('PATCH', { service_id: br.id, supplier_memo: d('memo:' + br.id, br.supplier_memo ?? '') }, 'メモを保存しました')} style={BTN}>保存</button>
@@ -136,7 +136,6 @@ export default function ProductsClient() {
       {/* 顧客向け（説明・画像URL※申請制） */}
       <div style={SEC}>
         <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 4 }}>顧客向け</div>
-        <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '0 0 10px' }}>お客さまのページに表示されます（MB Partnersの確認後に反映）。</p>
         <div style={LBL}>説明{pendingOf('public_description', menu.id) && AMBER()}</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <textarea rows={3} value={d('pd:' + menu.id, menu.public_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['pd:' + menu.id]: e.target.value }))} style={{ ...FLD, resize: 'vertical', minHeight: 68 }} />

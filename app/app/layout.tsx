@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('id', uid)
     .single()
   // ペルソナ・ホーム（2026-07-13）: サプライヤーはナビ差し替え（会社タブ）。判定は本人行のみ＝軽量。
-  const { data: navP } = await supabase.from('partners').select('id, supplier_rate_card').eq('profile_id', uid).maybeSingle()
+  const { data: navP } = await supabase.from('partners').select('id, code, supplier_rate_card').eq('profile_id', uid).maybeSingle()
   let navSupplier = !!navP?.supplier_rate_card
   if (!navSupplier && navP) {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
@@ -41,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     /* サプライヤー・コンソール（2026-07-13）: サプライヤーのAPP体験はシェルごと置換（PC=固定サイドバー/SP=ドロワー）。
        リファラル/フロンティアは従来の SurfaceShell（下の分岐に一切触れない）。 */
     navSupplier ? (
-      <SupplierShell companyName={profile?.name ?? 'MB Partners'}>
+      <SupplierShell companyName={profile?.name ?? '—'} code={navP?.code ?? ''} color={profile?.color ?? '#4733E6'} avatarUrl={profile?.avatar_url ?? null}>
         <style>{`.app-quiet :is(b,strong,.btn,.ui-btn,.ty-h1,.ty-h2,.eyebrow,.chip,.ui-tag){font-weight:500}
 .pop-in{animation:v2pop 120ms ease-out}@keyframes v2pop{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .exp-in{animation:v2exp 150ms ease-out}@keyframes v2exp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}

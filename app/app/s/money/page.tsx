@@ -75,7 +75,7 @@ export default async function SupplierMoneyPage() {
         <div>
           <h2 style={H2}>お支払い（MB Partnersへ）</h2>
           <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
-            <div style={SUB}>今月のお支払い見込み（{ym.replace('-', '年')}月・税抜）</div>
+            <div style={{ ...SUB, display: 'flex', alignItems: 'baseline', gap: 8 }}>今月のお支払い見込み<span style={{ fontSize: '.54rem', fontWeight: 400, color: 'var(--muted)' }}>{ym.replace('-', '年')}月・税抜</span></div>
             {preview.length === 0 ? (
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>今月分の対象はまだありません。</p>
             ) : (
@@ -119,7 +119,6 @@ export default async function SupplierMoneyPage() {
               ))}
             </div>
           </div>
-          <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 2px 0' }}>お支払いは、MB Partnersからお送りする請求書に記載の口座へお願いします。</p>
         </div>
         {/* お受け取り（紹介報酬＋網の還元を1カードに・下に振込先口座） */}
         <div>
@@ -133,7 +132,7 @@ export default async function SupplierMoneyPage() {
               <span style={{ color: 'var(--muted2)' }}>あなたの紹介分</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(ownMonth)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
-              <span style={{ color: 'var(--muted2)' }}>網の還元（MB Partnersメニュー分）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(netKick)}</span>
+              <span style={{ color: 'var(--muted2)' }}>紹介者の還元（MB Partnersメニュー分）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(netKick)}</span>
             </div>
             <div style={{ display: 'flex', gap: 12, padding: '10px 15px', borderTop: '0.5px solid var(--line)' }}>
               <a href="/app/rewards" style={{ fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>報酬明細 →</a>

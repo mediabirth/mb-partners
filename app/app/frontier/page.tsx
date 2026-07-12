@@ -10,7 +10,7 @@ export default async function FrontierDetailPage() {
   if (!me?.is_frontier) redirect('/app')
   return (
     <div className="page-anim" style={{ paddingBottom: 8 }}>
-      <h2 style={{ fontSize: '.92rem', fontWeight: 500, margin: '18px 20px 0' }}>あなたの網</h2>
+      <h2 style={{ fontSize: '.92rem', fontWeight: 500, margin: '18px 20px 0' }}>あなたのチーム</h2>
       <FrontierSection />
     </div>
   )
