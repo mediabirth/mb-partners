@@ -19,26 +19,33 @@ const NAV = [
   { href: '/app/s/settings', label: '設定', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z" /></> },
 ]
 
-function BrandHead({ companyName, code, color, avatarUrl }: { companyName: string; code: string; color: string; avatarUrl: string | null }) {
+function BrandHead({ onNav }: { onNav?: () => void }) {
   return (
-    <div style={{ borderBottom: '0.5px solid var(--line)' }}>
-      {/* 正式ロックアップ（BrandMark=全接点共通の単一ソース） */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px 10px' }}>
-        <BrandMark size={22} />
-        <span style={{ fontSize: '.8rem', fontWeight: 700, letterSpacing: '.06em', color: 'var(--c-blue)' }}>MB Partners</span>
-      </div>
-      {/* アカウントカード（タップでマイページ） */}
-      <a href="/app/mypage" style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 10px 10px', padding: '9px 8px', borderRadius: 10, textDecoration: 'none', color: 'var(--txt)', background: 'var(--bg2)' }}>
-        {avatarUrl
-          ? <img src={avatarUrl} alt="" width={30} height={30} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-          : <span style={{ width: 30, height: 30, borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.76rem', fontWeight: 500, flexShrink: 0 }}>{companyName[0] ?? '−'}</span>}
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: '.72rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{companyName}</span>
-          <span className="tnum" style={{ display: 'block', fontSize: '.56rem', color: 'var(--muted2)', fontFamily: 'Inter', letterSpacing: '.06em', marginTop: 1 }}>{code}</span>
-        </span>
-        <span style={{ color: 'var(--muted)', fontSize: '.8rem', flexShrink: 0 }}>›</span>
-      </a>
-    </div>
+    <a href="/app" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 16px 14px', textDecoration: 'none' }}>
+      <BrandMark size={26} />
+      <span>
+        <b style={{ display: 'block', fontFamily: 'Inter', fontWeight: 700, fontSize: '.98rem', color: 'var(--txt)', lineHeight: 1.1 }}>
+          MB <span style={{ color: 'var(--c-blue)' }}>Partners</span>
+        </b>
+        <small style={{ display: 'block', fontFamily: 'Inter', fontSize: 11, letterSpacing: '.3em', color: 'var(--muted2)', marginTop: 2, fontWeight: 700, textTransform: 'uppercase' }}>Supplier</small>
+      </span>
+    </a>
+  )
+}
+
+/** サイドバー最下部のアカウントチップ（タップでマイページ・v4） */
+function AccountChip({ companyName, code, color, avatarUrl, onNav }: { companyName: string; code: string; color: string; avatarUrl: string | null; onNav?: () => void }) {
+  return (
+    <a href="/app/mypage" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 10px 12px', padding: '9px 10px', borderRadius: 10, textDecoration: 'none', color: 'var(--txt)', background: 'var(--bg2)' }}>
+      {avatarUrl
+        ? <img src={avatarUrl} alt="" width={30} height={30} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        : <span style={{ width: 30, height: 30, borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.76rem', fontWeight: 500, flexShrink: 0 }}>{companyName[0] ?? '−'}</span>}
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: '.72rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{companyName}</span>
+        <span className="tnum" style={{ display: 'block', fontSize: '.56rem', color: 'var(--muted2)', fontFamily: 'Inter', letterSpacing: '.06em', marginTop: 1 }}>{code}</span>
+      </span>
+      <span style={{ color: 'var(--muted)', fontSize: '.8rem', flexShrink: 0 }}>›</span>
+    </a>
   )
 }
 
@@ -60,10 +67,6 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
           </a>
         )
       })}
-      <a href="/app/mypage" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, padding: '0 12px', borderRadius: 9, textDecoration: 'none', fontSize: '.76rem', color: 'var(--muted2)', marginTop: 10, borderTop: '0.5px solid var(--line)' }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" /></svg>
-        マイページ
-      </a>
     </nav>
   )
 
@@ -75,16 +78,19 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
           style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt)', marginLeft: -10 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
-        <BrandMark size={19} />
-        <span style={{ fontSize: '.78rem', fontWeight: 700, letterSpacing: '.06em', color: 'var(--c-blue)' }}>MB Partners</span>
+        <a href="/app" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+          <BrandMark size={19} />
+          <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.82rem', color: 'var(--txt)' }}>MB <span style={{ color: 'var(--c-blue)' }}>Partners</span></span>
+        </a>
         <span style={{ marginLeft: 'auto', fontSize: '.64rem', color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '46vw' }}>{companyName}</span>
       </header>
 
       <div style={{ display: 'flex' }}>
         {/* PC: 左固定サイドバー（最上部=ワードマーク＋会社名） */}
-        <aside className="sup-side" style={{ width: 230, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: '#fff', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-          <BrandHead companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} />
+        <aside className="sup-side" style={{ width: 230, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: 'linear-gradient(180deg,#fbfaff,#ffffff 26%)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+          <BrandHead />
           <NavList />
+          <div style={{ marginTop: 'auto' }}><AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} /></div>
         </aside>
         <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
       </div>
@@ -95,12 +101,13 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
           <div onClick={() => setDrawer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.34)', zIndex: 90 }} />
           <div className="drawer-in" style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: 264, maxWidth: '82vw', background: '#fff', zIndex: 95, boxShadow: '8px 0 30px rgba(14,14,20,.18)', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ flex: 1 }}><BrandHead companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} /></div>
+              <div style={{ flex: 1 }}><BrandHead /></div>
               <button aria-label="閉じる" onClick={() => setDrawer(false)} style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted2)', marginRight: 4 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
             <NavList onNav={() => setDrawer(false)} />
+            <AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={() => setDrawer(false)} />
           </div>
         </div>
       )}
@@ -109,7 +116,7 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
         .sup-side{display:none}
         @media (min-width:1024px){
           .sup-mobilehead{display:none !important}
-          .sup-side{display:block}
+          .sup-side{display:flex;flex-direction:column}
           .sup-drawer-wrap{display:none}
         }
         .drawer-in{animation:supDrawer .18s ease-out}

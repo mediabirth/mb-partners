@@ -306,13 +306,14 @@ for(const vp of [{width:375,height:667},{width:1024,height:768}]){
   if(vp.width===375)ok(/\/app\/?$/.test(sp.url())||sp.url().endsWith('/app'),'[375] 旧URL /app/supplier→ホーム（ミニコンソール）へ',sp.url())
   const t=await sp.evaluate(`document.body.innerText`) as string
   if(vp.width===375){
-    ok(t.includes('今月の売上（成約受注額）')&&t.includes('進行中の案件')&&t.includes('紹介者')&&t.includes('今月のお支払い見込み'),'[375] ホームv3: 数字4枚')
+    ok(t.includes('今月の売上（成約受注額）')&&t.includes('進行中の案件')&&t.includes('紹介者')&&t.includes('今月のお支払い見込み'),'[375] ホームv4: ヒーロー＋数字3枚')
     ok(t.includes('次の一手')&&t.includes('今月の流れ'),'[375] 次の一手＋今月の流れ')
-    ok(t.includes('紹介者を増やす')&&!t.includes('招待リンクを作成'),'[375] 紹介者カード=ボタンのみ（フォーム不在）')
+    ok(t.includes('紹介者を増やす')&&!t.includes('招待リンクを作成'),'[375] ヒーローCTA（フォーム不在）')
+    ok(t.includes('お金の内訳')&&t.includes('あなたの会社の手残り'),'[375] お金の内訳（ウォーターフォール）')
     // ドロワーでナビ全項目
     await sp.locator('button[aria-label="メニュー"]').click();await sp.waitForTimeout(600)
     const dt=await sp.evaluate(`document.body.innerText`) as string
-    ok(dt.includes('紹介者')&&dt.includes('商品')&&dt.includes('案件')&&dt.includes('お金')&&dt.includes('設定')&&dt.includes('マイページ'),'[375] ドロワー: ナビ全項目＋マイページ復活')
+    ok(dt.includes('紹介者')&&dt.includes('商品')&&dt.includes('案件')&&dt.includes('お金')&&dt.includes('設定')&&dt.includes('供給 検証'),'[375] ドロワー: ナビ全項目＋アカウントチップ（会社名）')
     await sp.locator('button[aria-label="閉じる"]').click();await sp.waitForTimeout(400)
     ok(t.includes('CCE2E-A')&&t.includes('CC-E2Eブランド'),'[375] ポータル: 自社案件表示')
     await sp.goto(BASE+'/app/s/money',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2800)
@@ -575,9 +576,19 @@ console.log('[19] craft検査（v2是正の実測）')
   ok(!(await pp.locator('button[aria-label="メニュー"]').first().isVisible().catch(()=>false)),'PC≥1024: ハンバーガー非表示（二重ナビ不在）')
   const side=await pp.evaluate(`(()=>{const a=document.querySelector('.sup-side');if(!a)return null;const t=a.textContent||'';return {first:t.trim().slice(0,11), hasCompany:t.includes('供給 検証'), hasMypage:t.includes('マイページ')}})()`) as any
   ok(side?.first==='MB Partners'&&side?.hasCompany===true,'ロゴ位置: サイドバー最上部=ワードマーク＋会社名',JSON.stringify(side))
-  ok(side?.hasMypage===true,'サイドバー: マイページ復活（v3・最下部）')
   ok((await pp.locator('.sup-side svg[viewBox="0 0 48 48"]').count())>0,'品質ゲート③: 公式ロゴ（BrandMark）ロックアップ')
-  ok((await pp.locator('.sup-side a[href="/app/mypage"]').count())>=2,'アカウントカード＋マイページの導線')
+  const lockup=await pp.evaluate(`(()=>{const a=document.querySelector('.sup-side a[href="/app"]');return a?a.textContent:''})()`) as string
+  ok(lockup.includes('MB')&&lockup.includes('Partners')&&/supplier/i.test(lockup),'v4: ロックアップ=MB Partners＋SUPPLIERサブラベル')
+  const chipLast=await pp.evaluate(`(()=>{const s=document.querySelector('.sup-side');if(!s)return false;const chips=s.querySelectorAll('a[href="/app/mypage"]');const last=chips[chips.length-1];if(!last)return false;const r=last.getBoundingClientRect();return r.bottom>window.innerHeight*0.7})()`)
+  ok(!!chipLast,'v4: アカウントチップ=サイドバー最下部')
+  // ロゴクリック=ホームへ（全ページ）
+  let logoBad=''
+  for(const p of ['/app/s/network','/app/s/products','/app/s/deals','/app/s/money','/app/s/settings']){
+    await pp.goto(BASE+p,{waitUntil:'domcontentloaded'});await pp.waitForTimeout(1800)
+    await pp.locator('.sup-side a[href="/app"]').first().click();await pp.waitForTimeout(1500)
+    if(!/\/app\/?$/.test(pp.url()))logoBad+=p+' '
+  }
+  ok(logoBad==='','v4: ロゴクリック=ホーム遷移（全ページ実測）',logoBad)
   // 品質ゲート②: 禁止語（網/リファラル）rendered=0 ＋ ①常設説明文の削減確認（代表文言の不在）
   let vocabBad=''
   for(const p of ['/app','/app/s/network','/app/s/products','/app/s/deals','/app/s/money','/app/s/settings']){
