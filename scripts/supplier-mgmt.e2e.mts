@@ -266,6 +266,40 @@ const vr=await pg.evaluate(`(async()=>{const mk=(b)=>fetch('/api/console/menu-re
   const c=await mk({menu_id:'${menuId4}',reward_type:'rate',reward_value:10,reward_base:'売上'})
   return [a,b,c]})()`) as number[]
 ok(vr[0]===400&&vr[1]===400&&vr[2]===200,'継続=400・粗利%=400・受注額%=200',JSON.stringify(vr))
+console.log('[14] サプライヤーポータル（/app/supplier）表示・データ境界・ビューポート')
+// SUP本人（別コンテキスト＝LINセッションと分離）
+for(const vp of [{width:375,height:667},{width:1024,height:768}]){
+  const sctx=await b.newContext({viewport:vp}); sctx.on('page',p=>{p.on('dialog',d=>d.accept().catch(()=>{}));p.on('pageerror',e=>errs.push('portal'+vp.width+': '+e.message))})
+  const sp=await sctx.newPage()
+  await sp.goto(BASE+'/app/login',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(1200)
+  await sp.locator('input[type="email"]').fill(SUPMAIL);await sp.locator('input[type="password"]').fill(PW)
+  await sp.locator('button[type="submit"]').first().click();await sp.waitForTimeout(3000)
+  await sp.goto(BASE+'/app/supplier',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2800)
+  const t=await sp.evaluate(`document.body.innerText`) as string
+  if(vp.width===375){
+    ok(t.includes('自社メニューの今月の成約'),'[375] ポータル: ヒーロー表示')
+    ok(t.includes('CCE2E-A')&&t.includes('CC-E2Eブランド'),'[375] ポータル: 自社案件表示')
+    ok(t.includes('販売手数料（受注額5%）')&&t.includes('15,000'),'[375] ポータル: 販売手数料15,000')
+    ok(t.includes('月額（プラン基本料）')&&t.includes('50,000'),'[375] ポータル: 月額50,000（履歴）')
+    ok(t.includes('締め済み・請求書待ち'),'[375] ポータル: 請求状態の対外語彙')
+    ok(t.includes('委託先への支払状況'),'[375] ポータル: 委託セクション')
+    ok(!t.includes('オムニス')&&!t.includes('ZZ6153'),'[375] ポータル: 他サプライヤー情報ゼロ')
+    ok(!t.includes('unbilled')&&!t.includes('invoiced')&&!t.includes('settled'),'[375] ポータル: 内部語彙ゼロ')
+  }
+  ok((await sp.evaluate(`document.documentElement.scrollWidth`) as number)<=vp.width,'['+vp.width+'] ポータル: 横はみ出しなし')
+  if(vp.width===375){
+    // mypage 出し分けカード
+    await sp.goto(BASE+'/app/mypage',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2200)
+    const mt=await sp.evaluate(`document.body.innerText`) as string
+    ok(mt.includes('サプライヤー ポータル'),'[375] mypage: ポータル導線カード')
+  }
+  await sctx.close()
+}
+// データ境界: 非サプライヤー（LIN）の直打ち→/appへ
+await lin.goto(BASE+'/app/supplier',{waitUntil:'domcontentloaded'});await lin.waitForTimeout(2200)
+ok(!lin.url().includes('/app/supplier'),'非サプライヤーの直打ち→リダイレクト',lin.url())
+const lint=await lin.evaluate(`document.body.innerText`) as string
+ok(!lint.includes('サプライヤー ポータル'),'非サプライヤーのmypage系にポータル語なし（この画面）')
 console.log('RESULT-B: '+pass+'/'+(pass+fail)+' pageerrors='+JSON.stringify(errs.slice(0,3)))
 await b.close()
 // 残置ゼロ（撤去は 系統→サプライヤー→運営 の順＝frontier_id FK）

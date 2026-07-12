@@ -23,6 +23,7 @@ type Props = {
   partnerCode: string; taxType: string; bank: Bank
   phone: string | null; address: string | null; invoiceNumber: string | null
   isFrontier?: boolean
+  isSupplier?: boolean
 }
 
 const LINE = '0.5px solid var(--line)'
@@ -37,7 +38,7 @@ const LOCK = (
   </span>
 )
 
-export default function MypageClient({ name: initialName, email, avatarUrl, avatarColor, partnerCode, taxType, bank, phone: initialPhone, address: initialAddress, invoiceNumber: initialInvoice, isFrontier }: Props) {
+export default function MypageClient({ name: initialName, email, avatarUrl, avatarColor, partnerCode, taxType, bank, phone: initialPhone, address: initialAddress, invoiceNumber: initialInvoice, isFrontier, isSupplier }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [avatar, setAvatar] = useState<string | null>(avatarUrl)
@@ -139,6 +140,19 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
             <KV label="住所" value={address || '未登録'} muted={!address} />
             <KV label="税区分" value={taxLabel} last />
           </div>
+
+          {isSupplier && (
+            <a href="/app/supplier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>
+              <span style={{ color: 'var(--c-blue)', display: 'flex', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" /><path d="M9 21V12h6v9" /></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>サプライヤー ポータル</div>
+                <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1 }}>自社メニューの案件・月次のお金を確認</div>
+              </div>
+              <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
+            </a>
+          )}
 
           {isFrontier && (
             <a href="/app/frontier" className="card-hover lift" style={{ display: 'flex', alignItems: 'center', gap: 11, margin: '0 20px 14px', background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', textDecoration: 'none', color: 'var(--txt)' }}>

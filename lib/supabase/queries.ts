@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export async function getPartnerByUserId(supabase: SupabaseClient, userId: string) {
   const { data } = await supabase
     .from('partners')
-    .select('id, code, status, tax_type, bank, is_frontier, phone, address, invoice_number')
+    .select('id, code, status, tax_type, bank, is_frontier, supplier_rate_card, phone, address, invoice_number')
     .eq('profile_id', userId)
     .single()
   return data

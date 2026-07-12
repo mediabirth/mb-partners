@@ -11,7 +11,7 @@ export default async function FrontierPage() {
   if (!user) redirect('/login')
   const supabase = await createClient()
 
-  const { data: me } = await supabase.from('partners').select('id, is_frontier').eq('profile_id', user.id).single()
+  const { data: me } = await supabase.from('partners').select('id, is_frontier, supplier_rate_card').eq('profile_id', user.id).single()
   if (!me) redirect('/app')
   if (!me.is_frontier) redirect('/app')  // フロンティアのみ
 
@@ -159,6 +159,11 @@ export default async function FrontierPage() {
   // ── 数字入り（アクティブ）状態 ─────────────────────────────
   return (
     <div className="page-anim" style={{ paddingBottom: 8 }}>
+      {(me as { supplier_rate_card?: string | null }).supplier_rate_card && (
+        <div style={{ margin: '14px 20px -4px' }}>
+          <a href="/app/supplier" style={{ fontSize: '.66rem', color: 'var(--c-blue)', textDecoration: 'none' }}>‹ サプライヤー ポータル（自社メニューの案件・月次のお金）</a>
+        </div>
+      )}
       {/* ① 収入ヒーロー：今月のオーバーライド収入＋前月比＋3指標 */}
       <div className="shine" style={{ margin: '18px 20px 0', background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)', color: '#fff', borderRadius: 18, padding: '22px 22px 18px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: -50, top: -50, width: 180, height: 180, pointerEvents: 'none' }}>
