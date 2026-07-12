@@ -7,21 +7,22 @@
 
 type Db = { from: (t: string) => any }
 
-export const STD_RATE_CARD = 'std-v1'
+export const STD_RATE_CARD = 'standard-v2' // Feature I-2: 標準の既定（std-v1は未使用のまま廃止・deprecated）
 export const OMNIS_FOUNDING_RATE_CARD = 'omnis-founding-v1'
 export const OMNIS_MONTHLY_FEE = 50000 // 税別（設計§4(d)）
 
-export type RateCard = { id: string; half_commission_rate: number; payment_fee_rate: number | null; monthly_fee: number | null; override_rate: number }
+/** fee_model: half_commission=折半（粗利ベース・個別カード用）／passthrough=報酬パススルー＋受注額(税抜)×revenue_fee_rate */
+export type RateCard = { id: string; half_commission_rate: number; payment_fee_rate: number | null; monthly_fee: number | null; override_rate: number; fee_model: 'half_commission' | 'passthrough'; revenue_fee_rate: number | null; deprecated: boolean }
 /** レートカードをDBから読む（Feature I・不変版方式）。読取失敗は既存定数へフォールバック（fail-safe）。 */
 export async function loadRateCard(db: Db, id: string | null | undefined): Promise<RateCard> {
   const cardId = id || STD_RATE_CARD
   try {
-    const { data } = await db.from('rate_cards').select('id, half_commission_rate, payment_fee_rate, monthly_fee, override_rate').eq('id', cardId).maybeSingle()
-    if (data) return { id: data.id, half_commission_rate: Number(data.half_commission_rate), payment_fee_rate: data.payment_fee_rate == null ? null : Number(data.payment_fee_rate), monthly_fee: data.monthly_fee == null ? null : Number(data.monthly_fee), override_rate: Number(data.override_rate) }
+    const { data } = await db.from('rate_cards').select('id, half_commission_rate, payment_fee_rate, monthly_fee, override_rate, fee_model, revenue_fee_rate, deprecated').eq('id', cardId).maybeSingle()
+    if (data) return { id: data.id, half_commission_rate: Number(data.half_commission_rate), payment_fee_rate: data.payment_fee_rate == null ? null : Number(data.payment_fee_rate), monthly_fee: data.monthly_fee == null ? null : Number(data.monthly_fee), override_rate: Number(data.override_rate), fee_model: data.fee_model === 'passthrough' ? 'passthrough' : 'half_commission', revenue_fee_rate: data.revenue_fee_rate == null ? null : Number(data.revenue_fee_rate), deprecated: !!data.deprecated }
   } catch { /* fallback */ }
   return cardId === OMNIS_FOUNDING_RATE_CARD
-    ? { id: cardId, half_commission_rate: 0.5, payment_fee_rate: null, monthly_fee: OMNIS_MONTHLY_FEE, override_rate: 0.10 }
-    : { id: cardId, half_commission_rate: 0.5, payment_fee_rate: 0.05, monthly_fee: null, override_rate: 0.10 }
+    ? { id: cardId, half_commission_rate: 0.5, payment_fee_rate: null, monthly_fee: OMNIS_MONTHLY_FEE, override_rate: 0.10, fee_model: 'half_commission', revenue_fee_rate: null, deprecated: false }
+    : { id: cardId, half_commission_rate: 0.5, payment_fee_rate: 0.05, monthly_fee: null, override_rate: 0.10, fee_model: 'passthrough', revenue_fee_rate: 0.05, deprecated: false }
 }
 
 export const FEE_RATE = {
@@ -38,7 +39,7 @@ export type FeeSnapshot = {
   menu_supplier_partner_id: string | null
   self_service: boolean
   cross_supplier: boolean
-  rate_kind: 'half_commission' | 'payment_fee_5' | 'corporate_override' | 'omnis_monthly' | 'none'
+  rate_kind: 'half_commission' | 'passthrough_revenue_fee' | 'payment_fee_5' | 'corporate_override' | 'omnis_monthly' | 'none'
   direction: 'charge' | 'pay' | 'none'
   rate: number | null
   rate_card_version: string
@@ -92,8 +93,10 @@ export async function resolveFeeSnapshot(db: Db, args: { partnerId: string | nul
       if (card.monthly_fee != null) { rate_kind = 'omnis_monthly'; direction = 'charge'; rate = null }
       else { rate_kind = 'payment_fee_5'; direction = 'charge'; rate = card.payment_fee_rate ?? FEE_RATE.payment_fee_5 }
     } else {
-      // 他系統(MB含む)→サプライヤーメニュー（条件②）
-      rate_kind = 'half_commission'; direction = 'charge'; rate = card.half_commission_rate
+      // 他系統(MB含む)→サプライヤーメニュー（条件②）。
+      // Feature I-2: passthrough カードは「報酬パススルー＋MB手数料=受注額(税抜)×revenue_fee_rate」（粗利ベース折半は個別カード専用）。
+      if (card.fee_model === 'passthrough') { rate_kind = 'passthrough_revenue_fee'; direction = 'charge'; rate = card.revenue_fee_rate ?? 0.05 }
+      else { rate_kind = 'half_commission'; direction = 'charge'; rate = card.half_commission_rate }
     }
     const rateCard = card.id
 
@@ -130,11 +133,14 @@ export function supplierChargeBase(input: { revenue: number; deliveryCost: numbe
 }
 
 /**
- * 逆ザヤ防止（設計§7-7）: サプライヤーメニューの報酬はMB受取50%枠内。
- * rate/continuous＝50%硬上限（エラー）／fixed＝警告（粗利が案件ごとに変わるため硬ガード不能）。
+ * サプライヤーメニューの報酬バリデーション（カード駆動・Feature I-2）。
+ * - 折半カード（fee_model=half_commission・オムニス等の個別契約）＝逆ザヤ防止（設計§7-7）:
+ *   rate/continuous＝50%硬上限（エラー）／fixed＝警告（粗利が案件ごとに変わるため硬ガード不能）。
+ * - パススルーカード（standard-v2）＝報酬はMB原資でなくパススルー＝逆ザヤ概念なし。
+ *   ただし報酬型は「固定額 or 受注額%（rate×売上ベース）」に限定（粗利%・継続は個別契約カードのみ）。
  * メニューがサプライヤー配下でなければ常にok。判定不能はfail-open（ok）。
  */
-export async function validateSupplierReward(db: Db, menuId: string, rewardType: string, rewardValue: number): Promise<{ ok: boolean; error?: string; warning?: string }> {
+export async function validateSupplierReward(db: Db, menuId: string, rewardType: string, rewardValue: number, rewardBase?: string | null): Promise<{ ok: boolean; error?: string; warning?: string }> {
   try {
     const { data: m } = await db.from('menus').select('service_menu_id').eq('id', menuId).maybeSingle()
     if (!m?.service_menu_id) return { ok: true }
@@ -142,6 +148,19 @@ export async function validateSupplierReward(db: Db, menuId: string, rewardType:
     if (!sm?.service_id) return { ok: true }
     const { data: sv } = await db.from('services').select('supplier_partner_id').eq('id', sm.service_id).maybeSingle()
     if (!sv?.supplier_partner_id) return { ok: true }
+    const { data: sp } = await db.from('partners').select('supplier_rate_card').eq('id', sv.supplier_partner_id).maybeSingle()
+    const card = await loadRateCard(db, sp?.supplier_rate_card)
+    if (card.fee_model === 'passthrough') {
+      // 標準サプライヤー：固定額 or 受注額%（売上ベースrate）のみ。逆ザヤガード不要（パススルー）。
+      if (rewardType === 'continuous') {
+        return { ok: false, error: '標準サプライヤーのメニュー報酬は「固定額」または「受注額%」のみです（継続報酬は個別契約カードのみ）' }
+      }
+      if (rewardType === 'rate' && rewardBase !== '売上') {
+        return { ok: false, error: '標準サプライヤーの率報酬は「受注額%（売上ベース）」のみです（粗利%は個別契約カードのみ）' }
+      }
+      return { ok: true }
+    }
+    // 折半カード（個別契約）＝従来の逆ザヤガード（完全不変）
     if ((rewardType === 'rate' || rewardType === 'continuous') && Number(rewardValue) > 50) {
       return { ok: false, error: '逆ザヤ防止：サプライヤーメニューの率報酬はMB受取50%枠内（50%以下）にしてください' }
     }

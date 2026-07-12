@@ -421,11 +421,22 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   // 一覧v2：トーストを {msg, undo?} 型へ拡張（undo付き＝8秒表示・deals ボードと同文法）。
   const [toast, setToast]        = useState<{ msg: string; undo?: () => void } | null>(null)
   // Feature I: 供給元（サプライヤー）一覧。console専用API＝partner/vendor面の共有クエリには一切載せない（面公開禁止）。
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string; brands: { id: string }[] }[]>([])
-  useEffect(() => { fetch('/api/console/suppliers').then(r => r.json()).then(d => setSuppliers(d.suppliers ?? [])).catch(() => {}) }, [])
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string; rate_card?: string; brands: { id: string }[] }[]>([])
+  const [rateCards, setRateCards] = useState<{ id: string; fee_model?: string }[]>([])
+  useEffect(() => {
+    fetch('/api/console/suppliers').then(r => r.json()).then(d => setSuppliers(d.suppliers ?? [])).catch(() => {})
+    fetch('/api/console/rate-cards').then(r => r.json()).then(d => setRateCards(d.cards ?? [])).catch(() => {})
+  }, [])
   const supplierOfBrand = (brandId: string): { id: string; name: string } | null => {
     for (const sp of suppliers) if (sp.brands.some(b => b.id === brandId)) return { id: sp.id, name: sp.name }
     return null
+  }
+  // Feature I-2: ブランドの供給元カードが passthrough（standard-v2）か。報酬型を「固定 or 受注額%」に絞る（サーバ側validateが正・UIは補助）。
+  const brandIsPassthrough = (brandId: string): boolean => {
+    const sp = suppliers.find(x => x.brands.some(b => b.id === brandId))
+    if (!sp) return false
+    const card = rateCards.find(c => c.id === sp.rate_card)
+    return card?.fee_model === 'passthrough'
   }
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [svcError, setSvcError]  = useState('')
@@ -533,7 +544,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
       const builtRewards: MenuReward[] = []
       for (let k = 0; k < d.rewards.length; k++) {
         const r = d.rewards[k]
-        const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'fixed' ? null : '粗利', reward_trigger: r.reward_trigger.trim() || null, default_months: r.reward_type === 'continuous' ? (parseAmount(r.reward_months) || null) : null, sort: k }
+        const payload = { reward_type: r.reward_type, reward_value: parseAmount(r.reward_value), reward_base: r.reward_type === 'fixed' ? null : (brandIsPassthrough(editing.id) ? '売上' : '粗利'), reward_trigger: r.reward_trigger.trim() || null, default_months: r.reward_type === 'continuous' ? (parseAmount(r.reward_months) || null) : null, sort: k }
         let rewardId = r.id
         if (rewardId) {
           const pr = await fetch(`/api/console/menu-rewards/${rewardId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => null)
@@ -744,13 +755,14 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                   }}>
                   <span style={{ color: 'var(--muted)', cursor: 'grab', display: 'flex', flexShrink: 0 }}><GripIcon /></span>
                   <ServiceLogo logoPath={svc.logo_path} name={svc.name} size={28} icon={svc.icon} color={svc.color} />
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</span>
                     {category && <span style={{ fontSize: 11, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{category}</span>}
+                    {/* 供給元バッジは可変幅領域に置く（幅44pxの状態スパン内に入れると長い社名で行が崩れる） */}
+                    {supplierOfBrand(svc.id) && <span style={{ fontSize: 11, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '2px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180, flexShrink: 1 }}>供給: {supplierOfBrand(svc.id)!.name}</span>}
                   </div>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, width: 44 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, background: svc.active ? 'var(--c-blue)' : 'transparent', border: svc.active ? 'none' : '1px solid var(--muted)' }} />
-                    {supplierOfBrand(svc.id) && <span style={{ fontSize: 11, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '2px 8px' }}>供給: {supplierOfBrand(svc.id)!.name}</span>}
                     <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{svc.active ? '公開' : '停止'}</span>
                   </span>
                   <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
@@ -936,9 +948,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)' }}>報酬{ri + 1}</span>
                           <button type="button" onClick={() => removeReward(mi, ri)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 500 }}>削除</button>
                         </div>
-                        {/* 報酬タイプ：固定（円）/ 粗利（%）/ 継続（毎月）の3択 */}
+                        {/* 報酬タイプ：固定（円）/ 粗利（%）/ 継続（毎月）。標準サプライヤー（passthrough）は固定/受注額%のみ（I-2） */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {([['fixed', '固定（円）'], ['rate', '粗利（%）'], ['continuous', '継続（毎月）']] as const).map(([v, l]) => (
+                          {(editing && brandIsPassthrough(editing.id)
+                            ? ([['fixed', '固定（円）'], ['rate', '受注額（%）']] as const)
+                            : ([['fixed', '固定（円）'], ['rate', '粗利（%）'], ['continuous', '継続（毎月）']] as const)).map(([v, l]) => (
                             <button type="button" key={v} onClick={() => setRewardField(mi, ri, { reward_type: v })}
                               style={{ padding: '8px 11px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500,
                                 border: `1.5px solid ${r.reward_type === v ? 'var(--c-blue)' : 'var(--line)'}`,

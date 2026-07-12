@@ -15,7 +15,7 @@ type Supplier = { id: string; name: string; code: string | null; rate_card: stri
 type Charge = { id: string; supplier_partner_id: string; deal_id: string | null; kind: string; period: string; base_amount: number; rate: number | null; amount: number; status: string; frozen_at: string; snapshot: { customer?: string } | null }
 type Preview = { rows: { kind: string; base_amount: number; amount: number; snapshot: { customer?: string } }[]; warnings: string[] }
 
-const KIND_JP: Record<string, string> = { half_commission: '折半手数料（粗利50%）', payment_fee_5: '決済手数料（5%）', omnis_monthly: '月額（ファウンディング）' }
+const KIND_JP: Record<string, string> = { half_commission: '折半手数料（粗利50%）', passthrough_revenue_fee: '販売手数料（受注額5%・報酬はパススルー）', payment_fee_5: '決済手数料（5%）', omnis_monthly: '月額（ファウンディング）' }
 const ST: Record<string, { label: string; bg: string; fg: string }> = {
   unbilled: { label: '未請求', bg: 'rgba(242,151,27,.12)', fg: '#b26a09' },
   invoiced: { label: '請求済', bg: 'rgba(86,70,230,.10)', fg: '#4733e6' },
@@ -95,7 +95,7 @@ export default function SupplierChargesPage() {
         <div style={{ padding: '24px 28px 44px', maxWidth: 1040 }}>
           {loading ? <div className="ui-skeleton" style={{ height: 120, borderRadius: 14 }} /> : suppliers.length === 0 ? (
             <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '48px 24px', textAlign: 'center', color: 'var(--muted2)', fontSize: '.78rem' }}>
-              サプライヤーが未登録です。サービスマスタでブランドに supplier（会社フロンティア）を紐づけると、ここに請求が集計されます。
+              サプライヤーが未登録です。「サプライヤー」画面で昇格し、サービスマスタでブランドに供給元を結線すると、ここに請求が集計されます。
             </div>
           ) : (
             <>

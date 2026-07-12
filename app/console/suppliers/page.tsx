@@ -11,7 +11,11 @@ import PageGuide from '@/components/PageGuide'
 import { GUIDE_SUPPLIERS } from '@/lib/console-guides'
 
 type Supplier = { id: string; code: string; name: string; status: string; tax_type: string | null; rate_card: string; brands: { id: string; name: string }[]; lineage_count: number }
-type Card = { id: string; name: string; monthly_fee: number | null; payment_fee_rate: number | null; half_commission_rate: number; override_rate: number }
+type Card = { id: string; name: string; monthly_fee: number | null; payment_fee_rate: number | null; half_commission_rate: number; override_rate: number; fee_model?: string; revenue_fee_rate?: number | null; deprecated?: boolean }
+// カード経済の要約（fee_model駆動・Feature I-2）
+const cardSummary = (c: Card) => c.fee_model === 'passthrough'
+  ? `パススルー＋受注額${Math.round((c.revenue_fee_rate ?? 0.05) * 100)}%／決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%／override${Math.round(c.override_rate * 100)}%`
+  : `折半${Math.round(c.half_commission_rate * 100)}%／${c.monthly_fee != null ? `月額¥${Number(c.monthly_fee).toLocaleString()}` : `決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%`}／override${Math.round(c.override_rate * 100)}%`
 const yen = (n: number) => `¥${Number(n || 0).toLocaleString()}`
 
 export default function SuppliersPage() {
@@ -22,7 +26,7 @@ export default function SuppliersPage() {
   const [promoteOpen, setPromoteOpen] = useState(false)
   const [frontiers, setFrontiers] = useState<{ id: string; name: string; code: string }[]>([])
   const [selPartner, setSelPartner] = useState('')
-  const [selCard, setSelCard] = useState('std-v1')
+  const [selCard, setSelCard] = useState('standard-v2')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const ym = new Date().toISOString().slice(0, 7)
@@ -55,7 +59,7 @@ export default function SuppliersPage() {
   async function promote() {
     if (!selPartner || busy) return
     const cardName = cards.find(c => c.id === selCard)?.name ?? selCard
-    if (!confirm(`このフロンティアをサプライヤーに昇格します。\n\n・適用レートカード: ${cardName}\n・以後、系統×メニューの組み合わせで手数料（折半/決済 or 月額/override）が自動判定されます\n・確定済み・凍結済みの案件には波及しません\n\nよろしいですか？`)) return
+    if (!confirm(`このフロンティアをサプライヤーに昇格します。\n\n・適用レートカード: ${cardName}\n・以後、系統×メニューの組み合わせで手数料（パススルー+受注額5%／折半／決済／月額／override）が自動判定されます\n・確定済み・凍結済みの案件には波及しません\n\nよろしいですか？`)) return
     setBusy(true)
     const r = await fetch('/api/console/suppliers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ partner_id: selPartner, rate_card_id: selCard }) })
     const j = await r.json().catch(() => ({}))
@@ -124,7 +128,7 @@ export default function SuppliersPage() {
               </select>
               <label style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--muted2)' }}>レートカード</label>
               <select value={selCard} onChange={e => setSelCard(e.target.value)} style={{ width: '100%', margin: '5px 0 16px', padding: '9px 11px', borderRadius: 9, border: '0.5px solid var(--line)', fontSize: '.8rem', fontFamily: 'inherit' }}>
-                {cards.map(c => <option key={c.id} value={c.id}>{c.name}（折半{Math.round(c.half_commission_rate * 100)}%／{c.monthly_fee != null ? `月額${yen(c.monthly_fee)}` : `決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%`}／override{Math.round(c.override_rate * 100)}%）</option>)}
+                {cards.filter(c => !c.deprecated).map(c => <option key={c.id} value={c.id}>{c.name}（{cardSummary(c)}）</option>)}
               </select>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button onClick={() => setPromoteOpen(false)} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '8px 14px' }}>キャンセル</button>

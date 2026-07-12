@@ -75,6 +75,23 @@ async function computeCharges(admin: Awaited<ReturnType<typeof createServiceRole
     })
   }
 
+  // (a2) パススルー手数料（Feature I-2・standard-v2）＝受注額(税抜)×凍結済みrate。
+  //   粗利ベースを採らない＝原価申告に依存しない検証可能な基準。パートナー報酬はパススルー（控除なし・別建て請求）。
+  for (const d of feeDeals) {
+    if ((d.fee_snapshot as { rate_kind?: string }).rate_kind !== 'passthrough_revenue_fee') continue
+    if (chargePeriodOf(d) !== period) continue
+    const revenue = (d.deal_items ?? []).reduce((s, it) => s + (Number(it.revenue) || 0), 0)
+    const frozenRate = Number((d.fee_snapshot as { rate?: number }).rate) || 0.05
+    const amount = Math.round(Math.max(0, revenue) * frozenRate)
+    // 受注額未入力（0）は凍結しない＝入力後の再クローズで拾える（折半と同じ規則）
+    if (amount <= 0) continue
+    rows.push({
+      supplier_partner_id: supplierId, deal_id: d.id, kind: 'passthrough_revenue_fee', period,
+      base_amount: revenue, rate: frozenRate, amount,
+      snapshot: { customer: d.company_name || d.customer_name, components: { revenue }, fee_snapshot: d.fee_snapshot, note: '報酬はパススルー（控除なし）・MB手数料=受注額(税抜)ベース' },
+    })
+  }
+
   // (b) 決済手数料5%＝報酬総額（税抜・源泉前）。固定/率分＝成約月・継続分＝period_month（v2 §4(b)/§7-5）
   const p5deals = feeDeals.filter(d => (d.fee_snapshot as { rate_kind?: string }).rate_kind === 'payment_fee_5')
   for (const d of p5deals) {

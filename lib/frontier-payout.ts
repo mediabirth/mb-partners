@@ -22,7 +22,7 @@ export async function loadSupplierFrontiers(admin: AnyClient): Promise<SupplierF
     for (const c of (cards ?? []) as { id: string; override_rate: number }[]) rateBy[c.id] = Number(c.override_rate)
     const out: SupplierFrontiers = {}
     for (const p of (ps ?? []) as { id: string; status: string | null; supplier_rate_card: string | null }[]) {
-      out[p.id] = { active: p.status === 'active', rate: rateBy[p.supplier_rate_card ?? 'std-v1'] }
+      out[p.id] = { active: p.status === 'active', rate: rateBy[p.supplier_rate_card ?? 'standard-v2'] }
     }
     return out
   } catch { return {} }

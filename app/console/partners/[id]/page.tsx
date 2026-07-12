@@ -32,7 +32,7 @@ export default async function PartnerDetailPage({
   const [profileForCheck, partnerRes, bankRequestsRes] = await Promise.all([
     supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
     service.from('partners')
-      .select('id, code, status, tax_type, kyc_verified_at, bank, profile_id, created_at, is_frontier, frontier_id, frontier_linked_at, phone, address, invoice_number, terms_agreed_at, terms_version, privacy_agreed_at, profiles(name, email, color)')
+      .select('id, code, status, tax_type, kyc_verified_at, bank, profile_id, created_at, is_frontier, frontier_id, frontier_linked_at, supplier_rate_card, phone, address, invoice_number, terms_agreed_at, terms_version, privacy_agreed_at, profiles(name, email, color)')
       .eq('id', id)
       .single(),
     service.from('bank_change_requests')
@@ -52,9 +52,9 @@ export default async function PartnerDetailPage({
   // R2-B: フロンティア候補（is_frontier=true のパートナー）
   const { data: frontiersRaw } = await service
     .from('partners')
-    .select('id, code, profiles(name)')
+    .select('id, code, supplier_rate_card, profiles(name)')
     .eq('is_frontier', true)
-  const frontiers = (frontiersRaw ?? []).map((f: any) => ({ id: f.id, code: f.code, name: f.profiles?.name ?? f.code }))
+  const frontiers = (frontiersRaw ?? []).map((f: any) => ({ id: f.id, code: f.code, name: f.profiles?.name ?? f.code, isSupplier: !!f.supplier_rate_card }))
 
   // Round 2: deals + payouts + inquiries (keyed by partner id)
   const [dealsRes, payoutsRes, inquiryCountRes] = await Promise.all([
@@ -334,6 +334,7 @@ export default async function PartnerDetailPage({
                 initialIsFrontier={!!(partner as any).is_frontier}
                 initialFrontierId={(partner as any).frontier_id ?? null}
                 frontiers={frontiers}
+                isSupplier={!!(partner as any).supplier_rate_card}
               />
 
               {/* Bank change requests */}

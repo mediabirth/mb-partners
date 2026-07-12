@@ -17,11 +17,11 @@ import type { Tone } from '@/components/ui/StatusPill'
 export const runtime = 'edge'
 
 const INTERNAL_CODES = new Set(['ZZ8463', 'ZZ8354'])
-type Kind = 'all' | 'referral' | 'frontier' | 'delivery'
+type Kind = 'all' | 'referral' | 'frontier' | 'supplier' | 'delivery'
 
 // BR-C2：種別を横断した統一行（該当しない列は ー）。役職は StatusPill で識別。
 type URow = {
-  kind: 'referral' | 'frontier' | 'delivery'
+  kind: 'referral' | 'frontier' | 'supplier' | 'delivery'
   id: string; href?: string
   name: string; email: string; color: string | null; avatar_url: string | null
   code: string; tax: string; deals: number | null; activeDeals: number; reward: number | null; kyc: boolean
@@ -33,7 +33,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/console/login')
   const { tab: tabParam } = await searchParams
-  const filter: Kind = (['referral', 'frontier', 'delivery'] as const).includes(tabParam as Kind) ? tabParam as Kind : 'all'
+  const filter: Kind = (['referral', 'frontier', 'supplier', 'delivery'] as const).includes(tabParam as Kind) ? tabParam as Kind : 'all'
 
   // owner/manager 認証では nested partners.profiles が profiles RLS（本人のみSELECT）で null になり氏名が「—」表示になる。
   // /console は middleware でガード済のため、氏名解決のみ service role で読取（表示専用・お金/deals/権限には不使用）。
@@ -53,13 +53,15 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const activeDealCount = (pid: string) => deals.filter(d => d.partners?.id === pid && ['received', 'in_progress'].includes(d.status)).length
   const partnerReward = (pid: string) => deals.filter(d => d.partners?.id === pid && ['paid', 'confirmed'].includes(d.status)).reduce((s, d) => s + (d.amount || 0), 0)
 
-  type P = typeof partners[number] & { is_frontier?: boolean }
+  type P = typeof partners[number] & { is_frontier?: boolean; supplier_rate_card?: string | null }
   const isRealPartner = (p: P) => !INTERNAL_CODES.has(p.code) && (p.profiles?.role ?? 'partner') === 'partner'
   const realPartners = partners.filter(isRealPartner) as P[]
   const pendingPartners = realPartners.filter(p => p.status === 'pending')
   const externalPartners = realPartners.filter(p => p.status !== 'pending').sort((a, b) => partnerReward(b.id) - partnerReward(a.id))
-  const referralPartners = externalPartners.filter(p => !p.is_frontier)
-  const frontierPartners = externalPartners.filter(p => p.is_frontier)
+  // Feature I-2 表示分離: サプライヤー（supplier_rate_card あり）はフロンティアと別区分で見せる（機構・データは不変）
+  const supplierPartners = externalPartners.filter(p => p.supplier_rate_card)
+  const referralPartners = externalPartners.filter(p => !p.is_frontier && !p.supplier_rate_card)
+  const frontierPartners = externalPartners.filter(p => p.is_frontier && !p.supplier_rate_card)
 
   const activeExternal = externalPartners.filter(p => p.status === 'active')
   const summaryReward = externalPartners.reduce((s, p) => s + partnerReward(p.id), 0)
@@ -67,7 +69,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
 
   // 統一行を構築（リファラル/フロンティア=partners・デリバリー=deliveries）。
   const partnerRow = (p: P): URow => ({
-    kind: p.is_frontier ? 'frontier' : 'referral', id: p.id, href: `/console/partners/${p.id}`,
+    kind: p.supplier_rate_card ? 'supplier' : p.is_frontier ? 'frontier' : 'referral', id: p.id, href: `/console/partners/${p.id}`,
     name: p.profiles?.name ?? '—', email: p.profiles?.email ?? '', color: p.profiles?.color ?? null,
     avatar_url: (p.profiles as { avatar_url?: string | null } | null)?.avatar_url ?? null,
     code: p.code, tax: p.tax_type === 'individual' ? '個人' : '法人',
@@ -87,6 +89,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
     { id: 'all', label: 'すべて', count: allRows.length },
     { id: 'referral', label: 'リファラル', count: referralPartners.length },
     { id: 'frontier', label: 'フロンティア', count: frontierPartners.length },
+    { id: 'supplier', label: 'サプライヤー', count: supplierPartners.length },
     { id: 'delivery', label: 'デリバリー', count: deliveries.length },
   ]
 

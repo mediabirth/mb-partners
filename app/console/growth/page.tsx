@@ -30,7 +30,7 @@ export default async function GrowthPage() {
   const [{ data: events }, { data: deals }, { data: partners }] = await Promise.all([
     admin.from('funnel_events').select('event_type, channel, partner_id, created_at'),
     admin.from('deals').select('id, partner_id, channel, source, status, created_at'),
-    admin.from('partners').select('id, code, is_frontier, profiles(name)'),
+    admin.from('partners').select('id, code, is_frontier, supplier_rate_card, profiles(name)'),
   ])
   const ev = events ?? [], dl = deals ?? [], pt = partners ?? []
 
@@ -50,7 +50,7 @@ export default async function GrowthPage() {
     const dormantDays = lastAt ? Math.floor((now - lastAt) / 86_400_000) : null
     const pShares = ev.filter(e => e.event_type === 'share' && e.partner_id === p.id).length
     const pReg = ev.filter(e => e.event_type === 'register' && e.partner_id === p.id).length
-    return { id: p.id, name: nameById[p.id]?.name, code: p.code, is_frontier: p.is_frontier, deals: pd.length, won: pd.filter(d => ['confirmed', 'paid'].includes(d.status)).length, shares: pShares, reg: pReg, dormantDays }
+    return { id: p.id, name: nameById[p.id]?.name, code: p.code, is_frontier: p.is_frontier, is_supplier: !!(p as any).supplier_rate_card, deals: pd.length, won: pd.filter(d => ['confirmed', 'paid'].includes(d.status)).length, shares: pShares, reg: pReg, dormantDays }
   }).filter(p => p.code !== 'MBHOUSE').sort((a, b) => b.deals - a.deals)
 
   const dormant = perPartner.filter(p => p.dormantDays == null || p.dormantDays >= 14)
@@ -87,7 +87,7 @@ export default async function GrowthPage() {
           <tbody>
             {perPartner.map(p => (
               <tr key={p.id}>
-                <td style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', fontWeight: 500 }}>{p.name}{p.is_frontier && <span style={{ fontSize: '.54rem', color: 'var(--c-blue)', border: '0.5px solid var(--line)', borderRadius: 20, padding: '1px 7px', marginLeft: 6 }}>フロンティア</span>}</td>
+                <td style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', fontWeight: 500 }}>{p.name}{p.is_frontier && <span style={{ fontSize: '.54rem', color: 'var(--c-blue)', border: '0.5px solid var(--line)', borderRadius: 20, padding: '1px 7px', marginLeft: 6 }}>{(p as any).is_supplier ? 'サプライヤー' : 'フロンティア'}</span>}</td>
                 <td style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', color: 'var(--muted2)', fontFamily: 'Inter' }}>{p.code}</td>
                 <td className="tnum" style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', textAlign: 'right', fontFamily: 'Inter' }}>{p.deals}</td>
                 <td className="tnum" style={{ padding: '10px 14px', borderBottom: '0.5px solid var(--line)', textAlign: 'right', fontFamily: 'Inter', color: p.won > 0 ? 'var(--green)' : 'var(--muted)' }}>{p.won}</td>

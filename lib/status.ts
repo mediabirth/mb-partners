@@ -79,6 +79,7 @@ export function projectStatus(status: string | null | undefined): { tone: Tone; 
 export const PARTNER_KIND: Record<string, Pill> = {
   referral: { tone: 'progress', label: 'リファラル' },
   frontier: { tone: 'success',  label: 'フロンティア' },
+  supplier: { tone: 'success',  label: 'サプライヤー' },  // Feature I-2: 法人・メニュー供給元（機構はfrontier・表示区分のみ）
   delivery: { tone: 'warn',     label: 'デリバリー' },
 }
 export function partnerKind(kind: string): { tone: Tone; children: string } {

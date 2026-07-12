@@ -6,6 +6,7 @@ export type RewardLike = {
   reward_type: 'fixed' | 'rate' | 'continuous'
   reward_value: number | string
   default_months?: number | null
+  reward_base?: string | null   // '粗利'（既定） | '売上'（受注額%・標準サプライヤー）
 }
 
 /** 単一報酬の値記法。fixed=¥、rate=粗利（税抜）のX%、continuous=継続 粗利（税抜）X%/月（months指定で・Yヶ月）。
@@ -14,7 +15,7 @@ export function rewardValueText(r: RewardLike, opts?: { months?: boolean }): str
   const v = Number(r.reward_value)
   if (r.reward_type === 'fixed') return `¥${v.toLocaleString()}`
   if (r.reward_type === 'continuous') return `継続 粗利（税抜）${v}%/月${opts?.months && r.default_months ? `・${r.default_months}ヶ月` : ''}`
-  return `粗利（税抜）の${v}%`
+  return r.reward_base === '売上' ? `受注額（税抜）の${v}%` : `粗利（税抜）の${v}%`
 }
 
 /** 「報酬 ¥30,000」等の統一ピル文言（単一報酬・APP用）。 */

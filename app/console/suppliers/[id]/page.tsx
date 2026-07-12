@@ -18,7 +18,10 @@ type Detail = {
   history: { event: string; from_card: string | null; to_card: string | null; created_at: string; note: string | null }[]
   charges_month: number; charges_total: number
 }
-type Card = { id: string; name: string; monthly_fee: number | null; payment_fee_rate: number | null; half_commission_rate: number; override_rate: number }
+type Card = { id: string; name: string; monthly_fee: number | null; payment_fee_rate: number | null; half_commission_rate: number; override_rate: number; fee_model?: string; revenue_fee_rate?: number | null; deprecated?: boolean }
+const cardSummary = (c: Card) => c.fee_model === 'passthrough'
+  ? `パススルー＋受注額${Math.round((c.revenue_fee_rate ?? 0.05) * 100)}%／決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%／override${Math.round(c.override_rate * 100)}%`
+  : `折半${Math.round(c.half_commission_rate * 100)}%／${c.monthly_fee != null ? `月額¥${Number(c.monthly_fee).toLocaleString()}` : `決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%`}／override${Math.round(c.override_rate * 100)}%`
 const yen = (n: number) => `¥${Number(n || 0).toLocaleString()}`
 const EV_JP: Record<string, string> = { promoted: '昇格', card_changed: 'カード変更', suspended: '契約停止', resumed: '再開' }
 
@@ -118,7 +121,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                 <div style={H}>適用レートカード（付け替え＝標準移行オプション）</div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <select value={selCard} onChange={e => setSelCard(e.target.value)} style={{ padding: '8px 11px', borderRadius: 9, border: '0.5px solid var(--line)', fontSize: '.78rem', fontFamily: 'inherit' }}>
-                    {cards.map(c => <option key={c.id} value={c.id}>{c.name}（折半{Math.round(c.half_commission_rate * 100)}%／{c.monthly_fee != null ? `月額${yen(c.monthly_fee)}` : `決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%`}／override{Math.round(c.override_rate * 100)}%）</option>)}
+                    {cards.filter(c => !c.deprecated || c.id === d.supplier.rate_card).map(c => <option key={c.id} value={c.id}>{c.name}（{cardSummary(c)}）{c.deprecated ? '（廃止）' : ''}</option>)}
                   </select>
                   <button onClick={changeCard} disabled={busy || selCard === d.supplier.rate_card} className="ui-btn ui-btn--primary" style={{ fontSize: '.7rem', padding: '8px 14px' }}>付け替える</button>
                 </div>

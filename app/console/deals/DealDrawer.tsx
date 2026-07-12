@@ -267,7 +267,8 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                 const hasCosts = assigns.length > 0 || (deal.other_cost ?? 0) > 0 || expense > 0 || revenue > 0
                 // Feature I: サプライヤー折半（fee_snapshot=half_commission）は受注額が請求ベース＝fixed報酬でも計算式ブロックを出し、
                 // 受注額をUIから入力できるようにする（未入力だと月次クローズで折半0円スキップ→再クローズ拾い直しになるため）。
-                const isSupplierHalf = (deal as { fee_snapshot?: { rate_kind?: string } }).fee_snapshot?.rate_kind === 'half_commission'
+                const feeKind = (deal as { fee_snapshot?: { rate_kind?: string } }).fee_snapshot?.rate_kind
+                const isSupplierHalf = feeKind === 'half_commission' || feeKind === 'passthrough_revenue_fee'
                 const showFormula = ri.isRate || cont.isContinuous || deal.intake_type === 'direct' || hasCosts || isSupplierHalf
                 const projectedReward = ri.isRate
                   ? Math.round(Math.max(0, baseWord(ri.baseLabel) === '売上' ? revenue : gross) * (ri.rate as number) / 100)
