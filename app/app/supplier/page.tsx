@@ -117,6 +117,15 @@ export default async function SupplierPortalPage() {
       {/* 1. 自社メニューの案件（読み取り専用） */}
       <div style={{ padding: '18px 20px 0' }}>
         <h2 style={H}>自社メニューの案件</h2>
+        {brands.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '0 0 8px' }}>
+            {brands.map(b => (
+              <span key={b.id} style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', background: '#fff', border: LINE, borderRadius: 999, padding: '3px 10px' }}>
+                {b.name}<span style={{ marginLeft: 5, color: b.active ? 'var(--c-blue)' : 'var(--muted)' }}>{b.active ? '公開中' : '停止中'}</span>
+              </span>
+            ))}
+          </div>
+        )}
         <div style={CARD}>
           {deals.length === 0 ? (
             <p style={{ fontSize: '.74rem', color: 'var(--muted2)', padding: '18px 16px', margin: 0 }}>まだ案件がありません。メニューが公開されると、ここに紹介案件が並びます。</p>
