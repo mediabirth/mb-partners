@@ -14,19 +14,18 @@ async function requireSupplierId(): Promise<string> {
   return me!.id
 }
 
-import PageGuide from '@/components/PageGuide'
+import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_PRODUCTS } from '@/lib/supplier-guides'
 import ProductsClient from './ProductsClient'
 // 商品: ブランド/メニューの管理（即時系＋申請系を1画面に・「申請中」バッジ・PC=2ペインはSupplierSettings page変種）
 export default async function SupplierProductsPage() {
   await requireSupplierId()
   return (
-    <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 980, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>商品</h1>
-        <PageGuide data={SG_PRODUCTS} />
+    <div className="page-anim">
+      <SupplierTopbar title="サービスマスタ" guide={SG_PRODUCTS} />
+      <div style={{ ...CONTENT, maxWidth: 760 }}>
+        <ProductsClient />
       </div>
-      <ProductsClient />
     </div>
   )
 }

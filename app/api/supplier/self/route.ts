@@ -54,7 +54,7 @@ export async function GET() {
   if (!me) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
   // サクサク: 直列チェーンを段階並列化（brands→[sms/deals素/reqs]→menus→[rewards/frozen/asg]・結果は従来と同一）
-  const { data: brands } = await admin.from('services').select('id, name, active, supplier_memo, image_url').eq('supplier_partner_id', me.partnerId).order('sort')
+  const { data: brands } = await admin.from('services').select('id, name, active, supplier_memo, image_url, logo_path, icon, color, category').eq('supplier_partner_id', me.partnerId).order('sort')
   const svIds = (brands ?? []).map(b => b.id)
   const [smsRes, dsRes, reqsRes, honorificMod] = await Promise.all([
     svIds.length ? admin.from('service_menus').select('id, service_id').in('service_id', svIds) : Promise.resolve({ data: [] as never[] }),

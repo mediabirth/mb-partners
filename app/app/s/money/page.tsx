@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
-import PageGuide from '@/components/PageGuide'
+import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_MONEY } from '@/lib/supplier-guides'
 /**
  * お金: 「払う（MBへ・委託先）」と「もらう（紹介報酬）」の2カラム（PC）。
@@ -60,16 +60,14 @@ export default async function SupplierMoneyPage() {
   }
   const bank = (me as { bank?: { bank_name?: string; branch_name?: string; account_type?: string; account_number?: string; account_holder?: string } | null }).bank ?? null
 
-  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13 }
-  const H2: React.CSSProperties = { fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }
+  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }
+  const H2: React.CSSProperties = { fontSize: '11px', fontWeight: 500, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: '4px 2px 12px', borderBottom: '0.5px solid var(--line)', paddingBottom: 8 }
   const SUB: React.CSSProperties = { fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', padding: '11px 15px 4px' }
 
   return (
-    <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 980, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>お金</h1>
-        <PageGuide data={SG_MONEY} />
-      </div>
+    <div className="page-anim">
+      <SupplierTopbar title="お金" guide={SG_MONEY} />
+      <div style={{ ...CONTENT }}>
       <div className="sup-money" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
         {/* 払う */}
         <div>
@@ -86,7 +84,7 @@ export default async function SupplierMoneyPage() {
                     <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(Number(r.amount))}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.74rem', fontWeight: 700 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.74rem', fontWeight: 500 }}>
                   <span>合計（見込み）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(previewTotal)}</span>
                 </div>
               </>
@@ -113,7 +111,7 @@ export default async function SupplierMoneyPage() {
             <div style={{ display: 'flex', gap: 0 }}>
               {[['提示中', asgSummary.proposed], ['了承済', asgSummary.accepted], ['納品済み', asgSummary.delivered]].map(([l, v], i) => (
                 <div key={String(l)} style={{ flex: 1, textAlign: 'center', borderLeft: i === 0 ? 'none' : '0.5px solid var(--line)' }}>
-                  <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.95rem', fontWeight: 700 }}>{String(v)}</div>
+                  <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.95rem', fontWeight: 500 }}>{String(v)}</div>
                   <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 2 }}>{String(l)}</div>
                 </div>
               ))}
@@ -126,7 +124,7 @@ export default async function SupplierMoneyPage() {
           <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
             <div style={{ padding: '12px 15px', borderBottom: '0.5px solid var(--line)' }}>
               <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)' }}>今月のお受け取り見込み</div>
-              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.25rem', fontWeight: 700, marginTop: 4 }}>{yen(ownMonth + netKick)}</div>
+              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.25rem', fontWeight: 500, marginTop: 4 }}>{yen(ownMonth + netKick)}</div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', fontSize: '.72rem' }}>
               <span style={{ color: 'var(--muted2)' }}>あなたの紹介分</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(ownMonth)}</span>
@@ -152,6 +150,7 @@ export default async function SupplierMoneyPage() {
         </div>
       </div>
       <style>{`@media (min-width:1024px){ .sup-money{grid-template-columns:3fr 2fr !important} }`}</style>
+      </div>
     </div>
   )
 }

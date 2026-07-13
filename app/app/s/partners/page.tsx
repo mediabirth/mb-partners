@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
 import CountUp from '@/components/CountUp'
-import PageGuide from '@/components/PageGuide'
+import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_NETWORK } from '@/lib/supplier-guides'
 import SupplierInvite from './SupplierInvite'
 import DeliverySection from './DeliverySection'
@@ -57,16 +57,14 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
   }
   const sorted = [...subs].sort((a, b2) => (per[b2.id]?.mRev ?? 0) - (per[a.id]?.mRev ?? 0))
 
-  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13 }
-  const TH: React.CSSProperties = { textAlign: 'left', fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', padding: '9px 14px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }
-  const TD: React.CSSProperties = { fontSize: '.74rem', padding: '11px 14px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }
+  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }
+  const TH: React.CSSProperties = { textAlign: 'left', fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', padding: '9px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }
+  const TD: React.CSSProperties = { fontSize: '.72rem', padding: '11px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }
 
   return (
-    <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 1120, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>パートナー</h1>
-        <PageGuide data={SG_NETWORK} />
-      </div>
+    <div className="page-anim">
+      <SupplierTopbar title="パートナー" guide={SG_NETWORK} />
+      <div style={{ ...CONTENT }}>
 
       {/* 区分タブ（MBコンソール パートナーの区分と同文法: パートナー/委託先） */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
@@ -88,7 +86,7 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
         ].map(c => (
           <div key={c.l} style={{ ...CARD, padding: '13px 15px' }}>
             <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>{c.l}</div>
-            <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 700, marginTop: 4 }}>
+            <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 500, marginTop: 4 }}>
               {c.yen && '¥'}<CountUp value={c.v} /><span style={{ fontSize: '.58rem', fontWeight: 400, color: 'var(--muted2)', marginLeft: 5 }}>{c.sub}</span>
             </div>
           </div>
@@ -136,7 +134,7 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
       {/* MB Partnersメニュー分の還元（小さく・契約ベース） */}
       <div style={{ ...CARD, marginTop: 12, padding: '12px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, fontSize: '.68rem', fontWeight: 500 }}>MB Partnersのサービスを紹介した分の還元（今月）</div>
-        <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 700, flexShrink: 0 }}>¥{mbKickback.toLocaleString()}</div>
+        <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 500, flexShrink: 0 }}>¥{mbKickback.toLocaleString()}</div>
       </div>
 
       <div style={{ ...CARD, marginTop: 12, padding: '12px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -144,6 +142,7 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
         <a href="/app/refer" style={{ flexShrink: 0, fontSize: '.7rem', fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, minHeight: 40, padding: '0 16px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>紹介する →</a>
       </div>
       </>}
+      </div>
     </div>
   )
 }

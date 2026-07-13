@@ -14,7 +14,7 @@ async function requireSupplierId(): Promise<string> {
   return me!.id
 }
 
-import PageGuide from '@/components/PageGuide'
+import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_SETTINGS } from '@/lib/supplier-guides'
 import BankCard from './BankCard'
 // 設定: 会社情報・変更申請履歴・通知先
@@ -25,15 +25,13 @@ export default async function SupplierSettingsPage() {
   const { data: p } = await admin.from('partners').select('code, tax_type, phone, bank, profiles(name, email)').eq('id', supplierId).maybeSingle()
   const prof = (p?.profiles ?? null) as { name?: string | null; email?: string | null } | null
   const { data: reqs } = await admin.from('supplier_change_requests').select('id, kind, payload, status, reason, created_at').eq('supplier_partner_id', supplierId).order('created_at', { ascending: false }).limit(30)
-  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13 }
+  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }
   const ROW: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.74rem' }
   return (
-    <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 720, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>設定</h1>
-        <PageGuide data={SG_SETTINGS} />
-      </div>
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>会社情報</h2>
+    <div className="page-anim">
+      <SupplierTopbar title="設定" guide={SG_SETTINGS} />
+      <div style={{ ...CONTENT, maxWidth: 760 }}>
+      <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>会社情報</h2>
       <div style={{ ...CARD, overflow: 'hidden', marginBottom: 16 }}>
         <div style={{ ...ROW, borderTop: 'none' }}><span style={{ color: 'var(--muted2)' }}>会社名</span><b>{prof?.name ?? '—'}</b></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>ID</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{p?.code ?? '—'}</span></div>
@@ -42,7 +40,7 @@ export default async function SupplierSettingsPage() {
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>電話番号</span><span>{p?.phone ?? '—'}</span></div>
       </div>
 
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>振込先口座</h2>
+      <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>振込先口座</h2>
       <BankCard bank={(p as { bank?: Record<string, string> | null })?.bank ?? null} />
 
       <div style={{ ...CARD, padding: '11px 15px', marginTop: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -50,7 +48,7 @@ export default async function SupplierSettingsPage() {
         <a href="/app/mypage" style={{ flexShrink: 0, fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>マイページ →</a>
       </div>
 
-      <h2 style={{ fontSize: '.78rem', fontWeight: 700, margin: '0 0 8px' }}>変更申請の履歴</h2>
+      <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>変更申請の履歴</h2>
       <div style={{ ...CARD, overflow: 'hidden' }}>
         {(reqs ?? []).length === 0 ? (
           <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>申請はまだありません（商品ページから申請できます）。</p>
@@ -62,6 +60,7 @@ export default async function SupplierSettingsPage() {
             </span>
           </div>
         ))}
+      </div>
       </div>
     </div>
   )

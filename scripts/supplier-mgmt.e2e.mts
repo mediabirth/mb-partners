@@ -313,10 +313,11 @@ for(const vp of [{width:375,height:667},{width:1024,height:768}]){
     ok(t.includes('パートナーを増やす')&&!t.includes('招待リンクを作成'),'[375] ヒーローCTA（フォーム不在）')
     ok(t.includes('お金の内訳')&&t.includes('あなたの会社の手残り'),'[375] お金の内訳（ウォーターフォール）')
     ok(t.includes('パートナーの成果')&&t.includes('パイプライン'),'[375] v5: パートナー成果＋パイプライン（吸収）')
+    ok(t.includes('ホーム')&&!t.includes('商品'),'[375] v7: サービスマスタ改名（商品語ゼロ）')
     // ドロワーでナビ全項目
     await sp.locator('button[aria-label="メニュー"]').click();await sp.waitForTimeout(600)
     const dt=await sp.evaluate(`document.body.innerText`) as string
-    ok(dt.includes('パートナー')&&dt.includes('商品')&&dt.includes('案件')&&dt.includes('お金')&&dt.includes('設定')&&dt.includes('供給 検証'),'[375] ドロワー: ナビ全項目＋アカウントチップ（会社名）')
+    ok(dt.includes('パートナー')&&dt.includes('サービスマスタ')&&dt.includes('案件')&&dt.includes('お金')&&dt.includes('設定')&&dt.includes('供給 検証'),'[375] ドロワー: ナビ全項目（サービスマスタ改名）＋アカウントチップ')
     await sp.locator('button[aria-label="閉じる"]').click();await sp.waitForTimeout(400)
     ok(t.includes('CCE2E-A')&&t.includes('CC-E2Eブランド'),'[375] ポータル: 自社案件表示')
     await sp.goto(BASE+'/app/s/money',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2800)

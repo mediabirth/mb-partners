@@ -7,8 +7,9 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import ServiceAvatar from '@/components/ServiceAvatar'
 
-type Brand = { id: string; name: string; active: boolean; supplier_memo: string | null; image_url: string | null }
+type Brand = { id: string; name: string; active: boolean; supplier_memo: string | null; image_url: string | null; logo_path: string | null; icon: string | null; color: string | null; category: string | null }
 type Menu = { id: string; name: string; service_id: string; public_description: string | null }
 type Reward = { id: string; menu_id: string; reward_type: string; reward_value: number; reward_base: string | null }
 type Req = { id: string; kind: string; menu_id: string | null; service_id: string; payload: { value?: unknown }; status: string; reason: string | null }
@@ -55,22 +56,25 @@ export default function ProductsClient() {
   if (!data.brands.length) return <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>ブランドがまだありません。搭載についてはMB Partnersへご相談ください。</p>
 
   const AMBER = (label = '申請中') => <span style={{ fontSize: '.54rem', fontWeight: 700, color: '#8a6100', background: 'rgba(224,168,0,.14)', borderRadius: 999, padding: '2px 8px', flexShrink: 0 }}>{label}</span>
-  const FLD: React.CSSProperties = { width: '100%', minHeight: 40, padding: '8px 10px', borderRadius: 8, border: LINE, fontSize: '.76rem', fontFamily: 'inherit', boxSizing: 'border-box' }
+  const FLD: React.CSSProperties = { width: '100%', padding: '8px 11px', borderRadius: 8, border: LINE, fontSize: '.82rem', fontFamily: 'inherit', color: 'var(--txt)', background: '#fff', boxSizing: 'border-box' }
   const BTN: React.CSSProperties = { fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, minHeight: 38, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', color: 'var(--c-blue)', background: 'var(--blue-bg2)', flexShrink: 0 }
-  const LBL: React.CSSProperties = { fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }
+  const LBL: React.CSSProperties = { fontSize: 11, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.03em', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }
 
   return (
     <div>
       {/* 一覧（サービスマスタと同じ1行文法） */}
-      <div style={{ background: '#fff', border: LINE, borderRadius: 13, overflow: 'hidden', maxWidth: 720 }}>
+      <div style={{ background: 'var(--s-0, #fff)', border: LINE, borderRadius: 14, overflow: 'hidden' }}>
         {data.brands.map((br, i) => (
           <button key={br.id} onClick={() => { setEditing(br.id); setNavSel('basic') }}
-            style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : LINE, minHeight: 52, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--blue-bg2)', color: 'var(--c-blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '.76rem', fontWeight: 700, flexShrink: 0 }}>{br.name[0]}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--txt)' }}>{br.name}</span>
-            {brandPending(br.id) > 0 && AMBER(`申請中 ${brandPending(br.id)}`)}
+            style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : LINE, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ServiceAvatar logoPath={br.logo_path} icon={br.icon ?? 'arrows'} color={br.color ?? '#4733e6'} name={br.name} size={28} />
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--txt)' }}>{br.name}</span>
+              {br.category && <span style={{ fontSize: 11, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{br.category}</span>}
+              {brandPending(br.id) > 0 && AMBER(`申請中 ${brandPending(br.id)}`)}
+            </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: br.active ? 'var(--c-blue)' : 'transparent', border: br.active ? 'none' : '1px solid var(--muted)' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', boxSizing: 'border-box', background: br.active ? 'var(--c-blue)' : 'transparent', border: br.active ? 'none' : '1px solid var(--muted)' }} />
               <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{br.active ? '公開' : '停止'}</span>
             </span>
             <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
@@ -87,8 +91,8 @@ export default function ProductsClient() {
           <div onClick={() => setEditing('')} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', backdropFilter: 'blur(2px)', zIndex: 40 }} />
           <div className="exp-in prod-drawer" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 760, maxWidth: '96vw', background: 'var(--bg2)', zIndex: 45, boxShadow: '-12px 0 40px rgba(14,14,20,.18)', display: 'flex', overflow: 'hidden' }}>
             {/* 左ナビ */}
-            <div className="prod-lnav" style={{ width: 150, flexShrink: 0, background: '#fff', borderRight: LINE, overflowY: 'auto', padding: '14px 8px' }}>
-              <div style={{ fontSize: '.72rem', fontWeight: 700, padding: '0 8px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</div>
+            <div className="prod-lnav" style={{ width: 132, flexShrink: 0, background: '#fff', borderRight: LINE, overflowY: 'auto', padding: '14px 8px' }}>
+              <div style={{ fontSize: '.72rem', fontWeight: 500, padding: '0 8px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</div>
               <button onClick={() => setNavSel('basic')} style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderRadius: 8, minHeight: 38, padding: '0 10px', fontSize: '.72rem', fontWeight: navSel === 'basic' ? 700 : 400, background: navSel === 'basic' ? 'var(--blue-bg2)' : 'none', color: navSel === 'basic' ? 'var(--c-blue)' : 'var(--txt)' }}>基本情報</button>
               <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', padding: '12px 10px 4px' }}>メニュー</div>
               {brandMenus.map(m => (
@@ -131,7 +135,7 @@ export default function ProductsClient() {
                     <button disabled={busy || !!pendingOf('menu_name', selMenu.id)} onClick={() => call('POST', { kind: 'menu_name', service_id: brand.id, menu_id: selMenu.id, value: d('mn:' + selMenu.id, selMenu.name) }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
                   </div>
                   <div style={{ borderTop: LINE, paddingTop: 12, marginBottom: 14 }}>
-                    <div style={{ fontSize: '.7rem', fontWeight: 700, marginBottom: 8 }}>紹介報酬（すぐ反映）</div>
+                    <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.03em', marginBottom: 8 }}>紹介報酬（すぐ反映）</div>
                     {data.rewards.filter(r => r.menu_id === selMenu.id).length === 0 ? (
                       <p style={{ fontSize: '.7rem', color: 'var(--muted2)', margin: 0 }}>報酬が未設定です。設定はMB Partnersへご相談ください。</p>
                     ) : data.rewards.filter(r => r.menu_id === selMenu.id).map(r => (

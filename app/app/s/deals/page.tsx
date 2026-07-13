@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import PageGuide from '@/components/PageGuide'
+import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_DEALS } from '@/lib/supplier-guides'
 import { DEAL_STATUS } from '@/lib/status'
 
@@ -53,11 +53,9 @@ export default function SupplierDealsPage() {
   }
 
   return (
-    <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 980, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>案件</h1>
-        <PageGuide data={SG_DEALS} />
-      </div>
+    <div className="page-anim">
+      <SupplierTopbar title="案件" guide={SG_DEALS} />
+      <div style={{ ...CONTENT }}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         {FILTERS.map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)} style={{ fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500, minHeight: 34, padding: '0 14px', borderRadius: 999, cursor: 'pointer', border: `1.5px solid ${filter === v ? 'var(--c-blue)' : 'var(--line)'}`, background: filter === v ? 'var(--blue-bg2)' : '#fff', color: filter === v ? 'var(--c-blue)' : 'var(--muted2)' }}>{l}</button>
@@ -70,7 +68,7 @@ export default function SupplierDealsPage() {
           return (
             <div key={key} style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, padding: '2px 4px 8px' }}>
-                <span style={{ fontSize: '.68rem', fontWeight: 700 }}>{label}</span>
+                <span style={{ fontSize: '.68rem', fontWeight: 500 }}>{label}</span>
                 <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.6rem', color: 'var(--muted2)' }}>{col.length}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60, background: 'var(--bg2)', borderRadius: 12, padding: 8 }}>
@@ -94,7 +92,7 @@ export default function SupplierDealsPage() {
         })}
       </div>
       {/* SP: リスト（テーブル） */}
-      <div className="sup-list" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13, overflow: 'hidden' }}>
+      <div className="sup-list" style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead>
@@ -143,6 +141,7 @@ export default function SupplierDealsPage() {
         </div>
       </div>
       <style>{`@media (min-width:1024px){ .sup-board{display:flex !important} .sup-list{display:none} }`}</style>
+      </div>
       {toast && <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '10px 2px 0' }}>{toast}</p>}
 
       {/* 行タップ→詳細ドロワー（コンソール文法の簡易版・createPortal=page-anim包含ブロック事故回避） */}

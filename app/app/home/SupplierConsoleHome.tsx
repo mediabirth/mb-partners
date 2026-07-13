@@ -1,6 +1,6 @@
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
 import CountUp from '@/components/CountUp'
-import PageGuide from '@/components/PageGuide'
+import { SupplierTopbar, CONTENT, SectionTitle } from '../s/SupplierChrome'
 import { SG_HOME } from '@/lib/supplier-guides'
 import { customerHonorific } from '@/lib/customer'
 import { DEAL_STATUS } from '@/lib/status'
@@ -94,15 +94,13 @@ export default async function SupplierConsoleHome() {
   const awaitingDelivery = ((asgRes.data ?? []) as { status: string | null }[]).filter(a => a.status === 'accepted' || a.status === 'assigned').length
   const rejReqs = rejReqsRes.data
 
-  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13 }
-  const H2: React.CSSProperties = { fontSize: '.82rem', fontWeight: 700, margin: '0 0 8px' }
+  const CARD: React.CSSProperties = { background: 'var(--s-0, #fff)', border: '0.5px solid var(--line)', borderRadius: 14 }
+  const H2: React.CSSProperties = { fontSize: '11px', fontWeight: 500, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: '4px 2px 12px', borderBottom: '0.5px solid var(--line)', paddingBottom: 8 }
 
   return (
-    <div className="page-anim" style={{ padding: '18px 18px 40px', maxWidth: 1120, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <h1 style={{ fontSize: '.95rem', fontWeight: 700 }}>ホーム</h1>
-        <PageGuide data={SG_HOME} />
-      </div>
+    <div className="page-anim">
+      <SupplierTopbar title="ホーム" guide={SG_HOME} />
+      <div style={{ ...CONTENT }}>
 
       {/* ヒーロー（コンソール・ダッシュボード同文法・CTA統合） */}
       <div className="page-anim shine card-hover" style={{ position: 'relative', borderRadius: 16, padding: '20px 24px', marginBottom: 14, background: 'linear-gradient(120deg, var(--c-blue) 0%, #3A28CE 100%)', color: '#fff', overflow: 'hidden' }}>
@@ -121,7 +119,7 @@ export default async function SupplierConsoleHome() {
               )}
             </div>
           </div>
-          <a href="/app/s/partners" style={{ flexShrink: 0, fontSize: '.74rem', fontWeight: 700, color: 'var(--c-blue)', background: '#fff', borderRadius: 999, minHeight: 44, padding: '0 20px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>パートナーを増やす →</a>
+          <a href="/app/s/partners" style={{ flexShrink: 0, fontSize: '.74rem', fontWeight: 500, color: 'var(--c-blue)', background: '#fff', borderRadius: 999, minHeight: 44, padding: '0 20px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>パートナーを増やす →</a>
         </div>
       </div>
 
@@ -134,7 +132,7 @@ export default async function SupplierConsoleHome() {
         ].map(c => (
           <div key={c.l} style={{ ...CARD, padding: '13px 15px' }}>
             <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>{c.l}</div>
-            <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 700, marginTop: 4 }}>
+            <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 500, marginTop: 4 }}>
               {c.yen && '¥'}<CountUp value={c.v} /><span style={{ fontSize: '.58rem', fontWeight: 400, color: 'var(--muted2)', marginLeft: 5 }}>{c.sub}</span>
             </div>
           </div>
@@ -142,7 +140,7 @@ export default async function SupplierConsoleHome() {
       </div>
 
       {/* お金の内訳（サプライヤー版ウォーターフォール・コンソール同バー表現・単一ソース由来） */}
-      <h2 style={{ ...H2, marginTop: 16 }}>お金の内訳</h2>
+      <div style={{ marginTop: 20 }}><SectionTitle title="お金の内訳" /></div>
       <div style={{ ...CARD, padding: '16px 18px' }}>
         <WaterRow label="総受注額" val={companyRevenue} pct={100} color="var(--c-blue)" head />
         <WaterRow label="パートナーへの報酬" val={rewardsMonth} pct={companyRevenue > 0 ? Math.round(rewardsMonth / companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
@@ -155,11 +153,11 @@ export default async function SupplierConsoleHome() {
       {/* パートナーの成果（旧・パートナーページのヒーローを吸収）＋パイプライン */}
       <div className="sup-2col" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 16 }}>
         <div>
-          <h2 style={H2}>パートナーの成果</h2>
+          <SectionTitle title="パートナーの成果" />
           <div style={{ ...CARD, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '13px 15px', borderBottom: '0.5px solid var(--line)' }}>
               <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>今月生んだ売上</span>
-              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 700 }}>¥{netRevenue.toLocaleString()}</span>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500 }}>¥{netRevenue.toLocaleString()}</span>
               <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>{netCount}件 ・ {teamN}名</span>
               <a href="/app/s/partners" style={{ marginLeft: 'auto', fontSize: '.64rem', color: 'var(--c-blue)', textDecoration: 'none', flexShrink: 0 }}>一覧 →</a>
             </div>
@@ -174,12 +172,12 @@ export default async function SupplierConsoleHome() {
           </div>
         </div>
         <div>
-          <h2 style={H2}>パイプライン</h2>
+          <SectionTitle title="パイプライン" />
           <div style={{ ...CARD, padding: '13px 15px' }}>
             <div style={{ display: 'flex' }}>
               {[['受付', received], ['対応中', negotiating], ['進行中 計', pipelineDeals.length]].map(([l, v], i) => (
                 <div key={String(l)} style={{ flex: 1, textAlign: 'center', borderLeft: i === 0 ? 'none' : '0.5px solid var(--line)' }}>
-                  <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 700 }}>{String(v)}</div>
+                  <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500 }}>{String(v)}</div>
                   <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 2 }}>{String(l)}</div>
                 </div>
               ))}
@@ -192,7 +190,7 @@ export default async function SupplierConsoleHome() {
       <div className="sup-2col" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 16 }}>
         {/* 要対応 */}
         <div>
-          <h2 style={H2}>次の一手</h2>
+          <SectionTitle title="次の一手" />
           <div style={{ ...CARD, overflow: 'hidden' }}>
             {needRevenue.length === 0 && awaitingDelivery === 0 && (rejReqs ?? []).length === 0 ? (
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>今日は対応が必要な項目はありません。</p>
@@ -225,7 +223,7 @@ export default async function SupplierConsoleHome() {
 
         {/* 最近の動き */}
         <div>
-          <h2 style={H2}>今月の流れ</h2>
+          <SectionTitle title="今月の流れ" />
           <div style={{ ...CARD, overflow: 'hidden' }}>
             {deals.length === 0 ? (
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>まだ案件がありません。メニューが公開されるとここに並びます。</p>
@@ -238,6 +236,7 @@ export default async function SupplierConsoleHome() {
             ))}
           </div>
         </div>
+      </div>
       </div>
       <style>{`@media (min-width:1024px){ .sup-2col{grid-template-columns:1fr 1fr !important} }
 .sup-new{animation:supNew 1.6s ease-out}

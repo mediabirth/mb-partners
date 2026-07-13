@@ -14,7 +14,7 @@ import BrandMark from '@/components/ui/BrandMark'
 const NAV = [
   { href: '/app', label: 'ホーム', exact: true, icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z" /> },
   { href: '/app/s/partners', label: 'パートナー', icon: <><circle cx="5" cy="12" r="2.4" /><circle cx="19" cy="5" r="2.4" /><circle cx="19" cy="19" r="2.4" /><path d="M7.2 11l9.4-5M7.2 13l9.4 5" /></> },
-  { href: '/app/s/products', label: '商品', icon: <path d="M21 8l-9-5-9 5v8l9 5 9-5V8zM3.3 8.5L12 13l8.7-4.5M12 13v8" /> },
+  { href: '/app/s/products', label: 'サービスマスタ', icon: <path d="M21 8l-9-5-9 5v8l9 5 9-5V8zM3.3 8.5L12 13l8.7-4.5M12 13v8" /> },
   { href: '/app/s/deals', label: '案件', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { href: '/app/s/money', label: 'お金', icon: <path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /> },
   { href: '/app/s/settings', label: '設定', icon: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34h0a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55h0a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v0a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z" /></> },
@@ -60,12 +60,12 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
 
   const startNav = () => setNavving(true)
   const NavList = ({ onNav }: { onNav?: () => void }) => (
-    <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 10px' }}>
+    <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 14px' }}>
       {NAV.map(n => {
         const on = isActive(n)
         return (
           <Link prefetch key={n.href} href={n.href} onClick={onNav}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, padding: '0 12px', borderRadius: 9, textDecoration: 'none', fontSize: '.8rem', fontWeight: on ? 700 : 500, color: on ? 'var(--c-blue)' : 'var(--txt)', background: on ? 'var(--blue-bg2)' : 'transparent' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 42, padding: '10px 14px', borderRadius: 9, textDecoration: 'none', fontSize: '.77rem', fontWeight: on ? 700 : 500, color: on ? 'var(--c-blue)' : 'var(--t-tertiary)', background: on ? 'var(--blue-bg2)' : 'transparent', boxSizing: 'border-box' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{n.icon}</svg>
             {n.label}
           </Link>
