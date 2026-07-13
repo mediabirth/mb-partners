@@ -306,21 +306,22 @@ for(const vp of [{width:375,height:667},{width:1024,height:768}]){
   if(vp.width===375)ok(/\/app\/?$/.test(sp.url())||sp.url().endsWith('/app'),'[375] 旧URL /app/supplier→ホーム（ミニコンソール）へ',sp.url())
   const t=await sp.evaluate(`document.body.innerText`) as string
   if(vp.width===375){
-    ok(t.includes('今月の売上（成約受注額）')&&t.includes('進行中の案件')&&t.includes('紹介者')&&t.includes('今月のお支払い見込み'),'[375] ホームv4: ヒーロー＋数字3枚')
+    ok(t.includes('今月の売上（成約受注額）')&&t.includes('進行中の案件')&&t.includes('パートナー')&&t.includes('今月のお支払い見込み'),'[375] ホームv5: ヒーロー＋数字3枚')
     ok(t.includes('次の一手')&&t.includes('今月の流れ'),'[375] 次の一手＋今月の流れ')
-    ok(t.includes('紹介者を増やす')&&!t.includes('招待リンクを作成'),'[375] ヒーローCTA（フォーム不在）')
+    ok(t.includes('パートナーを増やす')&&!t.includes('招待リンクを作成'),'[375] ヒーローCTA（フォーム不在）')
     ok(t.includes('お金の内訳')&&t.includes('あなたの会社の手残り'),'[375] お金の内訳（ウォーターフォール）')
+    ok(t.includes('パートナーの成果')&&t.includes('パイプライン'),'[375] v5: パートナー成果＋パイプライン（吸収）')
     // ドロワーでナビ全項目
     await sp.locator('button[aria-label="メニュー"]').click();await sp.waitForTimeout(600)
     const dt=await sp.evaluate(`document.body.innerText`) as string
-    ok(dt.includes('紹介者')&&dt.includes('商品')&&dt.includes('案件')&&dt.includes('お金')&&dt.includes('設定')&&dt.includes('供給 検証'),'[375] ドロワー: ナビ全項目＋アカウントチップ（会社名）')
+    ok(dt.includes('パートナー')&&dt.includes('商品')&&dt.includes('案件')&&dt.includes('お金')&&dt.includes('設定')&&dt.includes('供給 検証'),'[375] ドロワー: ナビ全項目＋アカウントチップ（会社名）')
     await sp.locator('button[aria-label="閉じる"]').click();await sp.waitForTimeout(400)
     ok(t.includes('CCE2E-A')&&t.includes('CC-E2Eブランド'),'[375] ポータル: 自社案件表示')
     await sp.goto(BASE+'/app/s/money',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2800)
     const tm=await sp.evaluate(`document.body.innerText`) as string
     ok(tm.includes('お支払い（MB Partnersへ）')&&tm.includes('お受け取り')&&tm.includes('振込先口座'),'[375] お金v2: 左右分離＋口座カード')
-    ok(tm.includes('販売手数料（受注額5%）')&&tm.includes('15,000'),'[375] お金: 販売手数料15,000（単一ソース）')
-    ok(tm.includes('月額（プラン基本料）')&&tm.includes('50,000'),'[375] お金: 月額50,000（履歴）')
+    ok(tm.includes('販売手数料')&&!tm.includes('折半')&&!tm.includes('5%）')&&tm.includes('15,000'),'[375] お金v5: 平易ラベル（条件語なし）＋実数15,000')
+    ok(tm.includes('月額利用料')&&tm.includes('50,000'),'[375] お金v5: 月額利用料50,000（履歴）')
     ok(tm.includes('締め済み・請求書待ち'),'[375] お金: 対外語彙')
     ok(tm.includes('委託先への支払い'),'[375] お金: 委託サマリ')
     ok(!tm.includes('unbilled')&&!tm.includes('invoiced')&&!tm.includes('settled'),'[375] お金: 内部語彙ゼロ')
@@ -329,11 +330,14 @@ for(const vp of [{width:375,height:667},{width:1024,height:768}]){
     ok((await sp.evaluate(`document.documentElement.scrollWidth`) as number)<=375,'[375] お金: 溢れゼロ')
     await sp.goto(BASE+'/app/s/deals',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2800)
     const td=await sp.evaluate(`document.body.innerText`) as string
-    ok(td.includes('CCE2E-A')&&td.includes('あなたの紹介者')&&td.includes('MB Partnersの紹介'),'[375] 案件: テーブル＋紹介経路（v3語彙）')
-    await sp.goto(BASE+'/app/s/network',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2800)
+    ok(td.includes('CCE2E-A')&&td.includes('あなたのパートナー')&&td.includes('MB Partnersの紹介'),'[375] 案件v5: テーブル＋紹介経路')
+    ok(td.includes('CC-E2Eブランド ─ CC-E2Eメニュー')||td.includes('─'),'[375] 案件v5: ブランド ─ メニューの法則')
+    await sp.goto(BASE+'/app/s/network',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2500)
+    ok(sp.url().includes('/app/s/partners'),'[375] v5: /s/network→/s/partnersへリダイレクト')
     const tn=await sp.evaluate(`document.body.innerText`) as string
-    ok(tn.includes('招待リンクを作成してコピー')&&tn.includes('あなたの紹介者が今月生んだ売上'),'[375] 紹介者v3: リンク主体招待＋真実の売上ヒーロー')
-    ok(!tn.includes('12ヶ月')&&!tn.includes('貢献額')&&!tn.includes('網')&&!tn.includes('リファラル'),'[375] 紹介者v3: 12ヶ月/貢献額/網/リファラルの不在')
+    ok(tn.includes('招待リンクを作成してコピー')&&tn.includes('今月生んだ売上'),'[375] パートナーv5: リンク主体招待＋KPI')
+    ok(tn.includes('今月の成約')&&(tn.includes('累計売上')||tn.includes('まだパートナーがいません')),'[375] パートナーv5: KPI＋一覧/空状態（コンソール体裁）')
+    ok(!tn.includes('12ヶ月')&&!tn.includes('貢献額')&&!tn.includes('網')&&!tn.includes('リファラル'),'[375] v5: 12ヶ月/貢献額/網/リファラルの不在')
     await sp.goto(BASE+'/app',{waitUntil:'domcontentloaded'});await sp.waitForTimeout(2000)
   }
   ok((await sp.evaluate(`document.documentElement.scrollWidth`) as number)<=vp.width,'['+vp.width+'] ポータル: 横はみ出しなし')

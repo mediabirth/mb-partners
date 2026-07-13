@@ -58,7 +58,7 @@ export async function GET() {
   const svIds = (brands ?? []).map(b => b.id)
   const [smsRes, dsRes, reqsRes, honorificMod] = await Promise.all([
     svIds.length ? admin.from('service_menus').select('id, service_id').in('service_id', svIds) : Promise.resolve({ data: [] as never[] }),
-    svIds.length ? admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, fixed_month, service_id, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [] as never[] }),
+    svIds.length ? admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, fixed_month, service_id, menu_id, reward_snapshot, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [] as never[] }),
     admin.from('supplier_change_requests').select('id, service_id, menu_id, kind, payload, status, reason, created_at').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false }).limit(20),
     import('@/lib/customer'),
   ])
@@ -69,6 +69,7 @@ export async function GET() {
   const mIds = menus.map(m => m.id)
   const ds = (dsRes.data ?? []) as Record<string, unknown>[]
   const dealIds = ds.map(x => x.id as string)
+  const menuNameById: Record<string, string> = Object.fromEntries(menus.map(m => [m.id, m.name]))
   const [rewardsRes, frRes, asgRes] = await Promise.all([
     mIds.length ? admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base').in('menu_id', mIds).eq('active', true).order('sort') : Promise.resolve({ data: [] as never[] }),
     dealIds.length ? admin.from('supplier_charges').select('deal_id').eq('supplier_partner_id', me.partnerId).in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
@@ -83,6 +84,7 @@ export async function GET() {
     customer: customerHonorific(d as never),
     status: d.status as string,
     brand: (brands ?? []).find(b => b.id === d.service_id)?.name ?? '',
+    menu_name: menuNameById[((d.reward_snapshot as { menu_id?: string } | null)?.menu_id ?? (d.menu_id as string | null)) ?? ''] ?? null,
     created_at: d.created_at as string,
     fixed_month: (d.fixed_month as string | null) ?? null,
     revenue: (((d.deal_items as { revenue: number | null }[] | null) ?? [])).reduce((s2, it) => s2 + (Number(it.revenue) || 0), 0),

@@ -6,7 +6,7 @@ import { SG_MONEY } from '@/lib/supplier-guides'
  * お金: 「払う（MBへ・委託先）」と「もらう（紹介報酬）」の2カラム（PC）。
  * ★数字は単一ソース＝computeCharges（請求と同一）・supplier_charges・deals.amount（支払と同一入力）。
  */
-const KIND_JP: Record<string, string> = { omnis_monthly: '月額（プラン基本料）', half_commission: '折半手数料（粗利50%）', passthrough_revenue_fee: '販売手数料（受注額5%）', payment_fee_5: '決済手数料（5%）' }
+const KIND_JP: Record<string, string> = { omnis_monthly: '月額利用料', half_commission: 'サービス利用料', passthrough_revenue_fee: '販売手数料', payment_fee_5: '決済手数料' }
 const CHG_ST: Record<string, { label: string; color: string }> = { unbilled: { label: '締め済み・請求書待ち', color: 'var(--muted2)' }, invoiced: { label: '請求済み', color: 'var(--c-blue)' }, settled: { label: 'お支払い確認済み', color: 'var(--green)' } }
 const yen = (n: number) => `¥${Number(n || 0).toLocaleString()}`
 

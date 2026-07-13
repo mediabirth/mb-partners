@@ -49,7 +49,7 @@ export default async function SupplierConsoleHome() {
   const subs = (subsRes.data ?? []) as { id: string; frontier_id: string | null; frontier_linked_at: string | null }[]
   let teamN = subs.length, monthOverride = 0
   const teamNew = subs.filter(s => (s.frontier_linked_at ?? '').slice(0, 7) === ym).length
-  const [overrideRes, previewRes, lastPreviewRes, asgRes] = await Promise.all([
+  const [overrideRes, previewRes, lastPreviewRes, asgRes, netRes] = await Promise.all([
     (async () => {
       if (!teamN) return 0
       const [{ computeOverrides }, { loadSupplierFrontiers }] = await Promise.all([import('@/lib/frontier'), import('@/lib/frontier-payout')])
@@ -61,7 +61,29 @@ export default async function SupplierConsoleHome() {
     chargesMod.computeCharges(admin, me.id, ym).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     chargesMod.computeCharges(admin, me.id, lastYm).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     deals.length ? admin.from('delivery_assignments').select('id, status').in('deal_id', deals.map(d => d.id)) : Promise.resolve({ data: [] as never[] }),
+    (subs.length && brandIds.length)
+      ? admin.from('deals').select('partner_id, status, fixed_month, created_at, deal_items(revenue)').in('partner_id', subs.map(s => s.id)).in('service_id', brandIds).in('status', ['confirmed', 'paid'])
+      : Promise.resolve({ data: [] as never[] }),
   ])
+  // パートナーの成果（旧・紹介者ページのヒーローを吸収）: 今月生んだ売上＋上位3名
+  const subNames: Record<string, string> = {}
+  if (subs.length) {
+    const { data: prs } = await admin.from('partners').select('id, code, profiles(name)').in('id', subs.map(s => s.id))
+    for (const p of (prs ?? []) as unknown as { id: string; code: string; profiles: { name: string | null } | null }[]) subNames[p.id] = p.profiles?.name ?? p.code
+  }
+  let netRevenue = 0, netCount = 0
+  const perSub: Record<string, number> = {}
+  for (const d of ((netRes as { data: unknown[] }).data ?? []) as { partner_id: string | null; status: string; fixed_month: string | null; created_at: string; deal_items: { revenue: number | null }[] | null }[]) {
+    if (!d.partner_id || !inMonth(d)) continue
+    const rev = (d.deal_items ?? []).reduce((s, it) => s + (Number(it.revenue) || 0), 0)
+    netRevenue += rev; netCount += 1
+    perSub[d.partner_id] = (perSub[d.partner_id] ?? 0) + rev
+  }
+  const topSubs = Object.entries(perSub).sort((a, b2) => b2[1] - a[1]).slice(0, 3)
+  // パイプライン（受注前の見込み・コンソール同項目）
+  const pipelineDeals = deals.filter(d => d.status === 'received' || d.status === 'in_progress')
+  const received = deals.filter(d => d.status === 'received').length
+  const negotiating = deals.filter(d => d.status === 'in_progress').length
   monthOverride = overrideRes
   const previewTotal = previewRes, lastPreviewTotal = lastPreviewRes
   const rewardsMonth = monthClosed.reduce((s, d) => s + (Number((d as unknown as { amount?: number }).amount) || 0), 0)
@@ -99,7 +121,7 @@ export default async function SupplierConsoleHome() {
               )}
             </div>
           </div>
-          <a href="/app/s/network" style={{ flexShrink: 0, fontSize: '.74rem', fontWeight: 700, color: 'var(--c-blue)', background: '#fff', borderRadius: 999, minHeight: 44, padding: '0 20px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>紹介者を増やす →</a>
+          <a href="/app/s/partners" style={{ flexShrink: 0, fontSize: '.74rem', fontWeight: 700, color: 'var(--c-blue)', background: '#fff', borderRadius: 999, minHeight: 44, padding: '0 20px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>パートナーを増やす →</a>
         </div>
       </div>
 
@@ -107,7 +129,7 @@ export default async function SupplierConsoleHome() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
         {[
           { l: '進行中の案件', v: inProgress, yen: false, sub: '件' },
-          { l: '紹介者', v: teamN, yen: false, sub: `名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}` },
+          { l: 'パートナー', v: teamN, yen: false, sub: `名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}` },
           { l: '今月のお支払い見込み', v: previewTotal, yen: true, sub: lastPreviewTotal > 0 ? `先月 ¥${lastPreviewTotal.toLocaleString()} ${previewTotal >= lastPreviewTotal ? '↗' : '↘'}` : '月末締め' },
         ].map(c => (
           <div key={c.l} style={{ ...CARD, padding: '13px 15px' }}>
@@ -123,10 +145,47 @@ export default async function SupplierConsoleHome() {
       <h2 style={{ ...H2, marginTop: 16 }}>お金の内訳</h2>
       <div style={{ ...CARD, padding: '16px 18px' }}>
         <WaterRow label="総受注額" val={companyRevenue} pct={100} color="var(--c-blue)" head />
-        <WaterRow label="紹介者への報酬" val={rewardsMonth} pct={companyRevenue > 0 ? Math.round(rewardsMonth / companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
+        <WaterRow label="パートナーへの報酬" val={rewardsMonth} pct={companyRevenue > 0 ? Math.round(rewardsMonth / companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
         <WaterRow label="MB Partners手数料" val={previewTotal} pct={companyRevenue > 0 ? Math.round(previewTotal / companyRevenue * 100) : 0} color="var(--amber)" minus />
         <div style={{ borderTop: '1.5px solid var(--line)', marginTop: 8, paddingTop: 10 }}>
           <WaterRow label="あなたの会社の手残り" val={takeHome} pct={companyRevenue > 0 ? Math.round(Math.max(0, takeHome) / companyRevenue * 100) : 0} color={takeHome >= 0 ? 'var(--c-blue)' : 'var(--red)'} strong />
+        </div>
+      </div>
+
+      {/* パートナーの成果（旧・パートナーページのヒーローを吸収）＋パイプライン */}
+      <div className="sup-2col" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 16 }}>
+        <div>
+          <h2 style={H2}>パートナーの成果</h2>
+          <div style={{ ...CARD, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '13px 15px', borderBottom: '0.5px solid var(--line)' }}>
+              <span style={{ fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>今月生んだ売上</span>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 700 }}>¥{netRevenue.toLocaleString()}</span>
+              <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>{netCount}件 ・ {teamN}名</span>
+              <a href="/app/s/partners" style={{ marginLeft: 'auto', fontSize: '.64rem', color: 'var(--c-blue)', textDecoration: 'none', flexShrink: 0 }}>一覧 →</a>
+            </div>
+            {topSubs.length === 0 ? (
+              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', padding: '12px 15px', margin: 0 }}>今月の成約はまだありません。</p>
+            ) : topSubs.map(([pid, rev], i) => (
+              <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{subNames[pid] ?? pid.slice(0, 8)}</span>
+                <span className="tnum" style={{ fontFamily: 'Inter' }}>¥{rev.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h2 style={H2}>パイプライン</h2>
+          <div style={{ ...CARD, padding: '13px 15px' }}>
+            <div style={{ display: 'flex' }}>
+              {[['受付', received], ['対応中', negotiating], ['進行中 計', pipelineDeals.length]].map(([l, v], i) => (
+                <div key={String(l)} style={{ flex: 1, textAlign: 'center', borderLeft: i === 0 ? 'none' : '0.5px solid var(--line)' }}>
+                  <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 700 }}>{String(v)}</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--muted2)', marginTop: 2 }}>{String(l)}</div>
+                </div>
+              ))}
+            </div>
+            <a href="/app/s/deals" style={{ display: 'inline-block', marginTop: 10, fontSize: '.64rem', color: 'var(--c-blue)', textDecoration: 'none' }}>案件一覧 →</a>
+          </div>
         </div>
       </div>
 

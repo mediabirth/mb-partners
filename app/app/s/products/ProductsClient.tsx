@@ -1,9 +1,8 @@
 'use client'
 /**
- * 商品 v2（設計図§4・マスタ文法の移植）。
- * 左ペイン=ブランドカード（公開状態バッジ・公開を申請・社内メモ）＋メニュー一覧（選択式）。
- * 右ペイン=選択中メニューの編集のみ（1画面1メニュー）: 基本（名前※申請制）→紹介報酬（即時・保存は節末に1つ）→
- * 顧客向け（説明・画像URL※申請制）。申請中はフィールド横に琥珀バッジ。SP=段階遷移（一覧→編集・戻る）。
+ * 商品 v5（MBコンソール サービスマスタと同体裁）:
+ * 一覧＝1行1ブランド（丸ロゴ・名前・公開状態・›）→行クリックでドロワー（左ナビ=基本情報＋メニュー列／中央=編集）。
+ * 即時＝紹介報酬・社内メモ／申請＝メニュー名・顧客向け説明・画像・公開状態（琥珀バッジ）。
  * データ・境界・ガードは /api/supplier/self（セッションスコープ）。
  */
 import { useEffect, useMemo, useState } from 'react'
@@ -16,20 +15,21 @@ const LINE = '0.5px solid var(--line)'
 
 export default function ProductsClient() {
   const [data, setData] = useState<{ brands: Brand[]; menus: Menu[]; rewards: Reward[]; requests: Req[] } | null>(null)
-  const [selMenu, setSelMenu] = useState<string>('')
-  const [spEdit, setSpEdit] = useState(false)   // SP段階遷移: 一覧→編集
+  const [editing, setEditing] = useState<string>('')          // brand id（ドロワー）
+  const [navSel, setNavSel] = useState<string>('basic')       // 'basic' | menu id
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
-  const load = () => fetch('/api/supplier/self').then(r => r.ok ? r.json() : null).then(d => { setData(d); if (d?.menus?.length && !selMenu) setSelMenu(d.menus[0].id) }).catch(() => {})
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const load = () => fetch('/api/supplier/self').then(r => r.ok ? r.json() : null).then(setData).catch(() => {})
+  useEffect(() => { load() }, [])
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(''), 6000) }
   const d = (k: string, fb: string) => draft[k] ?? fb
-
-  const menu = useMemo(() => data?.menus.find(m => m.id === selMenu) ?? null, [data, selMenu])
-  const brand = useMemo(() => data?.brands.find(b => b.id === menu?.service_id) ?? null, [data, menu])
+  const brand = useMemo(() => data?.brands.find(b => b.id === editing) ?? null, [data, editing])
+  const brandMenus = useMemo(() => (data?.menus ?? []).filter(m => m.service_id === editing), [data, editing])
+  const selMenu = useMemo(() => brandMenus.find(m => m.id === navSel) ?? null, [brandMenus, navSel])
   const pendingOf = (kind: string, menuId?: string | null, serviceId?: string) =>
     (data?.requests ?? []).find(r => r.status === 'pending' && r.kind === kind && (menuId ? r.menu_id === menuId : r.service_id === serviceId && !r.menu_id))
+  const brandPending = (id: string) => (data?.requests ?? []).filter(r => r.status === 'pending' && r.service_id === id).length
 
   async function call(method: 'PATCH' | 'POST', body: Record<string, unknown>, okMsg: string) {
     if (busy) return false
@@ -41,133 +41,124 @@ export default function ProductsClient() {
     setBusy(false)
     return r.ok
   }
-  // 紹介報酬: 節末の1保存で変更分をまとめて反映（即時系）
   async function saveRewards() {
-    const targets = (data?.rewards ?? []).filter(r => r.menu_id === selMenu && draft['rv:' + r.id] != null && Number(draft['rv:' + r.id]) !== Number(r.reward_value))
+    const targets = (data?.rewards ?? []).filter(r => r.menu_id === navSel && draft['rv:' + r.id] != null && Number(draft['rv:' + r.id]) !== Number(r.reward_value))
     if (!targets.length) { say('変更はありません'); return }
     for (const r of targets) {
-      const ok = await call('PATCH', { reward_id: r.id, reward_value: Number(draft['rv:' + r.id]) }, '紹介報酬を保存しました（すぐに反映・MB Partnersに通知）')
+      const ok = await call('PATCH', { reward_id: r.id, reward_value: Number(draft['rv:' + r.id]) }, '紹介報酬を保存しました（すぐに反映）')
       if (!ok) return
     }
   }
 
-  if (!data) return <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>読み込み中…</p>
+  if (!data) return <div className="ui-skeleton" style={{ height: 120, borderRadius: 13 }} />
   if (!data.brands.length) return <p style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>ブランドがまだありません。搭載についてはMB Partnersへご相談ください。</p>
 
   const AMBER = (label = '申請中') => <span style={{ fontSize: '.54rem', fontWeight: 700, color: '#8a6100', background: 'rgba(224,168,0,.14)', borderRadius: 999, padding: '2px 8px', flexShrink: 0 }}>{label}</span>
   const FLD: React.CSSProperties = { width: '100%', minHeight: 40, padding: '8px 10px', borderRadius: 8, border: LINE, fontSize: '.76rem', fontFamily: 'inherit', boxSizing: 'border-box' }
   const BTN: React.CSSProperties = { fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, minHeight: 38, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer', color: 'var(--c-blue)', background: 'var(--blue-bg2)', flexShrink: 0 }
   const LBL: React.CSSProperties = { fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }
-  const SEC: React.CSSProperties = { background: '#fff', border: LINE, borderRadius: 13, padding: '14px 16px', marginBottom: 12 }
-
-  const LeftPane = (
-    <div>
-      {data.brands.map(br => (
-        <div key={br.id} style={{ background: '#fff', border: LINE, borderRadius: 13, marginBottom: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 14px', borderBottom: LINE }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <b style={{ flex: 1, minWidth: 0, fontSize: '.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{br.name}</b>
-              <span style={{ fontSize: '.56rem', fontWeight: 700, borderRadius: 999, padding: '2px 9px', background: br.active ? 'rgba(21,145,126,.12)' : 'var(--bg2)', color: br.active ? '#0f9d76' : 'var(--muted2)', flexShrink: 0 }}>{br.active ? '公開中' : '非公開'}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-              {pendingOf('visibility', null, br.id)
-                ? AMBER('公開状態 申請中')
-                : <button disabled={busy} onClick={() => call('POST', { kind: 'visibility', service_id: br.id, value: !br.active }, '申請しました（MB Partnersの確認後に反映）')} style={{ ...BTN, minHeight: 32, fontSize: '.62rem' }}>{br.active ? '非公開を申請' : '公開を申請'}</button>}
-            </div>
-          </div>
-          {data.menus.filter(m => m.service_id === br.id).map(m => {
-            const on = m.id === selMenu
-            return (
-              <button key={m.id} onClick={() => { setSelMenu(m.id); setSpEdit(true) }}
-                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: on ? 'var(--blue-bg2)' : 'none', border: 'none', borderTop: LINE, minHeight: 44, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '.76rem', fontWeight: on ? 700 : 400, color: on ? 'var(--c-blue)' : 'var(--txt)' }}>
-                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
-                {pendingOf('menu_name', m.id) || pendingOf('public_description', m.id) ? AMBER() : null}
-                <span style={{ color: 'var(--muted)' }}>›</span>
-              </button>
-            )
-          })}
-          <div style={{ padding: '10px 14px', borderTop: LINE }}>
-            <div style={LBL}>社内向けメモ</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <textarea rows={2} value={d('memo:' + br.id, br.supplier_memo ?? '')} onChange={e => setDraft(p => ({ ...p, ['memo:' + br.id]: e.target.value }))} style={{ ...FLD, resize: 'vertical', minHeight: 52 }} />
-              <button disabled={busy} onClick={() => call('PATCH', { service_id: br.id, supplier_memo: d('memo:' + br.id, br.supplier_memo ?? '') }, 'メモを保存しました')} style={BTN}>保存</button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-
-  const RightPane = menu && brand ? (
-    <div>
-      <button className="prod-back" onClick={() => setSpEdit(false)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', color: 'var(--muted2)', padding: '0 0 10px', display: 'flex', alignItems: 'center', gap: 4 }}>← メニュー一覧</button>
-      <div style={{ fontSize: '.66rem', color: 'var(--muted2)', marginBottom: 8 }}>{brand.name} ─ <b style={{ color: 'var(--txt)' }}>{menu.name}</b></div>
-
-      {/* 基本（メニュー名※申請制） */}
-      <div style={SEC}>
-        <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 10 }}>基本</div>
-        <div style={LBL}>メニュー名（申請制）{pendingOf('menu_name', menu.id) && AMBER()}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input value={d('mn:' + menu.id, menu.name)} onChange={e => setDraft(p => ({ ...p, ['mn:' + menu.id]: e.target.value }))} style={FLD} />
-          <button disabled={busy || !!pendingOf('menu_name', menu.id)} onClick={() => call('POST', { kind: 'menu_name', service_id: brand.id, menu_id: menu.id, value: d('mn:' + menu.id, menu.name) }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
-        </div>
-      </div>
-
-      {/* 紹介報酬（即時・保存は節末に1つ） */}
-      <div style={SEC}>
-        <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 10 }}>紹介報酬（すぐ反映）</div>
-        {data.rewards.filter(r => r.menu_id === menu.id).length === 0 ? (
-          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', margin: 0 }}>報酬が未設定です。設定はMB Partnersへご相談ください。</p>
-        ) : data.rewards.filter(r => r.menu_id === menu.id).map(r => (
-          <div key={r.id} style={{ marginBottom: 10 }}>
-            <div style={LBL}>{r.reward_type === 'fixed' ? '固定（円）' : r.reward_base === '売上' ? '受注額（%）' : '率（%）'}</div>
-            <input inputMode="numeric" value={d('rv:' + r.id, String(r.reward_value))} onChange={e => setDraft(p => ({ ...p, ['rv:' + r.id]: e.target.value }))}
-              style={{ ...FLD, maxWidth: 180, fontFamily: 'Inter', textAlign: 'right' }} />
-          </div>
-        ))}
-        {data.rewards.some(r => r.menu_id === menu.id) && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: LINE, paddingTop: 10 }}>
-            <button disabled={busy} onClick={saveRewards} style={{ ...BTN, color: '#fff', background: 'var(--c-blue)', minHeight: 40, padding: '0 20px' }}>保存する</button>
-          </div>
-        )}
-      </div>
-
-      {/* 顧客向け（説明・画像URL※申請制） */}
-      <div style={SEC}>
-        <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 4 }}>顧客向け</div>
-        <div style={LBL}>説明{pendingOf('public_description', menu.id) && AMBER()}</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <textarea rows={3} value={d('pd:' + menu.id, menu.public_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['pd:' + menu.id]: e.target.value }))} style={{ ...FLD, resize: 'vertical', minHeight: 68 }} />
-          <button disabled={busy || !!pendingOf('public_description', menu.id)} onClick={() => call('POST', { kind: 'public_description', service_id: brand.id, menu_id: menu.id, value: d('pd:' + menu.id, menu.public_description ?? '') }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
-        </div>
-        <div style={LBL}>イメージ画像URL（ブランド共通）{pendingOf('image', null, brand.id) && AMBER()}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input value={d('img:' + brand.id, brand.image_url ?? '')} onChange={e => setDraft(p => ({ ...p, ['img:' + brand.id]: e.target.value }))} placeholder="https://…" style={FLD} />
-          <button disabled={busy || !!pendingOf('image', null, brand.id)} onClick={() => call('POST', { kind: 'image', service_id: brand.id, value: d('img:' + brand.id, brand.image_url ?? '') }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
-        </div>
-      </div>
-    </div>
-  ) : <p style={{ fontSize: '.72rem', color: 'var(--muted2)' }}>左の一覧からメニューを選択してください。</p>
 
   return (
     <div>
-      <div className={'prod-grid' + (spEdit ? ' sp-edit' : '')} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
-        <div className="prod-left">{LeftPane}</div>
-        <div className="prod-right">{RightPane}</div>
+      {/* 一覧（サービスマスタと同じ1行文法） */}
+      <div style={{ background: '#fff', border: LINE, borderRadius: 13, overflow: 'hidden', maxWidth: 720 }}>
+        {data.brands.map((br, i) => (
+          <button key={br.id} onClick={() => { setEditing(br.id); setNavSel('basic') }}
+            style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: i === 0 ? 'none' : LINE, minHeight: 52, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--blue-bg2)', color: 'var(--c-blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '.76rem', fontWeight: 700, flexShrink: 0 }}>{br.name[0]}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--txt)' }}>{br.name}</span>
+            {brandPending(br.id) > 0 && AMBER(`申請中 ${brandPending(br.id)}`)}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: br.active ? 'var(--c-blue)' : 'transparent', border: br.active ? 'none' : '1px solid var(--muted)' }} />
+              <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{br.active ? '公開' : '停止'}</span>
+            </span>
+            <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
+            </span>
+          </button>
+        ))}
       </div>
+
+      {/* ドロワー（サービスマスタと同じ右ドロワー・左ナビ=基本情報＋メニュー列） */}
+      {brand && (
+        <>
+          <div onClick={() => setEditing('')} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', backdropFilter: 'blur(2px)', zIndex: 40 }} />
+          <div className="exp-in prod-drawer" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 760, maxWidth: '96vw', background: 'var(--bg2)', zIndex: 45, boxShadow: '-12px 0 40px rgba(14,14,20,.18)', display: 'flex', overflow: 'hidden' }}>
+            {/* 左ナビ */}
+            <div className="prod-lnav" style={{ width: 150, flexShrink: 0, background: '#fff', borderRight: LINE, overflowY: 'auto', padding: '14px 8px' }}>
+              <div style={{ fontSize: '.72rem', fontWeight: 700, padding: '0 8px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{brand.name}</div>
+              <button onClick={() => setNavSel('basic')} style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderRadius: 8, minHeight: 38, padding: '0 10px', fontSize: '.72rem', fontWeight: navSel === 'basic' ? 700 : 400, background: navSel === 'basic' ? 'var(--blue-bg2)' : 'none', color: navSel === 'basic' ? 'var(--c-blue)' : 'var(--txt)' }}>基本情報</button>
+              <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', padding: '12px 10px 4px' }}>メニュー</div>
+              {brandMenus.map(m => (
+                <button key={m.id} onClick={() => setNavSel(m.id)} style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderRadius: 8, minHeight: 38, padding: '0 10px', fontSize: '.72rem', fontWeight: navSel === m.id ? 700 : 400, background: navSel === m.id ? 'var(--blue-bg2)' : 'none', color: navSel === m.id ? 'var(--c-blue)' : 'var(--txt)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</button>
+              ))}
+            </div>
+            {/* 中央編集 */}
+            <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '16px 18px 30px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <b style={{ flex: 1, fontSize: '.84rem' }}>{navSel === 'basic' ? '基本情報' : selMenu?.name ?? ''}</b>
+                <button aria-label="閉じる" onClick={() => setEditing('')} style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted2)', marginRight: -10 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
+              {navSel === 'basic' ? (
+                <div>
+                  <div style={LBL}>公開状態{pendingOf('visibility', null, brand.id) && AMBER()}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <span style={{ fontSize: '.76rem', fontWeight: 500 }}>{brand.active ? '公開中' : '非公開'}</span>
+                    {!pendingOf('visibility', null, brand.id) && (
+                      <button disabled={busy} onClick={() => call('POST', { kind: 'visibility', service_id: brand.id, value: !brand.active }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>{brand.active ? '非公開を申請' : '公開を申請'}</button>
+                    )}
+                  </div>
+                  <div style={LBL}>イメージ画像URL（申請制）{pendingOf('image', null, brand.id) && AMBER()}</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                    <input value={d('img:' + brand.id, brand.image_url ?? '')} onChange={e => setDraft(p => ({ ...p, ['img:' + brand.id]: e.target.value }))} placeholder="https://…" style={FLD} />
+                    <button disabled={busy || !!pendingOf('image', null, brand.id)} onClick={() => call('POST', { kind: 'image', service_id: brand.id, value: d('img:' + brand.id, brand.image_url ?? '') }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
+                  </div>
+                  <div style={LBL}>社内向けメモ（すぐ反映）</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <textarea rows={3} value={d('memo:' + brand.id, brand.supplier_memo ?? '')} onChange={e => setDraft(p => ({ ...p, ['memo:' + brand.id]: e.target.value }))} style={{ ...FLD, resize: 'vertical', minHeight: 64 }} />
+                    <button disabled={busy} onClick={() => call('PATCH', { service_id: brand.id, supplier_memo: d('memo:' + brand.id, brand.supplier_memo ?? '') }, 'メモを保存しました')} style={BTN}>保存</button>
+                  </div>
+                </div>
+              ) : selMenu ? (
+                <div>
+                  <div style={LBL}>メニュー名（申請制）{pendingOf('menu_name', selMenu.id) && AMBER()}</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                    <input value={d('mn:' + selMenu.id, selMenu.name)} onChange={e => setDraft(p => ({ ...p, ['mn:' + selMenu.id]: e.target.value }))} style={FLD} />
+                    <button disabled={busy || !!pendingOf('menu_name', selMenu.id)} onClick={() => call('POST', { kind: 'menu_name', service_id: brand.id, menu_id: selMenu.id, value: d('mn:' + selMenu.id, selMenu.name) }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
+                  </div>
+                  <div style={{ borderTop: LINE, paddingTop: 12, marginBottom: 14 }}>
+                    <div style={{ fontSize: '.7rem', fontWeight: 700, marginBottom: 8 }}>紹介報酬（すぐ反映）</div>
+                    {data.rewards.filter(r => r.menu_id === selMenu.id).length === 0 ? (
+                      <p style={{ fontSize: '.7rem', color: 'var(--muted2)', margin: 0 }}>報酬が未設定です。設定はMB Partnersへご相談ください。</p>
+                    ) : data.rewards.filter(r => r.menu_id === selMenu.id).map(r => (
+                      <div key={r.id} style={{ marginBottom: 10 }}>
+                        <div style={LBL}>{r.reward_type === 'fixed' ? '固定（円）' : r.reward_base === '売上' ? '受注額（%）' : '率（%）'}</div>
+                        <input inputMode="numeric" value={d('rv:' + r.id, String(r.reward_value))} onChange={e => setDraft(p => ({ ...p, ['rv:' + r.id]: e.target.value }))} style={{ ...FLD, maxWidth: 180, fontFamily: 'Inter', textAlign: 'right' }} />
+                      </div>
+                    ))}
+                    {data.rewards.some(r => r.menu_id === selMenu.id) && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button disabled={busy} onClick={saveRewards} style={{ ...BTN, color: '#fff', background: 'var(--c-blue)', minHeight: 40, padding: '0 20px' }}>保存する</button>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ borderTop: LINE, paddingTop: 12 }}>
+                    <div style={LBL}>顧客向け説明（申請制）{pendingOf('public_description', selMenu.id) && AMBER()}</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <textarea rows={3} value={d('pd:' + selMenu.id, selMenu.public_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['pd:' + selMenu.id]: e.target.value }))} style={{ ...FLD, resize: 'vertical', minHeight: 68 }} />
+                      <button disabled={busy || !!pendingOf('public_description', selMenu.id)} onClick={() => call('POST', { kind: 'public_description', service_id: brand.id, menu_id: selMenu.id, value: d('pd:' + selMenu.id, selMenu.public_description ?? '') }, '申請しました（MB Partnersの確認後に反映）')} style={BTN}>申請</button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </>
+      )}
       {toast && <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '10px 2px 0' }}>{toast}</p>}
-      <style>{`
-        .prod-right{display:none}
-        .prod-grid.sp-edit .prod-left{display:none}
-        .prod-grid.sp-edit .prod-right{display:block}
-        @media (min-width:1024px){
-          .prod-grid{grid-template-columns:300px 1fr !important}
-          .prod-left{display:block !important}
-          .prod-right{display:block !important}
-          .prod-back{display:none !important}
-        }
-      `}</style>
+      <style>{`@media (max-width: 640px){ .prod-lnav{width:112px !important} }`}</style>
     </div>
   )
 }

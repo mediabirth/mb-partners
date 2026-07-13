@@ -8,7 +8,7 @@ import PageGuide from '@/components/PageGuide'
 import { SG_DEALS } from '@/lib/supplier-guides'
 import { DEAL_STATUS } from '@/lib/status'
 
-type Deal = { id: string; customer: string; status: string; brand: string; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: { status: string | null }[] }
+type Deal = { id: string; customer: string; status: string; brand: string; menu_name: string | null; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: { status: string | null }[] }
 const FILTERS = [['all', 'すべて'], ['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
 
 export default function SupplierDealsPage() {
@@ -61,10 +61,13 @@ export default function SupplierDealsPage() {
                 return (
                   <tr key={d.id} onClick={() => setDetail(d)} style={{ cursor: 'pointer' }} className="row-hover">
                     <td style={{ fontSize: '.74rem', fontWeight: 500, padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.customer}</td>
-                    <td style={{ fontSize: '.68rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.brand}</td>
-                    <td style={{ fontSize: '.62rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.from_network ? 'あなたの紹介者' : 'MB Partnersの紹介'}</td>
+                    <td style={{ fontSize: '.68rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.brand}{d.menu_name ? ` ─ ${d.menu_name}` : ''}</td>
+                    <td style={{ fontSize: '.62rem', color: 'var(--muted2)', padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>{d.from_network ? 'あなたのパートナー' : 'MB Partnersの紹介'}</td>
                     <td style={{ padding: '10px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 9px' }}>{DEAL_STATUS[d.status]?.label ?? d.status}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${DEAL_STATUS[d.status]?.tone ?? 'neutral'})`, flexShrink: 0 }} />
+                        <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{DEAL_STATUS[d.status]?.label ?? d.status}</span>
+                      </span>
                     </td>
                     <td style={{ padding: '8px 12px', borderBottom: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
                       {editable ? (
@@ -103,8 +106,8 @@ export default function SupplierDealsPage() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
-            {([['メニュー', detail.brand],
-               ['紹介経路', detail.from_network ? 'あなたの紹介者' : 'MB Partnersの紹介'],
+            {([['メニュー', detail.menu_name ? `${detail.brand} ─ ${detail.menu_name}` : detail.brand],
+               ['紹介経路', detail.from_network ? 'あなたのパートナー' : 'MB Partnersの紹介'],
                ['状態', DEAL_STATUS[detail.status]?.label ?? detail.status],
                ['受付日', new Date(detail.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })],
                ['成約月', detail.fixed_month ? detail.fixed_month.slice(0, 7).replace('-', '年') + '月' : '—'],
