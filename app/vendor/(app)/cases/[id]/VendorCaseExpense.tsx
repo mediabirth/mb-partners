@@ -21,7 +21,7 @@ export default function VendorCaseExpense({ assignmentId, label, initial, delive
       </div>
 
       <button onClick={() => setOpen(true)} disabled={!delivered} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center', opacity: delivered ? 1 : .5 }}>経費を申請</button>
-      {!delivered && <p style={{ fontSize: '.62rem', color: 'var(--muted)', margin: '8px 2px 0', lineHeight: 1.6 }}>納品済みにすると経費を申請できます。</p>}
+      {!delivered && <p style={{ fontSize: '.62rem', color: 'var(--muted)', margin: '8px 2px 0', lineHeight: 1.6 }}>納品済みになると経費を申請できます（納品の確認は発注元が行います）。</p>}
 
       <div style={{ marginTop: 14 }}>
         {initial.length === 0 ? (

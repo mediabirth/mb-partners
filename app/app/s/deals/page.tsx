@@ -9,7 +9,7 @@ import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_DEALS } from '@/lib/supplier-guides'
 import { DEAL_STATUS } from '@/lib/status'
 
-type Asg = { id: string; status: string | null; base_fee: number | null; delivery_name: string }
+type Asg = { id: string; status: string | null; base_fee: number | null; delivery_name: string; own?: boolean }
 type Dlv = { id: string; name: string; active: boolean }
 type Deal = { id: string; customer: string; status: string; brand: string; menu_name: string | null; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: Asg[] }
 const COLS = [['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
@@ -26,6 +26,7 @@ export default function SupplierDealsPage() {
   const [busy, setBusy] = useState('')
   const [toast, setToast] = useState('')
   const [detail, setDetail] = useState<Deal | null>(null)
+  const [deliverConfirm, setDeliverConfirm] = useState<Asg | null>(null)
   const load = () => fetch('/api/supplier/self').then(r => r.ok ? r.json() : null).then(d => { setDeals(d?.deals ?? []); setDlvs((d?.deliveries ?? []).filter((x: Dlv) => x.active)); if (detail) setDetail((d?.deals ?? []).find((x: Deal) => x.id === detail.id) ?? null) }).catch(() => setDeals([]))
   useEffect(() => { load() }, [])
   const rows = useMemo(() => (deals ?? []).filter(d => filter === 'all' || d.status === filter), [deals, filter])
@@ -40,6 +41,15 @@ export default function SupplierDealsPage() {
     say(r.ok ? '委託を提示しました（受託者の承諾後に進みます）' : (j.error ?? '失敗しました'))
     if (r.ok) { setAsgDlv(''); setAsgFee(''); await load() }
     setBusy('')
+  }
+  // ベンダー純化P1: 納品済みの宣言（自社委託先のみ・確認を挟む＝ripple文法）。宣言者は運営側タイムラインに記録される。
+  async function markDelivered(a: Asg) {
+    setBusy('dlv')
+    const r = await fetch('/api/supplier/self', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'deliver', assignment_id: a.id }) })
+    const j = await r.json().catch(() => ({}))
+    say(r.ok ? '納品済みにしました' : (j.error ?? '失敗しました'))
+    if (r.ok) await load()
+    setBusy(''); setDeliverConfirm(null)
   }
   async function saveRevenue(d: Deal) {
     const v = Number((draft[d.id] ?? String(d.revenue || '')).replace(/[,，\s]/g, ''))
@@ -187,6 +197,11 @@ export default function SupplierDealsPage() {
                   <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.delivery_name}</span>
                   {a.base_fee != null && <span className="tnum" style={{ fontFamily: 'Inter', color: 'var(--muted2)' }}>¥{Number(a.base_fee).toLocaleString()}</span>}
                   <span style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>{ASG_JP[a.status ?? 'assigned'] ?? a.status}</span>
+                  {/* ベンダー純化P1: 納品済みの宣言＝発注元（自社委託先×了承済のみ・確認を挟む） */}
+                  {a.own && ['accepted', 'assigned'].includes(a.status ?? 'assigned') && (
+                    <button onClick={() => setDeliverConfirm(a)} disabled={busy === 'dlv'}
+                      style={{ fontFamily: 'inherit', fontSize: '.6rem', fontWeight: 500, minHeight: 30, padding: '0 10px', borderRadius: 8, border: 'none', cursor: 'pointer', color: 'var(--c-blue)', background: 'var(--blue-bg2)', flexShrink: 0 }}>納品済みにする</button>
+                  )}
                 </div>
               ))}
               {dlvs.length > 0 ? (
@@ -201,6 +216,24 @@ export default function SupplierDealsPage() {
               ) : (
                 <a href="/app/s/partners" style={{ fontSize: '.64rem', color: 'var(--c-blue)', textDecoration: 'none' }}>委託先を招待する（パートナーページ） →</a>
               )}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* 納品済み確認（ripple文法＝結果予告→確定・createPortal=包含ブロック事故回避） */}
+      {deliverConfirm && typeof document !== 'undefined' && createPortal(
+        <>
+          <div onClick={() => setDeliverConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 96 }} />
+          <div className="modal-pop" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, zIndex: 97, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+            <b style={{ fontSize: '.92rem', display: 'block', lineHeight: 1.5 }}>{deliverConfirm.delivery_name}を納品済みにしますか</b>
+            <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 8, lineHeight: 1.7 }}>
+              委託先には「納品済み」と表示され、経費の申請ができるようになります・確認の記録が残ります
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeliverConfirm(null)} style={{ fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, minHeight: 40, padding: '0 16px', borderRadius: 9, border: '0.5px solid var(--line)', cursor: 'pointer', background: '#fff', color: 'var(--txt)' }}>キャンセル</button>
+              <button onClick={() => markDelivered(deliverConfirm)} disabled={busy === 'dlv'} style={{ fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500, minHeight: 40, padding: '0 18px', borderRadius: 9, border: 'none', cursor: 'pointer', color: '#fff', background: 'var(--c-blue)' }}>納品済みにする</button>
             </div>
           </div>
         </>,

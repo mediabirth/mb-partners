@@ -8,6 +8,8 @@
  *
  * POST /api/console/deals/[id]/deliveries
  *   op方式（新）: { op:'add', delivery_id, base_fee, deal_item_id? } ／ { op:'remove', assignment_id } ／ { op:'fee', assignment_id, base_fee }
+ *               ／ { op:'deliver', assignment_id } — ベンダー純化P1: 納品済みの宣言（vendor面から移管・vendor-redesign.md §1 V2）。
+ *                 状態機械は不変（accepted→delivered・書き手のみ運営へ）。宣言者・日時は deal_events に常時記録（争議証跡）。
  *   レガシー（op無し・set-semantics）: { deal_item_id, delivery_id(null=MB自身), base_fee } — 直営業起票モーダル等の既存呼び出し互換。
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -56,6 +58,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
     if (!del?.length) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json({ ok: true })
+  }
+
+  if (b.op === 'deliver') {
+    if (!b.assignment_id) return NextResponse.json({ error: 'assignment_id required' }, { status: 400 })
+    const { data: cur } = await admin.from('delivery_assignments')
+      .select('id, status, base_fee, deliveries(name)').eq('id', b.assignment_id).eq('deal_id', id).maybeSingle()
+    if (!cur) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!['accepted', 'assigned'].includes(cur.status ?? '')) {
+      return NextResponse.json({ error: '納品済みにできるのは了承済の委託のみです' }, { status: 409 })
+    }
+    const { data: upd, error: updErr } = await admin.from('delivery_assignments')
+      .update({ status: 'delivered', updated_at: new Date().toISOString() })
+      .eq('id', b.assignment_id).eq('status', cur.status).select('id')
+    if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
+    if (!upd?.length) return NextResponse.json({ error: '状態が変化していません' }, { status: 409 })
+    // 宣言者・日時の常時記録（deal_events＝案件タイムライン・パートナー非公開）
+    const { data: prof } = await admin.from('profiles').select('name').eq('id', user.id).maybeSingle()
+    const dlvName = (cur.deliveries as { name?: string } | null)?.name ?? '委託先'
+    try {
+      await admin.from('deal_events').insert({
+        deal_id: id, visible_to_partner: false, created_by: user.id,
+        body: `納品済みにしました: ${dlvName} ・ 委託費 ¥${(cur.base_fee ?? 0).toLocaleString()}（運営 ${prof?.name ?? ''} が確認）`,
+      })
+    } catch { /* best-effort: 記録失敗は状態遷移を妨げない */ }
+    try { const { notifySlackEvent } = await import('@/lib/slack'); await notifySlackEvent('status_change', `📦 ${dlvName} の委託を納品済みに（運営 ${prof?.name ?? ''}・¥${(cur.base_fee ?? 0).toLocaleString()}）`) } catch { /* best-effort */ }
+    return NextResponse.json({ ok: true, status: 'delivered' })
   }
 
   if (b.op === 'fee') {

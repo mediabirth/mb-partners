@@ -2,6 +2,7 @@
 // 通水P2「束削減」: 案件詳細ドロワー。案件クリック時のみ dynamic(ssr:false) で取得＝ボード初期バンドルから分離。
 //   JSX/計算は原典を1:1移設（selected→deal）。状態/ハンドラは page.tsx から ctx で受領＝money/状態の単一ソース不変。
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import ServiceAvatar from '@/components/ServiceAvatar'
@@ -19,6 +20,20 @@ const ContinuousMonthly = dynamic(() => import('./ContinuousMonthly'), { ssr: fa
 
 export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }) {
   const { services, directors, deliveriesOpt, dealTasks, taskBusy, itemBusy, manageOpen, pending, dlvAdd, ctaConfirm, manageRef, moneyRef, setSelected, setManageOpen, setDlvAdd, setCtaConfirm, setRewardModal, setCancelConfirm, addAssignment, addExpense, deleteExpense, openConfirmDialog, patchAssignmentFee, patchItem, refreshDeals, removeAssignment, savePnl, setExpenseStatus, showToast, toggleDealTask, updateStatus, viewEvidence } = ctx
+  // ベンダー純化P1: 納品済みの宣言（vendor面から移管）。波及あり操作＝ripple文法（結果予告→確定）で確認を挟む。
+  const [deliverConfirm, setDeliverConfirm] = React.useState<{ id: string; name: string; fee: number } | null>(null)
+  const [deliverBusy, setDeliverBusy] = React.useState(false)
+  async function markDelivered(assignmentId: string) {
+    setDeliverBusy(true)
+    try {
+      const res = await fetch(`/api/console/deals/${deal.id}/deliveries`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'deliver', assignment_id: assignmentId }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d?.error ?? '更新に失敗しました'); return }
+      await refreshDeals(deal.id)
+      showToast('納品済みにしました')
+    } finally { setDeliverBusy(false); setDeliverConfirm(null) }
+  }
   return (
         <>
           <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.25)', zIndex: 70 }} />
@@ -305,6 +320,11 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                                 <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: `var(--st-${ast.tone})` }} />
                                 <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)' }}>{ast.children}</span>
                               </span>
+                              {/* ベンダー純化P1: 納品済みの宣言＝発注元（了承済のみ・確認を挟む） */}
+                              {editable && ['accepted', 'assigned'].includes(a.status ?? 'assigned') && (
+                                <button onClick={() => setDeliverConfirm({ id: a.id, name: a.deliveries?.name ?? '委託先', fee: a.base_fee ?? 0 })} disabled={itemBusy || deliverBusy}
+                                  style={{ flexShrink: 0, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 500, color: 'var(--c-blue)' }}>納品済みにする</button>
+                              )}
                               {editable && (
                                 <button onClick={() => removeAssignment(a.id)} disabled={itemBusy} title="提示を取り下げる"
                                   style={{ flexShrink: 0, background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.8rem' }}>✕</button>
@@ -405,6 +425,24 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
               </div>
             </div>
           </div>
+
+          {/* ベンダー純化P1: 納品済み確認（ripple文法＝結果予告→確定）。createPortal＝fixed包含ブロック事故回避（CLAUDE.md恒久） */}
+          {deliverConfirm && typeof document !== 'undefined' && createPortal(
+            <>
+              <div onClick={() => setDeliverConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
+              <div className="modal-pop" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+                <b style={{ fontSize: '.92rem', display: 'block', lineHeight: 1.5 }}>{deliverConfirm.name}を納品済みにしますか</b>
+                <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 8, lineHeight: 1.7 }}>
+                  デリバリーには「納品済み」と表示され、経費の申請ができるようになります・ボードのレーンは納品済みへ動きます・確認の記録が案件タイムラインに残ります
+                </p>
+                <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setDeliverConfirm(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
+                  <button onClick={() => markDelivered(deliverConfirm.id)} disabled={deliverBusy} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>納品済みにする</button>
+                </div>
+              </div>
+            </>,
+            document.body
+          )}
         </>
   )
 }

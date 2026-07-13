@@ -1,5 +1,7 @@
 'use client'
-/** 招待モーダル v8（コンソールの昇格モーダルと同文法・topbarの控えめなボタンから開く）。 */
+/** 招待モーダル v8（コンソールの昇格モーダルと同文法・topbarの控えめなボタンから開く）。
+ *  ベンダー純化P1: 委託先招待に分岐質問（営業・紹介もする方→パートナー招待へ・既定はパートナー側）。
+ *  委託先＝実務を担う方専用の席（vendor-redesign.md §2）。 */
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -12,14 +14,17 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
   const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  // 分岐: 営業・紹介もする方＝パートナー（既定）／実務のみ＝委託先
+  const [role, setRole] = useState<'sales' | 'work'>('sales')
   const isP = mode === 'partner'
+  const asPartner = isP || role === 'sales'
 
   async function create() {
     if (busy) return
-    if (!isP && !name.trim()) { setNote('委託先の名称は必須です'); return }
+    if (!asPartner && !name.trim()) { setNote('委託先の名称は必須です'); return }
     setBusy(true); setNote('')
     try {
-      const r = isP
+      const r = asPartner
         ? await fetch('/api/app/frontier/invite', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(email.trim() ? { email: email.trim() } : {}) })
         : await fetch('/api/supplier/self', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'invite_delivery', name: name.trim(), work: work.trim(), email: email.trim() }) })
       const j = await r.json().catch(() => ({}))
@@ -30,7 +35,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
       setNote(email.trim() ? (j.emailed ? '招待メールを送信し、リンクをコピーしました' : 'リンクをコピーしました（メールは送信できませんでした）') : 'リンクをコピーしました。相手に共有してください')
     } finally { setBusy(false) }
   }
-  function close() { setOpen(false); setUrl(''); setNote(''); setName(''); setWork(''); setEmail('') }
+  function close() { setOpen(false); setUrl(''); setNote(''); setName(''); setWork(''); setEmail(''); setRole('sales') }
 
   const FLD: React.CSSProperties = { width: '100%', border: '0.5px solid var(--line)', borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.82rem', boxSizing: 'border-box' }
   const LBL: React.CSSProperties = { fontSize: 11, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.03em', display: 'block', marginBottom: 5 }
@@ -41,19 +46,37 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
         ＋ {isP ? 'パートナーを招待' : '委託先を招待'}
       </button>
       {open && typeof document !== 'undefined' && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'grid', placeItems: 'center', padding: 16 }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 90 }}>
           <div onClick={close} style={{ position: 'absolute', inset: 0, background: 'rgba(14,14,20,.3)' }} />
-          <div className="modal-pop" style={{ position: 'relative', width: 440, maxWidth: '94vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
+          {/* .modal-pop は終端 transform translate(-50%,-50%) を保持するため、fixed中央（top/left 50%）の正典文法で使う（grid中央と併用しない） */}
+          <div className="modal-pop" style={{ position: 'fixed', top: '50%', left: '50%', width: 440, maxWidth: '94vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px', boxSizing: 'border-box' }}>
             <b style={{ fontSize: '.9rem', fontWeight: 500 }}>{isP ? 'パートナーを招待' : '委託先を招待'}</b>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '6px 0 14px', lineHeight: 1.7 }}>
               {isP ? 'リンクを共有するだけ。登録した方があなたのパートナーになります。' : '実務を担う委託先を招待します。登録後、案件から委託（アサイン）できます。'}
             </p>
             {!isP && (
               <>
-                <label style={LBL}>名称 / 屋号 <span style={{ color: 'var(--red)' }}>*</span></label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="例：山田保険事務所" style={{ ...FLD, marginBottom: 12 }} />
-                <label style={LBL}>業務（任意）</label>
-                <input value={work} onChange={e => setWork(e.target.value)} placeholder="例：保険の実務" style={{ ...FLD, marginBottom: 12 }} />
+                {/* 分岐質問（既定=パートナー側）: 営業・紹介を担う方はパートナーの席へ */}
+                <label style={LBL}>営業・紹介もする方ですか？</label>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  {([['sales', 'はい（営業・紹介もする）'], ['work', 'いいえ（実務のみ）']] as const).map(([v, l]) => (
+                    <button key={v} onClick={() => { setRole(v); setUrl(''); setNote('') }}
+                      style={{ flex: 1, fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, minHeight: 38, padding: '0 10px', borderRadius: 9, cursor: 'pointer', border: `1.5px solid ${role === v ? 'var(--c-blue)' : 'var(--line)'}`, background: role === v ? 'var(--blue-bg2)' : '#fff', color: role === v ? 'var(--c-blue)' : 'var(--muted2)' }}>{l}</button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '.64rem', color: 'var(--muted2)', margin: '0 0 14px', lineHeight: 1.7 }}>
+                  {role === 'sales'
+                    ? '営業やご紹介を担う方は「パートナー」としてお迎えください。紹介の成果がそのまま報酬になり、役割分担やその方だけの報酬率も設定できます。'
+                    : '委託先は、事務手続きや納品など実務を担う方専用の席です。委託費のご提示と、完了・経費の管理ができます。'}
+                </p>
+                {role === 'work' && (
+                  <>
+                    <label style={LBL}>名称 / 屋号 <span style={{ color: 'var(--red)' }}>*</span></label>
+                    <input value={name} onChange={e => setName(e.target.value)} placeholder="例：山田保険事務所" style={{ ...FLD, marginBottom: 12 }} />
+                    <label style={LBL}>業務（任意）</label>
+                    <input value={work} onChange={e => setWork(e.target.value)} placeholder="例：保険の実務" style={{ ...FLD, marginBottom: 12 }} />
+                  </>
+                )}
               </>
             )}
             <label style={LBL}>メールアドレス（任意・入力すると招待メールも送信）</label>
@@ -67,7 +90,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
             {note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '0 0 12px' }}>{note}</p>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={close} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '8px 14px' }}>閉じる</button>
-              <button onClick={create} disabled={busy || (!isP && !name.trim())} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '8px 16px' }}>
+              <button onClick={create} disabled={busy || (!asPartner && !name.trim())} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '8px 16px' }}>
                 {busy ? '作成中…' : copied ? 'コピーしました ✓' : url ? 'もう一度作成' : '招待リンクを作成'}
               </button>
             </div>

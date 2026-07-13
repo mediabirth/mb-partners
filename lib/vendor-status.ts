@@ -39,10 +39,3 @@ export const VENDOR_EXPENSE_ST: Record<string, VendorSt> = {
   rejected: { label: '却下', c: 'var(--red)', bg: 'var(--red-bg)' },
 }
 
-/** スケジュールの event_type → 色。 */
-export const VENDOR_EVENT_TYPE: Record<string, { c: string; bg: string }> = {
-  納品期限: { c: 'var(--red)', bg: 'var(--red-bg)' },
-  撮影: { c: 'var(--c-blue)', bg: 'var(--blue-bg)' },
-  クローズ: { c: 'var(--green)', bg: 'var(--green-bg)' },
-  打合せ: { c: 'var(--amber)', bg: 'var(--amber-bg)' },
-}

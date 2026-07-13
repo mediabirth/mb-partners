@@ -5,13 +5,13 @@ import { loadVendorBundle } from '@/lib/vendor-data'
 import { VENDOR_CASE_ST, VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
 import VendorOfferActions from './VendorOfferActions'
-import VendorDeliverAction from './VendorDeliverAction'
 import VendorCaseExpense from './VendorCaseExpense'
 
 export const runtime = 'edge'
 
 // 純化バッチ: ベンダー案件詳細＝契約とお金の公式記録に徹する。
 //   提示→承諾→納品済み→経費申請→承認→支払。PM系（タスク/メッセージ/進捗%）は撤去。
+// ベンダー純化P1: 納品済みの宣言は発注元（コンソール/サプライヤー）が行う＝本画面は承諾と閲覧と経費のみ。
 export default async function VendorCaseDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const b = await loadVendorBundle()
@@ -64,10 +64,7 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* 納品宣言（了承済のみ）＝経費申請ゲート */}
-      {accepted && <VendorDeliverAction assignmentId={a.id} />}
-
-      {/* 経費（納品済みで申請可） */}
+      {/* 経費（納品済みで申請可・納品の確認は発注元が行う） */}
       {(accepted || delivered) && (
         <VendorCaseExpense assignmentId={id} label={cust || '案件'} initial={expenses} delivered={delivered} />
       )}

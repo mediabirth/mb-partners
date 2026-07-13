@@ -96,7 +96,8 @@ export async function GET() {
     item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
     from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
     frozen: frozenSet.has(d.id as string),
-    assignments: asg.filter(a => a.deal_id === d.id).map(a => ({ id: a.id, status: a.status, base_fee: a.base_fee, delivery_name: dlvNameById[a.delivery_id] ?? '委託先' })),
+    // own=自社委託先（納品済みの宣言は own のみ・MB直の委託は運営が確認）
+    assignments: asg.filter(a => a.deal_id === d.id).map(a => ({ id: a.id, status: a.status, base_fee: a.base_fee, delivery_name: dlvNameById[a.delivery_id] ?? '委託先', own: (dlvs ?? []).some(v => v.id === a.delivery_id) })),
   }))
   const reqs = reqsRes.data
   return NextResponse.json({ brands: brands ?? [], menus, rewards, deals, deliveries: dlvs ?? [], requests: reqs ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
@@ -216,6 +217,28 @@ export async function POST(req: NextRequest) {
     try { await admin.from('deal_events').insert({ deal_id: dealId, body: `委託を提示: ${dv.name} ・ 委託費 ¥${baseFee.toLocaleString()}（サプライヤー ${me.name} から）`, visible_to_partner: false, created_by: null }) } catch { /* best-effort */ }
     await notify(admin, me, 'update', `assign:${ins.id}`, { deal: dl.customer_name, delivery: dv.name, base_fee: baseFee })
     return NextResponse.json({ id: ins.id, status: 'proposed' })
+  }
+
+  // ベンダー純化P1: 納品済みの宣言（vendor面から移管・vendor-redesign.md §1 V2/V10）。
+  //   自社案件×自社委託先のみ。状態機械は不変（accepted→delivered・書き手のみ発注元へ）。宣言者・日時は deal_events に常時記録。
+  if (kind === 'deliver') {
+    const assignmentId = typeof b.assignment_id === 'string' ? b.assignment_id : ''
+    if (!assignmentId) return NextResponse.json({ error: 'assignment_id は必須です' }, { status: 400 })
+    const { data: asg } = await admin.from('delivery_assignments').select('id, deal_id, status, base_fee, delivery_id').eq('id', assignmentId).maybeSingle()
+    if (!asg) return NextResponse.json({ error: '委託が見つかりません' }, { status: 404 })
+    const { data: dl } = await admin.from('deals').select('id, service_id, customer_name').eq('id', asg.deal_id).maybeSingle()
+    if (!dl || !(await ownService(admin, me.partnerId, dl.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみ操作できます' }, { status: 403 })
+    const { data: dv } = await admin.from('deliveries').select('id, name, supplier_partner_id').eq('id', asg.delivery_id).maybeSingle()
+    if (!dv || dv.supplier_partner_id !== me.partnerId) return NextResponse.json({ error: '自社の委託先のみ納品済みにできます' }, { status: 403 })
+    if (!['accepted', 'assigned'].includes(asg.status ?? '')) return NextResponse.json({ error: '納品済みにできるのは了承済の委託のみです' }, { status: 409 })
+    const { data: upd, error } = await admin.from('delivery_assignments')
+      .update({ status: 'delivered', updated_at: new Date().toISOString() })
+      .eq('id', assignmentId).eq('status', asg.status).select('id')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!upd?.length) return NextResponse.json({ error: '状態が変化していません' }, { status: 409 })
+    try { await admin.from('deal_events').insert({ deal_id: asg.deal_id, visible_to_partner: false, created_by: null, body: `納品済みにしました: ${dv.name} ・ 委託費 ¥${(asg.base_fee ?? 0).toLocaleString()}（サプライヤー ${me.name} が確認）` }) } catch { /* best-effort */ }
+    await notify(admin, me, 'update', `deliver:${assignmentId}`, { deal: dl.customer_name, delivery: dv.name, base_fee: asg.base_fee ?? 0 })
+    return NextResponse.json({ ok: true, status: 'delivered' })
   }
 
   // v8: 一括申請（表示に関わる変更をまとめて申請＝APPに正しく表示するための全フィールド）
