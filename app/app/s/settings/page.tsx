@@ -17,12 +17,13 @@ async function requireSupplierId(): Promise<string> {
 import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_SETTINGS } from '@/lib/supplier-guides'
 import BankCard from './BankCard'
+import CompanyNameField from './CompanyNameField'
 // 設定: 会社情報・変更申請履歴・通知先
 const KIND_JP: Record<string, string> = { public_description: '顧客向け説明', image: 'イメージ画像', menu_name: 'メニュー名', visibility: '公開/非公開' }
 export default async function SupplierSettingsPage() {
   const supplierId = await requireSupplierId()
   const admin = await createServiceRoleClient()
-  const { data: p } = await admin.from('partners').select('code, tax_type, phone, bank, profiles(name, email)').eq('id', supplierId).maybeSingle()
+  const { data: p } = await admin.from('partners').select('code, tax_type, phone, bank, company_name, profiles(name, email)').eq('id', supplierId).maybeSingle()
   const prof = (p?.profiles ?? null) as { name?: string | null; email?: string | null } | null
   const { data: reqs } = await admin.from('supplier_change_requests').select('id, kind, payload, status, reason, created_at').eq('supplier_partner_id', supplierId).order('created_at', { ascending: false }).limit(30)
   const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }
@@ -33,7 +34,7 @@ export default async function SupplierSettingsPage() {
       <div style={{ ...CONTENT, maxWidth: 760 }}>
       <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>会社情報</h2>
       <div style={{ ...CARD, overflow: 'hidden', marginBottom: 16 }}>
-        <div style={{ ...ROW, borderTop: 'none' }}><span style={{ color: 'var(--muted2)' }}>会社名</span><b>{prof?.name ?? '—'}</b></div>
+        <div style={{ ...ROW, borderTop: 'none', alignItems: 'center' }}><span style={{ color: 'var(--muted2)' }}>会社名（法人名）</span><CompanyNameField initial={(p as { company_name?: string | null })?.company_name ?? ''} fallback={prof?.name ?? '—'} /></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>ID</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{p?.code ?? '—'}</span></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>税区分</span><span>{p?.tax_type === 'corporate' ? '法人' : '個人'}</span></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>通知先メール</span><span>{prof?.email ?? '—'}</span></div>

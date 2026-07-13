@@ -62,17 +62,18 @@ export default function SupplierDealsPage() {
         ))}
       </div>
       {/* PC: 案件ボード（コンソール同文法・4列・カードクリック=ドロワー） */}
-      <div className="sup-board" style={{ display: 'none', gap: 10 }}>
+      <div className="sup-board" style={{ display: 'none', gap: 12, alignItems: 'flex-start', overflowX: 'auto' }}>
         {COLS.map(([key, label]) => {
           const col = (deals ?? []).filter(d => d.status === key)
           return (
-            <div key={key} style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, padding: '2px 4px 8px' }}>
-                <span style={{ fontSize: '.68rem', fontWeight: 500 }}>{label}</span>
-                <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.6rem', color: 'var(--muted2)' }}>{col.length}</span>
+            <div key={key} style={{ width: 256, flexShrink: 0, background: 'var(--bg2)', borderRadius: 16, padding: 14, minHeight: 220, border: '0.5px solid var(--line)' }}>
+              <div style={{ marginBottom: 12, padding: '2px 2px 0', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: `var(--st-${DEAL_STATUS[key]?.tone ?? 'neutral'})`, flexShrink: 0 }} />
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--txt)', whiteSpace: 'nowrap' }}>{label}</span>
+                <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '.66rem', color: 'var(--muted2)' }}>{col.length}</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60, background: 'var(--bg2)', borderRadius: 12, padding: 8 }}>
-                {col.length === 0 ? <div style={{ fontSize: '.62rem', color: 'var(--muted)', textAlign: 'center', padding: '14px 0' }}>なし</div> : col.map(d => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 60 }}>
+                {col.length === 0 ? <div style={{ fontSize: '.62rem', color: 'var(--muted)', textAlign: 'center', padding: '14px 0' }}>0件</div> : col.map(d => (
                   <button key={d.id} onClick={() => setDetail(d)} className="card-hover"
                     style={{ textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 11, padding: '10px 12px', color: 'var(--txt)' }}>
                     <div style={{ fontSize: '.74rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.customer}</div>

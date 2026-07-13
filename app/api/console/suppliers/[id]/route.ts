@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const [{ data: brands }, { data: lineage }, { data: history }, { data: charges }] = await Promise.all([
     admin.from('services').select('id, name, active').eq('supplier_partner_id', id),
-    admin.from('partners').select('id, code, status, frontier_linked_at, profiles(name)').eq('frontier_id', id),
+    admin.from('partners').select('id, code, status, frontier_linked_at, company_name, profiles(name)').eq('frontier_id', id),
     admin.from('supplier_card_events').select('event, from_card, to_card, created_at, note').eq('supplier_partner_id', id).order('created_at', { ascending: false }).limit(20),
     admin.from('supplier_charges').select('period, amount, status').eq('supplier_partner_id', id),
   ])

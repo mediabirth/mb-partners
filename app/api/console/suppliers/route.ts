@@ -27,12 +27,12 @@ export async function GET() {
   const ids = [...new Set([...(byCard ?? []).map((p: { id: string }) => p.id), ...(byService ?? []).map((s: { supplier_partner_id: string }) => s.supplier_partner_id)])]
   if (!ids.length) return NextResponse.json({ suppliers: [] })
   const [{ data: ps }, { data: svs }, { data: lineage }] = await Promise.all([
-    admin.from('partners').select('id, code, status, tax_type, supplier_rate_card, profiles(name)').in('id', ids),
+    admin.from('partners').select('id, code, status, tax_type, supplier_rate_card, company_name, profiles(name)').in('id', ids),
     admin.from('services').select('id, name, supplier_partner_id').in('supplier_partner_id', ids),
     admin.from('partners').select('id, frontier_id').in('frontier_id', ids),
   ])
   const suppliers = (ps ?? []).map((p: any) => ({
-    id: p.id, code: p.code, name: p.profiles?.name ?? p.code,
+    id: p.id, code: p.code, name: p.company_name || p.profiles?.name || p.code,
     status: p.status, tax_type: p.tax_type,
     rate_card: p.supplier_rate_card ?? STD_RATE_CARD,
     brands: (svs ?? []).filter((s: any) => s.supplier_partner_id === p.id).map((s: any) => ({ id: s.id, name: s.name })),

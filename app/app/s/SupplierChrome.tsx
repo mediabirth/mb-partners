@@ -23,5 +23,5 @@ export function SectionTitle({ title, subtitle }: { title: string; subtitle?: st
 }
 
 /** コンソールと同一のコンテンツ余白。 */
-export const CONTENT: React.CSSProperties = { padding: '24px 28px 44px', maxWidth: 1120, margin: '0 auto', width: '100%', minWidth: 0, boxSizing: 'border-box' }
+export const CONTENT: React.CSSProperties = { padding: '24px 28px 44px', maxWidth: 1120, margin: 0, width: '100%', minWidth: 0, boxSizing: 'border-box' }
 export const CARD14: React.CSSProperties = { background: 'var(--s-0, #fff)', border: '0.5px solid var(--line)', borderRadius: 14 }

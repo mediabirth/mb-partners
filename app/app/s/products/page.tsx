@@ -23,7 +23,7 @@ export default async function SupplierProductsPage() {
   return (
     <div className="page-anim">
       <SupplierTopbar title="サービスマスタ" guide={SG_PRODUCTS} />
-      <div style={{ ...CONTENT, maxWidth: 760 }}>
+      <div style={{ ...CONTENT, maxWidth: 720, margin: 0 }}>
         <ProductsClient />
       </div>
     </div>

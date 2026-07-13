@@ -70,7 +70,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   // 統一行を構築（リファラル/フロンティア=partners・デリバリー=deliveries）。
   const partnerRow = (p: P): URow => ({
     kind: p.supplier_rate_card ? 'supplier' : p.is_frontier ? 'frontier' : 'referral', id: p.id, href: `/console/partners/${p.id}`,
-    name: p.profiles?.name ?? '—', email: p.profiles?.email ?? '', color: p.profiles?.color ?? null,
+    name: ((p as { company_name?: string | null }).company_name || p.profiles?.name) ?? '—', email: p.profiles?.email ?? '', color: p.profiles?.color ?? null,
     avatar_url: (p.profiles as { avatar_url?: string | null } | null)?.avatar_url ?? null,
     code: p.code, tax: p.tax_type === 'individual' ? '個人' : '法人',
     deals: dealCount(p.id), activeDeals: activeDealCount(p.id), reward: partnerReward(p.id), kyc: !!p.kyc_verified_at,

@@ -182,7 +182,7 @@ export async function getAllDealsWithEvents(supabase: SupabaseClient, dealId: st
 }
 
 export async function getPartnersWithProfiles(supabase: SupabaseClient) {
-  const sel = 'id, code, status, tax_type, created_at, kyc_verified_at, is_frontier, frontier_id, supplier_rate_card, profiles(name, email, color, avatar_url, role)'
+  const sel = 'id, code, status, tax_type, created_at, kyc_verified_at, is_frontier, frontier_id, supplier_rate_card, company_name, profiles(name, email, color, avatar_url, role)'
   // 直営業基盤：MB直営(is_system)はパートナー一覧から除外。is_system列が無い(DDL前)は従来どおり全件にフォールバック。
   const filtered = await supabase.from('partners').select(sel).eq('is_system', false).order('created_at', { ascending: false })
   const data = filtered.error

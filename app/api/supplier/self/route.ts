@@ -18,14 +18,14 @@ async function requireSupplier(): Promise<{ partnerId: string; code: string; nam
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const { data: p } = await supabase.from('partners').select('id, code, supplier_rate_card, profiles(name)').eq('profile_id', user.id).maybeSingle()
+  const { data: p } = await supabase.from('partners').select('id, code, supplier_rate_card, company_name, profiles(name)').eq('profile_id', user.id).maybeSingle()
   if (!p) return null
   const admin = await createServiceRoleClient()
   if (!p.supplier_rate_card) {
     const { data: sv } = await admin.from('services').select('id').eq('supplier_partner_id', p.id).limit(1)
     if (!sv?.length) return null
   }
-  return { partnerId: p.id, code: p.code, name: (p.profiles as { name?: string } | null)?.name ?? p.code }
+  return { partnerId: p.id, code: p.code, name: (p as { company_name?: string | null }).company_name || (p.profiles as { name?: string } | null)?.name || p.code }
 }
 
 /** 対象が自社ブランド配下であることの検証（service直・menu経由の両方）。 */
@@ -149,6 +149,15 @@ export async function PATCH(req: NextRequest) {
     }
     try { await admin.from('deal_events').insert({ deal_id: d.id, body: `受注額をサプライヤー本人が入力: ¥${revenue.toLocaleString()}（${me.name}）`, visible_to_partner: false, created_by: null }) } catch { /* best-effort */ }
     await notify(admin, me, 'update', `deal-revenue:${d.id}`, { customer: d.customer_name, revenue })
+    return NextResponse.json({ ok: true })
+  }
+
+  // 即時④: 会社名（法人の正式名称・v9）。表示系全域が company_name を優先する。
+  if (typeof b.company_name === 'string') {
+    const cn = b.company_name.trim().slice(0, 120)
+    const { error } = await admin.from('partners').update({ company_name: cn || null }).eq('id', me.partnerId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await notify(admin, me, 'update', `company-name:${me.partnerId}`, { company_name: cn })
     return NextResponse.json({ ok: true })
   }
 

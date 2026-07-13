@@ -99,7 +99,7 @@ export default async function SupplierConsoleHome() {
 
   return (
     <div className="page-anim">
-      <SupplierTopbar title="ホーム" guide={SG_HOME} />
+      <SupplierTopbar title="ダッシュボード" guide={SG_HOME} />
       <div style={{ ...CONTENT }}>
 
       {/* ヒーロー（コンソール・ダッシュボード同文法・CTA統合） */}

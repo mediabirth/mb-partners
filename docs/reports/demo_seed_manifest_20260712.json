@@ -236,6 +236,11 @@
    "id": "da83b185-ea97-4aaf-80e4-5f37216a1bb1",
    "name": "omnis_monthly ¥50,000（2026-07）",
    "extra": ""
+  },
+  {
+   "type": "partners.company_name",
+   "id": "7751b302-334e-4f3e-8949-3604e288cd3c",
+   "name": "ZZ6153 company_name=株式会社オムニス（v9デモ表示名・撤去時はnullへ）"
   }
  ],
  "money_hashes": {

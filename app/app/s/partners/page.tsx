@@ -11,8 +11,7 @@ import DeliverySection from './DeliverySection'
  * 招待（唯一のフォーム・上部）→ KPI3枚 → パートナー一覧テーブル（状態・今月成約・今月売上・累計売上）。
  * 数字は自社メニューの受注額集計＋computeOverrides（支払と同一規則）＝単一ソース。
  */
-export default async function SupplierPartnersPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const tab = (await searchParams).tab === 'delivery' ? 'delivery' : 'partner'
+export default async function SupplierPartnersPage() {
   const user = await getCachedUser()
   if (!user) redirect('/login')
   const supabase = await createClient()
@@ -63,18 +62,11 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
 
   return (
     <div className="page-anim">
-      <SupplierTopbar title="パートナー" guide={SG_NETWORK} action={<InviteModal mode={tab === 'delivery' ? 'delivery' : 'partner'} />} />
+      <SupplierTopbar title="パートナー" guide={SG_NETWORK} action={<span style={{ display: 'inline-flex', gap: 8 }}><InviteModal mode="partner" /><InviteModal mode="delivery" /></span>} />
       <div style={{ ...CONTENT }}>
 
-      {/* 区分タブ（MBコンソール パートナーの区分と同文法: パートナー/委託先） */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        {([['partner', 'パートナー'], ['delivery', '委託先']] as const).map(([v, l]) => (
-          <a key={v} href={v === 'partner' ? '/app/s/partners' : '/app/s/partners?tab=delivery'}
-            style={{ fontSize: '.72rem', fontWeight: 500, minHeight: 36, padding: '0 16px', borderRadius: 999, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', border: `1.5px solid ${tab === v ? 'var(--c-blue)' : 'var(--line)'}`, background: tab === v ? 'var(--blue-bg2)' : '#fff', color: tab === v ? 'var(--c-blue)' : 'var(--muted2)' }}>{l}</a>
-        ))}
-      </div>
-
-      {tab === 'delivery' ? <DeliverySection /> : <>
+      {/* v9: タブを廃止しパートナー→委託先を1画面に縦並び（全部見える） */}
+      <>
 
       {/* KPI 3枚（コンソール同体裁） */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, margin: '12px 0' }}>
@@ -140,7 +132,13 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
         <div style={{ flex: 1, fontSize: '.72rem' }}>あなた自身の紹介もいつでも歓迎です</div>
         <a href="/app/refer" style={{ flexShrink: 0, fontSize: '.7rem', fontWeight: 500, color: '#fff', background: 'var(--c-blue)', borderRadius: 999, minHeight: 40, padding: '0 16px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>紹介する →</a>
       </div>
-      </>}
+
+      {/* 委託先（同一画面・下段） */}
+      <div style={{ margin: '24px 2px 12px', borderBottom: '0.5px solid var(--line)', paddingBottom: 8 }}>
+        <h2 style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: 0 }}>委託先（実務を担う方）</h2>
+      </div>
+      <DeliverySection />
+      </>
       </div>
     </div>
   )
