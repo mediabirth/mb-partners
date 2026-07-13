@@ -10,7 +10,9 @@ async function pidOf(email:string){const {data:pr}=await admin.from('profiles').
   if(!pr)return null; const {data:pa}=await admin.from('partners').select('id').eq('profile_id',pr.id).maybeSingle(); return pa?.id??null}
 async function cleanup(){
   const supId=await pidOf(SUPMAIL)
-  if(supId){await admin.from('supplier_charges').delete().eq('supplier_partner_id',supId);await admin.from('supplier_card_events').delete().eq('supplier_partner_id',supId);await admin.from('partner_reward_overrides').delete().eq('supplier_partner_id',supId);await admin.from('supplier_change_requests').delete().eq('supplier_partner_id',supId)}
+  if(supId){await admin.from('supplier_charges').delete().eq('supplier_partner_id',supId);await admin.from('supplier_card_events').delete().eq('supplier_partner_id',supId);await admin.from('partner_reward_overrides').delete().eq('supplier_partner_id',supId);await admin.from('supplier_change_requests').delete().eq('supplier_partner_id',supId)
+    const {data:mydlv}=await admin.from('deliveries').select('id').eq('supplier_partner_id',supId)
+    for(const v of mydlv??[]){await admin.from('delivery_assignments').delete().eq('delivery_id',v.id);await admin.from('invites').delete().eq('delivery_id',v.id);await admin.from('deliveries').delete().eq('id',v.id)}}
   await admin.from('deals').delete().like('customer_name','CCE2E%')
   const {data:svc}=await admin.from('services').select('id').eq('name','CC-E2Eブランド').maybeSingle()
   if(svc){await admin.from('audit_logs').delete().eq('category','supplier_self').like('target','%'+svc.id+'%').then(()=>{},()=>{})
@@ -548,9 +550,11 @@ await rp2.locator('input[type="email"]').fill(SUPMAIL);await rp2.locator('input[
 await rp2.locator('button[type="submit"]').first().click();await rp2.waitForTimeout(3000)
 await rp2.goto(BASE+'/app/s/deals',{waitUntil:'domcontentloaded'});await rp2.waitForTimeout(3000)
 ok((await rp2.locator('.sup-side').first().isVisible().catch(()=>false)),'PC: 固定サイドバー表示（≥1024）')
-const row=rp2.locator('tr',{hasText:'CCE2E-G'})
-await row.locator('input[inputmode="numeric"]').fill('400000')
-await row.locator('button',{hasText:'保存'}).click();await rp2.waitForTimeout(2500)
+// v6: PC=ボード＝カードを開いてドロワー内で受注額入力
+await rp2.locator('.sup-board button',{hasText:'CCE2E-G'}).first().click();await rp2.waitForTimeout(1000)
+await rp2.locator('input[placeholder="未入力"]').last().fill('400000')
+await rp2.locator('button',{hasText:'保存'}).last().click();await rp2.waitForTimeout(2500)
+await rp2.keyboard.press('Escape');await rp2.evaluate(`(()=>{const o=[...document.querySelectorAll('div')].find(x=>getComputedStyle(x).position==='fixed'&&x.style.background?.includes('rgba'));if(o)o.click()})()`);await rp2.waitForTimeout(400)
 const {data:d7i}=await admin.from('deal_items').select('revenue').eq('deal_id',d7!.id)
 ok(Number(d7i?.[0]?.revenue)===400000,'本人入力: 受注額400,000保存',JSON.stringify(d7i))
 const {data:ev7}=await admin.from('deal_events').select('body').eq('deal_id',d7!.id).like('body','%サプライヤー本人が入力%')
@@ -627,6 +631,55 @@ console.log('[19] craft検査（v2是正の実測）')
   const ts=await pp.evaluate(`document.body.innerText`) as string
   ok(ts.includes('振込先口座')&&ts.includes('変更申請'),'設定v3: 会社のこと（口座＋変更申請）')
   await pcx.close()
+}
+
+console.log('[20] v6: 商品ドロワー可視・案件ボード・委託先（招待→アサイン→整合）')
+{
+  const c6=await b.newContext({viewport:{width:1280,height:900}})
+  c6.on('page',p=>p.on('dialog',d=>d.accept().catch(()=>{})))
+  const p6=await c6.newPage(); const e6:string[]=[]; p6.on('pageerror',e=>e6.push(e.message))
+  await p6.goto(BASE+'/app/login',{waitUntil:'domcontentloaded'});await p6.waitForTimeout(1200)
+  await p6.locator('input[type="email"]').fill(SUPMAIL);await p6.locator('input[type="password"]').fill(PW)
+  await p6.locator('button[type="submit"]').first().click();await p6.waitForTimeout(3000)
+  // 商品ドロワー: portal化で全体がビューポート内（見切れ根絶の機械計測）
+  await p6.goto(BASE+'/app/s/products',{waitUntil:'domcontentloaded'});await p6.waitForTimeout(2500)
+  await p6.locator('text=CC-E2Eブランド').first().click();await p6.waitForTimeout(1000)
+  const dm=await p6.evaluate(`(()=>{const d=document.querySelector('.prod-drawer');if(!d)return null;const r=d.getBoundingClientRect();return{top:Math.round(r.top),right:Math.round(r.right),bottom:Math.round(r.bottom),ih:innerHeight,iw:innerWidth,parentBody:d.parentElement===document.body}})()`) as any
+  ok(!!dm&&dm.top===0&&dm.bottom===dm.ih&&dm.right<=dm.iw&&dm.parentBody===true,'商品ドロワー: body直下portal・全高可視（見切れ根絶）',JSON.stringify(dm))
+  ok(((await p6.evaluate(`document.body.innerText`)) as string).includes('基本情報'),'商品ドロワー: 内容表示')
+  await p6.keyboard.press('Escape');await p6.evaluate(`document.querySelector('.prod-drawer')&&document.body.click()`);await p6.waitForTimeout(400)
+  // 案件ボード（PC）
+  await p6.goto(BASE+'/app/s/deals',{waitUntil:'domcontentloaded'});await p6.waitForTimeout(2800)
+  const bd=await p6.evaluate(`(()=>{const b2=document.querySelector('.sup-board');return b2?getComputedStyle(b2).display:''})()`) as string
+  ok(bd==='flex','案件v6: PC=ボード表示（4列）')
+  const bt=await p6.evaluate(`document.querySelector('.sup-board')?.textContent||''`) as string
+  ok(bt.includes('受付')&&bt.includes('対応中')&&bt.includes('成約')&&bt.includes('支払済')&&bt.includes('CCE2E-A'),'案件v6: 列＋カード')
+  // 委託先: 招待（リンクのみ・実メール0）
+  await p6.goto(BASE+'/app/s/partners?tab=delivery',{waitUntil:'domcontentloaded'});await p6.waitForTimeout(2500)
+  await p6.locator('input[placeholder="名称 / 屋号（必須）"]').fill('CC設備サービス')
+  await p6.locator('input[placeholder*="業務"]').fill('保険の実務')
+  await p6.locator('button',{hasText:'招待リンクを作成'}).click();await p6.waitForTimeout(2500)
+  const dvUrl=await p6.evaluate(`(()=>{const i=[...document.querySelectorAll('input[readonly]')].find(x=>x.value.includes('/invite/'));return i?i.value:''})()`) as string
+  ok(!!dvUrl,'委託先: 招待リンク発行')
+  const {data:dvRow}=await admin.from('deliveries').select('id, supplier_partner_id, name').eq('name','CC設備サービス').maybeSingle()
+  ok(dvRow?.supplier_partner_id===supId,'委託先: 自社所有（supplier_partner_id）で作成')
+  ok(((await p6.evaluate(`document.body.innerText`)) as string).includes('招待済み・未登録'),'委託先: 一覧に状態表示')
+  // アサイン: 案件ドロワーから提示
+  await p6.goto(BASE+'/app/s/deals',{waitUntil:'domcontentloaded'});await p6.waitForTimeout(2800)
+  await p6.locator('.sup-board button',{hasText:'CCE2E-A'}).first().click();await p6.waitForTimeout(1000)
+  await p6.locator('select').selectOption({label:'CC設備サービス'})
+  await p6.locator('input[placeholder="委託費（税抜）"]').fill('80000')
+  await p6.locator('button',{hasText:'提示する'}).click();await p6.waitForTimeout(2500)
+  const {data:asgRow}=await admin.from('delivery_assignments').select('status, base_fee, delivery_id').eq('delivery_id',dvRow!.id)
+  ok((asgRow??[]).length===1&&asgRow![0].status==='proposed'&&Number(asgRow![0].base_fee)===80000,'アサイン: proposed/¥80,000で作成（vendorフロー接続）',JSON.stringify(asgRow))
+  const dt6=await p6.evaluate(`document.body.innerText`) as string
+  ok(dt6.includes('CC設備サービス')&&dt6.includes('提示中'),'ドロワー: 委託の状態表示')
+  // 境界: 他社委託先へのアサイン=403（デモのMB直委託先を流用）
+  const {data:mbDlv}=await admin.from('deliveries').select('id').is('supplier_partner_id',null).limit(1).maybeSingle()
+  if(mbDlv){const bx=await p6.evaluate(`fetch('/api/supplier/self',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'assign',deal_id:'${d1!.id}',delivery_id:'${mbDlv.id}',base_fee:1})}).then(r=>r.status)`) as number
+  ok(bx===403,'境界: 自社以外の委託先アサイン=403',String(bx))}
+  ok(e6.length===0,'v6: pageerrors=[]',JSON.stringify(e6))
+  await c6.close()
 }
 
 console.log('RESULT-B: '+pass+'/'+(pass+fail)+' pageerrors='+JSON.stringify(errs.slice(0,3)))

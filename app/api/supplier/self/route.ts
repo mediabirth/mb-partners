@@ -73,12 +73,17 @@ export async function GET() {
   const [rewardsRes, frRes, asgRes] = await Promise.all([
     mIds.length ? admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base').in('menu_id', mIds).eq('active', true).order('sort') : Promise.resolve({ data: [] as never[] }),
     dealIds.length ? admin.from('supplier_charges').select('deal_id').eq('supplier_partner_id', me.partnerId).in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
-    dealIds.length ? admin.from('delivery_assignments').select('deal_id, status').in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
+    dealIds.length ? admin.from('delivery_assignments').select('id, deal_id, delivery_id, status, base_fee').in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
   ])
   const rewards = (rewardsRes.data ?? []) as { id: string; menu_id: string; reward_type: string; reward_value: number; reward_base: string | null }[]
   const { customerHonorific } = honorificMod
   const frozenSet = new Set(((frRes.data ?? []) as { deal_id: string | null }[]).map(x => x.deal_id))
-  const asg = (asgRes.data ?? []) as { deal_id: string; status: string | null }[]
+  const asg = (asgRes.data ?? []) as { id: string; deal_id: string; delivery_id: string; status: string | null; base_fee: number | null }[]
+  // v6: 自社の委託先（supplier_partner_id=本人）一覧
+  const { data: dlvs } = await admin.from('deliveries').select('id, name, kind, contact_email, active, auth_user_id').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false })
+  const dlvIds = [...new Set(asg.map(a => a.delivery_id))]
+  const { data: dlvNames } = dlvIds.length ? await admin.from('deliveries').select('id, name').in('id', dlvIds) : { data: [] as never[] }
+  const dlvNameById: Record<string, string> = Object.fromEntries(((dlvNames ?? []) as { id: string; name: string }[]).map(x => [x.id, x.name]))
   const deals = ds.map(d => ({
     id: d.id as string,
     customer: customerHonorific(d as never),
@@ -91,10 +96,10 @@ export async function GET() {
     item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
     from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
     frozen: frozenSet.has(d.id as string),
-    assignments: asg.filter(a => a.deal_id === d.id).map(a => ({ status: a.status })),
+    assignments: asg.filter(a => a.deal_id === d.id).map(a => ({ id: a.id, status: a.status, base_fee: a.base_fee, delivery_name: dlvNameById[a.delivery_id] ?? '委託先' })),
   }))
   const reqs = reqsRes.data
-  return NextResponse.json({ brands: brands ?? [], menus, rewards, deals, requests: reqs ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ brands: brands ?? [], menus, rewards, deals, deliveries: dlvs ?? [], requests: reqs ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -165,6 +170,45 @@ export async function POST(req: NextRequest) {
   const admin = await createServiceRoleClient()
   const b = await req.json().catch(() => ({}))
   const kind = String(b.kind ?? '')
+
+  // v6①: 委託先の招待（自社所有・既存deliveries/invites流儀・実メールは任意）
+  if (kind === 'invite_delivery') {
+    const name = typeof b.name === 'string' ? b.name.trim().slice(0, 120) : ''
+    const email = typeof b.email === 'string' ? b.email.trim().toLowerCase() : ''
+    if (!name) return NextResponse.json({ error: '委託先の名称は必須です' }, { status: 400 })
+    const { data: dv, error: dvErr } = await admin.from('deliveries').insert({ name, kind: typeof b.work === 'string' ? b.work.trim().slice(0, 60) || null : null, contact_email: email || null, active: true, supplier_partner_id: me.partnerId, note: `サプライヤー（${me.name}）の委託先` }).select('id').single()
+    if (dvErr) return NextResponse.json({ error: dvErr.message }, { status: 500 })
+    const { randomUUID } = await import('node:crypto')
+    const token = randomUUID()
+    const { error: invErr } = await admin.from('invites').insert({ kind: 'vendor', role: 'vendor', email: email || null, name, token, delivery_id: dv.id, expires_at: new Date(Date.now() + 7 * 86400e3).toISOString() })
+    if (invErr) return NextResponse.json({ error: invErr.message }, { status: 500 })
+    const { partnerFacingOrigin, requestOrigin } = await import('@/lib/app-origin')
+    const invite_url = `${partnerFacingOrigin(requestOrigin(req))}/invite/${token}`
+    let emailed = false
+    if (email) {
+      try { const { sendInviteEmail } = await import('@/lib/email'); emailed = (await sendInviteEmail({ to: email, name, url: invite_url, expiresAt: null, kind: 'vendor' })).sent } catch { /* best-effort */ }
+    }
+    await notify(admin, me, 'update', `delivery-invite:${dv.id}`, { name, email: email || null })
+    return NextResponse.json({ id: dv.id, invite_url, emailed })
+  }
+
+  // v6②: 自社案件への委託アサイン（提示）＝受託者のアプリに承諾待ちで表示（既存vendorフローに接続）
+  if (kind === 'assign') {
+    const dealId = typeof b.deal_id === 'string' ? b.deal_id : ''
+    const deliveryId = typeof b.delivery_id === 'string' ? b.delivery_id : ''
+    const baseFee = Math.round(Number(b.base_fee))
+    if (!dealId || !deliveryId || !Number.isFinite(baseFee) || baseFee < 0) return NextResponse.json({ error: 'deal_id / delivery_id / base_fee は必須です' }, { status: 400 })
+    const { data: dl } = await admin.from('deals').select('id, service_id, customer_name').eq('id', dealId).maybeSingle()
+    if (!dl || !(await ownService(admin, me.partnerId, dl.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみアサインできます' }, { status: 403 })
+    const { data: dv } = await admin.from('deliveries').select('id, name, supplier_partner_id').eq('id', deliveryId).maybeSingle()
+    if (!dv || dv.supplier_partner_id !== me.partnerId) return NextResponse.json({ error: '自社の委託先のみアサインできます' }, { status: 403 })
+    const { data: ins, error } = await admin.from('delivery_assignments').insert({ deal_id: dealId, delivery_id: deliveryId, base_fee: baseFee, status: 'proposed', assigned_at: new Date().toISOString(), note: `サプライヤー（${me.name}）から提示` }).select('id').single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    try { await admin.from('deal_events').insert({ deal_id: dealId, body: `委託を提示: ${dv.name} ・ 委託費 ¥${baseFee.toLocaleString()}（サプライヤー ${me.name} から）`, visible_to_partner: false, created_by: null }) } catch { /* best-effort */ }
+    await notify(admin, me, 'update', `assign:${ins.id}`, { deal: dl.customer_name, delivery: dv.name, base_fee: baseFee })
+    return NextResponse.json({ id: ins.id, status: 'proposed' })
+  }
+
   if (!['public_description', 'image', 'menu_name', 'visibility'].includes(kind)) return NextResponse.json({ error: 'kind が不正です' }, { status: 400 })
   const serviceId = typeof b.service_id === 'string' ? b.service_id : ''
   const menuId = typeof b.menu_id === 'string' && b.menu_id ? b.menu_id : null

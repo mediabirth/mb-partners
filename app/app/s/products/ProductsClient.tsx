@@ -6,6 +6,7 @@
  * データ・境界・ガードは /api/supplier/self（セッションスコープ）。
  */
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 type Brand = { id: string; name: string; active: boolean; supplier_memo: string | null; image_url: string | null }
 type Menu = { id: string; name: string; service_id: string; public_description: string | null }
@@ -79,8 +80,9 @@ export default function ProductsClient() {
         ))}
       </div>
 
-      {/* ドロワー（サービスマスタと同じ右ドロワー・左ナビ=基本情報＋メニュー列） */}
-      {brand && (
+      {/* ドロワー（サービスマスタと同じ右ドロワー・左ナビ=基本情報＋メニュー列）。
+          ★createPortalでbody直下へ＝.page-animのanimation(transform)がfixedの包含ブロック化して見切れる既知事故の恒久回避（CLAUDE.mdモーダル規律） */}
+      {brand && typeof document !== 'undefined' && createPortal(
         <>
           <div onClick={() => setEditing('')} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', backdropFilter: 'blur(2px)', zIndex: 40 }} />
           <div className="exp-in prod-drawer" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 760, maxWidth: '96vw', background: 'var(--bg2)', zIndex: 45, boxShadow: '-12px 0 40px rgba(14,14,20,.18)', display: 'flex', overflow: 'hidden' }}>
@@ -155,7 +157,8 @@ export default function ProductsClient() {
               ) : null}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
       {toast && <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '10px 2px 0' }}>{toast}</p>}
       <style>{`@media (max-width: 640px){ .prod-lnav{width:112px !important} }`}</style>
