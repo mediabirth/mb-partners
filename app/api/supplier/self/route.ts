@@ -54,7 +54,7 @@ export async function GET() {
   if (!me) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
   // サクサク: 直列チェーンを段階並列化（brands→[sms/deals素/reqs]→menus→[rewards/frozen/asg]・結果は従来と同一）
-  const { data: brands } = await admin.from('services').select('id, name, active, supplier_memo, image_url, logo_path, icon, color, category').eq('supplier_partner_id', me.partnerId).order('sort')
+  const { data: brands } = await admin.from('services').select('id, name, active, supplier_memo, image_url, logo_path, icon, color, category, subtitle, description, who, target_audience, url').eq('supplier_partner_id', me.partnerId).order('sort')
   const svIds = (brands ?? []).map(b => b.id)
   const [smsRes, dsRes, reqsRes, honorificMod] = await Promise.all([
     svIds.length ? admin.from('service_menus').select('id, service_id').in('service_id', svIds) : Promise.resolve({ data: [] as never[] }),
@@ -64,8 +64,8 @@ export async function GET() {
   ])
   const sms = (smsRes.data ?? []) as { id: string; service_id: string }[]
   const smIds = sms.map(x => x.id)
-  const { data: mn } = smIds.length ? await admin.from('menus').select('id, name, service_menu_id, public_description').in('service_menu_id', smIds).order('sort') : { data: [] as never[] }
-  const menus = ((mn ?? []) as { id: string; name: string; service_menu_id: string; public_description: string | null }[]).map(m => ({ id: m.id, name: m.name, public_description: m.public_description, service_id: sms.find(x => x.id === m.service_menu_id)?.service_id ?? '' }))
+  const { data: mn } = smIds.length ? await admin.from('menus').select('id, name, service_menu_id, public_description, short_description, description').in('service_menu_id', smIds).order('sort') : { data: [] as never[] }
+  const menus = ((mn ?? []) as { id: string; name: string; service_menu_id: string; public_description: string | null; short_description: string | null; description: string | null }[]).map(m => ({ id: m.id, name: m.name, public_description: m.public_description, short_description: m.short_description, description: m.description, service_id: sms.find(x => x.id === m.service_menu_id)?.service_id ?? '' }))
   const mIds = menus.map(m => m.id)
   const ds = (dsRes.data ?? []) as Record<string, unknown>[]
   const dealIds = ds.map(x => x.id as string)
@@ -209,7 +209,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: ins.id, status: 'proposed' })
   }
 
-  if (!['public_description', 'image', 'menu_name', 'visibility'].includes(kind)) return NextResponse.json({ error: 'kind が不正です' }, { status: 400 })
+  // v8: 一括申請（表示に関わる変更をまとめて申請＝APPに正しく表示するための全フィールド）
+  if (kind === 'batch_request') {
+    const serviceId0 = typeof b.service_id === 'string' ? b.service_id : ''
+    if (!serviceId0 || !(await ownService(admin, me.partnerId, serviceId0))) return NextResponse.json({ error: '自社ブランドのみ申請できます' }, { status: 403 })
+    const items = Array.isArray(b.requests) ? b.requests as { kind: string; menu_id?: string | null; value: unknown }[] : []
+    const ALLOWED = ['public_description', 'image', 'menu_name', 'visibility', 'subtitle', 'category', 'description', 'who', 'target_audience', 'url', 'menu_short_description', 'menu_description']
+    if (!items.length || items.some(it => !ALLOWED.includes(it.kind))) return NextResponse.json({ error: '申請内容が不正です' }, { status: 400 })
+    const rows: Record<string, unknown>[] = []
+    for (const it of items) {
+      const mid = typeof it.menu_id === 'string' && it.menu_id ? it.menu_id : null
+      if (mid) { const own = await ownMenu(admin, me.partnerId, mid); if (!own || own.serviceId !== serviceId0) return NextResponse.json({ error: '自社メニューのみ申請できます' }, { status: 403 }) }
+      const val = it.kind === 'visibility' ? !!it.value : String(it.value ?? '').trim().slice(0, 4000)
+      rows.push({ supplier_partner_id: me.partnerId, service_id: serviceId0, menu_id: mid, kind: it.kind, payload: { value: val } })
+    }
+    const { data: ins, error } = await admin.from('supplier_change_requests').insert(rows).select('id')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await notify(admin, me, 'request', `batch:${serviceId0}`, { count: rows.length, kinds: items.map(i => i.kind) })
+    return NextResponse.json({ ids: (ins ?? []).map(x => x.id), status: 'pending', count: rows.length })
+  }
+
+  if (!['public_description', 'image', 'menu_name', 'visibility', 'subtitle', 'category', 'description', 'who', 'target_audience', 'url', 'menu_short_description', 'menu_description'].includes(kind)) return NextResponse.json({ error: 'kind が不正です' }, { status: 400 })
   const serviceId = typeof b.service_id === 'string' ? b.service_id : ''
   const menuId = typeof b.menu_id === 'string' && b.menu_id ? b.menu_id : null
   if (!serviceId) return NextResponse.json({ error: 'service_id は必須です' }, { status: 400 })

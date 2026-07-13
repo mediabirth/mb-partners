@@ -3,7 +3,7 @@ import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supa
 import CountUp from '@/components/CountUp'
 import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_NETWORK } from '@/lib/supplier-guides'
-import SupplierInvite from './SupplierInvite'
+import InviteModal from './InviteModal'
 import DeliverySection from './DeliverySection'
 
 /**
@@ -63,7 +63,7 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
 
   return (
     <div className="page-anim">
-      <SupplierTopbar title="パートナー" guide={SG_NETWORK} />
+      <SupplierTopbar title="パートナー" guide={SG_NETWORK} action={<InviteModal mode={tab === 'delivery' ? 'delivery' : 'partner'} />} />
       <div style={{ ...CONTENT }}>
 
       {/* 区分タブ（MBコンソール パートナーの区分と同文法: パートナー/委託先） */}
@@ -75,7 +75,6 @@ export default async function SupplierPartnersPage({ searchParams }: { searchPar
       </div>
 
       {tab === 'delivery' ? <DeliverySection /> : <>
-      <SupplierInvite />
 
       {/* KPI 3枚（コンソール同体裁） */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, margin: '12px 0' }}>

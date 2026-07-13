@@ -58,6 +58,13 @@ export async function PATCH(req: NextRequest) {
     } else if (r.kind === 'visibility') {
       const { error } = await admin.from('services').update({ active: !!value }).eq('id', r.service_id)
       applyErr = error?.message ?? null
+    } else if (['subtitle', 'category', 'description', 'who', 'target_audience', 'url'].includes(r.kind)) {
+      const { error } = await admin.from('services').update({ [r.kind]: String(value ?? '').trim() || null }).eq('id', r.service_id)
+      applyErr = error?.message ?? null
+    } else if ((r.kind === 'menu_short_description' || r.kind === 'menu_description') && r.menu_id) {
+      const col = r.kind === 'menu_short_description' ? 'short_description' : 'description'
+      const { error } = await admin.from('menus').update({ [col]: String(value ?? '').trim() || null }).eq('id', r.menu_id)
+      applyErr = error?.message ?? null
     } else applyErr = '未知の申請種別です'
     if (applyErr) return NextResponse.json({ error: `反映に失敗しました: ${applyErr}` }, { status: 500 })
   }

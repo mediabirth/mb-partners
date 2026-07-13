@@ -23,27 +23,38 @@ export default async function SupplierMoneyPage() {
   }
   const now = new Date()
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const inMonth = (d: { fixed_month?: string | null; created_at: string }) => ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === ym
   const { computeCharges } = await import('@/lib/supplier-charges')
   const { rows: preview } = await computeCharges(admin, me!.id, ym).catch(() => ({ rows: [] as never[] }))
   const previewTotal = preview.reduce((s, r) => s + Number((r as { amount: number }).amount), 0)
   const { data: charges } = await admin.from('supplier_charges').select('id, kind, period, amount, status').eq('supplier_partner_id', me!.id).order('period', { ascending: false }).limit(24)
-  // 委託（自社案件に紐づく分）
+  // ② パートナーへの報酬（今月・自社メニュー成約分＝deals.amount・支払はMB Partnersが代行）
+  // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）
   const { data: myBrands } = await admin.from('services').select('id').eq('supplier_partner_id', me!.id)
-  let asgSummary = { proposed: 0, accepted: 0, delivered: 0 }
+  let partnerRewardMonth = 0, partnerRewardCount = 0
+  let asgRows: { name: string; customer: string; base_fee: number; status: string | null }[] = []
   if ((myBrands ?? []).length) {
-    const { data: ds } = await admin.from('deals').select('id').in('service_id', (myBrands ?? []).map(b => b.id))
-    if ((ds ?? []).length) {
-      const { data: asg } = await admin.from('delivery_assignments').select('status').in('deal_id', (ds ?? []).map(d => d.id))
-      for (const a of asg ?? []) {
-        if (a.status === 'proposed') asgSummary.proposed++
-        else if (a.status === 'accepted' || a.status === 'assigned') asgSummary.accepted++
-        else if (a.status === 'delivered') asgSummary.delivered++
-      }
+    const { data: ds } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, amount, status, fixed_month, created_at').in('service_id', (myBrands ?? []).map(b => b.id)).in('status', ['confirmed', 'paid'])
+    for (const dd of (ds ?? [])) {
+      if (inMonth(dd)) { partnerRewardMonth += Number(dd.amount) || 0; partnerRewardCount++ }
+    }
+    const { data: dsAll } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name').in('service_id', (myBrands ?? []).map(b => b.id))
+    const idsAll = (dsAll ?? []).map(x => x.id)
+    if (idsAll.length) {
+      const { data: asg } = await admin.from('delivery_assignments').select('deal_id, delivery_id, base_fee, status').in('deal_id', idsAll).neq('status', 'declined')
+      const dlvIds = [...new Set((asg ?? []).map(a => a.delivery_id))]
+      const { data: dlvs } = dlvIds.length ? await admin.from('deliveries').select('id, name').in('id', dlvIds) : { data: [] as never[] }
+      const { customerHonorific } = await import('@/lib/customer')
+      asgRows = (asg ?? []).map(a => ({
+        name: ((dlvs ?? []) as { id: string; name: string }[]).find(v => v.id === a.delivery_id)?.name ?? '委託先',
+        customer: customerHonorific(((dsAll ?? []).find(x => x.id === a.deal_id) ?? {}) as never),
+        base_fee: Number(a.base_fee) || 0,
+        status: a.status,
+      }))
     }
   }
   // もらう: 本人の紹介報酬（支払と同一入力=deals.amount）
   const { data: own } = await admin.from('deals').select('amount, status, fixed_month, created_at').eq('partner_id', me!.id).in('status', ['confirmed', 'paid'])
-  const inMonth = (d: { fixed_month?: string | null; created_at: string }) => ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === ym
   const ownMonth = (own ?? []).filter(inMonth).reduce((s, d) => s + (Number(d.amount) || 0), 0)
   const ownTotal = (own ?? []).reduce((s, d) => s + (Number(d.amount) || 0), 0)
   // 網の還元（MB Partnersメニュー分・支払と同一規則）
@@ -69,9 +80,9 @@ export default async function SupplierMoneyPage() {
       <SupplierTopbar title="お金" guide={SG_MONEY} />
       <div style={{ ...CONTENT }}>
       <div className="sup-money" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
-        {/* 払う */}
+        {/* あなたのお支払い（3区分＝①MBへ直接／②パートナーへ=MB代行／③委託先へ=MB代行） */}
         <div>
-          <h2 style={H2}>お支払い（MB Partnersへ）</h2>
+          <h2 style={H2}>① MB Partnersへのお支払い</h2>
           <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
             <div style={{ ...SUB, display: 'flex', alignItems: 'baseline', gap: 8 }}>今月のお支払い見込み<span style={{ fontSize: '.54rem', fontWeight: 400, color: 'var(--muted)' }}>{ym.replace('-', '年')}月・税抜</span></div>
             {preview.length === 0 ? (
@@ -79,9 +90,9 @@ export default async function SupplierMoneyPage() {
             ) : (
               <>
                 {(preview as { kind: string; amount: number; snapshot?: { customer?: string } }[]).map((r, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
-                    <span>{KIND_JP[r.kind] ?? r.kind}{r.snapshot?.customer ? <span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {r.snapshot.customer}</span> : null}</span>
-                    <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(Number(r.amount))}</span>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[r.kind] ?? r.kind}{r.snapshot?.customer ? <span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {r.snapshot.customer}</span> : null}</span>
+                    <span className="tnum" style={{ fontFamily: 'Inter', flexShrink: 0 }}>{yen(Number(r.amount))}</span>
                   </div>
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.74rem', fontWeight: 500 }}>
@@ -106,16 +117,34 @@ export default async function SupplierMoneyPage() {
               )
             })}
           </div>
-          <div style={{ ...CARD, padding: '11px 15px' }}>
-            <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>委託先への支払い（MB Partnersの月次サイクルで実施）</div>
-            <div style={{ display: 'flex', gap: 0 }}>
-              {[['提示中', asgSummary.proposed], ['了承済', asgSummary.accepted], ['納品済み', asgSummary.delivered]].map(([l, v], i) => (
-                <div key={String(l)} style={{ flex: 1, textAlign: 'center', borderLeft: i === 0 ? 'none' : '0.5px solid var(--line)' }}>
-                  <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.95rem', fontWeight: 500 }}>{String(v)}</div>
-                  <div style={{ fontSize: '.56rem', color: 'var(--muted2)', marginTop: 2 }}>{String(l)}</div>
-                </div>
-              ))}
+          <h2 style={{ ...H2, marginTop: 20 }}>② パートナーへの報酬</h2>
+          <div style={{ ...CARD, padding: '12px 15px', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500 }}>{yen(partnerRewardMonth)}</span>
+              <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>今月の成約 {partnerRewardCount}件分</span>
+              <span style={{ marginLeft: 'auto', fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>お支払いはMB Partnersが代行</span>
             </div>
+          </div>
+
+          <h2 style={{ ...H2, marginTop: 20 }}>③ 委託先への委託費</h2>
+          <div style={{ ...CARD, overflow: 'hidden' }}>
+            {asgRows.length === 0 ? (
+              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '13px 15px', margin: 0 }}>委託はまだありません（案件の詳細から提示できます）。</p>
+            ) : (
+              <>
+                {asgRows.map((a, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}<span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {a.customer}</span></span>
+                    <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(a.base_fee)}</span>
+                    <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>{a.status === 'proposed' ? '提示中' : a.status === 'delivered' ? '納品済み' : '了承済'}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                  <span style={{ color: 'var(--muted2)' }}>合計 <span style={{ fontSize: '.56rem' }}>（お支払いはMB Partnersが代行）</span></span>
+                  <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500 }}>{yen(asgRows.reduce((s2, a) => s2 + a.base_fee, 0))}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
         {/* お受け取り（紹介報酬＋網の還元を1カードに・下に振込先口座） */}
@@ -149,7 +178,8 @@ export default async function SupplierMoneyPage() {
           </div>
         </div>
       </div>
-      <style>{`@media (min-width:1024px){ .sup-money{grid-template-columns:3fr 2fr !important} }`}</style>
+      <style>{`.sup-money>div{min-width:0}
+@media (min-width:1024px){ .sup-money{grid-template-columns:3fr 2fr !important} }`}</style>
       </div>
     </div>
   )
