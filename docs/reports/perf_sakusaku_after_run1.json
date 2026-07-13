@@ -1,0 +1,134 @@
+{
+ "console": {
+  "warm": [
+   {
+    "name": "deals",
+    "skeleton": 18,
+    "operable": 1809
+   },
+   {
+    "name": "partners",
+    "skeleton": 21,
+    "operable": 803
+   },
+   {
+    "name": "services",
+    "skeleton": 23,
+    "operable": 807
+   },
+   {
+    "name": "payouts",
+    "skeleton": 21,
+    "operable": 22
+   },
+   {
+    "name": "suppliers",
+    "skeleton": 20,
+    "operable": 43
+   },
+   {
+    "name": "charges",
+    "skeleton": 16,
+    "operable": 297
+   },
+   {
+    "name": "applications",
+    "skeleton": 18,
+    "operable": 19
+   },
+   {
+    "name": "growth",
+    "skeleton": -1,
+    "operable": -1
+   },
+   {
+    "name": "inquiries",
+    "skeleton": 15,
+    "operable": 17
+   },
+   {
+    "name": "home",
+    "skeleton": 21,
+    "operable": 803
+   }
+  ],
+  "feedback": 8,
+  "cold": {
+   "operable": 333,
+   "jsKB": 0
+  }
+ },
+ "app": {
+  "warm": [
+   {
+    "name": "cases",
+    "skeleton": 23,
+    "operable": 25
+   },
+   {
+    "name": "refer",
+    "skeleton": 33,
+    "operable": 815
+   },
+   {
+    "name": "rewards",
+    "skeleton": 18,
+    "operable": 19
+   },
+   {
+    "name": "inbox",
+    "skeleton": 23,
+    "operable": 24
+   },
+   {
+    "name": "home",
+    "skeleton": 21,
+    "operable": 804
+   }
+  ],
+  "feedback": 7,
+  "cold": {
+   "operable": 428,
+   "jsKB": 0
+  }
+ },
+ "supplier": {
+  "warm": [
+   {
+    "name": "network",
+    "skeleton": 21,
+    "operable": 55
+   },
+   {
+    "name": "products",
+    "skeleton": 20,
+    "operable": 811
+   },
+   {
+    "name": "deals",
+    "skeleton": 22,
+    "operable": 47
+   },
+   {
+    "name": "money",
+    "skeleton": 46,
+    "operable": 55
+   },
+   {
+    "name": "settings",
+    "skeleton": 20,
+    "operable": 43
+   },
+   {
+    "name": "home",
+    "skeleton": 23,
+    "operable": 48
+   }
+  ],
+  "feedback": 7,
+  "cold": {
+   "operable": 813,
+   "jsKB": 0
+  }
+ }
+}

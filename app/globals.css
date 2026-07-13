@@ -723,3 +723,8 @@ a:hover .mbmark svg circle, a:hover .mbmark svg rect { transform: scale(1.1); }
   .ui-btn__spin, .ui-skeleton::after { animation: none !important; }
   .ui-btn:active, .ui-tag:active { transform: none !important; }
 }
+
+
+/* サクサク（2026-07-14）: 全ボタン・リンクの押下即時フィードバック（CSSのみ=<16ms・押下中のみ・視覚回帰非影響） */
+:is(button, [role="button"], a):active { transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) { :is(button, [role="button"], a):active { transform: none; } }

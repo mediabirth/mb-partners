@@ -7,6 +7,7 @@
  * ナビ: ホーム／紹介者／商品／案件／お金／設定＋最下部マイページ（v3: 会社=設定・個人=マイページの分掌）。
  */
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import BrandMark from '@/components/ui/BrandMark'
 
@@ -21,7 +22,7 @@ const NAV = [
 
 function BrandHead({ onNav }: { onNav?: () => void }) {
   return (
-    <a href="/app" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 16px 14px', textDecoration: 'none' }}>
+    <Link prefetch href="/app" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 16px 14px', textDecoration: 'none' }}>
       <BrandMark size={26} />
       <span>
         <b style={{ display: 'block', fontFamily: 'Inter', fontWeight: 700, fontSize: '.98rem', color: 'var(--txt)', lineHeight: 1.1 }}>
@@ -29,14 +30,14 @@ function BrandHead({ onNav }: { onNav?: () => void }) {
         </b>
         <small style={{ display: 'block', fontFamily: 'Inter', fontSize: 11, letterSpacing: '.3em', color: 'var(--muted2)', marginTop: 2, fontWeight: 700, textTransform: 'uppercase' }}>Supplier</small>
       </span>
-    </a>
+    </Link>
   )
 }
 
 /** サイドバー最下部のアカウントチップ（タップでマイページ・v4） */
 function AccountChip({ companyName, code, color, avatarUrl, onNav }: { companyName: string; code: string; color: string; avatarUrl: string | null; onNav?: () => void }) {
   return (
-    <a href="/app/mypage" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 10px 12px', padding: '9px 10px', borderRadius: 10, textDecoration: 'none', color: 'var(--txt)', background: 'var(--bg2)' }}>
+    <Link prefetch href="/app/mypage" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 10px 12px', padding: '9px 10px', borderRadius: 10, textDecoration: 'none', color: 'var(--txt)', background: 'var(--bg2)' }}>
       {avatarUrl
         ? <img src={avatarUrl} alt="" width={30} height={30} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
         : <span style={{ width: 30, height: 30, borderRadius: '50%', background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.76rem', fontWeight: 500, flexShrink: 0 }}>{companyName[0] ?? '−'}</span>}
@@ -45,26 +46,29 @@ function AccountChip({ companyName, code, color, avatarUrl, onNav }: { companyNa
         <span className="tnum" style={{ display: 'block', fontSize: '.56rem', color: 'var(--muted2)', fontFamily: 'Inter', letterSpacing: '.06em', marginTop: 1 }}>{code}</span>
       </span>
       <span style={{ color: 'var(--muted)', fontSize: '.8rem', flexShrink: 0 }}>›</span>
-    </a>
+    </Link>
   )
 }
 
 export default function SupplierShell({ companyName, code, color, avatarUrl, children }: { companyName: string; code: string; color: string; avatarUrl: string | null; children: React.ReactNode }) {
   const pathname = usePathname()
   const [drawer, setDrawer] = useState(false)
-  useEffect(() => { setDrawer(false) }, [pathname])
+  // サクサク: 遷移中のみ表示する細いインディゴのプログレスバー（静音・pathname確定で消灯）
+  const [navving, setNavving] = useState(false)
+  useEffect(() => { setDrawer(false); setNavving(false) }, [pathname])
   const isActive = (n: { href: string; exact?: boolean }) => n.exact ? (pathname === n.href || pathname === n.href + '/') : (pathname ?? '').startsWith(n.href)
 
+  const startNav = () => setNavving(true)
   const NavList = ({ onNav }: { onNav?: () => void }) => (
     <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 10px' }}>
       {NAV.map(n => {
         const on = isActive(n)
         return (
-          <a key={n.href} href={n.href} onClick={onNav}
+          <Link prefetch key={n.href} href={n.href} onClick={onNav}
             style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, padding: '0 12px', borderRadius: 9, textDecoration: 'none', fontSize: '.8rem', fontWeight: on ? 700 : 500, color: on ? 'var(--c-blue)' : 'var(--txt)', background: on ? 'var(--blue-bg2)' : 'transparent' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{n.icon}</svg>
             {n.label}
-          </a>
+          </Link>
         )
       })}
     </nav>
@@ -72,16 +76,17 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg2)' }}>
+      {navving && <div className="sup-progress" aria-hidden />}
       {/* SP専用ヘッダ（<1024）: ハンバーガー＋ワードマーク。PCはトップバー廃止（サイドバー＋コンテンツのみ） */}
       <header className="sup-mobilehead" style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', height: 52 }}>
         <button aria-label="メニュー" onClick={() => setDrawer(true)}
           style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--txt)', marginLeft: -10 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
-        <a href="/app" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+        <Link prefetch href="/app" onClick={startNav} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
           <BrandMark size={19} />
           <span style={{ fontFamily: 'Inter', fontWeight: 700, fontSize: '.82rem', color: 'var(--txt)' }}>MB <span style={{ color: 'var(--c-blue)' }}>Partners</span></span>
-        </a>
+        </Link>
         <span style={{ marginLeft: 'auto', fontSize: '.64rem', color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '46vw' }}>{companyName}</span>
       </header>
 
@@ -89,8 +94,8 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
         {/* PC: 左固定サイドバー（最上部=ワードマーク＋会社名） */}
         <aside className="sup-side" style={{ width: 230, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: 'linear-gradient(180deg,#fbfaff,#ffffff 26%)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
           <BrandHead />
-          <NavList />
-          <div style={{ marginTop: 'auto' }}><AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} /></div>
+          <NavList onNav={startNav} />
+          <div style={{ marginTop: 'auto' }}><AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={startNav} /></div>
         </aside>
         <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
       </div>
@@ -106,8 +111,8 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
-            <NavList onNav={() => setDrawer(false)} />
-            <AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={() => setDrawer(false)} />
+            <NavList onNav={() => { setDrawer(false); startNav() }} />
+            <AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={() => { setDrawer(false); startNav() }} />
           </div>
         </div>
       )}
@@ -119,6 +124,9 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
           .sup-side{display:flex;flex-direction:column}
           .sup-drawer-wrap{display:none}
         }
+        .sup-progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:200;background:linear-gradient(90deg,transparent,var(--c-blue) 30%,var(--c-blue) 70%,transparent);animation:supProg 1s ease-in-out infinite;background-size:200% 100%}
+        @keyframes supProg{from{background-position:200% 0}to{background-position:-100% 0}}
+        @media (prefers-reduced-motion:reduce){.sup-progress{animation:none;background:var(--c-blue)}}
         .drawer-in{animation:supDrawer .18s ease-out}
         @keyframes supDrawer{from{transform:translateX(-24px);opacity:.6}to{transform:none;opacity:1}}
       `}</style>

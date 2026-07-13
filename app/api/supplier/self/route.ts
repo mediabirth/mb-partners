@@ -53,48 +53,45 @@ export async function GET() {
   const me = await requireSupplier()
   if (!me) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
+  // サクサク: 直列チェーンを段階並列化（brands→[sms/deals素/reqs]→menus→[rewards/frozen/asg]・結果は従来と同一）
   const { data: brands } = await admin.from('services').select('id, name, active, supplier_memo, image_url').eq('supplier_partner_id', me.partnerId).order('sort')
   const svIds = (brands ?? []).map(b => b.id)
-  let menus: { id: string; name: string; service_id: string; public_description: string | null }[] = []
-  let rewards: { id: string; menu_id: string; reward_type: string; reward_value: number; reward_base: string | null }[] = []
-  if (svIds.length) {
-    const { data: sms } = await admin.from('service_menus').select('id, service_id').in('service_id', svIds)
-    const smIds = (sms ?? []).map(x => x.id)
-    if (smIds.length) {
-      const { data: mn } = await admin.from('menus').select('id, name, service_menu_id, public_description').in('service_menu_id', smIds).order('sort')
-      menus = (mn ?? []).map(m => ({ id: m.id, name: m.name, public_description: m.public_description, service_id: (sms ?? []).find(x => x.id === m.service_menu_id)?.service_id ?? '' }))
-      const mIds = menus.map(m => m.id)
-      if (mIds.length) {
-        const { data: rs } = await admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base').in('menu_id', mIds).eq('active', true).order('sort')
-        rewards = rs ?? []
-      }
-    }
-  }
-  // 案件（自社スコープ・受注額入力用）: 紹介者の系統（網から/MB側）を fee_snapshot から表示
-  let deals: { id: string; customer: string; status: string; brand: string; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: { status: string | null }[] }[] = []
-  if (svIds.length) {
-    const { data: ds } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, fixed_month, service_id, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100)
-    const { customerHonorific } = await import('@/lib/customer')
-    const ids = (ds ?? []).map((x: { id: string }) => x.id)
-    // 凍結済み（既にその案件の請求行が凍結されている）＝受注額は読み取り表示（§0(d)。是正しても凍結値は不変のため編集を閉じる）
-    const { data: fr } = ids.length ? await admin.from('supplier_charges').select('deal_id').eq('supplier_partner_id', me.partnerId).in('deal_id', ids) : { data: [] }
-    const frozenSet = new Set((fr ?? []).map((x: { deal_id: string | null }) => x.deal_id))
-    const { data: asg } = ids.length ? await admin.from('delivery_assignments').select('deal_id, status').in('deal_id', ids) : { data: [] }
-    deals = ((ds ?? []) as Record<string, unknown>[]).map(d => ({
-      id: d.id as string,
-      customer: customerHonorific(d as never),
-      status: d.status as string,
-      brand: (brands ?? []).find(b => b.id === d.service_id)?.name ?? '',
-      created_at: d.created_at as string,
-      fixed_month: (d.fixed_month as string | null) ?? null,
-      revenue: (((d.deal_items as { revenue: number | null }[] | null) ?? [])).reduce((s2, it) => s2 + (Number(it.revenue) || 0), 0),
-      item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
-      from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
-      frozen: frozenSet.has(d.id as string),
-      assignments: ((asg ?? []) as { deal_id: string; status: string | null }[]).filter(a => a.deal_id === d.id).map(a => ({ status: a.status })),
-    }))
-  }
-  const { data: reqs } = await admin.from('supplier_change_requests').select('id, service_id, menu_id, kind, payload, status, reason, created_at').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false }).limit(20)
+  const [smsRes, dsRes, reqsRes, honorificMod] = await Promise.all([
+    svIds.length ? admin.from('service_menus').select('id, service_id').in('service_id', svIds) : Promise.resolve({ data: [] as never[] }),
+    svIds.length ? admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, created_at, fixed_month, service_id, fee_snapshot, deal_items(id, revenue)').in('service_id', svIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(100) : Promise.resolve({ data: [] as never[] }),
+    admin.from('supplier_change_requests').select('id, service_id, menu_id, kind, payload, status, reason, created_at').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false }).limit(20),
+    import('@/lib/customer'),
+  ])
+  const sms = (smsRes.data ?? []) as { id: string; service_id: string }[]
+  const smIds = sms.map(x => x.id)
+  const { data: mn } = smIds.length ? await admin.from('menus').select('id, name, service_menu_id, public_description').in('service_menu_id', smIds).order('sort') : { data: [] as never[] }
+  const menus = ((mn ?? []) as { id: string; name: string; service_menu_id: string; public_description: string | null }[]).map(m => ({ id: m.id, name: m.name, public_description: m.public_description, service_id: sms.find(x => x.id === m.service_menu_id)?.service_id ?? '' }))
+  const mIds = menus.map(m => m.id)
+  const ds = (dsRes.data ?? []) as Record<string, unknown>[]
+  const dealIds = ds.map(x => x.id as string)
+  const [rewardsRes, frRes, asgRes] = await Promise.all([
+    mIds.length ? admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base').in('menu_id', mIds).eq('active', true).order('sort') : Promise.resolve({ data: [] as never[] }),
+    dealIds.length ? admin.from('supplier_charges').select('deal_id').eq('supplier_partner_id', me.partnerId).in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
+    dealIds.length ? admin.from('delivery_assignments').select('deal_id, status').in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
+  ])
+  const rewards = (rewardsRes.data ?? []) as { id: string; menu_id: string; reward_type: string; reward_value: number; reward_base: string | null }[]
+  const { customerHonorific } = honorificMod
+  const frozenSet = new Set(((frRes.data ?? []) as { deal_id: string | null }[]).map(x => x.deal_id))
+  const asg = (asgRes.data ?? []) as { deal_id: string; status: string | null }[]
+  const deals = ds.map(d => ({
+    id: d.id as string,
+    customer: customerHonorific(d as never),
+    status: d.status as string,
+    brand: (brands ?? []).find(b => b.id === d.service_id)?.name ?? '',
+    created_at: d.created_at as string,
+    fixed_month: (d.fixed_month as string | null) ?? null,
+    revenue: (((d.deal_items as { revenue: number | null }[] | null) ?? [])).reduce((s2, it) => s2 + (Number(it.revenue) || 0), 0),
+    item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
+    from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
+    frozen: frozenSet.has(d.id as string),
+    assignments: asg.filter(a => a.deal_id === d.id).map(a => ({ status: a.status })),
+  }))
+  const reqs = reqsRes.data
   return NextResponse.json({ brands: brands ?? [], menus, rewards, deals, requests: reqs ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
 }
 

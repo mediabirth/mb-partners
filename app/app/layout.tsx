@@ -47,7 +47,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 .exp-in{animation:v2exp 150ms ease-out}@keyframes v2exp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .app-quiet{line-break:strict}.app-quiet p,.app-quiet li{text-wrap:pretty}.no-break{white-space:nowrap}
 .ob-card{animation:obIn 150ms ease-out backwards}@keyframes obIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in{animation:none}}`}</style>
+@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in{animation:none}}
+.app-quiet :is(button,a,[role=\"button\"]):active{transform:scale(.985);transition:transform .05s}
+@media (prefers-reduced-motion:reduce){.app-quiet :is(button,a):active{transform:none}}`}</style>
         <div className="app-quiet" style={{ display: 'contents' }}>
           <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
         </div>
@@ -69,7 +71,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 /* Opportunity Board カードの stagger（各カード animationDelay インライン・reduced-motionで無効） */
 .ob-card{animation:obIn 150ms ease-out backwards}@keyframes obIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .check-in{animation:checkIn 150ms ease-out}@keyframes checkIn{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in,.check-in{animation:none}}`}</style>
+@media (prefers-reduced-motion:reduce){.ob-card,.pop-in,.exp-in,.check-in{animation:none}}
+.app-quiet :is(button,a,[role=\"button\"]):active{transform:scale(.985);transition:transform .05s}
+@media (prefers-reduced-motion:reduce){.app-quiet :is(button,a):active{transform:none}}`}</style>
       <div className="app-quiet" style={{ display: 'contents' }}>
         <SWRProvider><PageTransition>{children}</PageTransition></SWRProvider>
       </div>
