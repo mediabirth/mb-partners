@@ -3,7 +3,7 @@
  * 案件（サプライヤー・コンソール）: 自社案件テーブル＋成約案件への受注額入力（本人化・2026-07-13）。
  * データ/境界/記録は /api/supplier/self（セッションスコープ・audit＋コンソール案件タイムラインに出所記録）。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_DEALS } from '@/lib/supplier-guides'
@@ -15,6 +15,46 @@ type Deal = { id: string; customer: string; status: string; brand: string; menu_
 const COLS = [['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
 const ASG_JP: Record<string, string> = { proposed: '提示中', accepted: '了承済', assigned: '了承済', delivered: '納品済み', declined: '辞退' }
 const FILTERS = [['all', 'すべて'], ['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
+
+/** 売上エビデンス（任意・ベンダー純化P2）: 添付＝/api/supplier/evidence・閲覧＝60秒署名URL。 */
+function EvidenceSection({ dealId, say }: { dealId: string; say: (m: string) => void }) {
+  const [items, setItems] = useState<{ id: string; label: string | null }[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const load = useCallback(() => { fetch(`/api/supplier/evidence?deal_id=${dealId}`).then(r => r.ok ? r.json() : null).then(d => setItems(d?.evidences ?? [])).catch(() => setItems([])) }, [dealId])
+  useEffect(() => { load() }, [load])
+  async function upload(f: File) {
+    setBusy(true)
+    try {
+      const fd = new FormData(); fd.append('deal_id', dealId); fd.append('file', f)
+      const r = await fetch('/api/supplier/evidence', { method: 'POST', body: fd })
+      const j = await r.json().catch(() => ({}))
+      say(r.ok ? 'エビデンスを添付しました' : (j.error ?? '添付に失敗しました'))
+      if (r.ok) load()
+    } finally { setBusy(false); if (fileRef.current) fileRef.current.value = '' }
+  }
+  async function view(id: string) {
+    const r = await fetch(`/api/supplier/evidence?id=${id}`)
+    const j = await r.json().catch(() => ({}))
+    if (r.ok && j.url) window.open(j.url, '_blank', 'noopener')
+    else say(j.error ?? '開けませんでした')
+  }
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.74rem' }}>
+      <div style={{ color: 'var(--muted2)', marginBottom: 6 }}>エビデンス（任意）</div>
+      {(items ?? []).map(ev => (
+        <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: '.7rem' }}>
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.label ?? '添付ファイル'}</span>
+          <button onClick={() => view(ev.id)} style={{ background: 'none', border: 'none', padding: '5px 0', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.64rem', fontWeight: 500, color: 'var(--c-blue)' }}>開く</button>
+        </div>
+      ))}
+      <input ref={fileRef} type="file" accept="application/pdf,image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f) }} />
+      <button onClick={() => fileRef.current?.click()} disabled={busy}
+        style={{ background: 'none', border: 'none', padding: '5px 0', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.66rem', fontWeight: 500, color: 'var(--c-blue)' }}>＋ 契約書・請求書を添付</button>
+      <p style={{ fontSize: '.58rem', color: 'var(--muted)', margin: '2px 0 0', lineHeight: 1.6 }}>通常は不要です。大型案件やお取引の記録を残したいときにご利用ください。</p>
+    </div>
+  )
+}
 
 export default function SupplierDealsPage() {
   const [deals, setDeals] = useState<Deal[] | null>(null)
@@ -57,7 +97,10 @@ export default function SupplierDealsPage() {
     setBusy(d.id)
     const r = await fetch('/api/supplier/self', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ deal_id: d.id, revenue: v }) })
     const j = await r.json().catch(() => ({}))
-    say(r.ok ? '保存済み・請求計算に反映されます' : (j.error ?? '失敗しました'))
+    // ベンダー純化P2: 桁ミス確認（乖離時のみ・保存は完了している＝ブロックしない）
+    say(r.ok
+      ? (j.digit_check ? `¥${Number(j.saved ?? v).toLocaleString()} で保存しました。桁のご確認をおすすめします` : '保存済み・請求計算に反映されます')
+      : (j.error ?? '失敗しました'))
     if (r.ok) await load()
     setBusy('')
   }
@@ -189,6 +232,9 @@ export default function SupplierDealsPage() {
                 </div>
               </div>
             )}
+            {/* ベンダー純化P2: 売上エビデンス（任意）— 通常は不要・大型案件や記録用。money非接触。 */}
+            <EvidenceSection dealId={detail.id} say={say} />
+
             {/* 委託（v6: 自社の委託先へのアサイン提示＝受託者アプリに承諾待ちで表示） */}
             <div style={{ padding: '12px 0', fontSize: '.74rem' }}>
               <div style={{ color: 'var(--muted2)', marginBottom: 6 }}>委託</div>

@@ -175,3 +175,12 @@ export async function validateSupplierReward(db: Db, menuId: string, rewardType:
 export function chargePeriodOf(deal: { fixed_month?: string | null; created_at?: string | null }): string {
   return String(deal.fixed_month ?? deal.created_at ?? '').slice(0, 7)
 }
+
+/** 受注額の乖離検知（ベンダー純化P2・vendor-redesign.md §3(b)）— 閾値の単一ソース。
+ *  ★静音・非ブロック: 判定はフラグ/トーストのみで、保存・請求・報酬計算には一切影響しない。 */
+export const REVENUE_DEVIATION = {
+  windowDays: 90,        // 同一メニューの参照窓（直近90日）
+  minSamples: 3,         // 中央値判定に必要な件数（N>=3）
+  ratio: 0.7,            // 中央値±70%超で乖離（N>=3）
+  sparseMagnitude: 10,   // N<3: 参照値から1桁（×10/÷10）ずれで乖離（緩い帯）
+} as const

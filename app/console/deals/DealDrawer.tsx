@@ -18,6 +18,60 @@ import { statusTranslation, projectLaneTranslation, transitionForecast, forecast
 import { continuousInfo, rateInfo, needsBase, lifecyclePhase, baseWord, rewardTermLine, sourceLine, grossBeforeReward, menuLabelOf, COLS, StatusTimeline, SectionLabel, PREV, DeliveryExpenses, DeliveryOptGroups, type Deal, type DrawerCtx } from './_parts'
 const ContinuousMonthly = dynamic(() => import('./ContinuousMonthly'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 200, borderRadius: 12, marginTop: 18 }} /> })
 
+/** 売上エビデンス（ベンダー純化P2）— 任意添付・署名URL閲覧・誤添付の削除。money非接触（記録のみ）。 */
+function DealEvidence({ dealId, editable, showToast }: { dealId: string; editable: boolean; showToast: (m: string) => void }) {
+  const [items, setItems] = React.useState<{ id: string; label: string | null }[] | null>(null)
+  const [busy, setBusy] = React.useState(false)
+  const fileRef = React.useRef<HTMLInputElement>(null)
+  const load = React.useCallback(() => { fetch(`/api/console/deals/${dealId}/evidences`).then(r => r.ok ? r.json() : null).then(d => setItems(d?.evidences ?? [])).catch(() => setItems([])) }, [dealId])
+  React.useEffect(() => { load() }, [load])
+  async function upload(f: File) {
+    setBusy(true)
+    try {
+      const fd = new FormData(); fd.append('file', f)
+      const r = await fetch(`/api/console/deals/${dealId}/evidences`, { method: 'POST', body: fd })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) { showToast(j.error ?? '添付に失敗しました'); return }
+      showToast('エビデンスを添付しました'); load()
+    } finally { setBusy(false); if (fileRef.current) fileRef.current.value = '' }
+  }
+  async function view(id: string) {
+    const r = await fetch(`/api/console/deals/${dealId}/evidences?ev=${id}`)
+    const j = await r.json().catch(() => ({}))
+    if (r.ok && j.url) window.open(j.url, '_blank', 'noopener')
+    else showToast(j.error ?? '開けませんでした')
+  }
+  async function remove(id: string) {
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/console/deals/${dealId}/evidences`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ evidence_id: id }) })
+      if (!r.ok) { const j = await r.json().catch(() => ({})); showToast(j.error ?? '削除に失敗しました'); return }
+      showToast('エビデンスを削除しました'); load()
+    } finally { setBusy(false) }
+  }
+  if (items !== null && items.length === 0 && !editable) return null   // 静音: 空×読取専用は出さない
+  return (
+    <div style={{ marginTop: 18, paddingTop: 12, borderTop: '0.5px solid var(--line)' }}>
+      <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', marginBottom: 6 }}>エビデンス（契約書・請求書など・任意）</p>
+      {(items ?? []).map(ev => (
+        <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: '.7rem' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted2)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M21.4 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.65 5.66l-9.2 9.19a2 2 0 01-2.82-2.83l8.49-8.48" /></svg>
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.label ?? '添付ファイル'}</span>
+          <button onClick={() => view(ev.id)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 500, color: 'var(--c-blue)' }}>開く</button>
+          {editable && <button onClick={() => remove(ev.id)} disabled={busy} title="添付を削除" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--muted)', fontSize: '.76rem' }}>✕</button>}
+        </div>
+      ))}
+      {editable && (
+        <>
+          <input ref={fileRef} type="file" accept="application/pdf,image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f) }} />
+          <button onClick={() => fileRef.current?.click()} disabled={busy}
+            style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: 'var(--c-blue)' }}>＋ エビデンスを添付</button>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }) {
   const { services, directors, deliveriesOpt, dealTasks, taskBusy, itemBusy, manageOpen, pending, dlvAdd, ctaConfirm, manageRef, moneyRef, setSelected, setManageOpen, setDlvAdd, setCtaConfirm, setRewardModal, setCancelConfirm, addAssignment, addExpense, deleteExpense, openConfirmDialog, patchAssignmentFee, patchItem, refreshDeals, removeAssignment, savePnl, setExpenseStatus, showToast, toggleDealTask, updateStatus, viewEvidence } = ctx
   // ベンダー純化P1: 納品済みの宣言（vendor面から移管）。波及あり操作＝ripple文法（結果予告→確定）で確認を挟む。
@@ -363,7 +417,16 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                         <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', marginBottom: 8 }}>金額</p>
                         {/* 受注額（売上）: 成約ダイアログで入力済・ここでは修正可（明細1件=インライン入力／複数=明細ブロックで行別入力） */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '.68rem', fontWeight: 500 }}>
-                          <span style={{ color: 'var(--muted2)' }}>受注額（売上）</span>
+                          <span style={{ color: 'var(--muted2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            受注額（売上）
+                            {/* ベンダー純化P2: 乖離琥珀（表示のみ・保存はブロックしない・入力ミス検出兼用） */}
+                            {deal._rev_flag && (
+                              <span title="入力ミスの可能性もご確認ください" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />
+                                <span style={{ fontSize: 10, color: 'var(--amber)' }}>相場と乖離（参考 ¥{(deal._rev_flag.median ?? 0).toLocaleString()}）</span>
+                              </span>
+                            )}
+                          </span>
                           {editable && items.length === 1 ? (
                             <input key={`${deal.id}:rev`} defaultValue={items[0].revenue ?? ''} inputMode="numeric" placeholder="未入力" disabled={itemBusy}
                               onBlur={e => { const v = e.target.value.trim(); if (v !== String(items[0].revenue ?? '')) patchItem(items[0].id, { revenue: v === '' ? null : Number(v.replace(/[,，\s]/g, '')) }) }}
@@ -416,6 +479,9 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                         </div>
                       ))}
                     </div>
+
+                    {/* ベンダー純化P2: 売上エビデンス（任意）— 受注額の裏付け（大型案件・記録用）。money非接触。 */}
+                    <DealEvidence dealId={deal.id} editable={editable} showToast={showToast} />
 
                     {/* 純化バッチ(A): 「デリバリー進行（プロジェクト管理）」「プロジェクト概要/スコープ」は撤去。
                         納品は上のデリバリー行の状態（提示中→了承済→納品済み）と経費で語る＝契約とお金の記録に純化。 */}

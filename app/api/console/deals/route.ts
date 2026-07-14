@@ -228,6 +228,41 @@ export async function GET() {
     }
   })
 
+  // ベンダー純化P2: 受注額の乖離琥珀フラグ（vendor-redesign.md §3(b)・表示専用の導出値）。
+  //   同一メニュー直近90日の確定済み受注額の中央値±70%（N<3は1桁ずれの緩い帯・N==0はfixed報酬×10からの1桁ずれのみ）。
+  //   ★保存/請求/報酬には一切影響しない（判定失敗は静かにフラグなし）。
+  try {
+    const { judgeDeviation } = await import('@/lib/revenue-flag')
+    const { REVENUE_DEVIATION } = await import('@/lib/supplier-fee')
+    const revOf = (d: Record<string, unknown>) => (((d.deal_items as { revenue?: number | null }[] | null) ?? [])).reduce((s, it) => s + (Number(it.revenue) || 0), 0)
+    const menuOf = (d: Record<string, unknown>) => ((d.reward_snapshot as { menu_id?: string } | null)?.menu_id ?? (d.menu_id as string | null)) || null
+    const since = Date.now() - REVENUE_DEVIATION.windowDays * 86400e3
+    const peersByMenu: Record<string, { id: string; rev: number }[]> = {}
+    for (const d of withOverride as Record<string, unknown>[]) {
+      const mid = menuOf(d); const rev = revOf(d)
+      if (!mid || rev <= 0 || !['confirmed', 'paid'].includes(d.status as string)) continue
+      if (new Date(d.created_at as string).getTime() < since) continue
+      ;(peersByMenu[mid] ??= []).push({ id: d.id as string, rev })
+    }
+    // N==0 メニューの想定受注額（fixed報酬×10）を一括解決
+    const zeroPeerMenus = [...new Set((withOverride as Record<string, unknown>[])
+      .filter(d => { const mid = menuOf(d); return mid && revOf(d) > 0 && ((peersByMenu[mid] ?? []).filter(p => p.id !== d.id).length === 0) })
+      .map(d => menuOf(d) as string))]
+    const estByMenu: Record<string, number> = {}
+    if (zeroPeerMenus.length) {
+      const { data: mrs } = await admin.from('menu_rewards').select('menu_id, reward_type, reward_value, active').in('menu_id', zeroPeerMenus).eq('active', true)
+      for (const r of (mrs ?? []) as { menu_id: string; reward_type: string; reward_value: number }[]) {
+        if (r.reward_type === 'fixed' && Number(r.reward_value) > 0 && !estByMenu[r.menu_id]) estByMenu[r.menu_id] = Number(r.reward_value) * 10
+      }
+    }
+    for (const d of withOverride as Record<string, unknown>[]) {
+      const mid = menuOf(d); const rev = revOf(d)
+      if (!mid || rev <= 0 || !['confirmed', 'paid'].includes(d.status as string)) { (d as Record<string, unknown>)._rev_flag = null; continue }
+      const peers = (peersByMenu[mid] ?? []).filter(p => p.id !== d.id).map(p => p.rev)
+      ;(d as Record<string, unknown>)._rev_flag = judgeDeviation(rev, peers, peers.length ? null : (estByMenu[mid] ?? null))
+    }
+  } catch { /* best-effort: フラグ無しで続行 */ }
+
   // A1: MB担当の選択肢＝内部メンバー（非partner）。A2a: デリバリー委託先の選択肢。
   const { data: directors } = await admin
     .from('profiles').select('id, name, role, color').neq('role', 'partner').order('name')

@@ -150,7 +150,18 @@ export async function PATCH(req: NextRequest) {
     }
     try { await admin.from('deal_events').insert({ deal_id: d.id, body: `受注額をサプライヤー本人が入力: ¥${revenue.toLocaleString()}（${me.name}）`, visible_to_partner: false, created_by: null }) } catch { /* best-effort */ }
     await notify(admin, me, 'update', `deal-revenue:${d.id}`, { customer: d.customer_name, revenue })
-    return NextResponse.json({ ok: true })
+    // ベンダー純化P2: 桁ミス確認（vendor-redesign.md §3(b)）。★保存は既に完了＝絶対にブロックしない。
+    //   本人には嫌疑表示をしない＝乖離時のみ「桁のご確認を」トースト用フラグを返すだけ（判定失敗は静かに無し）。
+    let digitCheck = false
+    try {
+      const { data: d2 } = await admin.from('deals').select('menu_id, reward_snapshot').eq('id', d.id).maybeSingle()
+      const menuId = ((d2?.reward_snapshot as { menu_id?: string } | null)?.menu_id ?? (d2?.menu_id as string | null)) || null
+      if (menuId && revenue > 0) {
+        const { flagForDeal } = await import('@/lib/revenue-flag')
+        digitCheck = !!(await flagForDeal(admin, { id: d.id, menu_id: menuId, revenue }))
+      }
+    } catch { /* best-effort */ }
+    return NextResponse.json({ ok: true, digit_check: digitCheck, saved: revenue })
   }
 
   // 即時④: 会社名（法人の正式名称・v9）。表示系全域が company_name を優先する。

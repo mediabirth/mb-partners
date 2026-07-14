@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
 import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_MONEY } from '@/lib/supplier-guides'
+import EvidenceClip from './EvidenceClip'
 /**
  * お金: 「払う（MBへ・委託先）」と「もらう（紹介報酬）」の2カラム（PC）。
  * ★数字は単一ソース＝computeCharges（請求と同一）・supplier_charges・deals.amount（支払と同一入力）。
@@ -27,7 +28,15 @@ export default async function SupplierMoneyPage() {
   const { computeCharges } = await import('@/lib/supplier-charges')
   const { rows: preview } = await computeCharges(admin, me!.id, ym).catch(() => ({ rows: [] as never[] }))
   const previewTotal = preview.reduce((s, r) => s + Number((r as { amount: number }).amount), 0)
-  const { data: charges } = await admin.from('supplier_charges').select('id, kind, period, amount, status').eq('supplier_partner_id', me!.id).order('period', { ascending: false }).limit(24)
+  const { data: charges } = await admin.from('supplier_charges').select('id, kind, period, amount, status, deal_id').eq('supplier_partner_id', me!.id).order('period', { ascending: false }).limit(24)
+
+  // ベンダー純化P2: 請求該当行の売上エビデンス参照（📎・署名URLはクリック時に発行）
+  const evDealIds = [...new Set([...(preview as { deal_id?: string | null }[]).map(r => r.deal_id), ...(charges ?? []).map(c => (c as { deal_id?: string | null }).deal_id)].filter(Boolean))] as string[]
+  const evByDeal: Record<string, { id: string; label: string | null }[]> = {}
+  if (evDealIds.length) {
+    const { data: evs } = await admin.from('deal_evidences').select('id, deal_id, label').in('deal_id', evDealIds)
+    for (const e of evs ?? []) (evByDeal[e.deal_id as string] ??= []).push({ id: e.id as string, label: (e.label as string) ?? null })
+  }
   // ② パートナーへの報酬（今月・自社メニュー成約分＝deals.amount・支払はMB Partnersが代行）
   // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）
   const { data: myBrands } = await admin.from('services').select('id').eq('supplier_partner_id', me!.id)
@@ -89,9 +98,10 @@ export default async function SupplierMoneyPage() {
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>今月分の対象はまだありません。</p>
             ) : (
               <>
-                {(preview as { kind: string; amount: number; snapshot?: { customer?: string } }[]).map((r, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                {(preview as { kind: string; amount: number; deal_id?: string | null; snapshot?: { customer?: string } }[]).map((r, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[r.kind] ?? r.kind}{r.snapshot?.customer ? <span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {r.snapshot.customer}</span> : null}</span>
+                    {r.deal_id && evByDeal[r.deal_id] ? <EvidenceClip evidences={evByDeal[r.deal_id]} /> : null}
                     <span className="tnum" style={{ fontFamily: 'Inter', flexShrink: 0 }}>{yen(Number(r.amount))}</span>
                   </div>
                 ))}
@@ -107,10 +117,12 @@ export default async function SupplierMoneyPage() {
               <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>確定済みの請求はまだありません。</p>
             ) : (charges ?? []).map((c, i) => {
               const st = CHG_ST[c.status] ?? { label: c.status, color: 'var(--muted2)' }
+              const evs = (c as { deal_id?: string | null }).deal_id ? evByDeal[(c as { deal_id?: string | null }).deal_id as string] : undefined
               return (
                 <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.7rem' }}>
                   <span className="tnum" style={{ fontFamily: 'Inter', color: 'var(--muted2)', flexShrink: 0 }}>{c.period}</span>
                   <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[c.kind] ?? c.kind}</span>
+                  {evs ? <EvidenceClip evidences={evs} /> : null}
                   <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(Number(c.amount))}</span>
                   <span style={{ fontSize: '.56rem', fontWeight: 500, color: st.color, flexShrink: 0 }}>{st.label}</span>
                 </div>

@@ -34,6 +34,8 @@ export type Deal = {
   intake_type?: string | null
   project_status?: string | null
   _phase?: 'shodan' | 'project'
+  // ベンダー純化P2: 受注額の乖離琥珀フラグ（表示専用・入力ミス検出兼用・money非接触）
+  _rev_flag?: { median: number | null; n: number; kind: string } | null
 }
 
 // N: 失注理由（選択式）

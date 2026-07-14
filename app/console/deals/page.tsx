@@ -726,6 +726,10 @@ export default function DealsPage() {
                           {attentionReasons.length > 0 && (
                             <span title={`要対応: ${attentionReasons.join('・')}`} style={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', background: 'var(--red)' }} />
                           )}
+                          {/* ベンダー純化P2: 乖離琥珀（静音・入力ミス検出兼用・保存はブロックしない） */}
+                          {d._rev_flag && (
+                            <span title={`相場と乖離（参考値 ¥${(d._rev_flag.median ?? 0).toLocaleString()}）— 入力ミスの可能性もご確認ください`} style={{ position: 'absolute', top: 8, right: attentionReasons.length > 0 ? 20 : 8, width: 7, height: 7, borderRadius: '50%', background: 'var(--amber)' }} />
+                          )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                             {d.services
                               ? <ServiceAvatar logoPath={(d.services as any).logo_path ?? null} icon={d.services.icon} color={d.services.color} name={d.services.name} size={24} />
