@@ -1,15 +1,43 @@
+import { Suspense } from 'react'
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
 import CountUp from '@/components/CountUp'
+import KpiCard, { WaterRow } from '@/components/ui/KpiCard'
+import { supplierWaterfall } from '@/lib/supplier-money'
 import { SupplierTopbar, CONTENT, SectionTitle } from '../s/SupplierChrome'
 import { SG_HOME } from '@/lib/supplier-guides'
 import { customerHonorific } from '@/lib/customer'
 import { DEAL_STATUS } from '@/lib/status'
 
 /**
- * サプライヤー・コンソール ホーム（2026-07-13）: 数字4枚＋要対応＋最近の動き＋主アクション。
- * ★数字はポータル/MBコンソールと同一ソース関数（computeCharges・computeOverrides）＝独自計算ゼロ。
+ * サプライヤー・コンソール ホーム（2026-07-13／洗練 2026-07-14）: MBダッシュボードと同一リズム（概況→内訳→2カラム）。
+ * ★数字はポータル/MBコンソールと同一ソース関数（computeCharges・computeOverrides・supplierWaterfall）＝独自計算ゼロ。
+ * ★KPIカード・内訳バーは components/ui/KpiCard（MBコンソールと同一実装）＝乖離不能。
+ * ★洗練: シェル（トップバー）を即描画し、概況本体は独立Suspenseでストリーム（MBダッシュボードと同方式）。
  */
-export default async function SupplierConsoleHome() {
+export default function SupplierConsoleHome() {
+  return (
+    <div className="page-anim">
+      <SupplierTopbar title="ダッシュボード" guide={SG_HOME} />
+      <Suspense fallback={<HomeSkeleton />}>
+        <SupplierHomeBody />
+      </Suspense>
+    </div>
+  )
+}
+
+function HomeSkeleton() {
+  return (
+    <div style={{ ...CONTENT }} aria-busy="true">
+      <div className="ui-skeleton" style={{ height: 128, borderRadius: 16, marginBottom: 14 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        {[0, 1, 2].map(i => <div key={i} className="ui-skeleton" style={{ height: 96, borderRadius: 14 }} />)}
+      </div>
+      <div className="ui-skeleton" style={{ height: 190, borderRadius: 14, marginTop: 20 }} />
+    </div>
+  )
+}
+
+async function SupplierHomeBody() {
   const user = await getCachedUser()
   if (!user) return null
   const supabase = await createClient()
@@ -40,30 +68,21 @@ export default async function SupplierConsoleHome() {
   const deals = (dealsRes.data ?? []) as D[]
   const revOf = (d: D) => (d.deal_items ?? []).reduce((s, it) => s + (Number(it.revenue) || 0), 0)
   const monthClosed = deals.filter(d => (d.status === 'confirmed' || d.status === 'paid') && inMonth(d))
-  const companyRevenue = monthClosed.reduce((s, d) => s + revOf(d), 0)
   const inProgress = deals.filter(d => d.status === 'received' || d.status === 'in_progress').length
-  const lastRevenue = deals.filter(d => (d.status === 'confirmed' || d.status === 'paid') && ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === lastYm).reduce((s, d) => s + revOf(d), 0)
-  const momPct = lastRevenue > 0 ? Math.round((companyRevenue - lastRevenue) / lastRevenue * 100) : null
 
   // 網・請求見込み・委託を並列（網は配下dealsに依存するため段2）
   const subs = (subsRes.data ?? []) as { id: string; frontier_id: string | null; frontier_linked_at: string | null }[]
-  let teamN = subs.length, monthOverride = 0
+  const teamN = subs.length
   const teamNew = subs.filter(s => (s.frontier_linked_at ?? '').slice(0, 7) === ym).length
-  const [overrideRes, previewRes, lastPreviewRes, asgRes, netRes] = await Promise.all([
-    (async () => {
-      if (!teamN) return 0
-      const [{ computeOverrides }, { loadSupplierFrontiers }] = await Promise.all([import('@/lib/frontier'), import('@/lib/frontier-payout')])
-      const { data: sd } = await admin.from('deals').select('partner_id, amount, status, fixed_month, created_at, fee_snapshot').in('partner_id', subs.map(s => s.id))
-      const linkById: Record<string, { frontier_id: string | null; frontier_linked_at: string | null }> = {}
-      for (const s of subs) linkById[s.id] = { frontier_id: s.frontier_id, frontier_linked_at: s.frontier_linked_at }
-      return computeOverrides((sd ?? []) as never, linkById, ym, await loadSupplierFrontiers(admin))[me.id] ?? 0
-    })().catch(() => 0),
+  const [previewRes, lastPreviewRes, asgRes, netRes, wf, wfLast] = await Promise.all([
     chargesMod.computeCharges(admin, me.id, ym).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     chargesMod.computeCharges(admin, me.id, lastYm).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     deals.length ? admin.from('delivery_assignments').select('id, status').in('deal_id', deals.map(d => d.id)) : Promise.resolve({ data: [] as never[] }),
     (subs.length && brandIds.length)
       ? admin.from('deals').select('partner_id, status, fixed_month, created_at, deal_items(revenue)').in('partner_id', subs.map(s => s.id)).in('service_id', brandIds).in('status', ['confirmed', 'paid'])
       : Promise.resolve({ data: [] as never[] }),
+    supplierWaterfall(admin, me.id, ym),
+    supplierWaterfall(admin, me.id, lastYm),
   ])
   // パートナーの成果（旧・紹介者ページのヒーローを吸収）: 今月生んだ売上＋上位3名
   const subNames: Record<string, string> = {}
@@ -84,10 +103,7 @@ export default async function SupplierConsoleHome() {
   const pipelineDeals = deals.filter(d => d.status === 'received' || d.status === 'in_progress')
   const received = deals.filter(d => d.status === 'received').length
   const negotiating = deals.filter(d => d.status === 'in_progress').length
-  monthOverride = overrideRes
   const previewTotal = previewRes, lastPreviewTotal = lastPreviewRes
-  const rewardsMonth = monthClosed.reduce((s, d) => s + (Number((d as unknown as { amount?: number }).amount) || 0), 0)
-  const takeHome = companyRevenue - rewardsMonth - previewTotal
 
   // 要対応（asg/rejReqsは上の並列で取得済み）
   const needRevenue = monthClosed.concat(deals.filter(d => (d.status === 'confirmed' || d.status === 'paid') && !inMonth(d))).filter(d => revOf(d) === 0)
@@ -95,11 +111,9 @@ export default async function SupplierConsoleHome() {
   const rejReqs = rejReqsRes.data
 
   const CARD: React.CSSProperties = { background: 'var(--s-0, #fff)', border: '0.5px solid var(--line)', borderRadius: 14 }
-  const H2: React.CSSProperties = { fontSize: '11px', fontWeight: 500, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: '4px 2px 12px', borderBottom: '0.5px solid var(--line)', paddingBottom: 8 }
 
   return (
-    <div className="page-anim">
-      <SupplierTopbar title="ダッシュボード" guide={SG_HOME} />
+    <>
       <div style={{ ...CONTENT }}>
 
       {/* ヒーロー（コンソール・ダッシュボード同文法・CTA統合） */}
@@ -108,13 +122,13 @@ export default async function SupplierConsoleHome() {
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: '.56rem', letterSpacing: '.22em', opacity: .85, textTransform: 'uppercase' }}>今月の売上（成約受注額）</div>
             <div className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '34px', letterSpacing: '-.03em', marginTop: 6, lineHeight: 1.05 }}>
-              <span style={{ fontSize: '1rem', opacity: .8, marginRight: 4 }}>¥</span><CountUp value={companyRevenue} />
+              <span style={{ fontSize: '1rem', opacity: .8, marginRight: 4 }}>¥</span><CountUp value={wf.companyRevenue} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
-              <span style={{ fontSize: '.62rem', opacity: .9 }}>{monthClosed.length}件</span>
-              {momPct != null && (
+              <span style={{ fontSize: '.62rem', opacity: .9 }}>{wf.monthCount}件</span>
+              {wfLast.companyRevenue > 0 && (
                 <span style={{ fontSize: '.6rem', background: 'rgba(255,255,255,.16)', borderRadius: 999, padding: '3px 10px' }}>
-                  {momPct >= 0 ? '▲' : '▼'} 前月比{Math.abs(momPct)}%
+                  {wf.companyRevenue >= wfLast.companyRevenue ? '▲' : '▼'} 前月比{Math.abs(Math.round((wf.companyRevenue - wfLast.companyRevenue) / wfLast.companyRevenue * 100))}%
                 </span>
               )}
             </div>
@@ -123,30 +137,21 @@ export default async function SupplierConsoleHome() {
         </div>
       </div>
 
-      {/* 数字カード3枚 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-        {[
-          { l: '進行中の案件', v: inProgress, yen: false, sub: '件' },
-          { l: 'パートナー', v: teamN, yen: false, sub: `名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}` },
-          { l: '今月のお支払い見込み', v: previewTotal, yen: true, sub: lastPreviewTotal > 0 ? `先月 ¥${lastPreviewTotal.toLocaleString()} ${previewTotal >= lastPreviewTotal ? '↗' : '↘'}` : '月末締め' },
-        ].map(c => (
-          <div key={c.l} style={{ ...CARD, padding: '13px 15px' }}>
-            <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>{c.l}</div>
-            <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.15rem', fontWeight: 500, marginTop: 4 }}>
-              {c.yen && '¥'}<CountUp value={c.v} /><span style={{ fontSize: '.58rem', fontWeight: 400, color: 'var(--muted2)', marginLeft: 5 }}>{c.sub}</span>
-            </div>
-          </div>
-        ))}
+      {/* 数字カード3枚（MBダッシュボードと同一のKpiCard・同グリッド文法） */}
+      <div className="stagger sup-kpi" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14, marginBottom: 16 }}>
+        <KpiCard label="進行中の案件" value={inProgress} suffix="件" icon="deal" />
+        <KpiCard label="パートナー" value={teamN} suffix={`名${teamNew > 0 ? ` ・ 今月+${teamNew}` : ''}`} icon="users" />
+        <KpiCard label="今月のお支払い見込み" value={previewTotal} format="yen" icon="cost" delta={lastPreviewTotal > 0 ? { cur: previewTotal, prev: lastPreviewTotal } : undefined} sub={lastPreviewTotal > 0 ? undefined : '月末締め'} />
       </div>
 
-      {/* お金の内訳（サプライヤー版ウォーターフォール・コンソール同バー表現・単一ソース由来） */}
-      <div style={{ marginTop: 20 }}><SectionTitle title="お金の内訳" /></div>
-      <div style={{ ...CARD, padding: '16px 18px' }}>
-        <WaterRow label="総受注額" val={companyRevenue} pct={100} color="var(--c-blue)" head />
-        <WaterRow label="パートナーへの報酬" val={rewardsMonth} pct={companyRevenue > 0 ? Math.round(rewardsMonth / companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
-        <WaterRow label="MB Partners手数料" val={previewTotal} pct={companyRevenue > 0 ? Math.round(previewTotal / companyRevenue * 100) : 0} color="var(--amber)" minus />
+      {/* お金の内訳（サプライヤー版ウォーターフォール・MBダッシュボードと同一部品/余白・単一ソース=supplierWaterfall） */}
+      <SectionTitle title="お金の内訳" />
+      <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px' }}>
+        <WaterRow label="総受注額" val={wf.companyRevenue} pct={100} color="var(--c-blue)" head />
+        <WaterRow label="紹介者への報酬" val={wf.rewardsMonth} pct={wf.companyRevenue > 0 ? Math.round(wf.rewardsMonth / wf.companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
+        <WaterRow label="MB Partners手数料" val={wf.mbFee} pct={wf.companyRevenue > 0 ? Math.round(wf.mbFee / wf.companyRevenue * 100) : 0} color="var(--amber)" minus />
         <div style={{ borderTop: '1.5px solid var(--line)', marginTop: 8, paddingTop: 10 }}>
-          <WaterRow label="あなたの会社の手残り" val={takeHome} pct={companyRevenue > 0 ? Math.round(Math.max(0, takeHome) / companyRevenue * 100) : 0} color={takeHome >= 0 ? 'var(--c-blue)' : 'var(--red)'} strong />
+          <WaterRow label="あなたの会社の手残り" val={wf.takeHome} pct={wf.companyRevenue > 0 ? Math.round(Math.max(0, wf.takeHome) / wf.companyRevenue * 100) : 0} color={wf.takeHome >= 0 ? 'var(--c-blue)' : 'var(--red)'} strong />
         </div>
       </div>
 
@@ -239,25 +244,10 @@ export default async function SupplierConsoleHome() {
       </div>
       </div>
       <style>{`@media (min-width:1024px){ .sup-2col{grid-template-columns:1fr 1fr !important} }
+@media (min-width:768px){ .sup-kpi{grid-template-columns:repeat(3,1fr) !important} }
 .sup-new{animation:supNew 1.6s ease-out}
 @keyframes supNew{from{background:var(--blue-bg2)}to{background:transparent}}
 @media (prefers-reduced-motion:reduce){.sup-new{animation:none}}`}</style>
-    </div>
-  )
-}
-
-
-// お金の内訳の1行（MBコンソールの WaterRow と同表現・表示のみ）
-function WaterRow({ label, val, pct, color, minus, head, strong }: { label: string; val: number; pct: number; color: string; minus?: boolean; head?: boolean; strong?: boolean }) {
-  return (
-    <div style={{ padding: head ? '2px 0 9px' : '6px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontSize: strong || head ? '.76rem' : '.68rem', fontWeight: 500, color: minus ? 'var(--muted2)' : 'var(--txt)' }}>{minus ? '− ' : ''}{label}</span>
-        <span className="tnum" style={{ fontFamily: 'Inter', fontSize: strong || head ? '.84rem' : '.72rem', fontWeight: 500 }}>{minus && val > 0 ? '−' : ''}¥{Math.abs(val).toLocaleString()}</span>
-      </div>
-      <div style={{ height: head || strong ? 9 : 7, borderRadius: 4, background: 'var(--bg2)', overflow: 'hidden' }}>
-        <div className="bar-grow" style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: '100%', background: color, borderRadius: 4 }} />
-      </div>
-    </div>
+    </>
   )
 }

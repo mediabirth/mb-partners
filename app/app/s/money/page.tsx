@@ -1,11 +1,16 @@
 import { redirect } from 'next/navigation'
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
-import { SupplierTopbar, CONTENT } from '../SupplierChrome'
+import { CONTENT, SectionTitle } from '../SupplierChrome'
 import { SG_MONEY } from '@/lib/supplier-guides'
+import { WaterRow } from '@/components/ui/KpiCard'
+import { supplierWaterfall } from '@/lib/supplier-money'
 import EvidenceClip from './EvidenceClip'
+import MoneyTabs from './MoneyTabs'
 /**
- * お金: 「払う（MBへ・委託先）」と「もらう（紹介報酬）」の2カラム（PC）。
- * ★数字は単一ソース＝computeCharges（請求と同一）・supplier_charges・deals.amount（支払と同一入力）。
+ * お金（洗練 2026-07-14）: MBコンソール「支払」の文法を供給者の立場に翻訳した唯一の画面。
+ *   タブ①お支払い（MB Partnersへ）／②お受け取り（あなたへ）。各タブは 見込み→履歴→状態 の同じ縦構造。
+ * ★数字は単一ソース＝supplierWaterfall（内部=computeCharges・請求と同一）・supplier_charges・deals.amount（支払と同一入力）。独自計算ゼロ。
+ * ★内訳バーは components/ui/KpiCard の WaterRow（MBダッシュボードと同一実装）。
  */
 const KIND_JP: Record<string, string> = { omnis_monthly: '月額利用料', half_commission: 'サービス利用料', passthrough_revenue_fee: '販売手数料', payment_fee_5: '決済手数料' }
 const CHG_ST: Record<string, { label: string; color: string }> = { unbilled: { label: '締め済み・請求書待ち', color: 'var(--muted2)' }, invoiced: { label: '請求済み', color: 'var(--c-blue)' }, settled: { label: 'お支払い確認済み', color: 'var(--green)' } }
@@ -26,9 +31,13 @@ export default async function SupplierMoneyPage() {
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const inMonth = (d: { fixed_month?: string | null; created_at: string }) => ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === ym
   const { computeCharges } = await import('@/lib/supplier-charges')
-  const { rows: preview } = await computeCharges(admin, me!.id, ym).catch(() => ({ rows: [] as never[] }))
+  const [{ rows: preview }, wf, chargesRes] = await Promise.all([
+    computeCharges(admin, me!.id, ym).catch(() => ({ rows: [] as never[], warnings: [] as never[] })),
+    supplierWaterfall(admin, me!.id, ym),
+    admin.from('supplier_charges').select('id, kind, period, amount, status, deal_id').eq('supplier_partner_id', me!.id).order('period', { ascending: false }).limit(24),
+  ])
   const previewTotal = preview.reduce((s, r) => s + Number((r as { amount: number }).amount), 0)
-  const { data: charges } = await admin.from('supplier_charges').select('id, kind, period, amount, status, deal_id').eq('supplier_partner_id', me!.id).order('period', { ascending: false }).limit(24)
+  const charges = chargesRes.data
 
   // ベンダー純化P2: 請求該当行の売上エビデンス参照（📎・署名URLはクリック時に発行）
   const evDealIds = [...new Set([...(preview as { deal_id?: string | null }[]).map(r => r.deal_id), ...(charges ?? []).map(c => (c as { deal_id?: string | null }).deal_id)].filter(Boolean))] as string[]
@@ -37,16 +46,10 @@ export default async function SupplierMoneyPage() {
     const { data: evs } = await admin.from('deal_evidences').select('id, deal_id, label').in('deal_id', evDealIds)
     for (const e of evs ?? []) (evByDeal[e.deal_id as string] ??= []).push({ id: e.id as string, label: (e.label as string) ?? null })
   }
-  // ② パートナーへの報酬（今月・自社メニュー成約分＝deals.amount・支払はMB Partnersが代行）
-  // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）
+  // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）— 名前解決は service role 経由（RLS名前落ちなし）
   const { data: myBrands } = await admin.from('services').select('id').eq('supplier_partner_id', me!.id)
-  let partnerRewardMonth = 0, partnerRewardCount = 0
   let asgRows: { name: string; customer: string; base_fee: number; status: string | null }[] = []
   if ((myBrands ?? []).length) {
-    const { data: ds } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, amount, status, fixed_month, created_at').in('service_id', (myBrands ?? []).map(b => b.id)).in('status', ['confirmed', 'paid'])
-    for (const dd of (ds ?? [])) {
-      if (inMonth(dd)) { partnerRewardMonth += Number(dd.amount) || 0; partnerRewardCount++ }
-    }
     const { data: dsAll } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name').in('service_id', (myBrands ?? []).map(b => b.id))
     const idsAll = (dsAll ?? []).map(x => x.id)
     if (idsAll.length) {
@@ -80,119 +83,131 @@ export default async function SupplierMoneyPage() {
   }
   const bank = (me as { bank?: { bank_name?: string; branch_name?: string; account_type?: string; account_number?: string; account_holder?: string } | null }).bank ?? null
 
-  const CARD: React.CSSProperties = { background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }
-  const H2: React.CSSProperties = { fontSize: '11px', fontWeight: 500, letterSpacing: '.08em', color: 'var(--t-tertiary)', margin: '4px 2px 12px', borderBottom: '0.5px solid var(--line)', paddingBottom: 8 }
+  const CARD: React.CSSProperties = { background: 'var(--s-0, #fff)', border: '0.5px solid var(--line)', borderRadius: 14 }
   const SUB: React.CSSProperties = { fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', padding: '11px 15px 4px' }
+
+  // ── タブ① お支払い（MB Partnersへ）: 内訳（ウォーターフォール）→ 見込み → 履歴 → 代行区分 ──
+  const payPanel = (
+    <div style={{ ...CONTENT, maxWidth: 880 }}>
+      {/* お金の内訳（MBダッシュボードと同一部品・単一ソース=supplierWaterfall） */}
+      <SectionTitle title="お金の内訳" subtitle="今月・税抜。手数料は請求と同一計算です。" />
+      <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 20 }}>
+        <WaterRow label="総受注額" val={wf.companyRevenue} pct={100} color="var(--c-blue)" head />
+        <WaterRow label="紹介者への報酬" val={wf.rewardsMonth} pct={wf.companyRevenue > 0 ? Math.round(wf.rewardsMonth / wf.companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
+        <WaterRow label="MB Partners手数料" val={wf.mbFee} pct={wf.companyRevenue > 0 ? Math.round(wf.mbFee / wf.companyRevenue * 100) : 0} color="var(--amber)" minus />
+        <div style={{ borderTop: '1.5px solid var(--line)', marginTop: 8, paddingTop: 10 }}>
+          <WaterRow label="あなたの会社の手残り" val={wf.takeHome} pct={wf.companyRevenue > 0 ? Math.round(Math.max(0, wf.takeHome) / wf.companyRevenue * 100) : 0} color={wf.takeHome >= 0 ? 'var(--c-blue)' : 'var(--red)'} strong />
+        </div>
+      </div>
+
+      {/* ① MB Partnersへ（直接のお振込）: 見込み → 履歴（状態つき） */}
+      <SectionTitle title="① MB Partnersへのお支払い" subtitle="MB Partnersからお送りする請求書に記載の口座へお振込みください。" />
+      <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{ ...SUB, display: 'flex', alignItems: 'baseline', gap: 8 }}>今月のお支払い見込み<span style={{ fontSize: '.54rem', fontWeight: 400, color: 'var(--muted)' }}>{ym.replace('-', '年')}月・税抜</span></div>
+        {preview.length === 0 ? (
+          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>今月分の対象はまだありません。</p>
+        ) : (
+          <>
+            {(preview as { kind: string; amount: number; deal_id?: string | null; snapshot?: { customer?: string } }[]).map((r, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[r.kind] ?? r.kind}{r.snapshot?.customer ? <span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {r.snapshot.customer}</span> : null}</span>
+                {r.deal_id && evByDeal[r.deal_id] ? <EvidenceClip evidences={evByDeal[r.deal_id]} /> : null}
+                <span className="tnum" style={{ fontFamily: 'Inter', flexShrink: 0 }}>{yen(Number(r.amount))}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.74rem', fontWeight: 500 }}>
+              <span>合計（見込み）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(previewTotal)}</span>
+            </div>
+          </>
+        )}
+      </div>
+      <div style={{ ...CARD, overflow: 'hidden', marginBottom: 20 }}>
+        <div style={SUB}>請求の履歴</div>
+        {(charges ?? []).length === 0 ? (
+          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>確定済みの請求はまだありません。</p>
+        ) : (charges ?? []).map((c, i) => {
+          const st = CHG_ST[c.status] ?? { label: c.status, color: 'var(--muted2)' }
+          const evs = (c as { deal_id?: string | null }).deal_id ? evByDeal[(c as { deal_id?: string | null }).deal_id as string] : undefined
+          return (
+            <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.7rem' }}>
+              <span className="tnum" style={{ fontFamily: 'Inter', color: 'var(--muted2)', flexShrink: 0 }}>{c.period}</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[c.kind] ?? c.kind}</span>
+              {evs ? <EvidenceClip evidences={evs} /> : null}
+              <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(Number(c.amount))}</span>
+              <span style={{ fontSize: '.56rem', fontWeight: 500, color: st.color, flexShrink: 0 }}>{st.label}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ②③ MB Partnersが支払いを代行する区分（あなたの振込は不要） */}
+      <SectionTitle title="② 紹介者（パートナー）への報酬" subtitle="お支払いはMB Partnersが代行します。" />
+      <div style={{ ...CARD, padding: '12px 15px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500 }}>{yen(wf.rewardsMonth)}</span>
+          <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>今月の成約 {wf.monthCount}件分</span>
+        </div>
+      </div>
+
+      <SectionTitle title="③ 委託先への委託費" subtitle="お支払いはMB Partnersが代行します（月次サイクル）。" />
+      <div style={{ ...CARD, overflow: 'hidden' }}>
+        {asgRows.length === 0 ? (
+          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '13px 15px', margin: 0 }}>委託はまだありません（案件の詳細から提示できます）。</p>
+        ) : (
+          <>
+            {asgRows.map((a, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}<span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {a.customer}</span></span>
+                <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(a.base_fee)}</span>
+                <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>{a.status === 'proposed' ? '提示中' : a.status === 'delivered' ? '納品済み' : '了承済'}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
+              <span style={{ color: 'var(--muted2)' }}>合計</span>
+              <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500 }}>{yen(asgRows.reduce((s2, a) => s2 + a.base_fee, 0))}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── タブ② お受け取り（あなたへ）: 見込み → 内訳 → 振込先口座 ──
+  const receivePanel = (
+    <div style={{ ...CONTENT, maxWidth: 880 }}>
+      <SectionTitle title="今月のお受け取り" subtitle="あなた自身の紹介分と、紹介者の還元（MB Partnersメニュー分）の合算です。" />
+      <div style={{ ...CARD, overflow: 'hidden', marginBottom: 20 }}>
+        <div style={{ padding: '12px 15px', borderBottom: '0.5px solid var(--line)' }}>
+          <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)' }}>今月のお受け取り見込み</div>
+          <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.25rem', fontWeight: 500, marginTop: 4 }}>{yen(ownMonth + netKick)}</div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', fontSize: '.72rem' }}>
+          <span style={{ color: 'var(--muted2)' }}>あなたの紹介分</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(ownMonth)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
+          <span style={{ color: 'var(--muted2)' }}>紹介者の還元（MB Partnersメニュー分）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(netKick)}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 12, padding: '10px 15px', borderTop: '0.5px solid var(--line)' }}>
+          <a href="/app/rewards" style={{ fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>報酬明細 →</a>
+          <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>累計 {yen(ownTotal)}</span>
+        </div>
+      </div>
+      <SectionTitle title="振込先口座" />
+      <div style={{ ...CARD, padding: '12px 15px' }}>
+        {bank?.bank_name ? (
+          <div style={{ fontSize: '.74rem', lineHeight: 1.8 }}>
+            {bank.bank_name} {bank.branch_name}<br />
+            {bank.account_type ?? '普通'} <span className="tnum" style={{ fontFamily: 'Inter' }}>{bank.account_number}</span> ・ {bank.account_holder}
+          </div>
+        ) : <p style={{ fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>未登録です。</p>}
+        <a href="/app/s/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: '.66rem', color: 'var(--c-blue)', textDecoration: 'none' }}>口座の変更は設定から →</a>
+      </div>
+    </div>
+  )
 
   return (
     <div className="page-anim">
-      <SupplierTopbar title="お金" guide={SG_MONEY} />
-      <div style={{ ...CONTENT }}>
-      <div className="sup-money" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
-        {/* あなたのお支払い（3区分＝①MBへ直接／②パートナーへ=MB代行／③委託先へ=MB代行） */}
-        <div>
-          <h2 style={H2}>① MB Partnersへのお支払い</h2>
-          <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ ...SUB, display: 'flex', alignItems: 'baseline', gap: 8 }}>今月のお支払い見込み<span style={{ fontSize: '.54rem', fontWeight: 400, color: 'var(--muted)' }}>{ym.replace('-', '年')}月・税抜</span></div>
-            {preview.length === 0 ? (
-              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>今月分の対象はまだありません。</p>
-            ) : (
-              <>
-                {(preview as { kind: string; amount: number; deal_id?: string | null; snapshot?: { customer?: string } }[]).map((r, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[r.kind] ?? r.kind}{r.snapshot?.customer ? <span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {r.snapshot.customer}</span> : null}</span>
-                    {r.deal_id && evByDeal[r.deal_id] ? <EvidenceClip evidences={evByDeal[r.deal_id]} /> : null}
-                    <span className="tnum" style={{ fontFamily: 'Inter', flexShrink: 0 }}>{yen(Number(r.amount))}</span>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.74rem', fontWeight: 500 }}>
-                  <span>合計（見込み）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(previewTotal)}</span>
-                </div>
-              </>
-            )}
-          </div>
-          <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
-            <div style={SUB}>請求の履歴</div>
-            {(charges ?? []).length === 0 ? (
-              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>確定済みの請求はまだありません。</p>
-            ) : (charges ?? []).map((c, i) => {
-              const st = CHG_ST[c.status] ?? { label: c.status, color: 'var(--muted2)' }
-              const evs = (c as { deal_id?: string | null }).deal_id ? evByDeal[(c as { deal_id?: string | null }).deal_id as string] : undefined
-              return (
-                <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.7rem' }}>
-                  <span className="tnum" style={{ fontFamily: 'Inter', color: 'var(--muted2)', flexShrink: 0 }}>{c.period}</span>
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{KIND_JP[c.kind] ?? c.kind}</span>
-                  {evs ? <EvidenceClip evidences={evs} /> : null}
-                  <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(Number(c.amount))}</span>
-                  <span style={{ fontSize: '.56rem', fontWeight: 500, color: st.color, flexShrink: 0 }}>{st.label}</span>
-                </div>
-              )
-            })}
-          </div>
-          <h2 style={{ ...H2, marginTop: 20 }}>② パートナーへの報酬</h2>
-          <div style={{ ...CARD, padding: '12px 15px', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-              <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500 }}>{yen(partnerRewardMonth)}</span>
-              <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>今月の成約 {partnerRewardCount}件分</span>
-              <span style={{ marginLeft: 'auto', fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 10px', whiteSpace: 'nowrap' }}>お支払いはMB Partnersが代行</span>
-            </div>
-          </div>
-
-          <h2 style={{ ...H2, marginTop: 20 }}>③ 委託先への委託費</h2>
-          <div style={{ ...CARD, overflow: 'hidden' }}>
-            {asgRows.length === 0 ? (
-              <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '13px 15px', margin: 0 }}>委託はまだありません（案件の詳細から提示できます）。</p>
-            ) : (
-              <>
-                {asgRows.map((a, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}<span style={{ color: 'var(--muted2)', fontSize: '.6rem' }}> ・ {a.customer}</span></span>
-                    <span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(a.base_fee)}</span>
-                    <span style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', background: 'var(--bg2)', borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>{a.status === 'proposed' ? '提示中' : a.status === 'delivered' ? '納品済み' : '了承済'}</span>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
-                  <span style={{ color: 'var(--muted2)' }}>合計 <span style={{ fontSize: '.56rem' }}>（お支払いはMB Partnersが代行）</span></span>
-                  <span className="tnum" style={{ fontFamily: 'Inter', fontWeight: 500 }}>{yen(asgRows.reduce((s2, a) => s2 + a.base_fee, 0))}</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-        {/* お受け取り（紹介報酬＋網の還元を1カードに・下に振込先口座） */}
-        <div>
-          <h2 style={H2}>お受け取り</h2>
-          <div style={{ ...CARD, overflow: 'hidden', marginBottom: 10 }}>
-            <div style={{ padding: '12px 15px', borderBottom: '0.5px solid var(--line)' }}>
-              <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)' }}>今月のお受け取り見込み</div>
-              <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.25rem', fontWeight: 500, marginTop: 4 }}>{yen(ownMonth + netKick)}</div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', fontSize: '.72rem' }}>
-              <span style={{ color: 'var(--muted2)' }}>あなたの紹介分</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(ownMonth)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 15px', borderTop: '0.5px solid var(--line)', fontSize: '.72rem' }}>
-              <span style={{ color: 'var(--muted2)' }}>紹介者の還元（MB Partnersメニュー分）</span><span className="tnum" style={{ fontFamily: 'Inter' }}>{yen(netKick)}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 12, padding: '10px 15px', borderTop: '0.5px solid var(--line)' }}>
-              <a href="/app/rewards" style={{ fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>報酬明細 →</a>
-              <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>累計 {yen(ownTotal)}</span>
-            </div>
-          </div>
-          <div style={{ ...CARD, padding: '12px 15px' }}>
-            <div style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>振込先口座</div>
-            {bank?.bank_name ? (
-              <div style={{ fontSize: '.74rem', lineHeight: 1.8 }}>
-                {bank.bank_name} {bank.branch_name}<br />
-                {bank.account_type ?? '普通'} <span className="tnum" style={{ fontFamily: 'Inter' }}>{bank.account_number}</span> ・ {bank.account_holder}
-              </div>
-            ) : <p style={{ fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>未登録です。</p>}
-            <a href="/app/s/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: '.66rem', color: 'var(--c-blue)', textDecoration: 'none' }}>口座の変更は設定から →</a>
-          </div>
-        </div>
-      </div>
-      <style>{`.sup-money>div{min-width:0}
-@media (min-width:1024px){ .sup-money{grid-template-columns:3fr 2fr !important} }`}</style>
-      </div>
+      <MoneyTabs guide={SG_MONEY} pay={payPanel} receive={receivePanel} />
     </div>
   )
 }
