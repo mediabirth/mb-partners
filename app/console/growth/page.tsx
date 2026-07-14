@@ -59,7 +59,8 @@ export default async function GrowthPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230, padding: '22px 24px 40px', maxWidth: 1080 + 230 }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.15rem', fontWeight: 500, marginBottom: 4 }}>成長（紹介ファネル）</h1><PageGuide data={GUIDE_GROWTH} /></span>
+      <p className="eyebrow" style={{ marginBottom: 2 }}>パートナー</p>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.15rem', fontWeight: 500, marginBottom: 4 }}>成長（紹介）</h1><PageGuide data={GUIDE_GROWTH} /></span>
       <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginBottom: 18 }}>共有リンク経由の紹介の流れと、パートナー別の生産性・休眠を可視化します（読み取り専用）。</p>
 
       {/* ファネル */}

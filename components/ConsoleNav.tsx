@@ -33,20 +33,30 @@ const NAV_STYLE = `
   }
 `
 
-const ITEMS = [
-  { href: '/console',           id: 'dash',     label: 'ダッシュボード', icon: 'dash' },
+// 情報再構造化（2026-07-14）: カテゴリ階層。親=クリックで代表子へ（先頭child）・アクティブは親子連動・現在地の親は自動展開。
+//   aliases=サイドバーに出ない詳細ページの帰属（アクティブ表示用・例: /console/suppliers はパートナー配下の詳細導線）。
+type NavChild = { href: string; label: string; badge?: 'partners' | 'inquiries' }
+type NavEntry = { href: string; id: string; label: string; icon: string; badge?: 'partners' | 'inquiries'; children?: NavChild[]; aliases?: string[] }
+const ITEMS: NavEntry[] = [
+  { href: '/console',           id: 'dash',     label: 'ダッシュボード', icon: 'dash', aliases: ['/console/analytics', '/console/funnel'] },
   { href: '/console/deals',     id: 'deals',    label: '案件',           icon: 'list' },
-  { href: '/console/growth',    id: 'growth',   label: '成長（紹介）',   icon: 'growth' },
-  { href: '/console/partners',  id: 'partners', label: 'パートナー',     icon: 'users' },
-  { href: '/console/applications', id: 'applications', label: 'パートナー応募', icon: 'apply' },
+  { href: '/console/partners',  id: 'partners', label: 'パートナー',     icon: 'users', badge: 'partners',
+    aliases: ['/console/suppliers', '/console/deliveries'],
+    children: [
+      { href: '/console/partners',     label: 'パートナー一覧', badge: 'partners' },
+      { href: '/console/applications', label: 'パートナー応募' },
+      { href: '/console/growth',       label: '成長（紹介）' },
+      { href: '/console/reactivate',   label: '再活性化' },
+    ] },
   { href: '/console/services',  id: 'svcs',     label: 'サービスマスタ', icon: 'svcs' },
-  { href: '/console/payouts',     id: 'payouts',     label: '支払管理',       icon: 'payouts' },
-  { href: '/console/suppliers', id: 'suppliers', label: 'サプライヤー', icon: 'svcs' },
-  { href: '/console/supplier-charges', id: 'supplier', label: 'サプライヤー請求', icon: 'payouts' },
-  { href: '/console/broadcasts', id: 'broadcasts', label: '配信',           icon: 'broadcasts' },
-  { href: '/console/inquiries', id: 'inquiries',  label: '問い合わせ',     icon: 'inquiries' },
-  { href: '/console/messages',  id: 'messages',   label: 'メッセージ',     icon: 'inquiries' },
-  { href: '/console/settings',  id: 'settings',   label: '設定',           icon: 'settings' },
+  { href: '/console/payouts',   id: 'payouts',  label: '支払',           icon: 'payouts', aliases: ['/console/supplier-charges', '/console/delivery-payouts'] },
+  { href: '/console/inquiries', id: 'inquiries', label: '問い合わせ',    icon: 'inquiries', badge: 'inquiries',
+    children: [
+      { href: '/console/inquiries', label: 'フォーム問い合わせ', badge: 'inquiries' },
+      { href: '/console/messages',  label: 'LINEメッセージ' },
+    ] },
+  { href: '/console/broadcasts', id: 'broadcasts', label: '配信',        icon: 'broadcasts' },
+  { href: '/console/settings',  id: 'settings',   label: '設定',        icon: 'settings' },
 ]
 
 function NavIcon({ id }: { id: string }) {
@@ -78,10 +88,24 @@ function NavIcon({ id }: { id: string }) {
 export default function ConsoleNav(_props?: { profileName?: string; profileColor?: string }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
+  // 折りたたみの手動上書き（未操作の親は「現在地なら展開」が既定）
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   // 画面遷移でドロワーを閉じる
   useEffect(() => { setOpen(false) }, [path])
-  const active = (href: string) =>
+  const hrefActive = (href: string) =>
     href === '/console' ? path === '/console' : path.startsWith(href)
+  // 子のアクティブ: 兄弟の中で最長一致（/console/partners が /console/partners/invite 等も拾う。兄弟間の競合なしを構造で保証）
+  const childActive = (item: NavEntry, href: string) => {
+    const hits = (item.children ?? []).filter(c => hrefActive(c.href))
+    if (!hits.length) return false
+    return hits.sort((a, b) => b.href.length - a.href.length)[0].href === href
+  }
+  // 親のアクティブ: 自身/子/別名（サイドバーに出ない詳細ページ）のいずれかに一致＝親子連動
+  const parentActive = (item: NavEntry) =>
+    hrefActive(item.href)
+    || (item.children ?? []).some(c => hrefActive(c.href))
+    || (item.aliases ?? []).some(a => path.startsWith(a))
+  const isExpanded = (item: NavEntry) => expanded[item.id] ?? parentActive(item)
 
   // Identity + badges come from the persistent console layout provider, resolved
   // once per session — no per-page re-fetch, so no account flash on navigation.
@@ -118,41 +142,79 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
         </div>
       </Link>
 
-      {ITEMS.map(item => (
-        <Link key={item.href} href={item.href}
-          className={`cnav-link${active(item.href) ? ' cnav-active' : ''}`}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 14px', borderRadius: 9,
-            fontSize: '.77rem', fontWeight: active(item.href) ? 700 : 500,
-            color: active(item.href) ? 'var(--c-blue)' : 'var(--t-tertiary)',
-            background: active(item.href) ? 'var(--blue-bg2)' : 'transparent',
-            textDecoration: 'none', minHeight: 42,
-          }}>
-          <NavIcon id={item.icon} />
-          {item.label}
-          {item.id === 'partners' && badges.pendingPartners > 0 && (
-            <span style={{
-              marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-              background: 'var(--c-blue)', color: '#fff', fontSize: '.56rem', fontWeight: 500,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
-              animation: 'pulseDot 2.8s ease-in-out infinite',
-            }}>
-              {badges.pendingPartners}
-            </span>
-          )}
-          {item.id === 'inquiries' && badges.openInquiries > 0 && (
-            <span style={{
-              marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
-              background: 'var(--amber)', color: '#fff', fontSize: '.56rem', fontWeight: 500,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
-              animation: 'pulseDot 2.8s ease-in-out infinite',
-            }}>
-              {badges.openInquiries}
-            </span>
-          )}
-        </Link>
-      ))}
+      {ITEMS.map(item => {
+        const pActive = parentActive(item)
+        const opened = isExpanded(item)
+        const badgeCount = item.badge === 'partners' ? badges.pendingPartners : item.badge === 'inquiries' ? badges.openInquiries : 0
+        const badgeBg = item.badge === 'partners' ? 'var(--c-blue)' : 'var(--amber)'
+        return (
+          <div key={item.href}>
+            {/* 親行: Link（代表子へ）＋独立した折りたたみボタン（Link内にbuttonを入れない＝妥当なDOM） */}
+            <div className={`cnav-link${pActive ? ' cnav-active' : ''}`}
+              style={{
+                display: 'flex', alignItems: 'center', borderRadius: 9,
+                color: pActive ? 'var(--c-blue)' : 'var(--t-tertiary)',
+                background: pActive ? 'var(--blue-bg2)' : 'transparent',
+                minHeight: 42,
+              }}>
+              <Link href={item.href} aria-expanded={item.children ? opened : undefined}
+                style={{
+                  flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 14px', fontSize: '.77rem', fontWeight: pActive ? 700 : 500,
+                  color: 'inherit', textDecoration: 'none', minHeight: 42, boxSizing: 'border-box',
+                }}>
+                <NavIcon id={item.icon} />
+                {item.label}
+                {/* 親バッジ: 折りたたみ中でも件数が見える（展開中は子側が担う） */}
+                {badgeCount > 0 && !(item.children && opened) && (
+                  <span style={{
+                    marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9,
+                    background: badgeBg, color: '#fff', fontSize: '.56rem', fontWeight: 500,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+                    animation: 'pulseDot 2.8s ease-in-out infinite',
+                  }}>{badgeCount}</span>
+                )}
+              </Link>
+              {item.children && (
+                <button aria-label={opened ? `${item.label}を折りたたむ` : `${item.label}を展開`}
+                  onClick={() => setExpanded(p => ({ ...p, [item.id]: !opened }))}
+                  style={{ width: 34, height: 42, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', borderRadius: 9 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ transition: 'transform .18s', transform: opened ? 'rotate(180deg)' : 'none' }}><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+              )}
+            </div>
+            {item.children && opened && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1, margin: '1px 0 3px' }}>
+                {item.children.map(c => {
+                  const cActive = childActive(item, c.href)
+                  const cBadge = c.badge === 'partners' ? badges.pendingPartners : c.badge === 'inquiries' ? badges.openInquiries : 0
+                  return (
+                    <Link key={c.href} href={c.href}
+                      className={`cnav-link${cActive ? ' cnav-active' : ''}`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 14px 8px 43px', borderRadius: 9,
+                        fontSize: '.72rem', fontWeight: cActive ? 700 : 500,
+                        color: cActive ? 'var(--c-blue)' : 'var(--t-tertiary)',
+                        background: cActive ? 'var(--blue-bg2)' : 'transparent',
+                        textDecoration: 'none', minHeight: 38,
+                      }}>
+                      {c.label}
+                      {cBadge > 0 && (
+                        <span style={{
+                          marginLeft: 'auto', minWidth: 17, height: 17, borderRadius: 9,
+                          background: c.badge === 'partners' ? 'var(--c-blue)' : 'var(--amber)', color: '#fff', fontSize: '.54rem', fontWeight: 500,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+                        }}>{cBadge}</span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
 
       <Link href="/console/settings" className="cnav-acct" style={{ marginTop: 'auto', textDecoration: 'none', borderRadius: 9 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', fontSize: '.72rem', color: 'var(--muted2)', borderRadius: 9 }}>

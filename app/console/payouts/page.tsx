@@ -1,17 +1,19 @@
 'use client'
 import { useEffect, useState, useTransition, type ReactNode } from 'react'
 import PageGuide from '@/components/PageGuide'
-import { GUIDE_PAYOUTS } from '@/lib/console-guides'
+import { GUIDE_PAYOUTS, GUIDE_SUPPLIER_CHARGES } from '@/lib/console-guides'
 import useSWR from 'swr'
 import ConsoleNav from '@/components/ConsoleNav'
 import StatusDot from '../StatusDot'
 import Avatar from '@/components/ui/Avatar'
 import { partnerKind } from '@/lib/status'
+import SupplierChargesPanel from './SupplierChargesPanel'
 
 /* ============================================================
- * 支払管理（BR-C4 再設計）— 「誰にいくら払うか」中心の1統合リスト。
+ * 支払（BR-C4 再設計＋情報再構造化 2026-07-14）— お金の出入りの唯一の画面。
+ *   タブ①パートナーへの支払（MBが払う・従来の支払管理）／タブ②サプライヤーからの請求（MBが請求する・旧 /console/supplier-charges を統合）。
  * 内部用語（凍結/未凍結/override/源泉…）は前面に出さず、確定/確定前/支払済み のプレーンな言葉に。
- * ★お金の計算・操作（締め/確定=凍結/支払済/取消）の処理ロジックは既存ハンドラをそのまま呼ぶ＝不変。
+ * ★お金の計算・操作（締め/確定=凍結/支払済/取消/請求済/入金済）の処理ロジックは既存ハンドラをそのまま呼ぶ＝不変。
  * ============================================================ */
 
 type PayoutItem = {
@@ -29,7 +31,7 @@ function monthLabel(d: string) { const [y, m] = d.split('-'); return `${y}年${N
 type BD = { label: string; value: number; op?: '−' | '＋' | '=' }
 type Row = {
   key: string; kind: 'referral' | 'frontier' | 'delivery'
-  name: string; color: string | null; sub: string
+  name: string; code?: string | null; color: string | null; sub: string
   amount: number; breakdown: BD[]
   csvYm?: string
   primary?: { label: string; onClick: () => void; tone: 'green' | 'blue' }
@@ -47,6 +49,8 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
             <b style={{ fontSize: '.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</b>
+            {/* ①名前表記: 氏名主体＋補助のコード小 */}
+            {row.code && <span style={{ fontSize: '.56rem', color: 'var(--muted2)', fontWeight: 500, flexShrink: 0 }}>{row.code}</span>}
             <StatusDot {...partnerKind(row.kind)} />
           </div>
           <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</div>
@@ -99,6 +103,16 @@ function Section({ title, total, count, defaultOpen, accent, children }: { title
 type Forecast = { month: string; total_net: number; partner_count: number; items: { partner_id: string; name: string; color: string | null; deal_count: number; gross: number; withholding: number; net: number }[] }
 
 export default function PayoutsPage() {
+  // 統合タブ: pay=パートナーへの支払（既定）／charges=サプライヤーからの請求（旧URLは ?tab=charges でリダイレクト着地）
+  //   SSRは常に'pay'で描画し、?tab はマウント後に反映（hydration不一致=React#418を避ける）。
+  const [tab, setTab] = useState<'pay' | 'charges'>('pay')
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'charges') setTab('charges')
+  }, [])
+  function switchTab(t: 'pay' | 'charges') {
+    setTab(t)
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', t === 'charges' ? '/console/payouts?tab=charges' : '/console/payouts')
+  }
   const { data, mutate } = useSWR<{ batches: Batch[] }>('/api/console/payouts')
   const batches = data?.batches ?? []
   // ④ 締め前「今月の支払見込み」（読み取り集計・close_month非実行）。
@@ -158,7 +172,9 @@ export default function PayoutsPage() {
   const partnerRow = (it: PayoutItem, b: Batch, withPay: boolean): Row => ({
     key: `p-${b.id}-${it.partner_id}`,
     kind: (it.override_gross ?? 0) > 0 ? 'frontier' : 'referral',
-    name: it.partners?.profiles?.name ?? it.partners?.code ?? '—', color: it.partners?.profiles?.color ?? null,
+    // ①名前表記: 氏名主体（コードは補助表示）。名前解決は既存 partners→profiles ネスト＝単一ソース。
+    name: it.partners?.profiles?.name ?? it.partners?.code ?? '—', code: it.partners?.profiles?.name ? it.partners?.code ?? null : null,
+    color: it.partners?.profiles?.color ?? null,
     sub: `${monthLabel(b.month)} ・ ${it.synthetic ? 'チーム報酬' : `${it.statement?.deal_count ?? 0}件`}`,
     amount: pNet(it), csvYm: b.month.substring(0, 7),
     breakdown: [{ label: '報酬合計', value: pGross(it) }, { label: '源泉徴収', value: pWh(it), op: '−' }, { label: 'お支払い', value: pNet(it), op: '=' }],
@@ -208,9 +224,9 @@ export default function PayoutsPage() {
   const monthMax = Math.max(thisMonthNet, ...byMonth.map(m => m.net), 1)
   // パートナー別累計（payout_items 横断・net合算）
   const partnerTotals = (() => {
-    const m = new Map<string, { name: string; color: string | null; total: number; months: number }>()
+    const m = new Map<string, { name: string; code: string | null; color: string | null; total: number; months: number }>()
     for (const b of batches) for (const it of b.payout_items) {
-      const cur = m.get(it.partner_id) ?? { name: it.partners?.profiles?.name ?? it.partners?.code ?? '—', color: it.partners?.profiles?.color ?? null, total: 0, months: 0 }
+      const cur = m.get(it.partner_id) ?? { name: it.partners?.profiles?.name ?? it.partners?.code ?? '—', code: it.partners?.profiles?.name ? it.partners?.code ?? null : null, color: it.partners?.profiles?.color ?? null, total: 0, months: 0 }
       cur.total += pNet(it); cur.months += 1
       m.set(it.partner_id, cur)
     }
@@ -229,10 +245,30 @@ export default function PayoutsPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>支払管理</h1><PageGuide data={GUIDE_PAYOUTS} /></span>
+        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>支払</h1>
+            <PageGuide data={tab === 'pay' ? GUIDE_PAYOUTS : GUIDE_SUPPLIER_CHARGES} />
+          </span>
+          {/* 統合タブ（案件ボードのQR切替と同文法） */}
+          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
+            {([['pay', 'パートナーへの支払'], ['charges', 'サプライヤーからの請求']] as const).map(([v, lbl]) => (
+              <button key={v} onClick={() => switchTab(v)} style={{
+                border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 500,
+                padding: '7px 14px', borderRadius: 7, whiteSpace: 'nowrap',
+                color: tab === v ? 'var(--txt)' : 'var(--muted2)',
+                background: tab === v ? '#fff' : 'transparent',
+                boxShadow: tab === v ? '0 1px 4px rgba(14,14,20,.1)' : 'none',
+              }}>{lbl}</button>
+            ))}
+          </div>
         </div>
 
+        {tab === 'charges' ? (
+          <div className="page-anim" style={{ padding: '26px 28px 44px', maxWidth: 1040 }}>
+            <SupplierChargesPanel />
+          </div>
+        ) : (
         <div className="page-anim" style={{ padding: '26px 28px', maxWidth: 880 }}>
           {/* B: 取得中はブランクでなく骨組みskeleton（pop-in/ガクッ防止） */}
           {data === undefined ? (
@@ -298,7 +334,7 @@ export default function PayoutsPage() {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar name={p.name} color={p.color} size={28} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                      <div style={{ fontSize: '.72rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}{p.code && <span style={{ fontSize: '.56rem', color: 'var(--muted2)', fontWeight: 500, marginLeft: 6 }}>{p.code}</span>}</div>
                       <div style={{ height: 6, background: 'var(--bg2)', borderRadius: 4, marginTop: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${Math.max(4, Math.round(p.total / partnerMax * 100))}%`, height: '100%', borderRadius: 4, background: 'var(--c-blue)' }} />
                       </div>
@@ -335,6 +371,7 @@ export default function PayoutsPage() {
           </Section>
           </>)}
         </div>
+        )}
       </div>
       {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 500, zIndex: 99 }}>{toast}</div>}
     </div>

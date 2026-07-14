@@ -268,7 +268,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                   <span>当月見込み/凍結: <b>{yen(d.charges_month)}</b></span>
                   <span>累計: <b>{yen(d.charges_total)}</b></span>
                 </div>
-                <Link href="/console/supplier-charges" style={{ display: 'inline-block', marginTop: 8, fontSize: '.7rem', color: 'var(--c-blue)' }}>サプライヤー請求（月次クローズ）へ →</Link>
+                <Link href="/console/payouts?tab=charges" style={{ display: 'inline-block', marginTop: 8, fontSize: '.7rem', color: 'var(--c-blue)' }}>支払 → サプライヤーからの請求（月次クローズ）へ →</Link>
               </div>
               {note && <p style={{ fontSize: '.68rem', color: 'var(--muted2)' }}>{note}</p>}
             </>

@@ -12,7 +12,10 @@ export async function GET() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: batches, error } = await supabase
+  // ①名前表記: owner認証では nested partners.profiles が RLS で null になり氏名がコード落ちするため、
+  //   役割確認済みのうえ service role で読取（deals ルートと同じ流儀・結合は同一の partners→profiles＝単一ソース）。
+  const admin = await createServiceRoleClient()
+  const { data: batches, error } = await admin
     .from('payout_batches')
     .select(`
       id, month, status, closed_at, paid_at,
@@ -24,7 +27,6 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // R2-E: フロンティアの override を合算（snapshot不変・導出）
-  const admin = await createServiceRoleClient()
   const augmented = await augmentBatches(admin, batches ?? [])
   return NextResponse.json({ batches: augmented })
 }

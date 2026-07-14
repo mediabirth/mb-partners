@@ -104,7 +104,7 @@ export default function MessagesClient({ threads, messages, signedUrls = {}, tem
       <div style={{ width: 300, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: 'var(--s-0)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px 18px 12px', borderBottom: '0.5px solid var(--line)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>メッセージ</h1><PageGuide data={GUIDE_MESSAGES} /></span>
+            <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}><p className="eyebrow" style={{ margin: 0 }}>問い合わせ</p><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>LINEメッセージ</h1><PageGuide data={GUIDE_MESSAGES} /></span></span>
             <a href="/console/settings/templates" className="ui-row" style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--c-blue)', textDecoration: 'none', padding: 0 }}>テンプレ設定</a>
           </div>
         </div>

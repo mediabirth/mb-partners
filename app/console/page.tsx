@@ -17,6 +17,7 @@ import StatCard from '@/components/ui/StatCard'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { PROJECT_STATUSES, INTAKE_LABEL } from '@/lib/phase'
+import FunnelSection from './FunnelSection'
 
 export const runtime = 'edge'
 
@@ -265,9 +266,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>ダッシュボード</h1><PageGuide data={GUIDE_DASHBOARD} /></span>
             <MonthSelector months={monthOptions} selected={selectedYm} current={ym} />
           </div>
+          {/* 情報再構造化: ファネル=本文常設・再活性化=サイドバー「パートナー」配下へ移動。残る子ページ導線は詳細分析のみ。 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Button variant="secondary" size="sm" href="/console/funnel">ファネル</Button>
-            <Button variant="secondary" size="sm" href="/console/reactivate">再活性化</Button>
             <Button variant="secondary" size="sm" href="/console/analytics">詳細分析</Button>
             <GlobalSearchClient />
           </div>
@@ -353,6 +353,12 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
               <StatCard label="平均受注額" value={`¥${avgRevenue.toLocaleString()}`} />
             </div>
           </div>
+
+          {/* 情報再構造化（2026-07-14）: 紹介ファネルを常設セクション化（旧 /console/funnel を統合・同一計算の読み取り集計） */}
+          <SectionTitle title="紹介ファネル" />
+          <Suspense fallback={<div className="ui-skeleton" style={{ height: 170, borderRadius: 14, marginBottom: 18 }} />}>
+            <FunnelSection />
+          </Suspense>
 
           {/* ⑥ 要対応（アラート＋停滞＋直近商談を1セクションに統合）＋最近の動き */}
           <SectionTitle title="要対応・最近の動き" />
