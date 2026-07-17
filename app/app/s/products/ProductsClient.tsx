@@ -11,9 +11,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { rewardValueText } from '@/lib/reward-format'
+import MenuOpsEditor from './MenuOpsEditor'
 
 type Brand = { id: string; name: string; active: boolean; supplier_memo: string | null; image_url: string | null; logo_path: string | null; icon: string | null; color: string | null; category: string | null; subtitle: string | null; description: string | null; who: string | null; target_audience: string | null; url: string | null }
-type Menu = { id: string; name: string; service_id: string; public_description: string | null; short_description: string | null; description: string | null }
+type Menu = { id: string; name: string; service_id: string; public_description: string | null; short_description: string | null; description: string | null; active?: boolean }
 type Reward = { id: string; menu_id: string; reward_type: string; reward_value: number; reward_base: string | null }
 type Req = { id: string; kind: string; menu_id: string | null; service_id: string; payload: { value?: unknown }; status: string; reason: string | null }
 const LINE = '0.5px solid var(--line)'
@@ -26,6 +27,26 @@ function Group({ label, first, children }: { label: string; first?: boolean; chi
       <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', marginBottom: 10 }}>{label}</div>
       {children}
     </div>
+  )
+}
+
+/** 画像アップロード（server経由・service-logosバケット）→ 値を申請draftへ（承認までは表示に出ない） */
+function AssetUpload({ serviceId, kind, onDone }: { serviceId: string; kind: 'logo' | 'image'; onDone: (v: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  return (
+    <label className="ui-btn ui-btn--ghost" style={{ fontSize: '.66rem', padding: '7px 12px', cursor: 'pointer', flexShrink: 0 }}>
+      {busy ? '送信中…' : 'アップロード'}
+      <input type="file" accept="image/*" style={{ display: 'none' }} disabled={busy} onChange={async e => {
+        const f = e.target.files?.[0]; if (!f) return
+        setBusy(true)
+        try {
+          const fd = new FormData(); fd.append('service_id', serviceId); fd.append('kind', kind); fd.append('file', f)
+          const r = await fetch('/api/supplier/asset', { method: 'POST', body: fd })
+          const j = await r.json().catch(() => ({}))
+          if (r.ok) onDone(kind === 'logo' ? j.path : j.url)
+        } finally { setBusy(false); e.target.value = '' }
+      }} />
+    </label>
   )
 }
 
@@ -70,6 +91,7 @@ export default function ProductsClient() {
       { key: 'who:' + brand.id, kind: 'who', cur: brand.who ?? '' },
       { key: 'url:' + brand.id, kind: 'url', cur: brand.url ?? '' },
       { key: 'img:' + brand.id, kind: 'image', cur: brand.image_url ?? '' },
+      { key: 'logo:' + brand.id, kind: 'logo', cur: brand.logo_path ?? '' },
     ]
     for (const m of brandMenus) {
       f.push({ key: 'mn:' + m.id, kind: 'menu_name', cur: m.name, menu_id: m.id })
@@ -156,6 +178,13 @@ export default function ProductsClient() {
               <button onClick={() => setNavSel('basic')} style={NAVB(navSel === 'basic')}>基本情報</button>
               <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--muted2)', padding: '12px 10px 4px' }}>メニュー</div>
               {brandMenus.map(m => <button key={m.id} onClick={() => setNavSel(m.id)} style={NAVB(navSel === m.id)}>{pv('mn:' + m.id, m.name)}</button>)}
+              {/* 完全等価化A: メニュー新設は申請制（承認で作成） */}
+              {pendingOf('menu_create') ? (
+                <div style={{ fontSize: '.6rem', color: '#8a6100', padding: '8px 10px' }}>メニュー追加を申請中</div>
+              ) : (
+                <button onClick={() => { const nm = window.prompt('新しいメニュー名（MB Partnersの確認後に作成されます）'); if (nm && nm.trim()) call('POST', { kind: 'menu_create', service_id: brand.id, value: nm.trim() }, 'メニュー追加を申請しました（MB Partnersの確認後に作成）') }}
+                  style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderRadius: 8, minHeight: 34, padding: '0 10px', fontSize: '.7rem', fontWeight: 500, background: 'none', color: 'var(--c-blue)' }}>＋ メニューを追加（申請）</button>
+              )}
             </div>
 
             {/* 中央フラットフォーム */}
@@ -177,7 +206,18 @@ export default function ProductsClient() {
                   <Fld label="こんなお客さまに（申請制）" pending={pendingOf('target_audience')}><input value={d('audience:' + brand.id, brand.target_audience ?? '')} onChange={e => setDraft(p => ({ ...p, ['audience:' + brand.id]: e.target.value }))} placeholder="例：投資用マンションを検討している人" style={inputStyle} /></Fld>
                   <Fld label="紹介しやすい方（申請制）" pending={pendingOf('who')}><input value={d('who:' + brand.id, brand.who ?? '')} onChange={e => setDraft(p => ({ ...p, ['who:' + brand.id]: e.target.value }))} placeholder="不動産・保険に関心のあるお客さまと接する方" style={inputStyle} /></Fld>
                   <Fld label="WebサイトURL（申請制）" pending={pendingOf('url')}><input value={d('url:' + brand.id, brand.url ?? '')} onChange={e => setDraft(p => ({ ...p, ['url:' + brand.id]: e.target.value }))} placeholder="https://example.com" style={inputStyle} /></Fld>
-                  <Fld label="イメージ画像URL（申請制）" pending={pendingOf('image')}><input value={d('img:' + brand.id, brand.image_url ?? '')} onChange={e => setDraft(p => ({ ...p, ['img:' + brand.id]: e.target.value }))} placeholder="https://…" style={inputStyle} /></Fld>
+                  <Fld label="イメージ画像（申請制）" pending={pendingOf('image')}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input value={d('img:' + brand.id, brand.image_url ?? '')} onChange={e => setDraft(p => ({ ...p, ['img:' + brand.id]: e.target.value }))} placeholder="https://…（アップロードでも設定できます）" style={{ ...inputStyle, flex: 1 }} />
+                      <AssetUpload serviceId={brand.id} kind="image" onDone={v => setDraft(p => ({ ...p, ['img:' + brand.id]: v }))} />
+                    </div>
+                  </Fld>
+                  <Fld label="ロゴ画像（申請制）" pending={pendingOf('logo')}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ flex: 1, fontSize: '.7rem', color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d('logo:' + brand.id, brand.logo_path ?? '') || '未設定'}</span>
+                      <AssetUpload serviceId={brand.id} kind="logo" onDone={v => setDraft(p => ({ ...p, ['logo:' + brand.id]: v }))} />
+                    </div>
+                  </Fld>
                   </Group>
                   <Group label="公開状態（申請して反映）">
                   <Fld label="現在の状態" pending={pendingOf('visibility')}>
@@ -200,17 +240,17 @@ export default function ProductsClient() {
                   <Fld label="ひとこと説明（一覧に表示・申請制）" pending={pendingOf('menu_short_description', selMenu.id)}><input value={d('msd:' + selMenu.id, selMenu.short_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['msd:' + selMenu.id]: e.target.value }))} placeholder="例：お客さまを紹介するだけ。実務は当社が対応。" style={inputStyle} /></Fld>
                   <Fld label="詳しい説明（詳細シートに表示・申請制）" pending={pendingOf('menu_description', selMenu.id)}><textarea rows={3} value={d('md:' + selMenu.id, selMenu.description ?? '')} onChange={e => setDraft(p => ({ ...p, ['md:' + selMenu.id]: e.target.value }))} placeholder="例：お客さまの状況を伺い、最適なプランをご提案します" style={{ ...inputStyle, resize: 'vertical' }} /></Fld>
                   <Fld label="顧客向け説明（相談ページに表示・申請制）" pending={pendingOf('public_description', selMenu.id)}><textarea rows={3} value={d('pd:' + selMenu.id, selMenu.public_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['pd:' + selMenu.id]: e.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} /></Fld>
+                  <Fld label="このメニューの公開状態（申請制）" pending={pendingOf('menu_visibility', selMenu.id)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: '.8rem' }}>{selMenu.active === false ? '非公開' : '公開中'}</span>
+                      {!pendingOf('menu_visibility', selMenu.id) && (
+                        <button disabled={busy} onClick={() => call('POST', { kind: 'menu_visibility', service_id: brand.id, menu_id: selMenu.id, value: selMenu.active === false }, '申請しました（MB Partnersの確認後に反映）')} className="ui-btn ui-btn--ghost" style={{ fontSize: '.68rem', padding: '6px 12px' }}>{selMenu.active === false ? '公開を申請' : '非公開を申請'}</button>
+                      )}
+                    </div>
+                  </Fld>
                   </Group>
-                  <Group label="報酬（すぐ反映）">
-                    {data.rewards.filter(r => r.menu_id === selMenu.id).length === 0 ? (
-                      <p style={{ fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>報酬が未設定です。設定はMB Partnersへご相談ください。</p>
-                    ) : data.rewards.filter(r => r.menu_id === selMenu.id).map(r => (
-                      <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                        <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', width: 92, flexShrink: 0 }}>紹介報酬</label>
-                        <input inputMode="numeric" value={d('rv:' + r.id, String(r.reward_value))} onChange={e => setDraft(p => ({ ...p, ['rv:' + r.id]: e.target.value }))} style={{ ...inputStyle, flex: 1, maxWidth: 200, fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right' }} />
-                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500, flexShrink: 0 }}>{r.reward_type === 'fixed' ? '円' : r.reward_base === '売上' ? '%（受注額）' : '%'}</span>
-                      </div>
-                    ))}
+                  <Group label="報酬・協力タスク・ヒアリング項目（すぐ反映＝MB Partnersに通知されます）">
+                    <MenuOpsEditor menuId={selMenu.id} onSaved={load} />
                   </Group>
                 </div>
               ) : null}

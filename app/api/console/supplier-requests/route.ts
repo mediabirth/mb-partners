@@ -55,6 +55,26 @@ export async function PATCH(req: NextRequest) {
     } else if (r.kind === 'image') {
       const { error } = await admin.from('services').update({ image_url: String(value ?? '').trim() || null }).eq('id', r.service_id)
       applyErr = error?.message ?? null
+    } else if (r.kind === 'logo') {
+      // 完全等価化A: ロゴ（services.logo_path・アップロード済みpathを反映）
+      const { error } = await admin.from('services').update({ logo_path: String(value ?? '').trim() || null }).eq('id', r.service_id)
+      applyErr = error?.message ?? null
+    } else if (r.kind === 'menu_visibility' && r.menu_id) {
+      // 完全等価化A: メニュー単位の公開/非公開
+      const { error } = await admin.from('menus').update({ active: !!value }).eq('id', r.menu_id)
+      applyErr = error?.message ?? null
+    } else if (r.kind === 'menu_create') {
+      // 完全等価化A: メニュー新設（service_menus＋menus を作成・報酬は未設定=サプライヤーが後から定義）
+      const nm = String(value ?? '').trim().slice(0, 80)
+      if (!nm) applyErr = 'メニュー名が空です'
+      else {
+        const { data: sm2, error: e1 } = await admin.from('service_menus').insert({ service_id: r.service_id, name: nm, ref_type: 'fixed', ref_value: 0 }).select('id').single()
+        if (e1) applyErr = e1.message
+        else {
+          const { error: e2 } = await admin.from('menus').insert({ service_menu_id: sm2!.id, name: nm, active: true })
+          applyErr = e2?.message ?? null
+        }
+      }
     } else if (r.kind === 'visibility') {
       const { error } = await admin.from('services').update({ active: !!value }).eq('id', r.service_id)
       applyErr = error?.message ?? null

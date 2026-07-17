@@ -5,6 +5,7 @@ import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_NETWORK } from '@/lib/supplier-guides'
 import InviteModal from './InviteModal'
 import DeliverySection from './DeliverySection'
+import OverridesSection from './OverridesSection'
 
 /**
  * パートナー（v5・MBコンソール「パートナー」と同体裁）:
@@ -121,6 +122,9 @@ export default async function SupplierPartnersPage() {
           </div>
         )}
       </div>
+
+      {/* 個別条件（B: 自社の紹介者×自社メニュー・MBコンソールと同一機構） */}
+      <OverridesSection />
 
       {/* MB Partnersメニュー分の還元（小さく・契約ベース） */}
       <div style={{ ...CARD, marginTop: 12, padding: '12px 15px', display: 'flex', alignItems: 'center', gap: 12 }}>

@@ -64,8 +64,8 @@ export async function GET() {
   ])
   const sms = (smsRes.data ?? []) as { id: string; service_id: string }[]
   const smIds = sms.map(x => x.id)
-  const { data: mn } = smIds.length ? await admin.from('menus').select('id, name, service_menu_id, public_description, short_description, description').in('service_menu_id', smIds).order('sort') : { data: [] as never[] }
-  const menus = ((mn ?? []) as { id: string; name: string; service_menu_id: string; public_description: string | null; short_description: string | null; description: string | null }[]).map(m => ({ id: m.id, name: m.name, public_description: m.public_description, short_description: m.short_description, description: m.description, service_id: sms.find(x => x.id === m.service_menu_id)?.service_id ?? '' }))
+  const { data: mn } = smIds.length ? await admin.from('menus').select('id, name, service_menu_id, public_description, short_description, description, active').in('service_menu_id', smIds).order('sort') : { data: [] as never[] }
+  const menus = ((mn ?? []) as { id: string; name: string; service_menu_id: string; public_description: string | null; short_description: string | null; description: string | null; active: boolean | null }[]).map(m => ({ id: m.id, name: m.name, active: m.active !== false, public_description: m.public_description, short_description: m.short_description, description: m.description, service_id: sms.find(x => x.id === m.service_menu_id)?.service_id ?? '' }))
   const mIds = menus.map(m => m.id)
   const ds = (dsRes.data ?? []) as Record<string, unknown>[]
   const dealIds = ds.map(x => x.id as string)
@@ -257,7 +257,7 @@ export async function POST(req: NextRequest) {
     const serviceId0 = typeof b.service_id === 'string' ? b.service_id : ''
     if (!serviceId0 || !(await ownService(admin, me.partnerId, serviceId0))) return NextResponse.json({ error: '自社ブランドのみ申請できます' }, { status: 403 })
     const items = Array.isArray(b.requests) ? b.requests as { kind: string; menu_id?: string | null; value: unknown }[] : []
-    const ALLOWED = ['public_description', 'image', 'menu_name', 'visibility', 'subtitle', 'category', 'description', 'who', 'target_audience', 'url', 'menu_short_description', 'menu_description']
+    const ALLOWED = ['public_description', 'image', 'logo', 'menu_name', 'visibility', 'subtitle', 'category', 'description', 'who', 'target_audience', 'url', 'menu_short_description', 'menu_description']
     if (!items.length || items.some(it => !ALLOWED.includes(it.kind))) return NextResponse.json({ error: '申請内容が不正です' }, { status: 400 })
     const rows: Record<string, unknown>[] = []
     for (const it of items) {
@@ -272,18 +272,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ids: (ins ?? []).map(x => x.id), status: 'pending', count: rows.length })
   }
 
-  if (!['public_description', 'image', 'menu_name', 'visibility', 'subtitle', 'category', 'description', 'who', 'target_audience', 'url', 'menu_short_description', 'menu_description'].includes(kind)) return NextResponse.json({ error: 'kind が不正です' }, { status: 400 })
+  if (!['public_description', 'image', 'logo', 'menu_name', 'visibility', 'menu_visibility', 'menu_create', 'subtitle', 'category', 'description', 'who', 'target_audience', 'url', 'menu_short_description', 'menu_description'].includes(kind)) return NextResponse.json({ error: 'kind が不正です' }, { status: 400 })
   const serviceId = typeof b.service_id === 'string' ? b.service_id : ''
   const menuId = typeof b.menu_id === 'string' && b.menu_id ? b.menu_id : null
   if (!serviceId) return NextResponse.json({ error: 'service_id は必須です' }, { status: 400 })
   if (!(await ownService(admin, me.partnerId, serviceId))) return NextResponse.json({ error: '自社ブランドのみ申請できます' }, { status: 403 })
-  if ((kind === 'public_description' || kind === 'menu_name') && !menuId) return NextResponse.json({ error: 'menu_id は必須です' }, { status: 400 })
+  if ((kind === 'public_description' || kind === 'menu_name' || kind === 'menu_visibility') && !menuId) return NextResponse.json({ error: 'menu_id は必須です' }, { status: 400 })
   if (menuId) {
     const own = await ownMenu(admin, me.partnerId, menuId)
     if (!own || own.serviceId !== serviceId) return NextResponse.json({ error: '自社メニューのみ申請できます' }, { status: 403 })
   }
-  const value = kind === 'visibility' ? !!b.value : String(b.value ?? '').trim().slice(0, 4000)
-  if (kind !== 'visibility' && !value) return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
+  const value = (kind === 'visibility' || kind === 'menu_visibility') ? !!b.value : String(b.value ?? '').trim().slice(0, 4000)
+  if (kind !== 'visibility' && kind !== 'menu_visibility' && !value) return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
   const { data: ins, error } = await admin.from('supplier_change_requests').insert({ supplier_partner_id: me.partnerId, service_id: serviceId, menu_id: menuId, kind, payload: { value } }).select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await notify(admin, me, 'request', `${kind}:${menuId ?? serviceId}`, { request_id: ins.id, value: typeof value === 'string' ? value.slice(0, 120) : value })
