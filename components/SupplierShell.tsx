@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import BrandMark from '@/components/ui/BrandMark'
+import LogoutButton from '@/components/LogoutButton'
 
 const NAV = [
   { href: '/app', label: 'ダッシュボード', exact: true, icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z" /> },
@@ -95,7 +96,11 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
         <aside className="sup-side" style={{ width: 230, flexShrink: 0, borderRight: '0.5px solid var(--line)', background: 'linear-gradient(180deg,#fbfaff,#ffffff 26%)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
           <BrandHead />
           <NavList onNav={startNav} />
-          <div style={{ marginTop: 'auto' }}><AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={startNav} /></div>
+          {/* 認証導線修理（2026-07-17）: ログアウトはAPP/コンソールと同一の LogoutButton（唯一の門＝central factory signOut scope:'local'） */}
+          <div style={{ marginTop: 'auto' }}>
+            <AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={startNav} />
+            <div style={{ padding: '0 12px 12px', display: 'flex', justifyContent: 'flex-end' }}><LogoutButton /></div>
+          </div>
         </aside>
         <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
       </div>
@@ -113,6 +118,7 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
             </div>
             <NavList onNav={() => { setDrawer(false); startNav() }} />
             <AccountChip companyName={companyName} code={code} color={color} avatarUrl={avatarUrl} onNav={() => { setDrawer(false); startNav() }} />
+            <div style={{ padding: '0 12px 14px', display: 'flex', justifyContent: 'flex-end' }}><LogoutButton /></div>
           </div>
         </div>
       )}
