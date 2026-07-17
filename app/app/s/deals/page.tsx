@@ -16,6 +16,27 @@ const COLS = [['received', '受付'], ['in_progress', '対応中'], ['confirmed'
 const ASG_JP: Record<string, string> = { proposed: '提示中', accepted: '了承済', assigned: '了承済', delivered: '納品済み', declined: '辞退' }
 const FILTERS = [['all', 'すべて'], ['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
 
+/** ヒアリング参照（①・読み取り専用・自社案件のみ＝面公開境界維持）。定義が無いメニューでは何も出さない（静音）。 */
+function HearingView({ dealId }: { dealId: string }) {
+  const [items, setItems] = useState<{ label: string; value: string }[] | null>(null)
+  useEffect(() => {
+    setItems(null)
+    fetch(`/api/supplier/hearing?deal_id=${dealId}`).then(r => r.ok ? r.json() : null).then(d => setItems(d?.items ?? [])).catch(() => setItems([]))
+  }, [dealId])
+  if (!items || items.length === 0) return null
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.74rem' }}>
+      <div style={{ color: 'var(--muted2)', marginBottom: 6 }}>ヒアリング</div>
+      {items.map(it => (
+        <div key={it.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '4px 0', fontSize: '.72rem' }}>
+          <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{it.label}</span>
+          <span style={{ textAlign: 'right', color: it.value ? 'var(--txt)' : 'var(--muted)' }}>{it.value || '—'}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** 売上エビデンス（任意・ベンダー純化P2）: 添付＝/api/supplier/evidence・閲覧＝60秒署名URL。 */
 function EvidenceSection({ dealId, say }: { dealId: string; say: (m: string) => void }) {
   const [items, setItems] = useState<{ id: string; label: string | null }[] | null>(null)
@@ -232,6 +253,9 @@ export default function SupplierDealsPage() {
                 </div>
               </div>
             )}
+            {/* ①メニュー別ヒアリング（読み取り・定義があるメニューのみ表示） */}
+            <HearingView dealId={detail.id} />
+
             {/* ベンダー純化P2: 売上エビデンス（任意）— 通常は不要・大型案件や記録用。money非接触。 */}
             <EvidenceSection dealId={detail.id} say={say} />
 

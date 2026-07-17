@@ -46,8 +46,25 @@ export default async function SupplierMoneyPage() {
     const { data: evs } = await admin.from('deal_evidences').select('id, deal_id, label').in('deal_id', evDealIds)
     for (const e of evs ?? []) (evByDeal[e.deal_id as string] ??= []).push({ id: e.id as string, label: (e.label as string) ?? null })
   }
+  // ② 紹介者別の内訳（氏名主体＋コード小・service role読取=RLS名前落ちなし・数字は支払と同一入力 deals.amount）
   // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）— 名前解決は service role 経由（RLS名前落ちなし）
   const { data: myBrands } = await admin.from('services').select('id').eq('supplier_partner_id', me!.id)
+  let refRows: { name: string; code: string | null; amount: number; count: number }[] = []
+  if ((myBrands ?? []).length) {
+    const { data: mds } = await admin.from('deals')
+      .select('partner_id, amount, status, fixed_month, created_at, partners(code, is_system, company_name, profiles(name))')
+      .in('service_id', (myBrands ?? []).map(b => b.id)).in('status', ['confirmed', 'paid'])
+    const byP = new Map<string, { name: string; code: string | null; amount: number; count: number }>()
+    for (const d0 of (mds ?? []) as unknown as { partner_id: string | null; amount: number | null; status: string; fixed_month: string | null; created_at: string; partners: { code: string; is_system: boolean; company_name: string | null; profiles: { name: string | null } | null } | null }[]) {
+      if (!d0.partner_id || !inMonth(d0)) continue
+      const pa = d0.partners
+      const name = pa?.is_system ? 'MB Partners（直接）' : (pa?.company_name || pa?.profiles?.name || pa?.code || '—')
+      const cur = byP.get(d0.partner_id) ?? { name, code: pa?.is_system ? null : ((pa?.company_name || pa?.profiles?.name) ? pa?.code ?? null : null), amount: 0, count: 0 }
+      cur.amount += Number(d0.amount) || 0; cur.count += 1
+      byP.set(d0.partner_id, cur)
+    }
+    refRows = [...byP.values()].sort((a, b) => b.amount - a.amount)
+  }
   let asgRows: { name: string; customer: string; base_fee: number; status: string | null }[] = []
   if ((myBrands ?? []).length) {
     const { data: dsAll } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name').in('service_id', (myBrands ?? []).map(b => b.id))
@@ -142,11 +159,21 @@ export default async function SupplierMoneyPage() {
 
       {/* ②③ MB Partnersが支払いを代行する区分（あなたの振込は不要） */}
       <SectionTitle title="② 紹介者（パートナー）への報酬" subtitle="お支払いはMB Partnersが代行します。" />
-      <div style={{ ...CARD, padding: '12px 15px', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ ...CARD, overflow: 'hidden', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', padding: '12px 15px', borderBottom: refRows.length ? '0.5px solid var(--line)' : 'none' }}>
           <span className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.05rem', fontWeight: 500 }}>{yen(wf.rewardsMonth)}</span>
           <span style={{ fontSize: '.62rem', color: 'var(--muted2)' }}>今月の成約 {wf.monthCount}件分</span>
         </div>
+        {/* 紹介者別（氏名主体＋コード小） */}
+        {refRows.map((r, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)', fontSize: '.72rem' }}>
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+              {r.name}{r.code && <span className="tnum" style={{ fontSize: '.56rem', color: 'var(--muted2)', fontWeight: 500, fontFamily: 'Inter', marginLeft: 6 }}>{r.code}</span>}
+            </span>
+            <span style={{ fontSize: '.6rem', color: 'var(--muted2)', flexShrink: 0 }}>{r.count}件</span>
+            <span className="tnum" style={{ fontFamily: 'Inter', flexShrink: 0 }}>{yen(r.amount)}</span>
+          </div>
+        ))}
       </div>
 
       <SectionTitle title="③ 委託先への委託費" subtitle="お支払いはMB Partnersが代行します（月次サイクル）。" />

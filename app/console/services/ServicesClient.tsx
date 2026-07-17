@@ -4,6 +4,7 @@ import PageGuide from '@/components/PageGuide'
 import { GUIDE_SERVICES } from '@/lib/console-guides'
 import { createClient } from '@/lib/supabase/client'
 import ServiceAvatar from '@/components/ServiceAvatar'
+import HearingItemsEditor from './HearingItemsEditor'
 import MenuDetailSheet, { type SheetMenuItem, type SheetReward } from '@/components/MenuDetailSheet'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
 import { parseAmount } from '@/lib/num'
@@ -1032,6 +1033,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                         メニューを削除
                       </button>
                     </div>
+
+                    {/* ヒアリング項目（①・保存済みメニューのみ・money非接続の記録定義） */}
+                    {selMenu.id && <HearingItemsEditor menuId={selMenu.id as string} />}
                   </>
                 )}
 

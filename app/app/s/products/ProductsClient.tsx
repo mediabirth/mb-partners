@@ -19,6 +19,16 @@ type Req = { id: string; kind: string; menu_id: string | null; service_id: strin
 const LINE = '0.5px solid var(--line)'
 const inputStyle: React.CSSProperties = { border: LINE, borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.82rem', color: 'var(--txt)', background: '#fff', width: '100%', boxSizing: 'border-box' }
 
+/** MBサービスマスタ編集と同一のグループ区切り（0.5px罫線＋11pxマイクロ見出し・箱なし） */
+function Group({ label, first, children }: { label: string; first?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{ borderTop: first ? 'none' : LINE, marginTop: first ? 0 : 16, paddingTop: first ? 0 : 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', marginBottom: 10 }}>{label}</div>
+      {children}
+    </div>
+  )
+}
+
 function Fld({ label, pending, children }: { label: string; pending?: boolean; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
@@ -159,6 +169,7 @@ export default function ProductsClient() {
 
               {navSel === 'basic' ? (
                 <div>
+                  <Group label="表示（申請して反映＝パートナー・お客さまに見える項目）" first>
                   <Fld label="サービス名"><input value={brand.name} readOnly style={{ ...inputStyle, background: 'var(--bg2)', color: 'var(--muted2)' }} /></Fld>
                   <Fld label="サブタイトル（申請制）" pending={pendingOf('subtitle')}><input value={d('subtitle:' + brand.id, brand.subtitle ?? '')} onChange={e => setDraft(p => ({ ...p, ['subtitle:' + brand.id]: e.target.value }))} placeholder="賃貸仲介プラットフォーム" style={inputStyle} /></Fld>
                   <Fld label="カテゴリ（申請制）" pending={pendingOf('category')}><input value={d('category:' + brand.id, brand.category ?? '')} onChange={e => setDraft(p => ({ ...p, ['category:' + brand.id]: e.target.value }))} placeholder="例：不動産 / 人材 / 保険" style={inputStyle} /></Fld>
@@ -167,7 +178,9 @@ export default function ProductsClient() {
                   <Fld label="紹介しやすい方（申請制）" pending={pendingOf('who')}><input value={d('who:' + brand.id, brand.who ?? '')} onChange={e => setDraft(p => ({ ...p, ['who:' + brand.id]: e.target.value }))} placeholder="不動産・保険に関心のあるお客さまと接する方" style={inputStyle} /></Fld>
                   <Fld label="WebサイトURL（申請制）" pending={pendingOf('url')}><input value={d('url:' + brand.id, brand.url ?? '')} onChange={e => setDraft(p => ({ ...p, ['url:' + brand.id]: e.target.value }))} placeholder="https://example.com" style={inputStyle} /></Fld>
                   <Fld label="イメージ画像URL（申請制）" pending={pendingOf('image')}><input value={d('img:' + brand.id, brand.image_url ?? '')} onChange={e => setDraft(p => ({ ...p, ['img:' + brand.id]: e.target.value }))} placeholder="https://…" style={inputStyle} /></Fld>
-                  <Fld label="公開状態（申請制）" pending={pendingOf('visibility')}>
+                  </Group>
+                  <Group label="公開状態（申請して反映）">
+                  <Fld label="現在の状態" pending={pendingOf('visibility')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ fontSize: '.8rem' }}>{brand.active ? '公開中' : '非公開'}</span>
                       {!pendingOf('visibility') && (
@@ -175,29 +188,36 @@ export default function ProductsClient() {
                       )}
                     </div>
                   </Fld>
-                  <Fld label="社内向けメモ（すぐ反映・お客さまには表示されません）"><textarea rows={2} value={d('memo:' + brand.id, brand.supplier_memo ?? '')} onChange={e => setDraft(p => ({ ...p, ['memo:' + brand.id]: e.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} /></Fld>
+                  </Group>
+                  <Group label="社内（すぐ反映・お客さまには表示されません）">
+                  <Fld label="社内向けメモ"><textarea rows={2} value={d('memo:' + brand.id, brand.supplier_memo ?? '')} onChange={e => setDraft(p => ({ ...p, ['memo:' + brand.id]: e.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} /></Fld>
+                  </Group>
                 </div>
               ) : selMenu ? (
                 <div>
+                  <Group label="表示（申請して反映＝パートナー・お客さまに見える項目）" first>
                   <Fld label="メニュー名（申請制）" pending={pendingOf('menu_name', selMenu.id)}><input value={d('mn:' + selMenu.id, selMenu.name)} onChange={e => setDraft(p => ({ ...p, ['mn:' + selMenu.id]: e.target.value }))} style={inputStyle} /></Fld>
                   <Fld label="ひとこと説明（一覧に表示・申請制）" pending={pendingOf('menu_short_description', selMenu.id)}><input value={d('msd:' + selMenu.id, selMenu.short_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['msd:' + selMenu.id]: e.target.value }))} placeholder="例：お客さまを紹介するだけ。実務は当社が対応。" style={inputStyle} /></Fld>
                   <Fld label="詳しい説明（詳細シートに表示・申請制）" pending={pendingOf('menu_description', selMenu.id)}><textarea rows={3} value={d('md:' + selMenu.id, selMenu.description ?? '')} onChange={e => setDraft(p => ({ ...p, ['md:' + selMenu.id]: e.target.value }))} placeholder="例：お客さまの状況を伺い、最適なプランをご提案します" style={{ ...inputStyle, resize: 'vertical' }} /></Fld>
                   <Fld label="顧客向け説明（相談ページに表示・申請制）" pending={pendingOf('public_description', selMenu.id)}><textarea rows={3} value={d('pd:' + selMenu.id, selMenu.public_description ?? '')} onChange={e => setDraft(p => ({ ...p, ['pd:' + selMenu.id]: e.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} /></Fld>
-                  <div style={{ borderTop: LINE, marginTop: 4, paddingTop: 14 }}>
+                  </Group>
+                  <Group label="報酬（すぐ反映）">
                     {data.rewards.filter(r => r.menu_id === selMenu.id).length === 0 ? (
                       <p style={{ fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>報酬が未設定です。設定はMB Partnersへご相談ください。</p>
                     ) : data.rewards.filter(r => r.menu_id === selMenu.id).map(r => (
-                      <Fld key={r.id} label={`紹介報酬（すぐ反映）: ${r.reward_type === 'fixed' ? '固定（円）' : r.reward_base === '売上' ? '受注額（%）' : '率（%）'}`}>
-                        <input inputMode="numeric" value={d('rv:' + r.id, String(r.reward_value))} onChange={e => setDraft(p => ({ ...p, ['rv:' + r.id]: e.target.value }))} style={{ ...inputStyle, maxWidth: 200, fontFamily: 'Inter', textAlign: 'right' }} />
-                      </Fld>
+                      <div key={r.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', width: 92, flexShrink: 0 }}>紹介報酬</label>
+                        <input inputMode="numeric" value={d('rv:' + r.id, String(r.reward_value))} onChange={e => setDraft(p => ({ ...p, ['rv:' + r.id]: e.target.value }))} style={{ ...inputStyle, flex: 1, maxWidth: 200, fontFamily: 'Inter', fontSize: '.8rem', textAlign: 'right' }} />
+                        <span style={{ fontSize: '.7rem', color: 'var(--muted2)', fontWeight: 500, flexShrink: 0 }}>{r.reward_type === 'fixed' ? '円' : r.reward_base === '売上' ? '%（受注額）' : '%'}</span>
+                      </div>
                     ))}
-                  </div>
+                  </Group>
                 </div>
               ) : null}
 
-              {/* フッター保存ゾーン（反映の二層が一目で分かる2動詞） */}
+              {/* フッター保存ゾーン（反映の二層が一目で分かる2動詞・結果/バリデーションはここに表示＝MBの下部固定保存と同文法） */}
               <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(8px)', borderTop: LINE, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ flex: 1, fontSize: '.62rem', color: 'var(--muted2)' }}>{dirtyRequests.length > 0 ? `表示に関わる変更 ${dirtyRequests.length}件（要MB Partners確認）` : '表示に関わる変更は申請すると反映されます'}</span>
+                <span style={{ flex: 1, fontSize: '.62rem', color: toast && /失敗|エラー|⚠/.test(toast) ? 'var(--red)' : 'var(--muted2)' }}>{toast || (dirtyRequests.length > 0 ? `表示に関わる変更 ${dirtyRequests.length}件（要MB Partners確認）` : '表示に関わる変更は申請すると反映されます')}</span>
                 <button disabled={busy} onClick={saveInstant} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '9px 16px' }}>保存する</button>
                 <button disabled={busy || dirtyRequests.length === 0} onClick={submitRequests} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '9px 18px', opacity: dirtyRequests.length === 0 ? .5 : 1 }}>変更を申請{dirtyRequests.length > 0 ? `（${dirtyRequests.length}）` : ''}</button>
               </div>

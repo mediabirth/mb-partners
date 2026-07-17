@@ -18,6 +18,50 @@ import { statusTranslation, projectLaneTranslation, transitionForecast, forecast
 import { continuousInfo, rateInfo, needsBase, lifecyclePhase, baseWord, rewardTermLine, sourceLine, grossBeforeReward, menuLabelOf, COLS, StatusTimeline, SectionLabel, PREV, DeliveryExpenses, DeliveryOptGroups, type Deal, type DrawerCtx } from './_parts'
 const ContinuousMonthly = dynamic(() => import('./ContinuousMonthly'), { ssr: false, loading: () => <div className="ui-skeleton" style={{ height: 200, borderRadius: 12, marginTop: 18 }} /> })
 
+/** メニュー別ヒアリング（①）— メニューに定義された項目の構造化入力（onBlur保存・money非接続の記録）。 */
+function DealHearing({ dealId, editable }: { dealId: string; editable: boolean }) {
+  const [data, setData] = React.useState<{ items: { id: string; label: string; input_type: string; options: string[] | null; required: boolean }[]; answers: Record<string, string> } | null>(null)
+  const [saved, setSaved] = React.useState('')
+  React.useEffect(() => {
+    setData(null)
+    fetch(`/api/console/deals/${dealId}/hearing`).then(r => r.ok ? r.json() : null).then(d => setData(d ?? { items: [], answers: {} })).catch(() => setData({ items: [], answers: {} }))
+  }, [dealId])
+  async function put(itemId: string, value: string) {
+    setData(p => p ? { ...p, answers: { ...p.answers, [itemId]: value } } : p)
+    const r = await fetch(`/api/console/deals/${dealId}/hearing`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers: [{ item_id: itemId, value }] }) })
+    if (r.ok) { setSaved(itemId); setTimeout(() => setSaved(''), 1600) }
+  }
+  if (!data || data.items.length === 0) return null
+  return (
+    <div style={{ marginBottom: 10 }}>
+      {data.items.map(it => (
+        <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <span style={{ width: 108, flexShrink: 0, fontSize: 11, fontWeight: 500, color: 'var(--muted2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {it.label}{it.required && <span style={{ color: 'var(--amber)', marginLeft: 2 }}>*</span>}
+          </span>
+          {editable ? (
+            it.input_type === 'select' ? (
+              <select defaultValue={data.answers[it.id] ?? ''} onChange={e => put(it.id, e.target.value)}
+                style={{ flex: 1, minWidth: 0, border: '0.5px solid var(--line)', borderRadius: 7, padding: '6px 8px', fontFamily: 'inherit', fontSize: '.72rem', background: '#fff' }}>
+                <option value="">—</option>
+                {(it.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input defaultValue={data.answers[it.id] ?? ''} inputMode={it.input_type === 'number' ? 'numeric' : undefined}
+                onBlur={e => { if (e.target.value !== (data.answers[it.id] ?? '')) put(it.id, e.target.value) }}
+                placeholder="—"
+                style={{ flex: 1, minWidth: 0, border: '0.5px solid var(--line)', borderRadius: 7, padding: '6px 9px', fontFamily: it.input_type === 'number' ? 'Inter' : 'inherit', fontSize: '.72rem' }} />
+            )
+          ) : (
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: data.answers[it.id] ? 'var(--txt)' : 'var(--muted2)' }}>{data.answers[it.id] || '—'}</span>
+          )}
+          <span style={{ width: 30, flexShrink: 0, fontSize: '.56rem', color: 'var(--green)', opacity: saved === it.id ? 1 : 0, transition: 'opacity .3s' }}>保存</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** 売上エビデンス（ベンダー純化P2）— 任意添付・署名URL閲覧・誤添付の削除。money非接触（記録のみ）。 */
 function DealEvidence({ dealId, editable, showToast }: { dealId: string; editable: boolean; showToast: (m: string) => void }) {
   const [items, setItems] = React.useState<{ id: string; label: string | null }[] | null>(null)
@@ -297,8 +341,9 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
                 )}
               </div>
 
-              {/* ヒアリング（協力タスクのヒアリングnote。無ければ「—」） */}
+              {/* ヒアリング（①メニュー別の構造化項目＝定義があれば入力欄・下に従来の自由記述note） */}
               <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', letterSpacing: '.06em', margin: '18px 0 8px' }}>ヒアリング</p>
+              <DealHearing dealId={deal.id} editable={!['paid', 'lost'].includes(deal.status)} />
               {(() => {
                 // ライフサイクル: 単一コンテンツ（ヒヤリングタスクのnote・パートナー編集制）。長文は折りたたみで全文表示。
                 const note = dealTasks.find(t => t.note && t.note.trim())?.note?.trim() ?? null
