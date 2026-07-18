@@ -187,8 +187,9 @@ export default function ProductsClient() {
               )}
             </div>
 
-            {/* 中央フラットフォーム */}
-            <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '16px 20px 84px', position: 'relative' }}>
+            {/* 中央フラットフォーム（MBと同構造: flex列＝スクロール子＋下部固定フッター兄弟。absolute-in-scroller事故の根治） */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '16px 20px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <b style={{ flex: 1, fontSize: '.88rem', fontWeight: 500 }}>{navSel === 'basic' ? '基本情報' : pv('mn:' + (selMenu?.id ?? ''), selMenu?.name ?? '')}</b>
                 <button aria-label="閉じる" onClick={() => setEditing('')} style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted2)', marginRight: -10 }}>
@@ -255,9 +256,10 @@ export default function ProductsClient() {
                 </div>
               ) : null}
 
+            </div>
               {/* フッター保存ゾーン（反映の二層が一目で分かる2動詞・結果/バリデーションはここに表示＝MBの下部固定保存と同文法） */}
-              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(8px)', borderTop: LINE, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ flex: 1, fontSize: '.62rem', color: toast && /失敗|エラー|⚠/.test(toast) ? 'var(--red)' : 'var(--muted2)' }}>{toast || (dirtyRequests.length > 0 ? `表示に関わる変更 ${dirtyRequests.length}件（要MB Partners確認）` : '表示に関わる変更は申請すると反映されます')}</span>
+              <div style={{ flexShrink: 0, background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(8px)', borderTop: LINE, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="prod-savehint" style={{ flex: 1, fontSize: '.62rem', color: toast && /失敗|エラー|⚠/.test(toast) ? 'var(--red)' : 'var(--muted2)' }}>{toast || (dirtyRequests.length > 0 ? `表示に関わる変更 ${dirtyRequests.length}件（要MB Partners確認）` : '表示に関わる変更は申請すると反映されます')}</span>
                 <button disabled={busy} onClick={saveInstant} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '9px 16px' }}>保存する</button>
                 <button disabled={busy || dirtyRequests.length === 0} onClick={submitRequests} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '9px 18px', opacity: dirtyRequests.length === 0 ? .5 : 1 }}>変更を申請{dirtyRequests.length > 0 ? `（${dirtyRequests.length}）` : ''}</button>
               </div>
@@ -305,7 +307,7 @@ export default function ProductsClient() {
       {toast && <p style={{ fontSize: '.68rem', color: 'var(--muted2)', margin: '10px 2px 0' }}>{toast}</p>}
       <style>{`
         @media (max-width: 1279px){ .prod-preview{display:none} }
-        @media (max-width: 640px){ .prod-lnav{width:104px !important} }
+        @media (max-width: 640px){ .prod-lnav{width:104px !important} .prod-savehint{display:none} }
       `}</style>
     </div>
   )

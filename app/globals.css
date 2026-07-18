@@ -18,6 +18,8 @@
   --green-bg: #E7F6EF;
   --amber:    #C07A12;
   --amber-bg: #FBF1DF;
+  /* コスト/控除系ゲージ専用（LP実使用の鮮やかオレンジ）。注意/要対応=amber とは意味が別（混同禁止） */
+  --gauge-deduction: #F2971B;
   --red:      #D34545;
   --red-bg:   #FBE9E9;
 

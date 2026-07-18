@@ -166,8 +166,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   const costLines = [
     { label: 'パートナー報酬', val: cur.partnerReward, color: 'var(--c-blue)' },
     { label: 'フロンティア報酬', val: cur.frontierOverride, color: 'var(--blue-dk)' },
-    { label: 'デリバリー委託費', val: cur.deliveryCost, color: 'var(--amber)' },
-    { label: 'デリバリー経費', val: cur.deliveryExpense, color: 'var(--amber)' },
+    { label: 'デリバリー委託費', val: cur.deliveryCost, color: 'var(--gauge-deduction)' },
+    { label: 'デリバリー経費', val: cur.deliveryExpense, color: 'var(--gauge-deduction)' },
     { label: 'その他原価', val: cur.otherCost, color: 'var(--muted2)' },
   ]
   const totalCost = costLines.reduce((s, c) => s + c.val, 0)

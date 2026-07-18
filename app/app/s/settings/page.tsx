@@ -16,6 +16,7 @@ async function requireSupplierId(): Promise<string> {
 
 import { SupplierTopbar, CONTENT } from '../SupplierChrome'
 import { SG_SETTINGS } from '@/lib/supplier-guides'
+import LogoutButton from '@/components/LogoutButton'
 import BankCard from './BankCard'
 import CompanyNameField from './CompanyNameField'
 // 設定: 会社情報・変更申請履歴・通知先
@@ -62,6 +63,11 @@ export default async function SupplierSettingsPage() {
           </div>
         ))}
       </div>
+      {/* ログアウト（設定の末尾・MBコンソール/APPの設定内ログアウトと同文法。機構は不変=LogoutButton scope:'local'） */}
+      <div style={{ marginTop: 24, paddingTop: 14, borderTop: '0.5px solid var(--line)', display: 'flex', justifyContent: 'flex-end' }}>
+        <LogoutButton />
+      </div>
+
       </div>
     </div>
   )
