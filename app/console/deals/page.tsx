@@ -268,6 +268,14 @@ export default function DealsPage() {
       setLostReason(''); setLostNote(''); setLostModal(deal)
       return
     }
+    // 無音B: 楽観的更新は「表示・状態遷移で金額に影響しないもの」のみ（受付↔商談中）。
+    //   確定系（成約confirmed=snapshot凍結・支払済paid・不成立lost）は従来どおりサーバ確定を待つ（CLAUDE.md恒久線引き）。
+    const optimistic = (newStatus === 'received' || newStatus === 'in_progress') && deal.status !== 'paid' && deal.status !== 'confirmed'
+    const prevStatus = deal.status
+    if (optimistic) {
+      setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: newStatus } : d))
+      if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: newStatus } : d)
+    }
     startTransition(async () => {
       const res = await fetch(`/api/console/deals/${deal.id}`, {
         method: 'PATCH',
@@ -276,11 +284,20 @@ export default function DealsPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: newStatus } : d))
-        if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: newStatus } : d)
+        if (!optimistic) {
+          setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: newStatus } : d))
+          if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: newStatus } : d)
+        }
         showToast(`ステータスを「${COLS.find(c => c.key === newStatus)?.label}」に変更しました`)
       } else {
-        showToast(data?.error ?? '更新に失敗しました')
+        if (optimistic) {
+          // ロールバック＋明示トースト
+          setDeals(prev => prev.map(d => d.id === deal.id ? { ...d, status: prevStatus } : d))
+          if (selected?.id === deal.id) setSelected(d => d ? { ...d, status: prevStatus } : d)
+          showToast(`${data?.error ?? '更新に失敗しました'}（元の状態に戻しました）`)
+        } else {
+          showToast(data?.error ?? '更新に失敗しました')
+        }
       }
     })
   }

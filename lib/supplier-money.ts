@@ -31,3 +31,17 @@ export async function supplierWaterfall(admin: Db, partnerId: string, ym: string
   const mbFee = feeRes
   return { companyRevenue, rewardsMonth, mbFee, takeHome: companyRevenue - rewardsMonth - mbFee, monthCount: monthClosed.length }
 }
+
+/** 純関数版（無音A・2026-07-18）: 取得済みdeals＋計算済みmbFeeから導出＝ページ側で往復を統合できる。
+ *  値の定義は supplierWaterfall と完全同一（同じフィルタ・同じ合算）。 */
+export function waterfallFromDeals(
+  deals: { status: string; amount: number | null; fixed_month: string | null; created_at: string; deal_items: { revenue: number | null }[] | null }[],
+  mbFee: number,
+  ym: string,
+): SupplierWaterfall {
+  const inMonth = (d: { fixed_month?: string | null; created_at: string }) => ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === ym
+  const monthClosed = deals.filter(d => (d.status === 'confirmed' || d.status === 'paid') && inMonth(d))
+  const companyRevenue = monthClosed.reduce((s, d) => s + (d.deal_items ?? []).reduce((s2, it) => s2 + (Number(it.revenue) || 0), 0), 0)
+  const rewardsMonth = monthClosed.reduce((s, d) => s + (Number(d.amount) || 0), 0)
+  return { companyRevenue, rewardsMonth, mbFee, takeHome: companyRevenue - rewardsMonth - mbFee, monthCount: monthClosed.length }
+}

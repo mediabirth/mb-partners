@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
 import CountUp from '@/components/CountUp'
 import KpiCard, { WaterRow } from '@/components/ui/KpiCard'
-import { supplierWaterfall } from '@/lib/supplier-money'
+import { waterfallFromDeals } from '@/lib/supplier-money'
 import { SupplierTopbar, CONTENT, SectionTitle } from '../s/SupplierChrome'
 import { SG_HOME } from '@/lib/supplier-guides'
 import { customerHonorific } from '@/lib/customer'
@@ -74,22 +74,26 @@ async function SupplierHomeBody() {
   const subs = (subsRes.data ?? []) as { id: string; frontier_id: string | null; frontier_linked_at: string | null }[]
   const teamN = subs.length
   const teamNew = subs.filter(s => (s.frontier_linked_at ?? '').slice(0, 7) === ym).length
-  const [previewRes, lastPreviewRes, asgRes, netRes, wf, wfLast] = await Promise.all([
+  const [previewRes, lastPreviewRes, asgRes, netRes, wfDealsRes, subNamesRes] = await Promise.all([
     chargesMod.computeCharges(admin, me.id, ym).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     chargesMod.computeCharges(admin, me.id, lastYm).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     deals.length ? admin.from('delivery_assignments').select('id, status').in('deal_id', deals.map(d => d.id)) : Promise.resolve({ data: [] as never[] }),
     (subs.length && brandIds.length)
       ? admin.from('deals').select('partner_id, status, fixed_month, created_at, deal_items(revenue)').in('partner_id', subs.map(s => s.id)).in('service_id', brandIds).in('status', ['confirmed', 'paid'])
       : Promise.resolve({ data: [] as never[] }),
-    supplierWaterfall(admin, me.id, ym),
-    supplierWaterfall(admin, me.id, lastYm),
+    // 無音A: ウォーターフォール用deals（全confirmed/paid・limitなし）を1本で取得し、当月/前月とも純関数で導出
+    //   （旧: supplierWaterfall×2 が内部で brands+deals+computeCharges を各自往復＝重複）。値の定義は不変。
+    brandIds.length
+      ? admin.from('deals').select('status, amount, fixed_month, created_at, deal_items(revenue)').in('service_id', brandIds).in('status', ['confirmed', 'paid'])
+      : Promise.resolve({ data: [] as never[] }),
+    subs.length ? admin.from('partners').select('id, code, profiles(name)').in('id', subs.map(s => s.id)) : Promise.resolve({ data: [] as never[] }),
   ])
+  const wfDeals = (wfDealsRes.data ?? []) as { status: string; amount: number | null; fixed_month: string | null; created_at: string; deal_items: { revenue: number | null }[] | null }[]
+  const wf = waterfallFromDeals(wfDeals, previewRes, ym)
+  const wfLast = waterfallFromDeals(wfDeals, lastPreviewRes, lastYm)
   // パートナーの成果（旧・紹介者ページのヒーローを吸収）: 今月生んだ売上＋上位3名
   const subNames: Record<string, string> = {}
-  if (subs.length) {
-    const { data: prs } = await admin.from('partners').select('id, code, profiles(name)').in('id', subs.map(s => s.id))
-    for (const p of (prs ?? []) as unknown as { id: string; code: string; profiles: { name: string | null } | null }[]) subNames[p.id] = p.profiles?.name ?? p.code
-  }
+  for (const p of ((subNamesRes.data ?? []) as unknown as { id: string; code: string; profiles: { name: string | null } | null }[])) subNames[p.id] = p.profiles?.name ?? p.code
   let netRevenue = 0, netCount = 0
   const perSub: Record<string, number> = {}
   for (const d of ((netRes as { data: unknown[] }).data ?? []) as { partner_id: string | null; status: string; fixed_month: string | null; created_at: string; deal_items: { revenue: number | null }[] | null }[]) {

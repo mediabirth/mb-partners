@@ -23,31 +23,37 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
   const rows: ChargeRow[] = []
   const warnings: string[] = []
 
-  // サプライヤー配下サービス（null検知警告用）
-  const { data: svs } = await admin.from('services').select('id').eq('supplier_partner_id', supplierId)
+  // 無音A(2026-07-18): 相互独立な読み取り（services/deals/カード種別）を1段に並列化＝計算式・値は完全不変（取得順のみ）。
+  const [svsRes, dealsRes, spRes] = await Promise.all([
+    admin.from('services').select('id').eq('supplier_partner_id', supplierId),
+    admin.from('deals')
+      .select('id, customer_name, company_name, amount, fixed_month, created_at, other_cost, status, fee_snapshot, deal_items(revenue)')
+      .in('status', ['confirmed', 'paid'])
+      .eq('fee_snapshot->>menu_supplier_partner_id', supplierId),
+    admin.from('partners').select('supplier_rate_card').eq('id', supplierId).maybeSingle(),
+  ])
+  const svs = svsRes.data
+  const deals = dealsRes.data
   const serviceIds = (svs ?? []).map((s: { id: string }) => s.id)
-
-  // 対象 deal（条件凍結済み・confirmed/paid）
-  const { data: deals } = await admin
-    .from('deals')
-    .select('id, customer_name, company_name, amount, fixed_month, created_at, other_cost, status, fee_snapshot, deal_items(revenue)')
-    .in('status', ['confirmed', 'paid'])
-    .eq('fee_snapshot->>menu_supplier_partner_id', supplierId)
 
   const feeDeals = (deals ?? []) as Array<{ id: string; customer_name: string | null; company_name: string | null; amount: number | null; fixed_month: string | null; created_at: string; other_cost: number | null; fee_snapshot: Record<string, unknown>; deal_items: { revenue: number | null }[] | null }>
 
   // (a) 折半＝当該periodに帰属する half_commission 案件（サクサク: per-deal照会を並列化・結果は従来と同一）
   const halfDeals = feeDeals.filter(d => (d.fee_snapshot as { rate_kind?: string }).rate_kind === 'half_commission' && chargePeriodOf(d) === period)
-  const halfRows = await Promise.all(halfDeals.map(async d => {
+  // 無音A: per-deal N+1（割当→経費）を2クエリのバッチに（deal別の集合・合算は完全同一＝値不変）
+  const halfIds = halfDeals.map(d => d.id)
+  const { data: asgAll } = halfIds.length ? await admin.from('delivery_assignments').select('id, deal_id, base_fee').in('deal_id', halfIds) : { data: [] as never[] }
+  const asgByDeal: Record<string, { id: string; base_fee: number | null }[]> = {}
+  for (const a of (asgAll ?? []) as { id: string; deal_id: string; base_fee: number | null }[]) (asgByDeal[a.deal_id] ??= []).push(a)
+  const allAsgIds = ((asgAll ?? []) as { id: string }[]).map(a => a.id)
+  const { data: expAll } = allAsgIds.length ? await admin.from('expense_claims').select('delivery_assignment_id, amount').in('delivery_assignment_id', allAsgIds).eq('status', 'approved') : { data: [] as never[] }
+  const expByAsg: Record<string, number> = {}
+  for (const e of (expAll ?? []) as { delivery_assignment_id: string; amount: number | null }[]) expByAsg[e.delivery_assignment_id] = (expByAsg[e.delivery_assignment_id] ?? 0) + (Number(e.amount) || 0)
+  const halfRows = halfDeals.map(d => {
     const revenue = (d.deal_items ?? []).reduce((s, it) => s + (Number(it.revenue) || 0), 0)
-    const { data: asg } = await admin.from('delivery_assignments').select('id, base_fee').eq('deal_id', d.id)
-    const deliveryCost = (asg ?? []).reduce((s: number, a: { base_fee: number | null }) => s + (Number(a.base_fee) || 0), 0)
-    let deliveryExpense = 0
-    const asgIds = (asg ?? []).map((a: { id: string }) => a.id)
-    if (asgIds.length) {
-      const { data: exp } = await admin.from('expense_claims').select('amount').in('delivery_assignment_id', asgIds).eq('status', 'approved')
-      deliveryExpense = (exp ?? []).reduce((s: number, e: { amount: number | null }) => s + (Number(e.amount) || 0), 0)
-    }
+    const asg = asgByDeal[d.id] ?? []
+    const deliveryCost = asg.reduce((s: number, a: { base_fee: number | null }) => s + (Number(a.base_fee) || 0), 0)
+    const deliveryExpense = asg.reduce((s: number, a: { id: string }) => s + (expByAsg[a.id] ?? 0), 0)
     const base = supplierChargeBase({ revenue, deliveryCost, deliveryExpense, otherCost: Number(d.other_cost) || 0 })
     // Feature I: 率は凍結済みfee_snapshot.rateを正とする（レートカード改定が確定済み案件に波及しない）
     const frozenRate = Number((d.fee_snapshot as { rate?: number }).rate) || FEE_RATE.half_commission
@@ -59,7 +65,7 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
       base_amount: base, rate: frozenRate, amount,
       snapshot: { customer: d.company_name || d.customer_name, components: { revenue, deliveryCost, deliveryExpense, otherCost: Number(d.other_cost) || 0 }, fee_snapshot: d.fee_snapshot },
     }
-  }))
+  })
   for (const r of halfRows) if (r) rows.push(r)
 
   // (a2) パススルー手数料（Feature I-2・standard-v2）＝受注額(税抜)×凍結済みrate。
@@ -81,12 +87,15 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
 
   // (b) 決済手数料5%＝報酬総額（税抜・源泉前）。固定/率分＝成約月・継続分＝period_month（v2 §4(b)/§7-5）（並列化・結果不変）
   const p5deals = feeDeals.filter(d => (d.fee_snapshot as { rate_kind?: string }).rate_kind === 'payment_fee_5')
-  const p5Rows = await Promise.all(p5deals.map(async d => {
+  const p5Ids = p5deals.map(d => d.id)
+  const { data: cpsAll } = p5Ids.length ? await admin.from('continuous_payouts').select('deal_id, confirmed_amount').in('deal_id', p5Ids).eq('period_month', `${period}-01`) : { data: [] as never[] }
+  const contByDeal: Record<string, number> = {}
+  for (const c of (cpsAll ?? []) as { deal_id: string; confirmed_amount: number | null }[]) contByDeal[c.deal_id] = (contByDeal[c.deal_id] ?? 0) + (Number(c.confirmed_amount) || 0)
+  const p5Rows = p5deals.map(d => {
     let base = 0
     const parts: Record<string, number> = {}
     if (chargePeriodOf(d) === period) { const a = Number(d.amount) || 0; if (a > 0) { base += a; parts.reward_amount = a } }
-    const { data: cps } = await admin.from('continuous_payouts').select('confirmed_amount').eq('deal_id', d.id).eq('period_month', `${period}-01`)
-    const cont = (cps ?? []).reduce((s: number, c: { confirmed_amount: number | null }) => s + (Number(c.confirmed_amount) || 0), 0)
+    const cont = contByDeal[d.id] ?? 0
     if (cont > 0) { base += cont; parts.continuous_amount = cont }
     if (base <= 0) return null
     const p5Rate = Number((d.fee_snapshot as { rate?: number }).rate) || FEE_RATE.payment_fee_5
@@ -96,11 +105,11 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
       base_amount: base, rate: p5Rate, amount,
       snapshot: { customer: d.company_name || d.customer_name, components: parts, fee_snapshot: d.fee_snapshot, note: 'パートナー受取からは一切控除しない（上乗せ請求）' },
     }
-  }))
+  })
   for (const r of p5Rows) if (r) rows.push(r)
 
   // (d) 月額固定（レートカード駆動: monthly_fee 非nullのカード＝クローズ時点の現行カード基準・設計§4(d)）
-  const { data: sp } = await admin.from('partners').select('supplier_rate_card').eq('id', supplierId).maybeSingle()
+  const sp = spRes.data
   const card = await loadRateCard(admin, (sp?.supplier_rate_card as string | null) ?? STD_RATE_CARD)
   if (card.monthly_fee != null) {
     rows.push({

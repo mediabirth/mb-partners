@@ -100,14 +100,6 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, role, color')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
   // owner認証では nested partners.profiles が RLS で null になるため、所有確認済みで service role 読取
   const admin = await createServiceRoleClient()
   const SEL_BASE = `
@@ -116,11 +108,30 @@ export async function GET() {
       service_menus(name, coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, logo_path),
       partners(code, frontier_id, frontier_linked_at, profiles(name, color))`
-  // N失注メタ + L2明細 + A1 P&L(revenue/director_id/other_cost)。列/テーブル未作成なら段階 fallback。
-  let { data: deals } = await admin
-    .from('deals')
-    .select(`${SEL_BASE}, delivery_brief, intake_type, project_status, review_stage, lost_at, lost_reason, lost_note, director_id, other_cost, deal_items(id, service_id, kind, amount, base_amount, revenue, sort, services(name))`)
-    .order('created_at', { ascending: false })
+  // 無音A(2026-07-18): 相互独立な取得（役割確認・deals本体・副テーブル5本=元々未フィルタ全量・menus全量・menu_rewards(fixed)・directors・supplierFrontiers）を1段に統合。
+  //   従来は5〜7段の直列往復（実測520ms）→1〜2段へ。select・集計ロジック・結果は完全不変（並べ替えのみ）。
+  const safeQ0 = (p2: PromiseLike<{ data: unknown }>) => Promise.resolve(p2).then(r => r, () => ({ data: null as unknown }))
+  const { dealFrontierOverride } = await import('@/lib/pnl')
+  const { loadSupplierFrontiers } = await import('@/lib/frontier-payout')
+  const [profileRes, dealsR1, dasR, expsR, tksR, upsR, dvbR, menusAllR, mrsAllR, directorsR, supplierFrontiers] = await Promise.all([
+    supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
+    admin.from('deals')
+      .select(`${SEL_BASE}, delivery_brief, intake_type, project_status, review_stage, lost_at, lost_reason, lost_note, director_id, other_cost, deal_items(id, service_id, kind, amount, base_amount, revenue, sort, services(name))`)
+      .order('created_at', { ascending: false }).then(r => r, () => ({ data: null })),
+    safeQ0(admin.from('delivery_assignments').select('id, deal_id, deal_item_id, delivery_id, base_fee, status, deliveries(name, kind)')),
+    safeQ0(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, evidence_path, status, approved_at, note, created_at').order('created_at', { ascending: true })),
+    safeQ0(admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').order('sort', { ascending: true })),
+    safeQ0(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').order('created_at', { ascending: false })),
+    safeQ0(admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, note, created_at').order('created_at', { ascending: false })),
+    safeQ0(admin.from('menus').select('id, name')),
+    safeQ0(admin.from('menu_rewards').select('menu_id, reward_type, reward_value, active').eq('active', true).eq('reward_type', 'fixed')),
+    admin.from('profiles').select('id, name, role, color').neq('role', 'partner').order('name'),
+    loadSupplierFrontiers(admin),
+  ])
+  const profile = profileRes.data
+  if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  let deals = dealsR1.data as Record<string, unknown>[] | null
   if (!deals) {
     ;({ data: deals } = await admin
       .from('deals')
@@ -136,18 +147,6 @@ export async function GET() {
   if (!deals) {
     ;({ data: deals } = await admin.from('deals').select(SEL_BASE).order('created_at', { ascending: false }))
   }
-
-  // G: デリバリー系5本（割当/経費/タスク/メモ/成果物）は取得が相互独立 → 1回の Promise.all へ。
-  // 集計ループは従来と同一順序で実行（das→exps→tks→ups→dvb）＝結果(委託費/承認済経費合計/件数)は完全一致。
-  // best-effort（テーブル未作成は data:null→空）。
-  const safeQ = (p: PromiseLike<{ data: unknown }>) => Promise.resolve(p).then(r => r, () => ({ data: null as unknown }))
-  const [dasR, expsR, tksR, upsR, dvbR] = await Promise.all([
-    safeQ(admin.from('delivery_assignments').select('id, deal_id, deal_item_id, delivery_id, base_fee, status, deliveries(name, kind)')),
-    safeQ(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, evidence_path, status, approved_at, note, created_at').order('created_at', { ascending: true })),
-    safeQ(admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').order('sort', { ascending: true })),
-    safeQ(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').order('created_at', { ascending: false })),
-    safeQ(admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, note, created_at').order('created_at', { ascending: false })),
-  ])
 
   // A2a: デリバリー割当 → 明細単位の割当行＋案件合計委託費。
   const deliveryByDeal: Record<string, { rows: Record<string, unknown>[]; cost: number }> = {}
@@ -184,21 +183,10 @@ export async function GET() {
   //   reward_snapshot.menu_id → menus.name（お客さま向け新名称を優先）／無ければ service_menus.name。
   //   読取クエリの追加のみ（in検索1回）。テーブル未作成でも安全に空でフォールバック。
   const menuNameById: Record<string, string> = {}
-  try {
-    const snapMenuIds = [...new Set((deals ?? [])
-      .map((d: Record<string, unknown>) => ((d.reward_snapshot as { menu_id?: string } | null)?.menu_id))
-      .filter((v): v is string => !!v))]
-    if (snapMenuIds.length > 0) {
-      const { data: mm } = await admin.from('menus').select('id, name').in('id', snapMenuIds)
-      for (const m of ((mm ?? []) as Array<{ id: string; name: string }>)) menuNameById[m.id] = m.name
-    }
-  } catch { /* best-effort（menus 未作成時は service_menus 名にフォールバック） */ }
+  for (const m of ((menusAllR.data ?? []) as Array<{ id: string; name: string }>)) menuNameById[m.id] = m.name
 
   // A1: 各案件のフロンティアoverride を読取で算出して付与（既存lib/frontierの式・保存値非接触）。
   // P0-b: 自己サービス抑止＋サプライヤー窓バイパスを支払計算(computeOverrides)と同一規則で表示にも反映（乖離ゼロ）。
-  const { dealFrontierOverride } = await import('@/lib/pnl')
-  const { loadSupplierFrontiers } = await import('@/lib/frontier-payout')
-  const supplierFrontiers = await loadSupplierFrontiers(admin)
   const withOverride = (deals ?? []).map((d: Record<string, unknown>) => {
     const dv = deliveryByDeal[d.id as string]
     return {
@@ -250,9 +238,9 @@ export async function GET() {
       .map(d => menuOf(d) as string))]
     const estByMenu: Record<string, number> = {}
     if (zeroPeerMenus.length) {
-      const { data: mrs } = await admin.from('menu_rewards').select('menu_id, reward_type, reward_value, active').in('menu_id', zeroPeerMenus).eq('active', true)
-      for (const r of (mrs ?? []) as { menu_id: string; reward_type: string; reward_value: number }[]) {
-        if (r.reward_type === 'fixed' && Number(r.reward_value) > 0 && !estByMenu[r.menu_id]) estByMenu[r.menu_id] = Number(r.reward_value) * 10
+      const zp = new Set(zeroPeerMenus)
+      for (const r of ((mrsAllR.data ?? []) as { menu_id: string; reward_value: number }[])) {
+        if (zp.has(r.menu_id) && Number(r.reward_value) > 0 && !estByMenu[r.menu_id]) estByMenu[r.menu_id] = Number(r.reward_value) * 10
       }
     }
     for (const d of withOverride as Record<string, unknown>[]) {
@@ -264,8 +252,7 @@ export async function GET() {
   } catch { /* best-effort: フラグ無しで続行 */ }
 
   // A1: MB担当の選択肢＝内部メンバー（非partner）。A2a: デリバリー委託先の選択肢。
-  const { data: directors } = await admin
-    .from('profiles').select('id, name, role, color').neq('role', 'partner').order('name')
+  const directors = directorsR.data
   let deliveriesList: unknown[] = []
   try {
     // C1: service_id（得意サービス・null=全サービス扱い）を読み取り列に追加＝アサインselectの2群表示に使う。

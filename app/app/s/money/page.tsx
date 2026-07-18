@@ -3,7 +3,7 @@ import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supa
 import { CONTENT, SectionTitle } from '../SupplierChrome'
 import { SG_MONEY } from '@/lib/supplier-guides'
 import { WaterRow } from '@/components/ui/KpiCard'
-import { supplierWaterfall } from '@/lib/supplier-money'
+import { waterfallFromDeals } from '@/lib/supplier-money'
 import EvidenceClip from './EvidenceClip'
 import MoneyTabs from './MoneyTabs'
 /**
@@ -31,13 +31,19 @@ export default async function SupplierMoneyPage() {
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const inMonth = (d: { fixed_month?: string | null; created_at: string }) => ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === ym
   const { computeCharges } = await import('@/lib/supplier-charges')
-  const [{ rows: preview }, wf, chargesRes] = await Promise.all([
+  // 無音A(2026-07-18): 直列だった取得を2段の並列へ（値・語彙・境界は不変／wfは取得済みdealsから純関数で導出）
+  const [{ rows: preview }, chargesRes, myBrandsRes, ownRes, subsRes] = await Promise.all([
     computeCharges(admin, me!.id, ym).catch(() => ({ rows: [] as never[], warnings: [] as never[] })),
-    supplierWaterfall(admin, me!.id, ym),
     admin.from('supplier_charges').select('id, kind, period, amount, status, deal_id').eq('supplier_partner_id', me!.id).order('period', { ascending: false }).limit(24),
+    admin.from('services').select('id').eq('supplier_partner_id', me!.id),
+    admin.from('deals').select('amount, status, fixed_month, created_at').eq('partner_id', me!.id).in('status', ['confirmed', 'paid']),
+    (me as { is_frontier?: boolean }).is_frontier ? admin.from('partners').select('id, frontier_id, frontier_linked_at').eq('frontier_id', me!.id) : Promise.resolve({ data: [] as never[] }),
   ])
   const previewTotal = preview.reduce((s, r) => s + Number((r as { amount: number }).amount), 0)
   const charges = chargesRes.data
+  const myBrands = myBrandsRes.data
+  const own = ownRes.data
+  const subs0 = (subsRes.data ?? []) as { id: string; frontier_id: string | null; frontier_linked_at: string | null }[]
 
   // ベンダー純化P2: 請求該当行の売上エビデンス参照（📎・署名URLはクリック時に発行）
   const evDealIds = [...new Set([...(preview as { deal_id?: string | null }[]).map(r => r.deal_id), ...(charges ?? []).map(c => (c as { deal_id?: string | null }).deal_id)].filter(Boolean))] as string[]
@@ -48,12 +54,19 @@ export default async function SupplierMoneyPage() {
   }
   // ② 紹介者別の内訳（氏名主体＋コード小・service role読取=RLS名前落ちなし・数字は支払と同一入力 deals.amount）
   // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）— 名前解決は service role 経由（RLS名前落ちなし）
-  const { data: myBrands } = await admin.from('services').select('id').eq('supplier_partner_id', me!.id)
+  const brandIds0 = (myBrands ?? []).map(b => b.id)
+  const [mdsRes, dsAllRes] = await Promise.all([
+    brandIds0.length
+      ? admin.from('deals').select('partner_id, amount, status, fixed_month, created_at, deal_items(revenue), partners(code, is_system, company_name, profiles(name))').in('service_id', brandIds0).in('status', ['confirmed', 'paid'])
+      : Promise.resolve({ data: [] as never[] }),
+    brandIds0.length
+      ? admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name').in('service_id', brandIds0)
+      : Promise.resolve({ data: [] as never[] }),
+  ])
+  const wf = waterfallFromDeals((mdsRes.data ?? []) as never, previewTotal, ym)
   let refRows: { name: string; code: string | null; amount: number; count: number }[] = []
   if ((myBrands ?? []).length) {
-    const { data: mds } = await admin.from('deals')
-      .select('partner_id, amount, status, fixed_month, created_at, partners(code, is_system, company_name, profiles(name))')
-      .in('service_id', (myBrands ?? []).map(b => b.id)).in('status', ['confirmed', 'paid'])
+    const mds = mdsRes.data
     const byP = new Map<string, { name: string; code: string | null; amount: number; count: number }>()
     for (const d0 of (mds ?? []) as unknown as { partner_id: string | null; amount: number | null; status: string; fixed_month: string | null; created_at: string; partners: { code: string; is_system: boolean; company_name: string | null; profiles: { name: string | null } | null } | null }[]) {
       if (!d0.partner_id || !inMonth(d0)) continue
@@ -67,7 +80,7 @@ export default async function SupplierMoneyPage() {
   }
   let asgRows: { name: string; customer: string; base_fee: number; status: string | null }[] = []
   if ((myBrands ?? []).length) {
-    const { data: dsAll } = await admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name').in('service_id', (myBrands ?? []).map(b => b.id))
+    const dsAll = dsAllRes.data
     const idsAll = (dsAll ?? []).map(x => x.id)
     if (idsAll.length) {
       const { data: asg } = await admin.from('delivery_assignments').select('deal_id, delivery_id, base_fee, status').in('deal_id', idsAll).neq('status', 'declined')
@@ -82,15 +95,14 @@ export default async function SupplierMoneyPage() {
       }))
     }
   }
-  // もらう: 本人の紹介報酬（支払と同一入力=deals.amount）
-  const { data: own } = await admin.from('deals').select('amount, status, fixed_month, created_at').eq('partner_id', me!.id).in('status', ['confirmed', 'paid'])
+  // もらう: 本人の紹介報酬（支払と同一入力=deals.amount・段1で取得済み）
   const ownMonth = (own ?? []).filter(inMonth).reduce((s, d) => s + (Number(d.amount) || 0), 0)
   const ownTotal = (own ?? []).reduce((s, d) => s + (Number(d.amount) || 0), 0)
   // 網の還元（MB Partnersメニュー分・支払と同一規則）
   let netKick = 0
   if ((me as { is_frontier?: boolean }).is_frontier) {
     const [{ computeOverrides }, { loadSupplierFrontiers }] = await Promise.all([import('@/lib/frontier'), import('@/lib/frontier-payout')])
-    const { data: subs } = await admin.from('partners').select('id, frontier_id, frontier_linked_at').eq('frontier_id', me!.id)
+    const subs = subs0
     if ((subs ?? []).length) {
       const { data: sd } = await admin.from('deals').select('partner_id, amount, status, fixed_month, created_at, fee_snapshot').in('partner_id', (subs ?? []).map(s => s.id))
       const linkById: Record<string, { frontier_id: string | null; frontier_linked_at: string | null }> = {}
