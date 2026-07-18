@@ -5,6 +5,7 @@
  * レイアウト・アニメ・寸法・配色は完全に1実装＝片方を変えると必ず両方変わる（乖離不能）。
  */
 import Link from 'next/link'
+import ResumeWarmer from '@/components/ResumeWarmer'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode, type CSSProperties } from 'react'
 
@@ -36,6 +37,8 @@ export default function SurfaceNav({ left, right, fab, unreadHref, iconOnly }: {
   }, [path, unreadHref])
   // href の無い（onClick）項目はルートを持たないため非アクティブ扱い。
   const active = (it: NavItem) => it.href ? (it.rootExact ? path === it.href : path.startsWith(it.href)) : false
+
+  const warmLinks = [...left, ...right].map(i => i.href).filter(Boolean) as string[]
 
   const Item = (it: NavItem) => {
     const on = active(it)
@@ -81,6 +84,7 @@ export default function SurfaceNav({ left, right, fab, unreadHref, iconOnly }: {
           .snav-root .snav-active-bar{ top:50%!important; left:0!important; transform:translateY(-50%)!important; width:3px!important; height:22px!important; border-radius:0 3px 3px 0!important; }
         }
       `}</style>
+      <ResumeWarmer links={warmLinks} />
       <nav className="snav-root" style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, background: 'rgba(255,255,255,.96)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--line)', display: 'flex', zIndex: 60 }}>
         {left.map(Item)}
         <div className="snav-fabwrap" style={{ flex: '0 0 74px', position: 'relative', top: -15, display: 'flex', justifyContent: 'center' }}>{fab}</div>

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { useConsoleSession } from '@/components/ConsoleSession'
 import Avatar from '@/components/ui/Avatar'
 import BrandMark from '@/components/ui/BrandMark'
+import ResumeWarmer from '@/components/ResumeWarmer'
 
 // G: レスポンシブ。<=900px ではサイドバーをドロワー化＋ハンバーガー。
 // コンテンツ余白(inline margin-left:230)は aside[data-cnav]~* を !important で上書き。
@@ -119,6 +120,8 @@ export default function ConsoleNav(_props?: { profileName?: string; profileColor
   return (
     <>
     <style>{NAV_STYLE}</style>
+    {/* 復帰ウォーマー（3面共通・chrome単位1個）: トークン先回り更新・prefetch再温め・デプロイ跨ぎ自動リロード */}
+    <ResumeWarmer links={['/console', '/console/deals', '/console/partners', '/console/payouts', '/console/services']} />
     {/* ハンバーガー（モバイルのみ） */}
     <button onClick={() => setOpen(true)} aria-label="メニュー" className="cnav-burger"
       style={{ position: 'fixed', top: 12, left: 12, zIndex: 60, width: 40, height: 40, borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(8px)', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--txt)' }}>

@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import BrandMark from '@/components/ui/BrandMark'
+import ResumeWarmer from '@/components/ResumeWarmer'
 
 const NAV = [
   { href: '/app', label: 'ダッシュボード', exact: true, icon: <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1h-5v-7h-6v7H4a1 1 0 01-1-1z" /> },
@@ -76,6 +77,7 @@ export default function SupplierShell({ companyName, code, color, avatarUrl, chi
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg2)' }}>
+      <ResumeWarmer links={NAV.map(n => n.href)} />
       {navving && <div className="sup-progress" aria-hidden />}
       {/* SP専用ヘッダ（<1024）: ハンバーガー＋ワードマーク。PCはトップバー廃止（サイドバー＋コンテンツのみ） */}
       <header className="sup-mobilehead" style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', height: 52 }}>
