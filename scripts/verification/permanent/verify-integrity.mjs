@@ -2,7 +2,7 @@
  * 恒久整合性ゲート。未認証境界と公開面を、実ユーザー・実案件・DB書込なしで検証する。
  * 認証済み3面は session-isolation.e2e.mjs がthrowawayのみで担う。
  */
-import { chromium } from 'playwright'
+import { launchChromium } from '../playwright-launch.mjs'
 
 const BASE_APP = process.env.BASE_APP || 'http://localhost:4599'
 const BASE_CONSOLE = process.env.BASE_CONSOLE || BASE_APP
@@ -30,13 +30,13 @@ const webhook = await fetch(`${BASE_APP}/api/line/webhook`, {
 ok(webhook.status === 401, 'LINE webhook 無署名 → 401', `got ${webhook.status}`)
 
 console.log('\n=== 公開面 ===')
-const browser = await chromium.launch()
+const browser = await launchChromium()
+const context = await browser.newContext({
+  viewport: { width: 375, height: 667 },
+  serviceWorkers: 'block',
+})
+const page = await context.newPage()
 for (const path of ['/partners', '/join', '/legal/privacy', '/legal/terms']) {
-  const context = await browser.newContext({
-    viewport: { width: 375, height: 667 },
-    serviceWorkers: 'block',
-  })
-  const page = await context.newPage()
   page.on('pageerror', error => pageErrors.push(`${path}: ${error.message}`))
   const response = await page.goto(`${BASE_APP}${path}`, { waitUntil: 'domcontentloaded', timeout: 45_000 })
   await page.waitForTimeout(500)
@@ -48,8 +48,8 @@ for (const path of ['/partners', '/join', '/legal/privacy', '/legal/terms']) {
   }))
   ok(metrics.scrollWidth <= metrics.viewportWidth, `${path}: 375px水平オーバーフロー0`, JSON.stringify(metrics))
   ok(metrics.bodyLength > 40, `${path}: 実描画`, `bodyLength=${metrics.bodyLength}`)
-  await context.close()
 }
+await context.close()
 await browser.close()
 ok(pageErrors.length === 0, 'page errors []', pageErrors.join(' | '))
 

@@ -4,7 +4,8 @@
  */
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import { chromium, type Page } from 'playwright'
+import type { Page } from 'playwright'
+import { launchChromium } from '../playwright-launch.mjs'
 
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n')
   .filter(line => line.includes('='))
@@ -68,15 +69,16 @@ async function login(page: Page, email: string, path: string) {
 async function measure(page: Page, link: string, targetPath: string, readyText: string) {
   const anchor = page.locator(link).first()
   if (!(await anchor.count())) return { skeleton: -1, operable: -1, feedback: -1 }
-  const feedback = await anchor.evaluate(async element => {
-    const before = getComputedStyle(element).transform
-    const started = performance.now()
-    element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-    await new Promise(requestAnimationFrame)
-    const changed = getComputedStyle(element).transform !== before
-    element.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-    return changed ? Math.round(performance.now() - started) : -1
-  })
+  const box = await anchor.boundingBox()
+  if (!box) return { skeleton: -1, operable: -1, feedback: -1 }
+  const before = await anchor.evaluate(element => getComputedStyle(element).transform)
+  const feedbackStarted = Date.now()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.waitForTimeout(20)
+  const after = await anchor.evaluate(element => getComputedStyle(element).transform)
+  const feedback = after !== before ? Date.now() - feedbackStarted : -1
+  await page.mouse.up()
   const started = Date.now()
   await anchor.click()
   await page.waitForURL(url => url.pathname === targetPath, { timeout: 10_000 })
@@ -86,21 +88,24 @@ async function measure(page: Page, link: string, targetPath: string, readyText: 
 }
 
 const rows: Array<{ surface: string; skeleton: number; operable: number; feedback: number }> = []
-const browser = await chromium.launch()
+const browser = await launchChromium()
+const anchorContext = await browser.newContext()
 try {
   await setup()
   for (const scenario of [
     { surface: 'console', account: ACC.console, start: '/console', link: 'a[href="/console/deals"]', target: '/console/deals', ready: '案件' },
     { surface: 'app', account: ACC.app, start: '/app', link: 'a[href="/app/refer"]', target: '/app/refer', ready: '紹介をはじめる' },
-    { surface: 'vendor', account: ACC.vendor, start: '/vendor', link: 'a[href="/vendor/money"]', target: '/vendor/money', ready: '報酬' },
+    { surface: 'vendor', account: ACC.vendor, start: '/vendor', link: 'a[href="/vendor/rewards"]', target: '/vendor/rewards', ready: '委託費の明細' },
   ] as const) {
-    const context = await browser.newContext({ serviceWorkers: 'block' })
+    const context = anchorContext
+    await context.clearCookies()
     const page = await context.newPage()
     await login(page, scenario.account.email, scenario.start)
     rows.push({ surface: scenario.surface, ...await measure(page, scenario.link, scenario.target, scenario.ready) })
-    await context.close()
+    await page.close()
   }
 } finally {
+  await anchorContext.close().catch(() => {})
   await browser.close()
   await cleanup()
 }

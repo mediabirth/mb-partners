@@ -12,7 +12,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import { chromium } from 'playwright'
+import { launchChromium } from '../playwright-launch.mjs'
 
 const env = Object.fromEntries(readFileSync(new URL('../../../.env.local', import.meta.url), 'utf8')
   .split('\n').filter(l => l.includes('=')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }))
@@ -153,7 +153,7 @@ async function main() {
   let browser = null
   let fatal = null
   try {
-    browser = await chromium.launch()
+    browser = await launchChromium()
     // 単一 context（＝実ユーザーの1ブラウザ）で3面を順にログイン
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
@@ -200,14 +200,13 @@ async function main() {
     ok(cookies.some(c => c.name.startsWith('mb-auth-vendor')), 'mb-auth-vendor cookie 存在')
     ok(cookies.some(c => c.name.startsWith('mb-auth-console')), 'mb-auth-console cookie 存在')
 
-    await ctx.close()
-
     console.log('[5] 同一メール二重ロール共存（アイデンティティ入れ替わりの回帰検出）')
     // 既存 partner に、同一メールで vendor accept を通しても partner の role/name が保全されることを実測。
     await dualIdentityCheck()
 
     console.log('[6] 二重ロールの両面ログイン共存（partner と vendor が同一ブラウザで同時生存）')
-    const dctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    await ctx.clearCookies()
+    const dctx = ctx
     const dpage = await dctx.newPage()
     // partner としてログイン → app 生存
     await dpage.goto(APP + '/login', { waitUntil: 'domcontentloaded' }); await dpage.waitForTimeout(600)
@@ -227,12 +226,13 @@ async function main() {
     }
     ok(await isAlive(dpage, 'vendor'), '★dual: vendor面 も生存（delivery linkageで本人性・role非依存）')
     ok(await isAlive(dpage, 'app'), '★dual: partner面 も同時生存（vendorログインが上書きしない）')
-    await dctx.close()
+    await dpage.close()
 
     console.log('[7] 運営者実環境（consoleログイン済み同一ブラウザで新規パートナー登録）＝招待セッション事故の恒久回帰')
     // 事故の実機序（2026-07-11・勝彦実機で再現）: 運営メールへの招待受諾が updateUserById(password) で
     // 運営アカウントを乗っ取り→全セッション失効（コンソール自動ログアウト）→role bounceでコンソール誤誘導。
-    const octx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    await ctx.clearCookies()
+    const octx = ctx
     const opage = await octx.newPage()
     await login(opage, 'console')
     ok(await isAlive(opage, 'console'), '[7] console ログイン成立（運営者状態）')
@@ -266,7 +266,8 @@ async function main() {
     ok(accOwn === 409, '★[7]b 運営メールの受諾は 409 で遮断（乗っ取りガード）', String(accOwn))
     ok(await isAlive(opage, 'console'), '★[7]b console セッション生存（パスワード上書きが起きていない）')
     await admin.from('invites').delete().eq('email', ACC.console.email)
-    await octx.close()
+    await opage.close()
+    await ctx.close()
   } catch (e) { fatal = e } finally {
     await browser?.close().catch(() => {})
     if (!OWN) await teardownFixtures()

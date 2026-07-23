@@ -1,7 +1,7 @@
 /** デプロイ跨ぎ自動リロードの恒久実測。throwawayのみ・成否にかかわらず撤去。 */
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import { chromium } from 'playwright'
+import { launchChromium } from '../playwright-launch.mjs'
 const env = Object.fromEntries(readFileSync('.env.local','utf8').split('\n').filter(l=>l.includes('=')).map(l=>{const i=l.indexOf('=');return[l.slice(0,i).trim(),l.slice(i+1).trim()]}))
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false}})
 const BASE=process.env.BASE_APP||'http://localhost:4599', PW='CcRr!2026xx', REF='cc-rr-ref@mb-system.internal'
@@ -22,8 +22,9 @@ await admin.from('profiles').upsert({id:c.data!.user!.id,name:'CC-RR',role:'part
 await admin.from('partners').insert({profile_id:c.data!.user!.id,code:'CCRR01',status:'active'})
 let b
 try{
-  b=await chromium.launch()
-  const p=await (await b.newContext()).newPage()
+  b=await launchChromium()
+  const context=await b.newContext()
+  const p=await context.newPage()
   await p.goto(BASE+'/app',{waitUntil:'domcontentloaded'});await p.waitForTimeout(1500)
   await p.locator('input[type="email"]').fill(REF);await p.locator('input[type="password"]').fill(PW)
   await p.locator('button[type="submit"]').first().click();await p.waitForTimeout(2800)
@@ -31,7 +32,8 @@ try{
   await p.evaluate(`document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('focus'))`)
   await p.waitForTimeout(1500)
   ok(reloads===0,'sha一致時はリロードしない',String(reloads))
-  const p2=await (await b.newContext()).newPage()
+  await context.clearCookies()
+  const p2=await context.newPage()
   await p2.goto(BASE+'/app',{waitUntil:'domcontentloaded'});await p2.waitForTimeout(1500)
   await p2.locator('input[type="email"]').fill(REF);await p2.locator('input[type="password"]').fill(PW)
   await p2.locator('button[type="submit"]').first().click();await p2.waitForTimeout(2800)

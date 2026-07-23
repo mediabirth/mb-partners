@@ -7,7 +7,8 @@
  */
 import { readFileSync, appendFileSync, mkdirSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
-import { chromium, type Page } from 'playwright'
+import type { Page } from 'playwright'
+import { launchChromium } from '../playwright-launch.mjs'
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }))
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
 const BASE = 'http://localhost:4599', PW = 'CcRp!2026xx', LABEL = process.argv[2] ?? 'run'
@@ -34,7 +35,8 @@ await mk(SUP, 'CC-RP供給者', 'partner').then(async uid => {
   await admin.from('services').insert({ name: 'CC-RPブランド', active: true, supplier_partner_id: pid, icon: '🧪', color: '#4733E6' })
 })
 
-const b = await chromium.launch()
+const b = await launchChromium()
+const anchorContext = await b.newContext()
 type Meas = { label: string; surface: string; mode: string; idleMin: number; clickToContentMs: number; authRefreshMs: number | null; apiFirstMs: number | null; failed: string[] }
 const rows: Meas[] = []
 
@@ -77,7 +79,8 @@ const SCENARIOS: Scenario[] = [
 ]
 
 for (const sc of SCENARIOS) {
-  const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
+  const ctx = anchorContext
+  await ctx.clearCookies()
   const p = await ctx.newPage()
   const failed: string[] = []
   let authStart = 0, authMs: number | null = null, apiFirstAt = 0, apiFirstMs: number | null = null, measuring = false, resumeAt = 0
@@ -122,8 +125,9 @@ for (const sc of SCENARIOS) {
       await p.waitForTimeout(400)
     }
   }
-  await ctx.close()
+  await p.close()
 }
+await anchorContext.close()
 await b.close()
 for (const r of rows) appendFileSync(OUT, JSON.stringify(r) + '\n')
 console.table(rows.map(r => ({ surface: r.surface, mode: r.mode, idle: r.idleMin, ms: r.clickToContentMs, auth: r.authRefreshMs ?? '-', api1st: r.apiFirstMs ?? '-', fail: r.failed.join(';') })))
