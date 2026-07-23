@@ -315,7 +315,7 @@ export default function PayoutsPage() {
                   <div key={m.month} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ width: 64, flexShrink: 0, fontSize: '.62rem', color: 'var(--muted2)', fontWeight: 500 }}>{monthLabel(m.month)}</span>
                     <div style={{ flex: 1, height: 18, background: 'var(--bg2)', borderRadius: 5, overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.max(4, Math.round(m.net / monthMax * 100))}%`, height: '100%', borderRadius: 5, background: m.status === 'paid' ? 'var(--muted2)' : m.status === 'closed' ? 'var(--green)' : 'var(--amber)' }} />
+                      {m.net > 0 && <div style={{ width: `${Math.round(m.net / monthMax * 100)}%`, height: '100%', borderRadius: 5, background: m.status === 'paid' ? 'var(--green)' : m.status === 'closed' ? 'var(--c-blue)' : 'var(--amber)' }} />}
                     </div>
                     <span className="tnum" style={{ width: 92, textAlign: 'right', fontFamily: 'Inter', fontSize: '.7rem', fontWeight: 500 }}>{yen(m.net)}</span>
                     <span style={{ width: 38, textAlign: 'right', fontSize: '.58rem', color: 'var(--muted2)' }}>{m.partners}名</span>

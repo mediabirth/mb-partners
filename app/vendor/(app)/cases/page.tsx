@@ -4,6 +4,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import { loadVendorBundle } from '@/lib/vendor-data'
 import { VENDOR_DEAL_ST, VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
+import EmptyState from '@/components/ui/EmptyState'
 
 export const runtime = 'edge'
 
@@ -21,7 +22,12 @@ export default async function VendorCases() {
       </div>
       <div style={{ padding: '0 20px 20px' }}>
         {b.assignments.length === 0 ? (
-          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '20px 0' }}>担当している案件はまだありません</p>
+          <EmptyState
+            title="担当案件はまだありません"
+            hint="案件が割り当てられると、ここに表示されます"
+            icon={<span style={{ display: 'inline-flex', width: 52, height: 52, borderRadius: 15, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', alignItems: 'center', justifyContent: 'center' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10" /></svg></span>}
+            style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }}
+          />
         ) : b.assignments.map(a => {
           // 提示中/辞退は割当自身の状態を優先（承諾前は案件状態語を出さない）
           const st = (a.status === 'proposed' || a.status === 'declined' ? VENDOR_OFFER_ST[a.status] : null)

@@ -47,7 +47,7 @@ export default async function SupplierSettingsPage() {
 
       <div style={{ ...CARD, padding: '11px 15px', marginTop: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ flex: 1, fontSize: '.72rem' }}>あなた自身のこと（プロフィール・連絡先・パスワード）</span>
-        <a href="/app/mypage" style={{ flexShrink: 0, fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>マイページ →</a>
+        <a href="/app/mypage" style={{ flexShrink: 0, fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>個人の設定 →</a>
       </div>
 
       <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>変更申請の履歴</h2>

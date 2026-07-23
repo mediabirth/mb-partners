@@ -156,7 +156,7 @@ export default async function CasesPage({
         {filtered.length === 0 ? (
           <EmptyState
             title="まだ案件はありません"
-            hint="「紹介する」ボタンから案件を登録しましょう。"
+            hint="＋ボタンから紹介を登録しましょう"
             icon={
               <span style={{ display: 'inline-flex', width: 52, height: 52, borderRadius: 15, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10" /></svg>

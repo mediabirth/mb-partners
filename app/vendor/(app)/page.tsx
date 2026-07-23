@@ -5,6 +5,7 @@ import ServiceAvatar from '@/components/ServiceAvatar'
 import { VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
 import { BUILD_STAMP } from '@/lib/build-stamp'
+import EmptyState from '@/components/ui/EmptyState'
 
 export const runtime = 'edge'
 
@@ -127,7 +128,13 @@ export default async function VendorHome() {
       </div>
       <div style={{ padding: '0 20px' }}>
         {active.length === 0 ? (
-          <p style={{ fontSize: '.7rem', color: 'var(--muted2)', padding: '4px 2px 16px' }}>進行中の委託はありません。</p>
+          <EmptyState
+            compact
+            title="進行中の委託はまだありません"
+            hint="案件を受けると、ここに表示されます"
+            icon={<span style={{ display: 'inline-flex', width: 40, height: 40, borderRadius: 12, background: 'var(--blue-bg2)', alignItems: 'center', justifyContent: 'center' }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--c-blue)" strokeWidth="1.6"><path d="M4 6h16M4 12h16M4 18h10" /></svg></span>}
+            style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14 }}
+          />
         ) : active.slice(0, 4).map(a => {
           const st = VENDOR_OFFER_ST[a.status ?? ''] ?? { label: '—', c: 'var(--muted2)' }
           return (

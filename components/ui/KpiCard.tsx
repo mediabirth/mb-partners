@@ -5,16 +5,17 @@
  */
 import CountUp from '@/components/CountUp'
 
-export function DeltaBadge({ cur, prev }: { cur: number; prev: number }) {
+export function DeltaBadge({ cur, prev, format, suffix }: { cur: number; prev: number; format?: 'number' | 'yen'; suffix?: string }) {
   const diff = cur - prev
-  const pct = prev !== 0 ? Math.round((diff / Math.abs(prev)) * 100) : null
   const up = diff >= 0
   const color = diff === 0 ? 'var(--muted2)' : up ? 'var(--green)' : 'var(--red)'
-  const arrow = diff === 0 ? '±' : up ? '▲' : '▼'
+  const sign = diff > 0 ? '+' : diff < 0 ? '−' : '±'
+  const value = Math.abs(diff).toLocaleString()
+  const display = format === 'yen' ? `¥${sign}${value}` : `${sign}${value}${suffix ?? ''}`
   return (
     <span style={{ fontSize: '.58rem', fontWeight: 500, color }}>
       <span style={{ color: 'var(--muted2)', fontWeight: 400, marginRight: 4 }}>前月比</span>
-      {arrow}{pct != null ? `${Math.abs(pct)}%` : Math.abs(diff)}
+      {display}
     </span>
   )
 }
@@ -56,7 +57,7 @@ export default function KpiCard({ label, value, suffix, format, icon, delta, sub
         {suffix && <small style={{ fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 400, marginLeft: 3, color: 'var(--muted2)' }}>{suffix}</small>}
       </div>
       <div style={{ marginTop: 5, minHeight: 14 }}>
-        {delta ? <DeltaBadge cur={delta.cur} prev={delta.prev} />
+        {delta ? <DeltaBadge cur={delta.cur} prev={delta.prev} format={format} suffix={suffix} />
           : sub ? <span style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>{sub}</span> : null}
       </div>
     </div>

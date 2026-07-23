@@ -10,7 +10,7 @@ import { attachSurfaceProfile } from '@/lib/identity'
 const VENDOR_COLORS = ['#15917E', '#4733E6', '#D98914', '#C2479E', '#2A7DE1', '#9333EA']
 
 // ID表記の正典: partner コード（英字2+数字4・generatePartnerCode）と同型式で display_code を採番。
-// ＝マイページのID表示を APP と同型（chip・Inter・letter-spacing）に揃える。
+// ＝設定のID表示を APP と同型（chip・Inter・letter-spacing）に揃える。
 function generateDeliveryCode(name: string): string {
   const upper = (name || '').trim().toUpperCase().replace(/[^A-Z]/g, '')
   const prefix = upper.length >= 2 ? upper.slice(0, 2) : ('ZZ' + upper).slice(-2)

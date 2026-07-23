@@ -490,10 +490,8 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
 
 function HeroDelta({ cur, prev }: { cur: number; prev: number }) {
   const diff = cur - prev
-  const pct = prev !== 0 ? Math.round((diff / Math.abs(prev)) * 100) : null
-  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '±'
-  return <span>{arrow} {pct != null ? `${Math.abs(pct)}%` : `¥${Math.abs(diff).toLocaleString()}`}</span>
+  const sign = diff > 0 ? '+' : diff < 0 ? '−' : '±'
+  return <span>¥{sign}{Math.abs(diff).toLocaleString()}</span>
 }
-
 
 

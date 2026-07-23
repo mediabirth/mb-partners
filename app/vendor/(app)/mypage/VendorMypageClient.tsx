@@ -1,6 +1,6 @@
 'use client'
 /**
- * マイページ（受託者）— APP パートナー版（app/app/mypage/MypageClient.tsx）と 1:1 同型。
+ * 設定（受託者）— APP パートナー版（app/app/mypage/MypageClient.tsx）と 1:1 同型。
  * 構造・見出し・トークン・編集文法・空状態「未登録」・トースト・ボタン系（btn btn-p/btn-g）を APP と一致させる。
  * 正当な固有差のみ:
  *  - ID表記＝display_code（partnerCode と同型式・同 chip）
@@ -69,7 +69,7 @@ export default function VendorMypageClient({ name, email, avatarUrl, avatarColor
     <div>
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>マイページ</h2>
+          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>設定</h2>
         </div>
       </div>
 

@@ -40,7 +40,16 @@ const buildSha = (await new Promise((resolve, reject) => {
   child.on('error', reject)
   child.on('exit', code => code === 0 ? resolve(output.trim()) : reject(new Error(`git rev-parse: exit ${code}`)))
 }))
-await run('build', 'pnpm', ['build'], { NEXT_PUBLIC_BUILD_SHA: buildSha })
+const buildTime = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+}).format(new Date()).replaceAll('/', '-') + ' JST'
+await run('build', 'pnpm', ['build'], { NEXT_PUBLIC_BUILD_SHA: buildSha, NEXT_PUBLIC_BUILD_TIME: buildTime })
 await run('typecheck', 'pnpm', ['typecheck'])
 const serverLog = openSync(`${LOG_DIR}/server.log`, 'w')
 const nextBin = fileURLToPath(new URL('../../node_modules/next/dist/bin/next', import.meta.url))

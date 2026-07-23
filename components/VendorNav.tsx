@@ -19,8 +19,6 @@ export default function VendorNav() {
   return (
     <>
       <SurfaceNav
-        // 純化(E): 「案件」ラベル削除＝整合のため全項目アイコンのみ（名称は aria-label で保持・タップ領域不変）。
-        iconOnly
         left={[{ href: '/vendor', label: 'ホーム', icon: HOME, rootExact: true }, { href: '/vendor/cases', label: '案件', icon: CASES }]}
         right={[{ href: '/vendor/rewards', label: '委託費', icon: REWARD }, { href: '/vendor/inbox', label: '通知', icon: BELL }]}
         fab={<NavFab onClick={() => setExpenseOpen(true)} label="経費を申請" iconOnly><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg></NavFab>}
