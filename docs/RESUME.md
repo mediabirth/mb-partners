@@ -24,11 +24,13 @@
 
 ## 未決・進行中
 
-1. **⑧協力報酬の凍結** — **勝彦裁定済（2026-07-23）＝(b) 起票時凍結**。設計書 `docs/design/coop-reward-freeze.md` v1 起案済→設計承認後に単独バッチ（deploy-coop-freeze-20260723）で Codex 発行。
-2. **Codex是正パッケージA** — **実装完了・レビュー合格（891fa12）／デプロイ保留**。tsc 20→0・ignoreBuildErrors削除・canon 7本122assertions・SHA注入で resume-reload 標準green化・⑦⑩済・money 4ハッシュ前後一致・NO DEPLOY判定は規律遵守で正。**保留理由＝誠実化された性能ゲートが実 red を暴いた**（下記）。性能バッチ green 後に同時デプロイ。
-3. リード自身: ~~lineage-rate-design v3改訂・§7-8文言改訂~~（済 2026-07-23・§10追補＋§7-8「クライアントへserializeしない」へ改訂）・AGENTS.md配置（勝彦ドラフト待ち）。
-4. 実運用ランウェイ: 完全撤去→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ。
+1. **デプロイ正典コマンドの再徹底** — 次デプロイから `--build-env NEXT_PUBLIC_BUILD_SHA` + `NEXT_PUBLIC_BUILD_TIME` 両注入必須（本番stamp時刻が6/19のまま＝TIME未注入検出）。Vercel project env に残る古い `NEXT_PUBLIC_BUILD_TIME` の掃除＝本番env変更につき勝彦確認事項。
+2. **UX精査第2巡（リード）** — 通知タブ・オンボーディング動線（招待→初回到達の体験）・サプライヤーコンソール・PageGuide内容の実読照合。
+3. リード自身: AGENTS.md配置（勝彦ドラフト待ち）。
+4. 実運用ランウェイ: 完全撤去→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ（PRAGMATION/EMANATIONの正規ロゴ含む）。
 5. バックログ: P3請求書発行代行（税務レビュー前提）・重ページ構造下限・ログインのサーバーアクション化（第5条件案件）・ダーク全面・書体展開・ティア制度。
+
+（済: 是正パッケージA=891fa12・coop凍結=399119c・UX-1=3dab5ed・perf-red-fix=b925234 — 全て本番反映・検収合格）
 
 ---
 
