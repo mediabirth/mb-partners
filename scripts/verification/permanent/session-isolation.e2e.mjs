@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { chromium } from 'playwright'
 
-const env = Object.fromEntries(readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+const env = Object.fromEntries(readFileSync(new URL('../../../.env.local', import.meta.url), 'utf8')
   .split('\n').filter(l => l.includes('=')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }))
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
@@ -150,9 +150,10 @@ async function isAlive(page, surf) {
 
 async function main() {
   if (!OWN) await ensureFixtures()
-  const browser = await chromium.launch()
+  let browser = null
   let fatal = null
   try {
+    browser = await chromium.launch()
     // 単一 context（＝実ユーザーの1ブラウザ）で3面を順にログイン
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
@@ -267,7 +268,7 @@ async function main() {
     await admin.from('invites').delete().eq('email', ACC.console.email)
     await octx.close()
   } catch (e) { fatal = e } finally {
-    await browser.close().catch(() => {})
+    await browser?.close().catch(() => {})
     if (!OWN) await teardownFixtures()
     if (fatal) { console.log('FATAL:', fatal?.message); console.log(fatal?.stack?.slice(0, 500)) }
     console.log(`\nSESSION-ISOLATION: ${pass} passed / ${fail} failed`)

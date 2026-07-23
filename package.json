@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
-    "test:session": "node scripts/session-isolation.e2e.mjs",
-    "test:canon": "tsx --test lib/status-effects.test.ts"
+    "test:session": "node scripts/verification/permanent/session-isolation.e2e.mjs",
+    "test:canon": "tsx --test lib/status-effects.test.ts",
+    "test:verify": "node scripts/verification/run-permanent.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

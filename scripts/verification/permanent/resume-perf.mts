@@ -3,16 +3,17 @@
  * 手法: Playwright clock で Date.now を放置分だけ前進（=トークン期限切れ・Router Cache失効・SWR focus再検証を実時間待ちなしで忠実再現）
  *       ＋ visibilityState を hidden→visible に切替（実ブラウザの復帰イベント経路をそのまま発火）。
  * 計測: 復帰直後クリック→内容表示ms（immediate）／復帰0.5秒後クリック（human=実操作相当）。auth/v1/token 往復と失敗応答も記録。
- * 使い方: npx tsx scripts/resume-perf.mts [label]
+ * 使い方: pnpm exec tsx scripts/verification/permanent/resume-perf.mts [label]
  */
-import { readFileSync, appendFileSync } from 'node:fs'
+import { readFileSync, appendFileSync, mkdirSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { chromium, type Page } from 'playwright'
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }))
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
 const BASE = 'http://localhost:4599', PW = 'CcRp!2026xx', LABEL = process.argv[2] ?? 'run'
 const OWNER = 'cc-rp-owner@mb-system.internal', REF = 'cc-rp-ref@mb-system.internal', SUP = 'cc-rp-sup@mb-system.internal'
-const OUT = '/private/tmp/claude-501/-Users-kmbrkthk/3c01494a-a62a-4e0d-b895-09f7cc0f5b0c/scratchpad/resume-perf.jsonl'
+const OUT = '/private/tmp/mb-partners-verify/resume-perf.jsonl'
+mkdirSync('/private/tmp/mb-partners-verify', { recursive: true })
 
 async function cleanup() {
   const { data: svc } = await admin.from('services').select('id').eq('name', 'CC-RPブランド').maybeSingle()
@@ -23,6 +24,7 @@ async function cleanup() {
     if (u) { const { data: pa } = await admin.from('partners').select('id').eq('profile_id', u.id).maybeSingle(); if (pa) await admin.from('partners').delete().eq('id', pa.id); await admin.from('profiles').delete().eq('id', u.id); await admin.auth.admin.deleteUser(u.id).catch(() => {}) }
   }
 }
+try {
 await cleanup()
 const mk = async (email: string, name: string, role: string) => { const c = await admin.auth.admin.createUser({ email, password: PW, email_confirm: true, app_metadata: { role } }); await admin.from('profiles').upsert({ id: c.data!.user!.id, name, role, email, color: '#888' }); return c.data!.user!.id }
 await mk(OWNER, 'CC-RP運営', 'owner')
@@ -127,3 +129,10 @@ for (const r of rows) appendFileSync(OUT, JSON.stringify(r) + '\n')
 console.table(rows.map(r => ({ surface: r.surface, mode: r.mode, idle: r.idleMin, ms: r.clickToContentMs, auth: r.authRefreshMs ?? '-', api1st: r.apiFirstMs ?? '-', fail: r.failed.join(';') })))
 await cleanup()
 console.log('done', LABEL)
+const regressions = rows.filter(r => r.failed.length || (r.mode !== 'immediate' && r.clickToContentMs > 500))
+console.log(`RESUME-PERF: ${rows.length - regressions.length} green / ${regressions.length} red`)
+process.exit(regressions.length ? 1 : 0)
+} catch (error) {
+  await cleanup()
+  throw error
+}

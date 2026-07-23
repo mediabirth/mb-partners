@@ -45,12 +45,12 @@
    - **fee-hash（サプライヤー請求）**: `select coalesce(md5(string_agg(snapshot::text||amount::text, ',' order by id)),'(empty)') from supplier_charges`
    - **override-hash（パートナー別報酬・2026-07-12追加）**: `select coalesce(md5(string_agg(id::text||partner_id::text||coalesce(reward_id::text,'')||override_value::text||active::text, ',' order by id)),'(empty)') from partner_reward_overrides`（CCが個別条件を勝手に触っていない証明。勝彦の正当な設定操作では変わる）
    ※固定値の絶対pinはしない——勝彦/米井が製品を正当に使えば（成約・起票・メニュー追加・請求クローズ等で）自然に変わるため。変化を見たら「誰の操作か」を必ず突合する。
-6. **canon**: `pnpm test:canon`（status-effects 61 assertion）green
+6. **canon**: `pnpm test:canon`（status-effects assertion）green
 
 **★公開ページの本番検証（2026-07-07 追加・/partners 404 事故の再発防止）**:
 公開URL（`/partners`・`/r/`・`/join`・`/legal` 等、未認証で見せる面）を「動いた」と判定するときは、必ず **本番エイリアスドメイン `https://mb-partners.app/...`**（デプロイ直URL `*.vercel.app` でも localhost でもない）に対して、**①`curl -sI`（キャッシュ無効ヘッダ）で 200 を確認、②Service Worker をブロックした新規ブラウザ（`serviceWorkers:'block'`＝シークレット相当・キャッシュ無**）で 200＋実描画をスクショ確認、③デプロイ直後は CDN 伝播ラグと端末側 SW キャッシュを疑い、cache-busting クエリで複数回叩いて一貫 200 を確認** の3点を満たすこと。
 ※ 事故の穴: デプロイ直後に温まった1拠点から alias を1回叩いて 200 を得ても、他エッジの伝播ラグや端末の旧 SW/キャッシュで 404 になり得る。公開面のデプロイでは SW の `CACHE_NAME` を bump して端末側の旧キャッシュ更新を促すこと。
-7. **★セッション独立（本丸・恒久）**: `pnpm test:session`（`scripts/session-isolation.e2e.mjs`）green。
+7. **★セッション独立（本丸・恒久）**: `pnpm test:session`（`scripts/verification/permanent/session-isolation.e2e.mjs`）green。
    3面に同一ブラウザでログイン→1面のセッション期限切れ→再ログインで**他2面のセッションが生存**することを実測する。
    これは「1面にログインすると他面がログアウトされる」事象（過去に複数回再発）の恒久回帰検出。**この事象に触れる変更をしたら必ず再実行**。
    - 構造ガード: auth クライアント（`@supabase/ssr` の createBrowserClient/createServerClient）は
@@ -60,7 +60,7 @@
 
 **残置ゼロ**: 検証で作った throwaway・書込は必ず原状復帰。money 意味は不変（入力UI/配線の改善は可、計算の意味・確定値は不変）。
 
-**★新画面の横断品質ゲート（恒久・2026-07-13 追加）**: 新しい面・新ページは、リリース前に次のゲートを通し、通過証跡を統合レポートに含めること——①静音（常設説明文ゼロ原則・知識はⓘ、操作の説明は操作の瞬間のみ）②平易語彙（内部語・専門語のUI出力ゼロ・copy-guideline禁止語遵守）③確立ナビ文法（二重ナビ禁止・公式ロゴ（BrandMark）ロックアップ）④ⓘ完備 ⑤ペルソナの真実（そのペルソナに嘘になる数字・文言の不在）⑥モバイル機械計測（375px溢れゼロ・44pxターゲット）⑦**性能**（遷移実測=クリック→骨格100ms以内/操作可能500ms以内(warm)・loading.tsxスケルトン必須（白紙禁止）・ボタンactive即時フィードバック・計測はscripts/perf-sakusaku.mts。**バックグラウンド復帰後の性能も同基準**＝放置30分/60分後の復帰でも最初のクリックがwarm同等であること・「再読み込みが必要」事象ゼロ・計測はscripts/resume-perf.mts（clock+visibility切替で放置を忠実再現）。復帰経路の恒久部品=ResumeWarmer（3面chrome搭載: トークン先回り更新・prefetch再温め・デプロイ跨ぎsha検知の自動リロード）——これを外す変更は復帰計測の再実行必須）。本ゲートはE2Eのcraft検査に組み込む。
+**★新画面の横断品質ゲート（恒久・2026-07-13 追加）**: 新しい面・新ページは、リリース前に次のゲートを通し、通過証跡を統合レポートに含めること——①静音（常設説明文ゼロ原則・知識はⓘ、操作の説明は操作の瞬間のみ）②平易語彙（内部語・専門語のUI出力ゼロ・copy-guideline禁止語遵守）③確立ナビ文法（二重ナビ禁止・公式ロゴ（BrandMark）ロックアップ）④ⓘ完備 ⑤ペルソナの真実（そのペルソナに嘘になる数字・文言の不在）⑥モバイル機械計測（375px溢れゼロ・44pxターゲット）⑦**性能**（遷移実測=クリック→骨格100ms以内/操作可能500ms以内(warm)・loading.tsxスケルトン必須（白紙禁止）・ボタンactive即時フィードバック・計測は`scripts/verification/permanent/perf-sakusaku.mts`。**バックグラウンド復帰後の性能も同基準**＝放置30分/60分後の復帰でも最初のクリックがwarm同等であること・「再読み込みが必要」事象ゼロ・計測は`scripts/verification/permanent/resume-perf.mts`（clock+visibility切替で放置を忠実再現）。復帰経路の恒久部品=ResumeWarmer（3面chrome搭載: トークン先回り更新・prefetch再温め・デプロイ跨ぎsha検知の自動リロード）——これを外す変更は復帰計測の再実行必須）。本ゲートはE2Eのcraft検査に組み込む。
 
 **★楽観的更新の線引き（恒久・2026-07-18 追加）**: 楽観的UI更新（押下即反映→失敗時ロールバック＋明示トースト）を適用してよいのは、**失敗しても金額に影響しない表示・状態系のみ**（例: 受付↔商談中の移動・タスクのチェック・既読・並べ替え・フィルタ）。**金額入力・成約確定（snapshot凍結）・支払確定・請求クローズ・報酬設定・レートカード変更などmoney及び確定系の全操作には適用禁止**＝従来どおりサーバ確定を待つ。
 
@@ -73,3 +73,10 @@
 **★招待〜初回到達の検証（恒久・2026-07-11 追加）**: 招待・登録の動線を触るバッチは、**経路ごとに・クリーンプロファイルの実ブラウザで・「招待URL→登録ウィザード→完了CTA→ログイン済みダッシュボード到達」までを実測**する（セッションcookie名の確認込み・再ログインを挟ませない）。恒久マトリクス＝①通常パートナー招待 ②フロンティア招待 ③受託者（vendor）招待 ④フロンティアのセルフ招待リンク（/invite/[token]?f=） ⑤apexルート直打ち（クリーン→/login・APPセッション有→/app） ⑥consoleホスト封じ込め（console.mb-partners.app/invite等→apexへ強制）。apex上に運営コンソールへの誘導を一切置かない（RootPage/proxy）。
 
 **★運営者実環境検証＋第5条件（恒久・2026-07-11 招待セッション事故）**: 対外動線（招待・登録・認証・cookieに触れる変更）の検証は、クリーン環境に加え**運営者実環境（コンソールにログイン済みの同一ブラウザ）**でも実測する。**自律デプロイの第5条件**＝認証・招待・登録・cookieに触れる変更は、運営者条件E2E（test:session のケース[7]）を含む session 全通過なしにデプロイ不可。実行時強制＝`lib/supabase/cookie-guard.ts`（面×cookie名の許可表・違反Set-Cookieの剥奪・Domain属性のhost-only強制）が唯一の門（server/client/proxy の setAll）に常設——外すこと自体を変更禁止とする。
+
+## 検証資産の分類規則
+
+- **恒久スイート**: `scripts/verification/permanent/` のみ。実ユーザー・実案件・`cc-monitor`・既存デモを参照せず、必要な書込は識別可能なthrowawayだけに限定し、成功・失敗を問わず撤去する。標準入口は `pnpm test:verify`（build、canon、整合性、session、性能、復帰性能を直列実行。`CC_MAIL_SUPPRESS=1` 強制）。
+- **バッチ固有／診断用**: `scripts/` 直下の `*.e2e.*`、`verify-*`、`repro-*`、描画・計測スクリプト。固定ID・固定日付・旧UI前提を含み得るため恒久greenの対象外とし、再実行前に現規律へ適合させる。恒久化時は実データ依存除去・残置ゼロ確認・`permanent/` への移動・`test:verify` 登録を同一バッチで行う。
+- **運用資産**: migration、seed、cleanup、画像生成、メールpreview等。検証ランナーから呼ばず、各操作の承認規律に従う。
+- 詳細な判定基準と棚卸し結果は `scripts/verification/README.md` および該当バッチの統合レポートを正とする。
