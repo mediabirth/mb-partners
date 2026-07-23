@@ -11,7 +11,8 @@ const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n')
   .filter(line => line.includes('='))
   .map(line => { const i = line.indexOf('='); return [line.slice(0, i).trim(), line.slice(i + 1).trim()] }))
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
-const BASE = process.env.BASE_APP || 'http://localhost:4599'
+const APP_BASE = process.env.BASE_APP || 'http://localhost:4599'
+const CONSOLE_BASE = process.env.BASE_CONSOLE || APP_BASE
 const PW = 'CcPermanentPerf!2026'
 const ACC = {
   console: { email: 'cc-permanent-perf-owner@mb-system.internal', role: 'owner', name: '恒久性能A' },
@@ -58,8 +59,8 @@ async function setup() {
   }
 }
 
-async function login(page: Page, email: string, path: string) {
-  await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' })
+async function login(page: Page, base: string, email: string, path: string) {
+  await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' })
   await page.waitForFunction(() => document.readyState === 'complete')
   const emailInput = page.locator('input[type="email"]')
   const passwordInput = page.locator('input[type="password"]')
@@ -78,17 +79,31 @@ async function login(page: Page, email: string, path: string) {
   await page.waitForTimeout(2_500)
 }
 
-async function warmUp(page: Page, link: string, targetPath: string, readyText: string, startPath: string) {
+async function waitForReady(page: Page, readySelector: string, readyText: string) {
+  await page.waitForFunction(({ selector, text }) => {
+    return [...document.querySelectorAll<HTMLElement>(selector)].some(element => {
+      const rect = element.getBoundingClientRect()
+      const style = getComputedStyle(element)
+      return element.textContent?.trim() === text
+        && rect.width > 0
+        && rect.height > 0
+        && style.display !== 'none'
+        && style.visibility !== 'hidden'
+    })
+  }, { selector: readySelector, text: readyText }, { timeout: 10_000, polling: 'raf' })
+}
+
+async function warmUp(page: Page, link: string, targetPath: string, readySelector: string, readyText: string, startPath: string) {
   await page.locator(link).first().click()
   await page.waitForURL(url => url.pathname === targetPath, { timeout: 10_000 })
-  await page.getByText(readyText, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 })
+  await waitForReady(page, readySelector, readyText)
   await page.locator(`a[href="${startPath}"]`).first().click()
   await page.waitForURL(url => url.pathname === startPath, { timeout: 10_000 })
   await page.locator(link).first().waitFor({ state: 'visible', timeout: 10_000 })
   await page.waitForTimeout(500)
 }
 
-async function measure(page: Page, link: string, targetPath: string, readyText: string) {
+async function measure(page: Page, link: string, targetPath: string, readySelector: string, readyText: string) {
   const anchor = page.locator(link).first()
   if (!(await anchor.count())) return { skeleton: -1, operable: -1, feedback: -1 }
   const box = await anchor.boundingBox()
@@ -101,19 +116,18 @@ async function measure(page: Page, link: string, targetPath: string, readyText: 
   await page.waitForTimeout(20)
   const after = await anchor.evaluate(element => getComputedStyle(element).transform)
   const feedback = after !== before ? Date.now() - feedbackStarted : -1
-  // mouseupをリンク外で行い、feedback観測が本計測より先に遷移を発火しないようにする。
-  await page.mouse.move(0, 0)
-  await page.mouse.up()
+  // 実ジェスチャーどおり同じリンク上でmouse-upし、そのclickを遷移計測に使う。
+  // feedback検査後に別clickすると、:active復帰transitionの安定待ちが遷移時間へ混入する。
   const started = Date.now()
   const targetReached = page.waitForURL(url => url.pathname === targetPath, { timeout: 10_000 }).then(() => Date.now() - started)
   const skeletonShown = page.locator('[aria-busy="true"]').first()
     .waitFor({ state: 'visible', timeout: 2_000 })
     .then(() => Date.now() - started)
     .catch(() => Number.POSITIVE_INFINITY)
-  await anchor.click({ noWaitAfter: true })
+  await page.mouse.up()
   const skeleton = await Promise.race([skeletonShown, targetReached])
   await targetReached
-  await page.getByText(readyText, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 })
+  await waitForReady(page, readySelector, readyText)
   return { skeleton, operable: Date.now() - started, feedback }
 }
 
@@ -123,16 +137,16 @@ const anchorContext = await browser.newContext()
 try {
   await setup()
   for (const scenario of [
-    { surface: 'console', account: ACC.console, start: '/console', link: 'a[href="/console/deals"]', target: '/console/deals', ready: '案件' },
-    { surface: 'app', account: ACC.app, start: '/app', link: 'a[href="/app/refer"]', target: '/app/refer', ready: '紹介をはじめる' },
-    { surface: 'vendor', account: ACC.vendor, start: '/vendor', link: 'a[href="/vendor/rewards"]', target: '/vendor/rewards', ready: '委託費の明細' },
+    { surface: 'console', base: CONSOLE_BASE, account: ACC.console, start: '/console', link: 'a[href="/console/deals"]', target: '/console/deals', readySelector: 'h1', ready: '案件ボード' },
+    { surface: 'app', base: APP_BASE, account: ACC.app, start: '/app', link: 'a[href="/app/refer"]', target: '/app/refer', readySelector: 'h2', ready: '紹介をはじめる' },
+    { surface: 'vendor', base: APP_BASE, account: ACC.vendor, start: '/vendor', link: 'a[href="/vendor/rewards"]', target: '/vendor/rewards', readySelector: 'h2', ready: '委託費の明細' },
   ] as const) {
     const context = anchorContext
     await context.clearCookies()
     const page = await context.newPage()
-    await login(page, scenario.account.email, scenario.start)
-    await warmUp(page, scenario.link, scenario.target, scenario.ready, scenario.start)
-    rows.push({ surface: scenario.surface, ...await measure(page, scenario.link, scenario.target, scenario.ready) })
+    await login(page, scenario.base, scenario.account.email, scenario.start)
+    await warmUp(page, scenario.link, scenario.target, scenario.readySelector, scenario.ready, scenario.start)
+    rows.push({ surface: scenario.surface, ...await measure(page, scenario.link, scenario.target, scenario.readySelector, scenario.ready) })
     await page.close()
   }
 } finally {

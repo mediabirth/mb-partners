@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { mkdirSync, openSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const ROOT = new URL('../../', import.meta.url)
-const BASE = 'http://localhost:4599'
+const PORT = Number(process.env.VERIFY_PORT || 4599)
+const BASE = `http://localhost:${PORT}`
 const LOG_DIR = '/private/tmp/mb-partners-verify'
 mkdirSync(LOG_DIR, { recursive: true })
 
@@ -41,9 +43,10 @@ const buildSha = (await new Promise((resolve, reject) => {
 await run('build', 'pnpm', ['build'], { NEXT_PUBLIC_BUILD_SHA: buildSha })
 await run('typecheck', 'pnpm', ['typecheck'])
 const serverLog = openSync(`${LOG_DIR}/server.log`, 'w')
-const server = spawn('pnpm', ['start', '-p', '4599'], {
+const nextBin = fileURLToPath(new URL('../../node_modules/next/dist/bin/next', import.meta.url))
+const server = spawn(process.execPath, [nextBin, 'start', '-p', String(PORT)], {
   cwd: ROOT,
-  env: { ...process.env, CC_MAIL_SUPPRESS: '1', PORT: '4599' },
+  env: { ...process.env, CC_MAIL_SUPPRESS: '1', PORT: String(PORT) },
   stdio: ['ignore', serverLog, serverLog],
 })
 

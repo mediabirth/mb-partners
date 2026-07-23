@@ -11,7 +11,7 @@ import type { Page } from 'playwright'
 import { launchChromium } from '../playwright-launch.mjs'
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split('\n').filter(l => l.includes('=')).map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }))
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
-const BASE = 'http://localhost:4599', PW = 'CcRp!2026xx', LABEL = process.argv[2] ?? 'run'
+const BASE = process.env.BASE_APP || 'http://localhost:4599', PW = 'CcRp!2026xx', LABEL = process.argv[2] ?? 'run'
 const OWNER = 'cc-rp-owner@mb-system.internal', REF = 'cc-rp-ref@mb-system.internal', SUP = 'cc-rp-sup@mb-system.internal'
 const OUT = '/private/tmp/mb-partners-verify/resume-perf.jsonl'
 mkdirSync('/private/tmp/mb-partners-verify', { recursive: true })
