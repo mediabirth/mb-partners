@@ -43,7 +43,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     coop_enabled: boolean | null; coop_type: string | null; coop_value: number | null; coop_base: string | null
     ref_type?: string | null; ref_value?: number | null; ref_base?: string | null
   } | null
-  const snap = (ctx?.reward_snapshot ?? null) as { ref_type?: string; ref_value?: number; ref_base?: string } | null
+  const snap = (ctx?.reward_snapshot ?? null) as {
+    ref_type?: string; ref_value?: number; ref_base?: string
+    coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null
+  } | null
   const confirming = hasStatus && status === 'confirmed'
 
   // P: 報酬ゲート(a)。協力で必須タスク未達なら紹介レートへダウングレード（締め前のレート決定にのみ作用）。
@@ -78,10 +81,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const refType  = snapFirst ? (snap?.ref_type ?? menu?.ref_type) : (menu?.ref_type ?? snap?.ref_type)
   const refValue = Number((snapFirst ? (snap?.ref_value ?? menu?.ref_value) : (menu?.ref_value ?? snap?.ref_value)) ?? 0)
   const refBase  = (snapFirst ? (snap?.ref_base ?? menu?.ref_base) : (menu?.ref_base ?? snap?.ref_base)) ?? '売上'
-  if (effectiveKind === 'cooperation' && menu?.coop_enabled) {
-    baseLabel = menu.coop_base ?? '売上'
-    if ((menu.coop_type ?? 'rate') === 'fixed') fixedAmount = Number(menu.coop_value ?? 0)
-    else rate = Number(menu.coop_value ?? 0)
+  const hasCoopSnapshot = !!snap && Object.prototype.hasOwnProperty.call(snap, 'coop_enabled')
+  const coopEnabled = hasCoopSnapshot ? snap.coop_enabled : menu?.coop_enabled
+  const coopType = hasCoopSnapshot ? snap.coop_type : menu?.coop_type
+  const coopValue = hasCoopSnapshot ? snap.coop_value : menu?.coop_value
+  const coopBase = hasCoopSnapshot ? snap.coop_base : menu?.coop_base
+  if (effectiveKind === 'cooperation' && coopEnabled) {
+    baseLabel = coopBase ?? '売上'
+    if ((coopType ?? 'rate') === 'fixed') fixedAmount = Number(coopValue ?? 0)
+    else rate = Number(coopValue ?? 0)
   } else if (ctx?.channel === 'cooperation') {
     // 協力→紹介ダウングレード：ref_* を採用
     baseLabel = refBase

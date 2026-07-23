@@ -137,6 +137,16 @@ export async function submitPartnerReferral(formData: FormData) {
       if (mr.reward_type === 'continuous') continuousMonths = mr.default_months ?? null
     }
   }
+  // 協力報酬も紹介報酬と同じく起票時点で凍結する。既存snapshotキーは保持し、coop_*だけを加える。
+  if (channel === 'cooperation') {
+    rewardSnapshot = {
+      ...(rewardSnapshot ?? {}),
+      coop_enabled: menu?.coop_enabled ?? null,
+      coop_type: menu?.coop_type ?? null,
+      coop_value: menu?.coop_value ?? null,
+      coop_base: menu?.coop_base ?? null,
+    }
+  }
 
   const { data: deal, error } = await supabase
     .from('deals')
