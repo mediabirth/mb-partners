@@ -48,7 +48,7 @@ export async function computeDeliveryPayoutLines(admin: SupabaseClient): Promise
   {
     const { data } = await admin.from('delivery_assignments')
       .select('id, deal_id, deal_item_id, delivery_id, base_fee, deliveries(name)')
-    for (const a of (data ?? []) as Array<{ id: string; deal_id: string; deal_item_id: string | null; delivery_id: string | null; base_fee: number; deliveries: { name: string } | null }>) {
+    for (const a of (data ?? []) as unknown as Array<{ id: string; deal_id: string; deal_item_id: string | null; delivery_id: string | null; base_fee: number; deliveries: { name: string } | null }>) {
       if (!a.delivery_id) continue                 // MB自身（委託費0）は支払対象外
       const info = dealInfo[a.deal_id]
       if (!info) continue                          // 成約前の案件は対象外

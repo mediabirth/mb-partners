@@ -74,7 +74,10 @@ export async function GET(req: NextRequest) {
   }
   const partnerList = (partners ?? [])
     .filter((p: { id: string }) => p.id !== supplierId)  // 本人は候補から除外（自己水増し遮断はPOSTでも拒否）
-    .map((p: { id: string; code: string; profiles: { name: string | null } | null }) => ({ id: p.id, code: p.code, name: p.profiles?.name ?? p.code }))
+    .map(p => {
+      const profile = p.profiles as unknown as { name: string | null } | null
+      return { id: p.id, code: p.code, name: profile?.name ?? p.code }
+    })
   return NextResponse.json({ overrides: ovs ?? [], rewards, partners: partnerList })
 }
 

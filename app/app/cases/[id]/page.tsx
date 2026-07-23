@@ -72,7 +72,7 @@ export default async function CaseDetailPage({
     ])
     tasks = (tasksRes.data ?? []) as DealTask[]
     for (const t of (tplsRes.data ?? []) as { label: string; description: string | null }[]) if (t.description) taskDesc[t.label] = t.description
-    items = (itRes.data ?? []) as typeof items
+    items = (itRes.data ?? []) as unknown as typeof items
     newMenuName = (mmRes.data as { name?: string } | null)?.name ?? null
     menuInfoDescription = (mmRes.data as { description?: string | null } | null)?.description ?? null
     // ⓘの表示条件は従来同様「新メニュー名が解決できたとき」のみ（svcExtra 自体は並列取得済み）

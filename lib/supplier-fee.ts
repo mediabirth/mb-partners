@@ -138,7 +138,7 @@ export function supplierChargeBase(input: { revenue: number; deliveryCost: numbe
  *   rate/continuous＝50%硬上限（エラー）／fixed＝警告（粗利が案件ごとに変わるため硬ガード不能）。
  * - パススルーカード（standard-v2）＝報酬はMB原資でなくパススルー＝逆ザヤ概念なし。
  *   ただし報酬型は「固定額 or 受注額%（rate×売上ベース）」に限定（粗利%・継続は個別契約カードのみ）。
- * メニューがサプライヤー配下でなければ常にok。判定不能はfail-open（ok）。
+ * メニューがサプライヤー配下でなければ常にok。判定不能はfail-closed。
  */
 export async function validateSupplierReward(db: Db, menuId: string, rewardType: string, rewardValue: number, rewardBase?: string | null): Promise<{ ok: boolean; error?: string; warning?: string }> {
   try {
@@ -168,7 +168,7 @@ export async function validateSupplierReward(db: Db, menuId: string, rewardType:
       return { ok: true, warning: 'サプライヤーメニューの固定報酬は案件粗利によりMB受取50%枠を超える可能性があります（運用ガイドライン参照）' }
     }
     return { ok: true }
-  } catch { return { ok: true } }
+  } catch { return { ok: false, error: '確認できませんでした。もう一度お試しください' } }
 }
 
 /** 帰属月（設計§7-5）＝支払側 close_month_batch と同一規則: fixed_month ?? created_at の YYYY-MM。 */

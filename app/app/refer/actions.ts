@@ -253,7 +253,11 @@ export async function submitPartnerReferral(formData: FormData) {
   // お客さま向け新名称（menu_ref=新menus）を優先。無ければ従来の service_menu 名。★表示のみ・紐付き/money不変。
   let menuName = (menu as { name?: string } | null)?.name ?? ''
   if (menuRefRaw) {
-    try { const { data: mm } = await supabase.from('menus').select('name').eq('id', menuRefRaw).single(); if ((mm as { name?: string } | null)?.name) menuName = (mm as { name?: string }).name } catch { /* fallback to old name */ }
+    try {
+      const { data: mm } = await supabase.from('menus').select('name').eq('id', menuRefRaw).single()
+      const resolvedMenu = mm as { name?: string } | null
+      if (resolvedMenu?.name) menuName = resolvedMenu.name
+    } catch { /* fallback to old name */ }
   }
   const { data: svcRow } = isConsultation ? { data: null } : await supabase.from('services').select('name').eq('id', serviceId).single()
   const svcName = svcRow?.name ?? ''

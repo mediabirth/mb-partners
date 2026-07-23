@@ -60,10 +60,32 @@ async function setup() {
 
 async function login(page: Page, email: string, path: string) {
   await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' })
-  await page.locator('input[type="email"]').fill(email)
-  await page.locator('input[type="password"]').fill(PW)
+  await page.waitForFunction(() => document.readyState === 'complete')
+  const emailInput = page.locator('input[type="email"]')
+  const passwordInput = page.locator('input[type="password"]')
+  await emailInput.waitFor({ state: 'visible' })
+  await passwordInput.waitFor({ state: 'visible' })
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await emailInput.fill(email)
+    await passwordInput.fill(PW)
+    await page.waitForTimeout(100)
+    if (await emailInput.inputValue() === email && await passwordInput.inputValue() === PW) break
+  }
+  if (await emailInput.inputValue() !== email || await passwordInput.inputValue() !== PW) {
+    throw new Error(`login hydration did not retain credentials: ${path}`)
+  }
   await page.locator('button[type="submit"]').first().click()
   await page.waitForTimeout(2_500)
+}
+
+async function warmUp(page: Page, link: string, targetPath: string, readyText: string, startPath: string) {
+  await page.locator(link).first().click()
+  await page.waitForURL(url => url.pathname === targetPath, { timeout: 10_000 })
+  await page.getByText(readyText, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 })
+  await page.locator(`a[href="${startPath}"]`).first().click()
+  await page.waitForURL(url => url.pathname === startPath, { timeout: 10_000 })
+  await page.locator(link).first().waitFor({ state: 'visible', timeout: 10_000 })
+  await page.waitForTimeout(500)
 }
 
 async function measure(page: Page, link: string, targetPath: string, readyText: string) {
@@ -71,6 +93,7 @@ async function measure(page: Page, link: string, targetPath: string, readyText: 
   if (!(await anchor.count())) return { skeleton: -1, operable: -1, feedback: -1 }
   const box = await anchor.boundingBox()
   if (!box) return { skeleton: -1, operable: -1, feedback: -1 }
+  await page.mouse.move(0, 0)
   const before = await anchor.evaluate(element => getComputedStyle(element).transform)
   const feedbackStarted = Date.now()
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
@@ -78,11 +101,18 @@ async function measure(page: Page, link: string, targetPath: string, readyText: 
   await page.waitForTimeout(20)
   const after = await anchor.evaluate(element => getComputedStyle(element).transform)
   const feedback = after !== before ? Date.now() - feedbackStarted : -1
+  // mouseupをリンク外で行い、feedback観測が本計測より先に遷移を発火しないようにする。
+  await page.mouse.move(0, 0)
   await page.mouse.up()
   const started = Date.now()
-  await anchor.click()
-  await page.waitForURL(url => url.pathname === targetPath, { timeout: 10_000 })
-  const skeleton = Date.now() - started
+  const targetReached = page.waitForURL(url => url.pathname === targetPath, { timeout: 10_000 }).then(() => Date.now() - started)
+  const skeletonShown = page.locator('[aria-busy="true"]').first()
+    .waitFor({ state: 'visible', timeout: 2_000 })
+    .then(() => Date.now() - started)
+    .catch(() => Number.POSITIVE_INFINITY)
+  await anchor.click({ noWaitAfter: true })
+  const skeleton = await Promise.race([skeletonShown, targetReached])
+  await targetReached
   await page.getByText(readyText, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 })
   return { skeleton, operable: Date.now() - started, feedback }
 }
@@ -101,6 +131,7 @@ try {
     await context.clearCookies()
     const page = await context.newPage()
     await login(page, scenario.account.email, scenario.start)
+    await warmUp(page, scenario.link, scenario.target, scenario.ready, scenario.start)
     rows.push({ surface: scenario.surface, ...await measure(page, scenario.link, scenario.target, scenario.ready) })
     await page.close()
   }

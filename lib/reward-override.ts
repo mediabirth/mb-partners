@@ -66,36 +66,5 @@ export async function supplierOfMenu(db: Db, menuId: string): Promise<string | n
   } catch { return null }
 }
 
-/**
- * APP表示の個別化: セッションパートナーの有効値で rewards 配列（menu_rewards行）を差し替える（表示専用・元配列は破壊しない）。
- * まとめ読み（overrides 2クエリ）で N+1 を避ける。失敗時は入力をそのまま返す（fail-safe）。
- */
-export async function personalizeRewards<T extends { id: string; menu_id: string; reward_type: string; reward_value: number }>(
-  db: Db,
-  partnerId: string | null | undefined,
-  rewards: T[],
-  supplierByMenu: Record<string, string | null>,
-): Promise<T[]> {
-  try {
-    if (!partnerId || rewards.length === 0) return rewards
-    const { data: ovs } = await db
-      .from('partner_reward_overrides')
-      .select('id, reward_id, supplier_partner_id, override_value')
-      .eq('partner_id', partnerId)
-      .eq('active', true)
-    const list = (ovs ?? []) as { id: string; reward_id: string | null; supplier_partner_id: string; override_value: number }[]
-    if (!list.length) return rewards
-    const byReward = new Map(list.filter(o => o.reward_id).map(o => [o.reward_id as string, o]))
-    const bySupplier = new Map(list.filter(o => !o.reward_id).map(o => [o.supplier_partner_id, o]))
-    return rewards.map(r => {
-      const exact = byReward.get(r.id)
-      if (exact) return { ...r, reward_value: Number(exact.override_value) }
-      if (r.reward_type === 'rate' || r.reward_type === 'continuous') {
-        const sup = supplierByMenu[r.menu_id]
-        const all = sup ? bySupplier.get(sup) : undefined
-        if (all) return { ...r, reward_value: Number(all.override_value) }
-      }
-      return r
-    })
-  } catch { return rewards }
-}
+// 個別化は /api/my-reward-overrides（no-store）＋クライアント1箇所マージのみ。
+// /api/services（CDN共有キャッシュ）への個別値混入は恒久禁止。

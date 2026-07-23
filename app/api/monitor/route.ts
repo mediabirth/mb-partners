@@ -189,7 +189,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : 'tier error' }, { status: 500 })
   }
 
-  const outcomes = []
+  const outcomes: Awaited<ReturnType<typeof recordCheck>>[] = []
   for (const c of checks) outcomes.push(await recordCheck(admin, c))
 
   // 静音化（2026-07-12）: 日次ハートビート（異常なし連絡）は廃止。Slackは「異常（2回連続）」と「復旧」のみ。

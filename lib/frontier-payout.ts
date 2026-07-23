@@ -58,7 +58,12 @@ export async function freezeOverridesForBatch(admin: AnyClient, batchId: string,
     const overrides = computeOverrides(deals, linkById, ym, supplierFrontiers)
     const rows = Object.entries(overrides)
       .filter(([, g]) => g > 0)
-      .map(([frontier_id, override_gross]) => ({ batch_id: batchId, frontier_id, override_gross, rate: OVERRIDE_RATE }))
+      .map(([frontier_id, override_gross]) => ({
+        batch_id: batchId,
+        frontier_id,
+        override_gross,
+        rate: supplierFrontiers[frontier_id]?.rate ?? OVERRIDE_RATE,
+      }))
     if (rows.length) {
       const { error } = await admin.from('payout_overrides').insert(rows)
       if (error) return false

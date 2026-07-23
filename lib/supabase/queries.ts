@@ -333,7 +333,7 @@ export type MenuReward = {
 export type DealRow = {
   id: string; customer_name: string; channel: string; source: string
   customer_type?: string | null; company_name?: string | null; contact_name?: string | null
-  status: 'received' | 'in_progress' | 'confirmed' | 'paid'
+  status: 'received' | 'in_progress' | 'confirmed' | 'paid' | 'lost'
   amount: number; fixed_month: string | null; menu_id?: string | null
   consent: boolean; meeting_at: string | null
   created_at: string; updated_at: string; service_id: string

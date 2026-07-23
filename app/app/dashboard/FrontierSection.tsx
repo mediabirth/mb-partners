@@ -105,9 +105,9 @@ export default async function FrontierSection() {
             <span style={{ fontSize: '.66rem', opacity: .85 }}>まずは仲間の招待から</span>
           </div>
           <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.28)', position: 'relative' }}>
-            <div style={{ fontSize: '.6rem', opacity: .85 }}>チーム<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{teamN}名</span></div>
-            <div style={{ fontSize: '.6rem', opacity: .85 }}>今月稼働<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{activeSubs}名</span></div>
-            <div style={{ fontSize: '.6rem', opacity: .85 }}>次の節目<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', fontWeight: 500, marginTop: 2 }}>{milestoneTarget}名</span></div>
+            <div style={{ fontSize: '.6rem', opacity: .85 }}>チーム<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', marginTop: 2 }}>{teamN}名</span></div>
+            <div style={{ fontSize: '.6rem', opacity: .85 }}>今月稼働<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', marginTop: 2 }}>{activeSubs}名</span></div>
+            <div style={{ fontSize: '.6rem', opacity: .85 }}>次の節目<span style={{ fontWeight: 500, display: 'block', fontFamily: 'Inter', fontSize: '.88rem', marginTop: 2 }}>{milestoneTarget}名</span></div>
           </div>
         </div>
 

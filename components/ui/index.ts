@@ -1,7 +1,7 @@
 /**
  * F-2 デザインシステム：components/ui バレル。3サーフェス共通の共有プリミティブ。
  * すべて BR-0 トークン由来。純プレゼンテーション層（ロジック/データ/お金/RLS/認証は不関与）。
- * 既存の ServiceAvatar / Toast / ChannelMark は実績があるためここから再エクスポートして集約する。
+ * 既存の ServiceAvatar / Toast は実績があるためここから再エクスポートして集約する。
  */
 export { default as Button } from './Button'
 export type { ButtonProps } from './Button'
@@ -29,4 +29,3 @@ export { Field, Input, Textarea, Select, FileField } from './Field'
 
 // 既存の実績コンポーネントを集約（重複生成しない）
 export { default as ServiceAvatar } from '../ServiceAvatar'
-export { default as ChannelMark } from '../ChannelMark'

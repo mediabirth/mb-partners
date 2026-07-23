@@ -231,6 +231,9 @@ export async function POST(req: NextRequest) {
       privacy_agreed_at: agreePrivacy ? nowIso : null,
       ...frontierFields,
     } : { ...frontierFields }
+    const insertPartnerFields = fullRegistration
+      ? partnerFields
+      : Object.assign({ tax_type: 'individual' }, partnerFields)
 
     const { data: existingPartner } = await service
       .from('partners').select('id, code').eq('profile_id', userId).maybeSingle()
@@ -244,8 +247,7 @@ export async function POST(req: NextRequest) {
 
       const { error: partnerErr } = await service.from('partners').insert({
         profile_id: userId, code, status: 'active',
-        tax_type: 'individual',
-        ...partnerFields,
+        ...insertPartnerFields,
       })
       if (partnerErr) {
         return NextResponse.json({ error: partnerErr.message, detail: 'partners insert failed' }, { status: 500 })

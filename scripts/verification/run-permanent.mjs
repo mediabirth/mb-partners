@@ -31,7 +31,15 @@ async function waitForServer() {
   throw new Error('local server did not become ready')
 }
 
-await run('build', 'pnpm', ['build'])
+const buildSha = (await new Promise((resolve, reject) => {
+  const child = spawn('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] })
+  let output = ''
+  child.stdout.on('data', chunk => { output += chunk })
+  child.on('error', reject)
+  child.on('exit', code => code === 0 ? resolve(output.trim()) : reject(new Error(`git rev-parse: exit ${code}`)))
+}))
+await run('build', 'pnpm', ['build'], { NEXT_PUBLIC_BUILD_SHA: buildSha })
+await run('typecheck', 'pnpm', ['typecheck'])
 const serverLog = openSync(`${LOG_DIR}/server.log`, 'w')
 const server = spawn('pnpm', ['start', '-p', '4599'], {
   cwd: ROOT,

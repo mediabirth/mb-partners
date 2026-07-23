@@ -14,10 +14,10 @@ export default function SettingsPage() {
   const [partnerId, setPartnerId] = useState<string | null>(null)
   useEffect(() => {
     const sb = createClient()
-    sb.auth.getUser().then(({ data }) => {
+    sb.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
       if (!data.user) return
       sb.from('partners').select('id').eq('profile_id', data.user.id).maybeSingle()
-        .then(({ data: p }) => { if (p?.id) setPartnerId(p.id) })
+        .then(({ data: p }: { data: { id: string } | null }) => { if (p?.id) setPartnerId(p.id) })
     })
   }, [])
   async function logout() {

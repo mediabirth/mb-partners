@@ -36,9 +36,12 @@ export async function GET(req: NextRequest) {
   let suppliers: { id: string; name: string; code: string | null; rate_card: string }[] = []
   if (ids.length) {
     const { data: ps } = await admin.from('partners').select('id, code, supplier_rate_card, company_name, profiles(name)').in('id', ids)
-    suppliers = (ps ?? []).map((p: { id: string; code: string | null; supplier_rate_card: string | null; company_name: string | null; profiles: { name: string | null } | null }) => ({
-      id: p.id, code: p.code, name: p.company_name || p.profiles?.name || p.code || p.id.slice(0, 8), rate_card: p.supplier_rate_card ?? STD_RATE_CARD,
-    }))
+    suppliers = (ps ?? []).map(p => {
+      const profile = p.profiles as unknown as { name: string | null } | null
+      return {
+        id: p.id, code: p.code, name: p.company_name || profile?.name || p.code || p.id.slice(0, 8), rate_card: p.supplier_rate_card ?? STD_RATE_CARD,
+      }
+    })
   }
 
   const { data: charges } = await admin

@@ -16,7 +16,7 @@ export function makeSurfaceServerClient(surface: Surface, cookieAdapter: CookieA
   // 根絶第1層（2026-07-11）: setAll を許可表ガードでラップ＝面違いの auth cookie 書込を通信層で剥奪（cookie-guard.ts）。
   const guarded: CookieAdapter = {
     getAll: () => cookieAdapter.getAll(),
-    setAll: (cookiesToSet) => cookieAdapter.setAll?.(enforceAuthCookiePolicy(surface, cookiesToSet as never) as never),
+    setAll: (cookiesToSet, responseHeaders) => cookieAdapter.setAll?.(enforceAuthCookiePolicy(surface, cookiesToSet as never) as never, responseHeaders),
   }
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

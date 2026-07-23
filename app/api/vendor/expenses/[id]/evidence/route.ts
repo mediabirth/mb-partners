@@ -18,7 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .from('expense_claims')
     .select('id, evidence_path, delivery_assignment_id, delivery_assignments(delivery_id)')
     .eq('id', id).maybeSingle()
-  const owns = exp && (exp.delivery_assignments as { delivery_id: string } | null)?.delivery_id === vendor.deliveryId
+  const assignment = exp?.delivery_assignments as unknown as { delivery_id: string } | null
+  const owns = exp && assignment?.delivery_id === vendor.deliveryId
   if (!exp || !owns) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (!exp.evidence_path) return NextResponse.json({ error: '領収書が添付されていません' }, { status: 404 })
 

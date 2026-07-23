@@ -18,6 +18,7 @@ export const runtime = 'edge'
 
 const INTERNAL_CODES = new Set(['ZZ8463', 'ZZ8354'])
 type Kind = 'all' | 'referral' | 'frontier' | 'supplier' | 'delivery'
+const FILTER_KINDS: Exclude<Kind, 'all'>[] = ['referral', 'frontier', 'supplier', 'delivery']
 
 // BR-C2：種別を横断した統一行（該当しない列は ー）。役職は StatusPill で識別。
 type URow = {
@@ -33,7 +34,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/console/login')
   const { tab: tabParam } = await searchParams
-  const filter: Kind = (['referral', 'frontier', 'supplier', 'delivery'] as const).includes(tabParam as Kind) ? tabParam as Kind : 'all'
+  const filter: Kind = FILTER_KINDS.includes(tabParam as Exclude<Kind, 'all'>) ? tabParam as Exclude<Kind, 'all'> : 'all'
 
   // owner/manager 認証では nested partners.profiles が profiles RLS（本人のみSELECT）で null になり氏名が「—」表示になる。
   // /console は middleware でガード済のため、氏名解決のみ service role で読取（表示専用・お金/deals/権限には不使用）。
