@@ -90,10 +90,11 @@ resolveEffectiveReward(admin, { partnerId, reward }): Promise<{
 
 ## 4. 表示の個別化と境界設計
 
-### 4.1 本人にだけ個別率を見せる
+### 4.1 本人にだけ個別率を見せる（v1.1改訂・2026-07-23＝実装事実へ追随）
 
-- **入口は1つ**: APP のメニュー/報酬表示は全て `/api/services`（`getServicesWithMenus`）由来（refer 3画面・共有シート・MenuDetailSheet）。
-  ここで**セッション由来の partner_id** により rewards 配列の `reward_value` を有効値へ差し替える（サーバ側マージ・クライアントには有効値のみ渡す）。
+- **実装済みの正**: 個別化は `/api/my-reward-overrides`（認証必須・セッション由来 partner の差分のみ・`Cache-Control: no-store`）＋**クライアント1箇所マージ**で行う。`/api/services` は全ユーザー共通の正典マスタとして CDN 共有キャッシュ（s-maxage）される——**そこへ個別値を混ぜることは恒久禁止**（共有キャッシュに個別値が焼かれ他パートナーへ漏出）。
+- ※v1の「/api/services でサーバ側マージ」案は、本書 §4.2 リスク④（共有キャッシュ禁止）と自己矛盾していたため**廃案**。`/api/services` 側にも恒久禁止コメントを常設済み。
+- `lib/reward-override.ts` の `personalizeRewards()`（サーバ側マージ実装・呼び出し元ゼロ）は**削除**（是正パッケージA）——設計書経由で誤配線されると漏出経路になるため、死にコードとして残さない。
 - 案件・報酬明細（cases/rewards/継続）は **reward_snapshot / deals.amount 駆動のため自動的に本人の値**になる（改修不要・接続点F/D）。
 - 表示装飾は Phase 1 では行わない（静音原則＝値が正しければ説明は不要）。「あなた専用条件」バッジは Phase 2 の任意項目。
 

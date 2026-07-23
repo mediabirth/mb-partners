@@ -1,0 +1,91 @@
+# MB Partners — 開発記録 / RESUME（リポ内正本）
+
+> 2026-07-23 より、開発の裁定・バッチ記録はこのファイルが正本（コードと同じコミットで文脈を残す）。
+> それ以前の全履歴（2026-06-12〜07-23・432k字）は Notion「MB Partners — 引き継ぎ / RESUME (2026-06-21)」を歴史書庫として凍結参照。
+> 規律の正典は [CLAUDE.md](../CLAUDE.md)（money 4ハッシュ・自律デプロイ5条件・品質ゲート7項目・凍結思想・検証資産分類）。
+
+## 体制（2026-07-23〜）
+
+- 勝彦＝株式会社Media Birth代表・最終決定者・実機審判。
+- Claude Code（Opus/Fable セッション）＝開発リード：設計・裁定・Codexへの指示発行・レポートレビュー・記録。
+- Codex（GPT-5）＝実装者。指示は1バッチ=1ミッション=1コードブロック。完了時に統合レポート全文を受領しレビュー。
+- money域は二段階（read-only設計書→勝彦承認→実装）。
+
+## 現在の本番状態
+
+- HEAD: `399119c` ＝ 本番stamp `399119c`（リード独立検収済 2026-07-24・throwaway実ブラウザで実測）。main=origin/main 同期・全タグpush済。
+- 直近デプロイ4連: perf-red-fix（b925234）→ パッケージA同乗 → UX-1（3dab5ed）→ coop-freeze（399119c）。
+- money 4ハッシュ正典（2026-07-23 リード直接実測・Codex報告と全桁一致＝クロスチェック済）:
+  - menu_rewards: `bb94d30546ab15ef5e39f8bdeb76528e`（MB seed補助: 16行/¥340,100 ✓）
+  - deals: `d5976ebf80e9a169239dee552b7650ef`（勝彦deals 3件 ✓）
+  - fee: `4b17cc905c8346133a0ab55a1291ce9b`（supplier_charges 3行）
+  - override: `0fd767f4ec2d0dde13a3cacb441fb734`（partner_reward_overrides 2行）
+- テストデータ残骸（撤去待ち台帳）: デモ91エンティティ・ZZ3782・「あきら」deal・+takasan系
+
+## 未決・進行中
+
+1. **⑧協力報酬の凍結** — **勝彦裁定済（2026-07-23）＝(b) 起票時凍結**。設計書 `docs/design/coop-reward-freeze.md` v1 起案済→設計承認後に単独バッチ（deploy-coop-freeze-20260723）で Codex 発行。
+2. **Codex是正パッケージA** — **実装完了・レビュー合格（891fa12）／デプロイ保留**。tsc 20→0・ignoreBuildErrors削除・canon 7本122assertions・SHA注入で resume-reload 標準green化・⑦⑩済・money 4ハッシュ前後一致・NO DEPLOY判定は規律遵守で正。**保留理由＝誠実化された性能ゲートが実 red を暴いた**（下記）。性能バッチ green 後に同時デプロイ。
+3. リード自身: ~~lineage-rate-design v3改訂・§7-8文言改訂~~（済 2026-07-23・§10追補＋§7-8「クライアントへserializeしない」へ改訂）・AGENTS.md配置（勝彦ドラフト待ち）。
+4. 実運用ランウェイ: 完全撤去→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ。
+5. バックログ: P3請求書発行代行（税務レビュー前提）・重ページ構造下限・ログインのサーバーアクション化（第5条件案件）・ダーク全面・書体展開・ティア制度。
+
+---
+
+## 作業ログ
+
+### 2026-07-24 3バッチ検収（perf-red-fix / UX-1 / coop-freeze）— リード合格裁定
+
+- **perf-red-fix（b925234・レポート未受領のまま着地→diff直接レビューで事後検収）**: 製品コード変更ゼロ。真赤の真因＝**Playwrightの二度目クリックが要素安定待ち（:active復帰transition）を遷移時間へ混入**（リードのviewTransition仮説は誤り・撤回）。修正=実ジェスチャー（mouse-up一発）＋ready判定を「見出し実可視・完全一致」へ**厳格化**（consoleの操作可能42→232msに増えてなおgreen=誠実）。閾値不変。**合格**。診断ハーネス scripts/perf-red-diagnose.mts 残置（診断用分類）。
+- **UX-1（3dab5ed）**: 発注8項目全実装・「マイページ」grep残0確認・**合格**。
+- **coop-freeze（399119c・money域）**: 設計書§2どおり2ファイルのみ。`hasOwnProperty('coop_enabled')` の後方互換判別と三項演算子による凍結null保全は厳密。§4実測4ケースgreen（起票1000→menu9000変更→確定1000／旧案件7000／ダウングレード333）。**合格**＝**発見事項⑧クローズ・凍結思想の非対称解消**。
+- **リード独立検収（本番）**: stamp `399119c`=HEAD・vendorナビ4ラベル・空状態カードを throwaway実ブラウザで実測✓。3面307・webhook401✓。money 4ハッシュ独立再測定=全一致✓（menu bb94d305…/deals d5976ebf…/fee 4b17cc90…/override 0fd767f4…）・勝彦deals 3件✓。
+- **検出した綻び2件**: ①本番stamp時刻が「2026-06-19 01:58 JST」＝デプロイ時 `--build-env NEXT_PUBLIC_BUILD_TIME` 未注入（SHAは注入済み・Vercel環境変数に6/19の古い値が残存しfallback）→次デプロイから正典コマンド（SHA+TIME両注入）厳守を指示。古いproject env の掃除は本番env変更=勝彦確認事項。②perf-red-fix の統合レポート未受領→バッチ完了時のレポート必達を再周知。
+
+### 2026-07-23 リード引き継ぎ監査（Opus 4.8→Fable 5）
+
+リポ全体監査（設計書 vs money系コード実読）。金額計算式の誤りゼロを確認。発見事項:
+
+- **①検証標準の穴**: `next.config.ts` の `ignoreBuildErrors: true` により「build 0」が型検査を含まない（tsc 20件・コメントも事実に反する）。
+- **②テスト孤児6本**: `test:canon` は status-effects のみ。coop-task/narrative/reward-format/synapse×3 は未配線（全て手動実行green確認済）。
+- **④漏出予備軍**: `lib/reward-override.ts` の `personalizeRewards()` は呼び出し元ゼロの死にコードで、設計書 §4.1（古い・自己矛盾）どおり配線すると `/api/services` の CDN 共有キャッシュ経由で個別報酬率が他パートナーへ漏出する。実装は正しく別endpoint（`/api/my-reward-overrides`・no-store）方式を採用済み。
+- **⑤設計書ドリフト**: lineage-rate-design v2 が rate_cards 駆動（fee_model/passthrough_revenue_fee/standard-v2）に未追随。
+- **⑥§7-8 文言**: fee_snapshot の SC 内 select は必要（P0-b①の判定材料）。禁止対象は「クライアントへの serialize」に改訂すべき。
+- **⑦凍結監査証跡の欠陥**: `freezeOverridesForBatch` が `rate: OVERRIDE_RATE` 固定で書き込み、レートカード率と不一致になり得る（支払額は正・証跡のみ矛盾）。
+- **⑧協力報酬の非凍結**: confirm 時に `menu.coop_*` をライブ読み＝起票→成約間のメニュー編集が確定額に波及。紹介(ref_*)との非対称が未文書化。→勝彦裁定待ち。
+- **⑨バレル破損**: `components/ui/index.ts` が存在しない `../ChannelMark` を export（現在importゼロで潜伏）。
+- **⑩fail-open**: `validateSupplierReward` が catch で ok:true＝DB一時障害時に逆ザヤ50%ガードが無効化。
+
+### 2026-07-23 Codexブラウザ環境整備 合格（bd6ace3）
+
+課題①（Chromium起動不可）解消。playwright-launch.mjs 共通ランチャー（Mach拒否時のみ single-process フォールバック）＋恒久5本の配線。verify-integrity 17/17・session 32/32・resume-reload 2/2・resume-perf 21green。money 4ハッシュ前後一致・残置ゼロ。
+
+### 2026-07-23 リード環境での恒久スイート審判（multi-process・完了）
+
+`pnpm test:verify` フル実行＋red の真因診断（throwaway プローブ・残置ゼロ確認済）。
+
+- **green**: build 0・canon 61・integrity・session 32/32・resume-perf 21green。
+- **製品性能に regression なし**: warm 実測 = app 84/108/32ms・vendor 34/314/35ms（全予算内）。
+- **red 3件は全て検証側の欠陥**と確定:
+  1. **perf: warm-up 欠落** — ランナーがサーバ起動直後に計測＝cold 初撃を「warm」として測る。vendor 816ms（Codex 810ms も同因）は再実測で 314ms green。
+  2. **perf: console ログインの hydration 競走** — console/login はバンドルが重く、`domcontentloaded` 直後の fill を hydration が空リセット→空欄 submit→常に `-1 invalid`（決定的）。1.5s 待機で auth 200・/console 着地を実証。
+  3. **resume-reload: SHA 未注入** — ResumeWarmer は `NEXT_PUBLIC_BUILD_SHA` 無しでは reload しない設計（正しい）。ランナー `run-permanent.mjs` がビルド時に SHA を注入しないため標準入口では構造的に green 不能。
+- → 3件とも是正パッケージA（検証配線の章）へ編入。
+
+### 2026-07-23 リードによる全面UX精査（第1巡・実画面18枚）
+
+勝彦委任（「全て任せる・完璧に改善」）に基づき、throwaway 3面＋公開面を実ブラウザで撮影・実読（375px/1280px・撤去済）。強み＝console dashboard/payouts・pub_join は高水準。発見:
+- **データ欠陥（修正適用済・委任に基づく）**: PRAGMATION の logo_path=/logos/reso.png、EMANATION の logo_path=storage/1782751670711.png（画像実確認＝**両方 RSNT=RESONATIONマーク**）＝紹介画面で3ブランド同ロゴ。加えて name「PRAGMATION 」末尾空白。→ 両logo_path=NULL（頭文字アバターへ）＋name trim を適用（UPDATE 2行・before値本節記録＝可逆・money非接触・正規ロゴは既存タスク「LPロゴ素材」で搭載）。
+- **表示バグ**: ①dashboard KPI「前月比 ▲11580000」未フォーマット ②支払・月別バーが¥0でも描画＋月毎の色意味不統一。
+- **語彙・動線の不整合**: ③vendor下部ナビがラベル無しアイコンのみ（APPと不統一・FAB「+」=経費申請が無説明）④APP案件空状態が「『紹介する』ボタン」と実在しないボタン名を案内（実UIは+FAB）⑤APP報酬「マイページから」→ナビに「マイページ」不存在（実体は設定）⑥vendor案件空状態が裸テキスト（APP空状態カード文法と不統一）⑦案件ボード列「商談中/進行中/納品済み」とDEAL_STATUS正典「対応中/成約/支払済」の二重語彙が画面混在（phase語彙。意図的でも用語対応の明示なし）。
+- **検証側**: ⑧ランナーが BUILD_TIME 未注入→ローカルstamp日付が旧値表示（SHAは正・stamp規律の綻び）。
+→ バッチUX-1（表示・文言のみ・money非接触）として発注。データ修正SQLは勝彦承認待ち。
+
+### 2026-07-23 是正パッケージA レビュー合格＋性能 red の審判（891fa12）
+
+- コードレビュー: A（personalizeRewards削除・バレル）／B（tsc 20→0・money近接3ファイルは型表現のみを実diffで確認・invite/accept tax_type 挙動保存・setAll 2引数はガード維持）／C（canon 7本・SHA注入・perf誠実化）／D（freeze rate 実適用率・fail-closed）全て**合格**。money 4ハッシュ前後一致。
+- **性能 red の審判（リード環境 multi-process で Codex 数値を再現＝環境説を棄却）**: app 骨格253/操作可能257ms・vendor 47/829ms・console 39/42ms green。旧計測の「green」は計測欠陥（warm-up無し・URL時刻=骨格）による偽装だったと確定。**リードの前言「vendor 314ms=regression無し」は旧計測に依拠しており撤回**。
+- 一次切り分け（リード実測・コード実読）:
+  - **app 253ms**: operable−skeleton=4ms＝RSC/サーバは即応。全遅延が**URL コミット前のクライアント側**。容疑=(i) `experimental.viewTransition` の遷移コミット遅延（`.page-anim` pageIn=200ms と数値整合）(ii) loading境界（app/app/loading.tsx・aria-busy有）が commit されない経路。
+  - **vendor 829ms**: skeleton 47ms 健全＝**サーバ描画 ~780ms**。/vendor/rewards は `runtime='edge'`＋`loadVendorBundle`（resolveVendor→2段並列・stagedフォールバック）。~830ms の決定性が高く固定コスト（edge simulate/リトライ/フォールバック発火）の疑い。
+- 裁定: **NO DEPLOY 維持**。独立性能バッチ（計測ファースト）を発注→green 後にパッケージAと同時デプロイ。

@@ -1,6 +1,7 @@
 # 系統連動レート（Lineage-Linked Rate）— 診断・設計書
 
-- 版: **v2**（独立レビュー `lineage-rate-review.md` の指摘＋確定裁定8件を反映 / **実装・DDL・デプロイなし**）
+- 版: **v3**（v2＋実装済み事実への追随改訂。§10「v3追補」が現行実装との差分正典）
+- v3改訂: 2026-07-23 リード監査に伴う追随（Claude Code・設計書改訂のみ／コード・DDL・デプロイなし）
 - 改訂履歴: v1=Opus 4.8作成 → 独立レビュー=Fable 5 → **v2改訂=Fable 5（claude-fable-5）**
 - 対象: 外部サプライヤー搭載のための手数料機構。初号サプライヤー＝**オムニス（高さん／投資用マンション・保険）**。
 - 原則: 本書は**設計のみ**。money計算の「意味」に触れる拡張のため、**本書v2を勝彦＋Claudeが承認してから**実装バッチを発行する。診断は実データ**読み取りのみ**（書込・DDL・デプロイ一切なし）。
@@ -210,7 +211,8 @@ supplier_charges:
 5. **請求の帰属月規則**: (a)＝deal成約月（`fixed_month ?? created_at` のYYYY-MM・支払側 `close_month_batch` と同一規則）。(b)固定/率分＝同じく成約月、継続分＝`continuous_payouts.period_month`。(d)＝暦月。クローズは対象月の翌月に実施（支払側と同リズム）。クローズ後の入力変更は請求に波及しない（§2第2段）。
 6. **クロスサプライヤーoverride**（A系統→Bサプライヤーメニュー）: **Phase 0対象外と明記**（単一サプライヤーのため顕在化しない）。ただし `fee_snapshot.cross_supplier` に判定を記録し、将来の裁定材料を凍結時点から残す。現行コードは払う挙動＝Phase 0中にA系統×Bメニューが発生した場合は運用で個別判断。
 7. **逆ザヤ防止**: サプライヤーメニュー（`supplier_partner_id` 非null のサービス配下）の `menu_rewards` 保存時に、**報酬がMB受取50%枠内に収まるかのバリデーション**を追加（rate型＝reward_value≤50%を強制、fixed型＝保存時警告＋運用ガイドライン。粗利が案件ごとに変わるためfixedは硬いガード不能＝警告＋請求ビューでの案件別逆ザヤ表示で補完）。
-8. **fee_snapshot の面公開禁止**: `fee_snapshot`／`supplier_charges` は **partner/vendor 面の select・API応答に一切載せない**（手数料条件はMB・サプライヤー間の商条件）。実装バッチで `lib/supabase/queries.ts` ほか全selectの列を確認・回帰項目化。
+8. **fee_snapshot の面公開禁止**（v3文言改訂）: `fee_snapshot`／`supplier_charges` は **partner/vendor 面のクライアントへ serialize しない・API応答に載せない**（手数料条件はMB・サプライヤー間の商条件）。
+   ※v2の「selectに一切載せない」は不可能要求だった＝P0-b①（self_service抑止）の判定にはサーバ側での fee_snapshot 読取が**必要**。Server Component 内で `computeOverrides` に渡しスカラー集計値のみをクライアントへ渡す現行実装（FrontierHomeTop／s/partners／s/money）は**適合**。禁止されるのはクライアントコンポーネントへの props 渡し・API JSON への同梱・共有キャッシュ経路への混入。
 9. **自己監視への接続**: 監視Tier3（日次）に (i)「supplierメニューのconfirmed dealで fee_snapshot=null」検知、(ii) fee-hash照合（CC不変）、(iii) unbilled滞留（クローズ漏れ・前月分がunbilledのまま）検知を追加。発報は既存 `/api/monitor` の recordCheck 経路（2回連続・Slack）。
 
 ---
@@ -245,4 +247,32 @@ supplier_charges:
 
 ---
 
-*実行モデル: v2改訂＝Claude Fable 5（claude-fable-5）。v1作成＝Opus 4.8、独立レビュー＝Fable 5（`lineage-rate-review.md`）。本改訂はread-only（設計書ファイルの改訂のみ・コード/DDL/DB書込/デプロイなし）。実装はv2承認後、P0-a→P0-bの順に別バッチで発行する。*
+## 10. v3追補 — 実装済み事実への追随（2026-07-23・現行実装との差分正典）
+
+P0-a／P0-b は実装・本番稼働済み。その後の Feature I／I-2（レートカード不変版方式・サプライヤー完全等価化）により、v2記述と実装に以下の差分がある。**本節が現行の正**。
+
+### 10.1 レートカード駆動（Feature I）
+- 手数料条件はハードコード定数でなく **`rate_cards` テーブル**（不変版方式）から解決する。`lib/supplier-fee.ts loadRateCard`（読取失敗は定数フォールバック＝fail-safe）。
+- カード列: `half_commission_rate / payment_fee_rate / monthly_fee / override_rate / fee_model / revenue_fee_rate / deprecated`。
+- 既定カードは **`standard-v2`**。v2記載の `std-v1` は**未使用のまま廃止**（deprecated）。`omnis-founding-v1`（折半50%＋月額¥50,000＋override10%）は個別契約カードとして存置。
+- サプライヤーへの適用は `partners.supplier_rate_card`。凍結済み `fee_snapshot.rate` が常に正＝カード改定は確定済み案件に波及しない（2段凍結の帰結・実装済み）。
+
+### 10.2 fee_model と rate_kind の拡張（Feature I-2）
+- `fee_model: 'half_commission' | 'passthrough'` を導入。
+  - **half_commission（個別契約カード）**: v2どおり折半＝`supplierChargeBase`（override控除前・粗利ベース）×凍結率。逆ザヤ50%ガード適用。
+  - **passthrough（standard-v2・標準）**: 報酬はパススルー（MB原資でない・控除なし）＋MB手数料＝**受注額(税抜)×`revenue_fee_rate`（既定5%）**。粗利ベースを採らない＝原価申告に依存しない検証可能な基準。逆ザヤ概念なし。ただし報酬型は固定額 or 受注額%のみ（継続・粗利%は個別契約カード専用）＝`validateSupplierReward` で強制。
+- `rate_kind` に **`passthrough_revenue_fee`** を追加（v2 schema の5値→6値）。§2第1段の fee_snapshot スキーマは同フィールド構成のまま `rate_kind`/`rate_card_version` の値域のみ拡張。
+- `supplier_charges.kind` にも同値を追加（`lib/supplier-charges.ts (a2)`）。
+
+### 10.3 構成の差分
+- `lib/lineage.ts` は**新設せず**、系統判定は `lib/supplier-fee.ts resolveFeeSnapshot` に統合（関数境界の判断・機能は§1どおり）。
+- 月額行 `omnis_monthly` は名称互換のまま**汎用月額**（monthly_fee 非nullのカード全般）として動作。
+- 乖離琥珀フラグの閾値単一ソース `REVENUE_DEVIATION` も `lib/supplier-fee.ts` に同居（vendor-redesign.md §3(b) 参照）。
+
+### 10.4 既知の未解決（別バッチ・是正パッケージA）
+- `freezeOverridesForBatch` の `payout_overrides.rate` が `OVERRIDE_RATE` 固定で書かれ、カード率適用時に `amount ≠ base×rate` の証跡矛盾になり得る（支払額は正・記録のみ）→実適用率の記録へ修正予定。
+- `validateSupplierReward` の catch fail-open（DB一時障害時にガード素通り）→fail-closed 化予定。
+
+---
+
+*実行モデル: v3追補＝Claude Code（リード・2026-07-23）。v2改訂＝Claude Fable 5（claude-fable-5）。v1作成＝Opus 4.8、独立レビュー＝Fable 5（`lineage-rate-review.md`）。v3はread-only（設計書ファイルの改訂のみ・コード/DDL/DB書込/デプロイなし）。*
