@@ -4,7 +4,7 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 export const runtime = 'edge'
 
 /**
- * PATCH /api/mypage — 設定の基本情報を直接更新（B: 「変更を申請」制度の廃止）。
+ * PATCH /api/mypage — プロフィールの基本情報を直接更新（B: 「変更を申請」制度の廃止）。
  * 氏名 → profiles.name、電話/住所/インボイス番号 → partners（本人行のみ・お金系非接触）。
  * 旧実装は nickname のみDB保存で、phone/address/invoice は localStorage 止まりだった（A4根因）。
  * nickname は廃止（UIから撤去・列は deprecate として残置）。

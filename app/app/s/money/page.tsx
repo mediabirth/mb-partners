@@ -121,7 +121,7 @@ export default async function SupplierMoneyPage() {
       {/* お金の内訳（MBダッシュボードと同一部品・単一ソース=supplierWaterfall） */}
       <SectionTitle title="お金の内訳" subtitle="今月・税抜。手数料は請求と同一計算です。" />
       <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 20 }}>
-        <WaterRow label="総受注額" val={wf.companyRevenue} pct={100} color="var(--c-blue)" head />
+        <WaterRow label="総受注額" val={wf.companyRevenue} pct={wf.companyRevenue > 0 ? 100 : 0} color="var(--c-blue)" head />
         <WaterRow label="紹介者への報酬" val={wf.rewardsMonth} pct={wf.companyRevenue > 0 ? Math.round(wf.rewardsMonth / wf.companyRevenue * 100) : 0} color="var(--blue-dk)" minus />
         <WaterRow label="MB Partners手数料" val={wf.mbFee} pct={wf.companyRevenue > 0 ? Math.round(wf.mbFee / wf.companyRevenue * 100) : 0} color="var(--gauge-deduction)" minus />
         <div style={{ borderTop: '1.5px solid var(--line)', marginTop: 8, paddingTop: 10 }}>

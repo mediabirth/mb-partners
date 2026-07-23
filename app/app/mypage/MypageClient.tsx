@@ -1,6 +1,6 @@
 'use client'
 /**
- * 設定 v2（整合性プログラム B）。
+ * プロフィール v2（整合性プログラム B）。
  * - 「変更を申請」制度は廃止：氏名・電話・住所・インボイス番号は直接編集し DB へ保存（A4根因の localStorage 保存を撤廃）
  * - 振込口座も直接変更可。ただし変更時は登録メールへ通知＋audit_logs へ履歴記録（サーバ側で必須化）
  * - ニックネームは廃止（UI撤去・profiles.nickname は deprecate 残置）
@@ -122,7 +122,7 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
     <div>
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>設定</h2>
+          <h2 style={{ fontSize: '.98rem', fontWeight: 500 }}>プロフィール</h2>
         </div>
       </div>
 

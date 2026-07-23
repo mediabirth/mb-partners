@@ -10,14 +10,22 @@ import { createClient } from '@/lib/supabase/client'
 import BankBranchSelect, { type BankDraft } from '@/components/ui/BankBranchSelect'
 
 type Step = 1 | 2 | 3 | 4
+type Step2Field = 'name' | 'phone' | 'address'
+type Step2Errors = Partial<Record<Step2Field, string>>
 const STEP_LABELS = ['アカウント', '基本情報', '報酬受取', '確認と同意']
 
 const card: React.CSSProperties = { width: '100%', maxWidth: 430, background: '#fff', minHeight: '100dvh', boxShadow: '0 0 48px rgba(14,14,20,.10)', display: 'flex', flexDirection: 'column' }
 const input: React.CSSProperties = { width: '100%', border: '0.5px solid var(--line)', borderRadius: 9, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', color: 'var(--txt)', background: '#fff' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 5 }
 
-function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
-  return <div style={{ marginBottom: 13 }}><span style={lbl}>{label}</span>{children}</div>
+function Field({ label, children, error }: { label: React.ReactNode; children: React.ReactNode; error?: string }) {
+  return (
+    <div style={{ marginBottom: 13 }}>
+      <span style={lbl}>{label}</span>
+      {children}
+      {error && <p role="alert" style={{ color: 'var(--red)', fontSize: '.62rem', lineHeight: 1.5, margin: '4px 0 0' }}>{error}</p>}
+    </div>
+  )
 }
 const Logo = () => (
   <svg width="38" height="38" viewBox="0 0 48 48" fill="none" style={{ marginBottom: 14 }} aria-hidden>
@@ -39,6 +47,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
   const [name, setName] = useState(defaultName)   // お名前 / 屋号（単一）
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [step2Errors, setStep2Errors] = useState<Step2Errors>({})
   // STEP3
   const [taxType, setTaxType] = useState<'individual' | 'corporate'>('individual')
   const [bankDraft, setBankDraft] = useState<BankDraft>({ bank_name: '', branch_name: '' })
@@ -53,14 +62,30 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
   const [agreePrivacy, setAgreePrivacy] = useState(false)
 
   const step1ok = password.length >= 8 && password === passwordConfirm
-  const step2ok = !!name.trim() && !!phone.trim() && !!address.trim()
   const step3ok = !!bankName.trim() && !!branchName.trim() && !!accountNumber.trim() && !!accountHolder.trim()
   const step4ok = agreeTerms && agreePrivacy
+
+  function clearStep2Error(field: Step2Field) {
+    setStep2Errors(current => {
+      if (!current[field]) return current
+      const nextErrors = { ...current }
+      delete nextErrors[field]
+      return nextErrors
+    })
+  }
 
   function next() {
     setError('')
     if (step === 1 && !step1ok) { setError(password.length < 8 ? 'パスワードは8文字以上で設定してください' : 'パスワードが一致しません'); return }
-    if (step === 2 && !step2ok) { setError('必須項目を入力してください'); return }
+    if (step === 2) {
+      const errors: Step2Errors = {
+        ...(!name.trim() && { name: 'お名前 / 屋号を入力してください' }),
+        ...(!phone.trim() && { phone: '電話番号を入力してください' }),
+        ...(!address.trim() && { address: '住所を入力してください' }),
+      }
+      setStep2Errors(errors)
+      if (Object.keys(errors).length > 0) { setError('必須項目を入力してください'); return }
+    }
     if (step === 3 && !step3ok) { setError('振込先口座をすべて入力してください'); return }
     setStep(s => Math.min(4, s + 1) as Step)
   }
@@ -133,9 +158,15 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
 
           {step === 2 && (
             <>
-              <Field label="お名前 / 屋号 *"><input value={name} onChange={e => setName(e.target.value)} placeholder="例：田中フォト" style={input} /></Field>
-              <Field label="電話番号 *"><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" style={input} /></Field>
-              <Field label="住所 *"><input value={address} onChange={e => setAddress(e.target.value)} placeholder="大阪府〇〇市〇〇1-2-3" style={input} /></Field>
+              <Field label="お名前 / 屋号 *" error={step2Errors.name}>
+                <input aria-invalid={!!step2Errors.name} value={name} onChange={e => { setName(e.target.value); clearStep2Error('name') }} placeholder="例：田中フォト" style={{ ...input, borderColor: step2Errors.name ? 'var(--red)' : 'var(--line)' }} />
+              </Field>
+              <Field label="電話番号 *" error={step2Errors.phone}>
+                <input aria-invalid={!!step2Errors.phone} value={phone} onChange={e => { setPhone(e.target.value); clearStep2Error('phone') }} placeholder="09012345678" inputMode="tel" style={{ ...input, borderColor: step2Errors.phone ? 'var(--red)' : 'var(--line)' }} />
+              </Field>
+              <Field label="住所 *" error={step2Errors.address}>
+                <input aria-invalid={!!step2Errors.address} value={address} onChange={e => { setAddress(e.target.value); clearStep2Error('address') }} placeholder="大阪府〇〇市〇〇1-2-3" style={{ ...input, borderColor: step2Errors.address ? 'var(--red)' : 'var(--line)' }} />
+              </Field>
               <p style={{ fontSize: '.62rem', color: 'var(--muted)', margin: '-6px 0 0', lineHeight: 1.6 }}>住所は支払調書の発行など税務手続にのみ使用します。</p>
             </>
           )}

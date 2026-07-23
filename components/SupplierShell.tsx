@@ -4,7 +4,7 @@
  * PC(≥1024)=左固定サイドバーのみ（トップバー廃止・MBコンソール同文法）。
  *   サイドバー最上部=MB Partnersワードマーク（インディゴ＝ブランドの家）＋直下に会社名（小・グレー）。
  * SP(<1024)=モバイルヘッダ（ハンバーガー）＋ドロワー。ドロワーは<1024専用＝PCでハンバーガー非表示。
- * ナビ: ホーム／紹介者／商品／案件／お金／設定＋最下部の個人設定。
+ * ナビ: ホーム／紹介者／商品／案件／お金／設定＋最下部のプロフィール。
  */
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -35,7 +35,7 @@ function BrandHead({ onNav }: { onNav?: () => void }) {
   )
 }
 
-/** サイドバー最下部のアカウントチップ（タップで個人設定） */
+/** サイドバー最下部のアカウントチップ（タップでプロフィール） */
 function AccountChip({ companyName, code, color, avatarUrl, onNav }: { companyName: string; code: string; color: string; avatarUrl: string | null; onNav?: () => void }) {
   return (
     <Link prefetch href="/app/mypage" onClick={onNav} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 10px 12px', padding: '9px 10px', borderRadius: 10, textDecoration: 'none', color: 'var(--txt)', background: 'var(--bg2)' }}>

@@ -125,9 +125,9 @@ export default async function RewardsPage() {
         )
       })}
 
-      {/* B: 「変更を申請」制度は廃止。振込口座は設定から直接変更（変更時は登録メールへ通知＋履歴記録）。 */}
+      {/* B: 「変更を申請」制度は廃止。振込口座はプロフィールから直接変更（変更時は登録メールへ通知＋履歴記録）。 */}
       <a href="/app/mypage" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '18px 0 0', padding: '13px 15px', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 13, textDecoration: 'none', color: 'var(--txt)' }}>
-        <span style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>振込先口座の確認・変更は設定から</span>
+        <span style={{ fontSize: '.74rem', color: 'var(--muted2)' }}>振込先口座の確認・変更はプロフィールから</span>
         <span style={{ fontSize: '1rem', color: 'var(--muted)' }}>›</span>
       </a>
 

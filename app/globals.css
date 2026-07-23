@@ -124,6 +124,22 @@
    ============================================================ */
 *  { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* サプライヤー頁ヘッダ: SPはタイトル行と操作行を分離し、長い操作名でも縦潰れさせない。 */
+.supplier-topbar-title { flex-shrink: 0; min-width: 0; }
+.supplier-topbar-actions { flex-shrink: 0; }
+@media (max-width: 600px) {
+  .supplier-topbar {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .supplier-topbar-actions > span {
+    display: flex !important;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}
+
 body {
   font-family: var(--font-display), var(--font-sans), 'Zen Kaku Gothic New', 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg2);

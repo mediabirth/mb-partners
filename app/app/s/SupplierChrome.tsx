@@ -3,12 +3,12 @@ import PageGuide, { type PageGuideData } from '@/components/PageGuide'
 
 export function SupplierTopbar({ title, guide, action }: { title: string; guide?: PageGuideData; action?: React.ReactNode }) {
   return (
-    <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+    <div className="console-topbar supplier-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+      <span className="supplier-topbar-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
         <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>{title}</h1>
         {guide && <PageGuide data={guide} />}
       </span>
-      {action}
+      {action && <div className="supplier-topbar-actions">{action}</div>}
     </div>
   )
 }
