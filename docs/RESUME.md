@@ -32,6 +32,13 @@
 
 ## 作業ログ
 
+### 2026-07-24 ⛔インシデント: 撤去がオーナーアカウントを巻き添え→復旧完了
+
+- **事象**: 勝彦が console から強制ログアウト・再ログイン不能。真因=**ZZ3782（テストパートナー行）が勝彦のオーナーprofile（39b30d21・mediabirth.project@gmail.com・role=owner）に紐づいており**、撤去台帳の「ZZ3782 partners/profiles/auth」がオーナーのauth/profileごと削除した。**台帳作成時にprofileのroleと共有参照を確認しなかったリードの過失**（Codexは台帳どおり実行＝過失なし）。
+- **巻き添え実運用データ**: ①auth.users/identities/profiles（owner） ②member_calendar_links（Google OAuth結線） ③member_notification_prefs ④services.moom.calendar_member_id（予約カレンダー結線）。
+- **復旧（全件・バックアップから原本復元）**: 3行復元（生成列除外のCOPY→INSERT・元UID/パスワードハッシュ維持=旧パスワードで即ログイン可）＋カレンダー結線＋通知設定＋moom結線UPDATE。money 4ハッシュ非接触を前後確認。ZZ3782 partner行は意図どおり削除のまま。米井テストaccountの通知pref（1155ed3c）は孤児化のため復元せず。
+- **恒久教訓（次回撤去の台帳規則）**: profiles/auth を削除対象に載せる前に、(a) profile の role（owner/manager は原則巻き添え禁止）(b) 共有参照の全列挙（services.calendar_member_id・member_*・deals.created_by・audit）を必須チェックとする。テスト用partner行の削除と、その profile/auth の削除は**別判定**（partner行だけ消せば十分なケースが多い）。
+
 ### 2026-07-24 demo-teardown 検収合格＝開業前クリーンルーム達成
 
 - 実行=Codex（GPT-5.6 Sol・勝彦GO済）。DBのみ・コード変更0・デプロイなし。事前COPY退避63ファイル/456行＋復元手順＋SHA-256照合。
