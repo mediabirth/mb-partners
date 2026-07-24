@@ -13,8 +13,8 @@
 
 ## 現在の本番状態
 
-- HEAD: `399119c` ＝ 本番stamp `399119c`（リード独立検収済 2026-07-24・throwaway実ブラウザで実測）。main=origin/main 同期・全タグpush済。
-- 直近デプロイ4連: perf-red-fix（b925234）→ パッケージA同乗 → UX-1（3dab5ed）→ coop-freeze（399119c）。
+- HEAD: `bec60f2`(+ローカルdocs2件・push保留中) ＝ 本番stamp `bec60f2 ・ 2026-07-24 09:18 JST`（リードCLI再デプロイで復元・実ブラウザ実測済）。
+- 直近デプロイ: perf-red-fix（b925234）→ パッケージA同乗 → UX-1（3dab5ed）→ coop-freeze（399119c）→ UX-2（bec60f2）。⚠️git自動デプロイ事変は作業ログ 2026-07-24 参照＝**裁定までgit push停止中**。
 - money 4ハッシュ正典（2026-07-23 リード直接実測・Codex報告と全桁一致＝クロスチェック済）:
   - menu_rewards: `bb94d30546ab15ef5e39f8bdeb76528e`（MB seed補助: 16行/¥340,100 ✓）
   - deals: `d5976ebf80e9a169239dee552b7650ef`（勝彦deals 3件 ✓）
@@ -35,6 +35,13 @@
 ---
 
 ## 作業ログ
+
+### 2026-07-24 UX-2検収合格＋⛔デプロイ二重化の再発検出（stamp偽装）
+
+- **UX-2（bec60f2）検収**: diff 13ファイル=表示・文言・レイアウトのみ（waterfall は pct 計算のみ・api/mypage はコメント行のみ）。本番実測=mypage見出し「プロフィール」✓・口座導線「プロフィールから」✓・supplier partners h1 水平80×24px/scrollWidth375✓。**合格**。
+- **⛔重大検出**: 検収プローブの stamp が `743cfb7・2026-06-19`＝Codex の CLI デプロイ（bec60f2 stamp正常）の後、**Vercel Git 連携の自動デプロイ（git-main alias 付き・08:53 JST）が本番エイリアスを奪取**。`--build-env` 無しビルドのため stamp は6/19の古い project env 値で焼かれ、**SHA表示が嘘をつく**（内容は bec60f2 で正・機能マーカーで確認済み）。6月に解消した「デプロイ二重化」の再発形態＝**git push origin main が5条件デプロイ規律をバイパスして本番へ届く**構造問題。
+- 即応: 正典コマンドで bec60f2 を CLI 再デプロイ→本番stamp `bec60f2 ・ 2026-07-24 09:18 JST` 復元を実ブラウザ実測（money 4ハッシュ・残置ゼロ確認済）。**裁定が出るまで git push は停止**（push=自動デプロイ再発火のため）。
+- **恒久対処の裁定事項（勝彦）**: ①Vercel の main 自動本番デプロイを無効化（vercel.json `git.deploymentEnabled` または dashboard・推奨=CLI一本化の回復）②古い project env `NEXT_PUBLIC_BUILD_SHA`/`NEXT_PUBLIC_BUILD_TIME`（743cfb7/6-19値）の削除（本番env変更につき要承認）③保険として next.config で `VERCEL_GIT_COMMIT_SHA` fallback を焼く案（git経路でも stamp が嘘をつかない）。
 
 ### 2026-07-24 UX精査第2巡（リード・本番実走12枚・残置ゼロ）
 
