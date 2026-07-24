@@ -13,8 +13,8 @@
 
 ## 現在の本番状態
 
-- HEAD: `76c0522` ＝ 本番stamp `76c0522 ・ 2026-07-24 10:11 JST`（リード独立実測済）。main=origin 同期・push凍結解除済。
-- 直近デプロイ: perf-red-fix（b925234）→ パッケージA同乗 → UX-1（3dab5ed）→ coop-freeze（399119c）→ UX-2（bec60f2）。git自動デプロイは vercel.json `git.deploymentEnabled:false` で恒久停止（stamp-truth バッチ・push後の非発火を双方独立確認）＝**デプロイはCLI一本・push凍結解除**。
+- HEAD: `31ec7bd`(+docs) ＝ 本番stamp `31ec7bd`（リード独立実測済 2026-07-24）。デプロイはCLI一本（git自動デプロイ恒久停止・stamp-truth）。
+- デプロイ済バッチ列: 環境整備→パッケージA→perf-red-fix→UX-1→coop-freeze→UX-2→stamp-truth（76c0522）→perf-polish（f5b6084）→UX-3（31ec7bd）。全て検収合格。
 - money 4ハッシュ正典（2026-07-23 リード直接実測・Codex報告と全桁一致＝クロスチェック済）:
   - menu_rewards: `bb94d30546ab15ef5e39f8bdeb76528e`（MB seed補助: 16行/¥340,100 ✓）
   - deals: `d5976ebf80e9a169239dee552b7650ef`（勝彦deals 3件 ✓）
@@ -24,14 +24,10 @@
 
 ## 未決・進行中
 
-1. **stamp-truth 検収合格（76c0522）** — git自動デプロイ恒久停止・stamp/resume-warm がビルド時焼き込みで全経路正直化（fallbackは'local'のみ＝嘘リテラル廃止）。リード独立実測: 本番stamp=HEAD・resume-warm sha=76c0522・4ハッシュ一致・残置0・push後の自動デプロイ非発火。
-2. **デプロイ正典コマンドの再徹底** — 次デプロイから `--build-env NEXT_PUBLIC_BUILD_SHA` + `NEXT_PUBLIC_BUILD_TIME` 両注入必須（本番stamp時刻が6/19のまま＝TIME未注入検出）。Vercel project env に残る古い `NEXT_PUBLIC_BUILD_TIME` の掃除＝本番env変更につき勝彦確認事項。
-2. **UX精査第2巡（リード）** — 通知タブ・オンボーディング動線（招待→初回到達の体験）・サプライヤーコンソール・PageGuide内容の実読照合。
-3. ~~AGENTS.md配置~~（済 2026-07-24・リード起草＝完全自走の恒久指示・絶対規律10項・レポートの型を含む。git 直下 app/AGENTS.md）。
-4. 実運用ランウェイ: 完全撤去→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ（PRAGMATION/EMANATIONの正規ロゴ含む）。
-5. バックログ: P3請求書発行代行（税務レビュー前提）・重ページ構造下限・ログインのサーバーアクション化（第5条件案件）・ダーク全面・書体展開・ティア制度。
-
-（済: 是正パッケージA=891fa12・coop凍結=399119c・UX-1=3dab5ed・perf-red-fix=b925234 — 全て本番反映・検収合格）
+1. **login-server-action バッチ**（第5条件案件・発注済 2026-07-24）: ログイン3面のサーバーアクション化＝初期バンドルから auth-js 62KB 除去。
+2. **ダーク全面の裁定**（保留）・LINE空状態文言（任意・次バッチ同梱可）。
+3. 実運用ランウェイ: 完全撤去（台帳作成→勝彦GO→実行の三段）→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ（PRAGMATION/EMANATION正規ロゴ含む）。
+4. バックログ: vendor 324ms真因（Server-Timing恒久計測＋実件数fixture）・P3請求書発行代行（税務レビュー前提）・書体展開・ティア制度。
 
 ---
 
