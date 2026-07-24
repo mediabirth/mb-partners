@@ -32,6 +32,12 @@
 
 ## 作業ログ
 
+### 2026-07-24 ⛔インシデント続報: 復元後もログイン不能→真因2=CSV復元のNULL化→完全修理
+
+- 復元後も勝彦ログイン不能。真因=**COPY(csv)は空文字とNULLを区別できず**、auth.users の token系7カラム（confirmation_token/recovery_token/email_change×3/phone_change×2/reauthentication_token）が''→NULLに化け、GoTrueがscanエラー=全パスワードで500。
+- 修理=7カラムをCOALESCEで''へ。**証明**: 誤パスワードprobeが修理前500→修理後400 invalid_credentials（アカウント健全化をパスワード非依存で実証）。
+- 教訓（復元手順の恒久規則）: auth.users をCSV復元したら**必ずtoken系カラムの''復元とhealthy行との列比較**を行う。RESTORE.mdにも本規則を追記すべき（バックアップはCodex出力側のため次回撤去時の台帳規則に含める）。
+
 ### 2026-07-24 ⛔インシデント: 撤去がオーナーアカウントを巻き添え→復旧完了
 
 - **事象**: 勝彦が console から強制ログアウト・再ログイン不能。真因=**ZZ3782（テストパートナー行）が勝彦のオーナーprofile（39b30d21・mediabirth.project@gmail.com・role=owner）に紐づいており**、撤去台帳の「ZZ3782 partners/profiles/auth」がオーナーのauth/profileごと削除した。**台帳作成時にprofileのroleと共有参照を確認しなかったリードの過失**（Codexは台帳どおり実行＝過失なし）。
