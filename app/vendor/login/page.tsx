@@ -1,8 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import BrandMark from '@/components/ui/BrandMark'
+import { signInVendor } from '@/app/login/actions'
 
 export default function VendorLoginPage() {
   const router = useRouter()
@@ -15,10 +15,9 @@ export default function VendorLoginPage() {
     e.preventDefault()
     if (!email.trim() || !password) return
     setLoading(true); setError('')
-    const supabase = createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+    const result = await signInVendor(email, password)
     setLoading(false)
-    if (signInError) { setError('メールアドレスまたはパスワードが正しくありません。'); return }
+    if (!result.ok) { setError('メールアドレスまたはパスワードが正しくありません。'); return }
     router.push('/vendor'); router.refresh()
   }
 

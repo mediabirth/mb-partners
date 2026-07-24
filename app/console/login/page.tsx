@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import BrandMark from '@/components/ui/BrandMark'
+import { signInConsole } from '@/app/login/actions'
 
 export default function ConsoleLoginPage() {
   const router = useRouter()
@@ -18,9 +18,8 @@ export default function ConsoleLoginPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError) {
+    const result = await signInConsole(email, password)
+    if (!result.ok) {
       setError('メールアドレスまたはパスワードが正しくありません。')
       setLoading(false)
       return

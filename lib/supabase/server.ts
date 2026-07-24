@@ -52,6 +52,35 @@ export async function createClient() {
   })
 }
 
+/**
+ * ログイン Server Action 専用。
+ * 呼び出し面を固定値で照合し、proxy が伝播した surface と異なる cookie 名前空間には書き込ませない。
+ * proxy 外の診断環境では host+既知pathnameを surfaceFor に渡すが、クライアント入力は判定に使わない。
+ */
+export async function createSurfaceActionClient(expectedSurface: Surface, pathname: string) {
+  const cookieStore = await cookies()
+  const hdrs = await headers()
+  const headerSurface = hdrs.get(SURFACE_HEADER)
+  const surface = headerSurface === 'app' || headerSurface === 'vendor' || headerSurface === 'console'
+    ? headerSurface
+    : surfaceFor(hdrs.get('host'), pathname)
+
+  if (surface !== expectedSurface) {
+    throw new Error(`Login surface mismatch: expected=${expectedSurface} actual=${surface}`)
+  }
+
+  return makeSurfaceServerClient(surface, {
+    getAll() {
+      return cookieStore.getAll()
+    },
+    setAll(cookiesToSet) {
+      cookiesToSet.forEach(({ name, value, options }) =>
+        cookieStore.set(name, value, options)
+      )
+    },
+  })
+}
+
 // Deduplicated per-request: layout + page share one auth round-trip
 export const getCachedUser = cache(async () => {
   const supabase = await createClient()

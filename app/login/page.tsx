@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import BrandMark from '@/components/ui/BrandMark'
+import { signInApp } from './actions'
 
 // オープンリダイレクト防止：?redirect は /app 配下の相対パスのみ許可。外部URL/プロトコル相対/他サーフェス/制御文字は弾き '/' へ。
 function safeRedirect(): string {
@@ -32,14 +32,10 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    const { error: err } = await supabase.auth.signInWithPassword({
-      email:    email.trim().toLowerCase(),
-      password,
-    })
+    const result = await signInApp(email, password)
 
     setLoading(false)
-    if (err) {
+    if (!result.ok) {
       setError('メールアドレスまたはパスワードが正しくありません。')
       return
     }
