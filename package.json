@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:session": "node scripts/verification/permanent/session-isolation.e2e.mjs",
+    "test:password-reset": "node scripts/verification/permanent/password-reset.e2e.mjs",
     "test:canon": "tsx --test lib/*.test.ts",
     "test:verify": "node scripts/verification/run-permanent.mjs"
   },

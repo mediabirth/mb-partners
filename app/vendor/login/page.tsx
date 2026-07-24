@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import BrandMark from '@/components/ui/BrandMark'
 import { signInVendor } from '@/app/login/actions'
 
@@ -73,7 +74,12 @@ export default function VendorLoginPage() {
                 />
               </div>
               <div className="fld">
-                <label htmlFor="password">パスワード</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                  <label htmlFor="password">パスワード</label>
+                  <Link href="/vendor/forgot-password" style={{ color: 'var(--blue)', fontSize: '.68rem', fontWeight: 600 }}>
+                    パスワードをお忘れですか？
+                  </Link>
+                </div>
                 <input
                   id="password"
                   className="ui-field"

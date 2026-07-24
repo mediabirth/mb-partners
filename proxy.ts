@@ -112,7 +112,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── /console/** — admin console ────────────────────────────────────────────
-  if (pathname.startsWith('/console') && !pathname.startsWith('/console/login')) {
+  if (
+    pathname.startsWith('/console')
+    && !pathname.startsWith('/console/login')
+    && !pathname.startsWith('/console/forgot-password')
+    && !pathname.startsWith('/console/reset-password')
+  ) {
     if (!uid) return NextResponse.redirect(new URL('/console/login', request.url))
     const role = await roleOf()
     if (role === 'partner') {
@@ -122,7 +127,13 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── /vendor/** — vendor ポータル（ページ側でも role 検証。ここでは未ログインを login へ）──
-  if (pathname.startsWith('/vendor') && !pathname.startsWith('/vendor/login') && !pathname.startsWith('/vendor/accept')) {
+  if (
+    pathname.startsWith('/vendor')
+    && !pathname.startsWith('/vendor/login')
+    && !pathname.startsWith('/vendor/accept')
+    && !pathname.startsWith('/vendor/forgot-password')
+    && !pathname.startsWith('/vendor/reset-password')
+  ) {
     if (!uid) return NextResponse.redirect(new URL('/vendor/login', request.url))
     return response
   }
@@ -142,7 +153,13 @@ export const config = {
     '/console/:path*',
     '/vendor/:path*',
     '/login',
+    '/forgot-password',
+    '/reset-password',
     '/console/login',
+    '/console/forgot-password',
+    '/console/reset-password',
+    '/vendor/forgot-password',
+    '/vendor/reset-password',
     '/api/:path*',
     // 招待動線修理（2026-07-11）: console ホスト封じ込めのため受諾/公開パスも proxy を通す。
     '/invite/:path*',

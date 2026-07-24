@@ -10,7 +10,7 @@
 import { MAIL_FROM as FROM } from './mail-from'
 import { resolveTemplateMedia } from './notify/template-resolve'
 import { emailAttachmentsFromTemplate } from './notify/template-media'
-import { brandedEmailHtml } from './notify'
+import { brandedEmailHtml, sendEmail } from './notify'
 import { logMail, resolveMailOverride, bodyToBrandedHtml } from './mail-send'
 import { fillVars } from './mail-registry'
 
@@ -21,6 +21,34 @@ const LOGO_BAR =
   <img src="https://mb-partners.app/icon-512.png" alt="MB Partners" width="40" height="40" style="display:inline-block;vertical-align:middle;border-radius:9px" />
   <span style="font-weight:800;font-size:17px;vertical-align:middle;margin-left:9px">MB <span style="color:#4733E6">Partners</span></span>
 </div>`
+
+/**
+ * パスワード再設定メール。リンク生成は呼び出し側の service role に限定し、
+ * この関数は既存の Resend + CC_MAIL_SUPPRESS 共通入口だけを使う。
+ */
+export async function sendPasswordResetEmail(params: {
+  to: string
+  url: string
+}): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  const subject = '【MB Partners】パスワード再設定のご案内'
+  const text =
+`パスワード再設定のご依頼を受け付けました。
+
+下記のリンクから新しいパスワードを設定してください。
+${params.url}
+
+このメールに心当たりがない場合は、操作せずに破棄してください。
+ご不明な点は ${SUPPORT} までお問い合わせください。
+
+— MB Partners 運営事務局`
+
+  return sendEmail({
+    to: params.to,
+    subject,
+    text,
+    buttons: [{ label: 'パスワードを再設定する', url: params.url }],
+  })
+}
 
 /**
  * R1① 顧客への予約完了メール（ベストエフォート）。予約日時＋打ち合わせ案内。

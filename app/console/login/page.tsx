@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import BrandMark from '@/components/ui/BrandMark'
 import { signInConsole } from '@/app/login/actions'
 
@@ -72,8 +73,14 @@ export default function ConsoleLoginPage() {
             />
           </div>
           <div className="fld">
-            <label>パスワード</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+              <label htmlFor="console-password">パスワード</label>
+              <Link href="/console/forgot-password" style={{ color: 'var(--blue)', fontSize: '.68rem', fontWeight: 600 }}>
+                パスワードをお忘れですか？
+              </Link>
+            </div>
             <input
+              id="console-password"
               className="ui-field"
               type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="••••••••••" required autoComplete="current-password"
