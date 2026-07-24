@@ -15,12 +15,11 @@
 
 - HEAD: `31ec7bd`(+docs) ＝ 本番stamp `31ec7bd`（リード独立実測済 2026-07-24）。デプロイはCLI一本（git自動デプロイ恒久停止・stamp-truth）。
 - デプロイ済バッチ列: 環境整備→パッケージA→perf-red-fix→UX-1→coop-freeze→UX-2→stamp-truth（76c0522）→perf-polish（f5b6084）→UX-3（31ec7bd）。全て検収合格。
-- money 4ハッシュ正典（2026-07-23 リード直接実測・Codex報告と全桁一致＝クロスチェック済）:
-  - menu_rewards: `bb94d30546ab15ef5e39f8bdeb76528e`（MB seed補助: 16行/¥340,100 ✓）
-  - deals: `d5976ebf80e9a169239dee552b7650ef`（勝彦deals 3件 ✓）
-  - fee: `4b17cc905c8346133a0ab55a1291ce9b`（supplier_charges 3行）
-  - override: `0fd767f4ec2d0dde13a3cacb441fb734`（partner_reward_overrides 2行）
-- テストデータ残骸（撤去待ち台帳）: デモ91エンティティ・ZZ3782・「あきら」deal・+takasan系・**配信の「計測用配信（throwaway）」下書き＋【デモ】配信2件（2026-07-24 第3巡深読で発見）**
+- **money 4ハッシュ正典（2026-07-24 完全撤去後・リード独立再測定＝台帳§4案B事前計算と全桁一致）**:
+  - menu_rewards: `c5317c594d08ee0afea4a4764082876c`（＝デモ投入前値へ復帰・MB seed補助: 16行/¥340,100 ✓）
+  - deals: `f0cda850919327978126ece73d303434`（**残3件＝全て勝彦作成** ✓）
+  - fee: `(empty)`／override: `(empty)`
+- **テストデータ残骸: ゼロ**（demo-teardown 2026-07-24 完遂・partners=MBHOUSE+ZZ6347のみ・services=MB6・broadcasts 0・demo profiles 0・cc-monitor×2生存・孤児frontier参照0）。バックアップ63ファイル/456行はCodex出力ディレクトリに退避（外部共有禁止・復元手順同梱）。
 
 ## 未決・進行中
 
@@ -32,6 +31,13 @@
 ---
 
 ## 作業ログ
+
+### 2026-07-24 demo-teardown 検収合格＝開業前クリーンルーム達成
+
+- 実行=Codex（GPT-5.6 Sol・勝彦GO済）。DBのみ・コード変更0・デプロイなし。事前COPY退避63ファイル/456行＋復元手順＋SHA-256照合。
+- **リード独立再測定＝台帳§4案Bの事前計算値と全桁一致**（deals f0cda850…/menu c5317c59…=投入前復帰/fee・override empty/MB seed 16行/¥340,100/勝彦deals 3件）。残置リスト全生存（MBHOUSE・ZZ6347・cc-monitor×2・MB6サービス）・孤児参照0・実ブラウザで【デモ】/ZZ表示消滅確認（Codex証跡）。
+- 特記: MOOM が ZZ3782 profile を calendar_member_id 参照→参照のみNULL化（本体非接触・正しい裁量）。ZZ6347配下の非デモ通知2件は保護残置（正しい保守判断）。invites は台帳明記3件を超え16件撤去（蓄積テスト招待の掃除・非money・是認）。
+- **これで開発～撤去の全アーク完結。残るは人の手番のみ＝高さん実招待（千秋楽）・第2陣・apex MX・カレンダー/OAuth本番確認・LPロゴ素材。**
 
 ### 2026-07-24 login-server-action 検収合格（f1f65c0）＝仕上げプログラム完了
 
