@@ -24,14 +24,21 @@
 
 ## 未決・進行中
 
-1. **login-server-action バッチ**（第5条件案件・発注済 2026-07-24）: ログイン3面のサーバーアクション化＝初期バンドルから auth-js 62KB 除去。
-2. **ダーク全面の裁定**（保留）・LINE空状態文言（任意・次バッチ同梱可）。
+1. **完全撤去プログラム**（次の主戦・三段: リードが台帳作成(read-only)→勝彦GO→Codex実行）。原資料=demo_seed_manifest_20260712.json/v2（機械可読・91エンティティ）＋追加残骸（あきらdeal・ZZ3782・+takasan・配信3件）。現況カウント: ZZ系partners 9・デモ/throwaway配信 3・demo系profiles 6。**deals-cleanup-rule厳守＝CC/デモ起源のみ撤去・勝彦(bfb3c027)/実パートナー作成分は残置**。
+2. **ダーク全面＝実運用後へ延期（リード裁定 2026-07-24）**: 全面×全部品の再テーマ＋ゲート再走の規模に対しローンチ阻害要因ゼロ・実ユーザーの要望駆動が適切。トリガー=高さん/第2陣からの要望 or 勝彦指示。LINE空状態文言も同様に任意扱い。
 3. 実運用ランウェイ: 完全撤去（台帳作成→勝彦GO→実行の三段）→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ（PRAGMATION/EMANATION正規ロゴ含む）。
 4. バックログ: vendor 324ms真因（Server-Timing恒久計測＋実件数fixture）・P3請求書発行代行（税務レビュー前提）・書体展開・ティア制度。
 
 ---
 
 ## 作業ログ
+
+### 2026-07-24 login-server-action 検収合格（f1f65c0）＝仕上げプログラム完了
+
+- diff実読: `createSurfaceActionClient` は唯一の門（makeSurfaceServerClient）経由・surface二重照合（header優先/期待面不一致throw=fail-closed）・クライアント入力を面判定に不使用。eslint境界内。
+- リード独立実測（本番）: 新server action経由で /login→/app 着地✓・authクッキーは `mb-auth-app` のみ（面分離維持）✓・誤入力文言維持✓・ハッシュ不変✓。session 32/32×3回（Codex）。
+- バンドル: ログイン3面 Brotli 186-191KB→**133-138KB**（auth-js 除去・目標136KB級達成・console差分は固有UI）。
+- これで7/23監査以降の「仕上げ計画」全項目消化: 検証基盤（型/テスト/perf誠実化/stamp/デプロイ一本化）・UX 3巡＋是正3バッチ・性能仕上げ・バンドル。残る性能宿題は vendor 324ms真因のみ（Server-Timing恒久計測・バックログ）。
 
 ### 2026-07-24 perf-polish／UX-3 検収＋UX-4要否判定
 
