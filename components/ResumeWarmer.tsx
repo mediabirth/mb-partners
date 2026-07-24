@@ -23,7 +23,7 @@ export default function ResumeWarmer({ links = [] }: { links?: string[] }) {
       fetch('/api/resume-warm', { cache: 'no-store' })
         .then(r => r.ok ? r.json() : null)
         .then(d => {
-          const mine = process.env.NEXT_PUBLIC_BUILD_SHA ?? null
+          const mine = process.env.NEXT_PUBLIC_BUILD_SHA || 'local'
           // 放置中に新デプロイ→旧チャンク参照で操作不能になる前に、復帰の瞬間に一度だけ再読込
           if (d?.sha && mine && d.sha !== mine) window.location.reload()
         })

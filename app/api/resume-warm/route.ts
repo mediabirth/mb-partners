@@ -16,5 +16,5 @@ export async function GET() {
     const supabase = await createClient()
     await supabase.auth.getUser()   // cookieが無ければ即null・あれば必要時にリフレッシュ（Set-Cookieで更新）
   } catch { /* best-effort */ }
-  return NextResponse.json({ sha: process.env.NEXT_PUBLIC_BUILD_SHA ?? null }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ sha: process.env.NEXT_PUBLIC_BUILD_SHA || 'local' }, { headers: { 'Cache-Control': 'no-store' } })
 }
