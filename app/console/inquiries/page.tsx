@@ -64,8 +64,8 @@ export default function ConsoleInquiriesPage() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#4733E6'} />
       <main className="page-anim" style={{ marginLeft: 230, flex: 1, padding: '32px 32px', minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div><p className="eyebrow" style={{ marginBottom: 2 }}>問い合わせ</p><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.25rem', fontWeight: 500, lineHeight: 1 }}>フォーム問い合わせ</h1><PageGuide data={GUIDE_INQUIRIES} /></span></div>
+        <div className="console-mobile-header" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div className="console-mobile-title"><p className="eyebrow" style={{ marginBottom: 2 }}>問い合わせ</p><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1.25rem', fontWeight: 500, lineHeight: 1 }}>フォーム問い合わせ</h1><PageGuide data={GUIDE_INQUIRIES} /></span></div>
           {openCount > 0 && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,

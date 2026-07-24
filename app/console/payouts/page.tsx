@@ -44,7 +44,7 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
   const [open, setOpen] = useState(false)
   return (
     <div style={{ borderTop: '0.5px solid var(--line)' }}>
-      <div className="lift" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
+      <div className="lift console-pay-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         <Avatar name={row.name} color={row.color} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
@@ -55,14 +55,14 @@ function PayRow({ row, busy }: { row: Row; busy: boolean }) {
           </div>
           <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.sub}</div>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div className="console-pay-amount" style={{ textAlign: 'right', flexShrink: 0 }}>
           <div className="eyebrow" style={{ fontSize: '.5rem', color: 'var(--muted2)', letterSpacing: '.06em' }}>お支払額</div>
           <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '.92rem', fontWeight: 500 }}>{yen(row.amount)}</div>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+        <div className="console-pay-actions" style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
           {row.primary && <button onClick={row.primary.onClick} disabled={busy} style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, padding: '7px 13px', borderRadius: 8, color: row.primary.tone === 'green' ? 'var(--green)' : '#fff', background: row.primary.tone === 'green' ? 'var(--green-bg)' : 'var(--c-blue)' }}>{row.primary.label}</button>}
         </div>
-        <span style={{ color: 'var(--muted)', fontSize: '.7rem', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>∨</span>
+        <span className="console-pay-chevron" style={{ color: 'var(--muted)', fontSize: '.7rem', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>∨</span>
       </div>
       {open && (
         <div style={{ padding: '12px 18px 14px 64px', background: 'var(--bg2)' }}>
@@ -245,13 +245,13 @@ export default function PayoutsPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+        <div className="console-topbar console-mobile-header" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="console-mobile-title" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 7 }}>
             <h1 style={{ fontSize: '1rem', fontWeight: 500 }}>支払</h1>
             <PageGuide data={tab === 'pay' ? GUIDE_PAYOUTS : GUIDE_SUPPLIER_CHARGES} />
           </span>
           {/* 統合タブ（案件ボードのQR切替と同文法） */}
-          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
+          <div className="console-mobile-actions console-payout-tabs" style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
             {([['pay', 'パートナーへの支払'], ['charges', 'サプライヤーからの請求']] as const).map(([v, lbl]) => (
               <button key={v} onClick={() => switchTab(v)} style={{
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.72rem', fontWeight: 500,

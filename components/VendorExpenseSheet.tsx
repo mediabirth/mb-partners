@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 
 type Opt = { id: string; label: string; base_fee?: number }
 const KINDS = ['交通', '宿泊', 'その他']
@@ -56,18 +57,20 @@ export default function VendorExpenseSheet({ open, onClose, presetAssignmentId, 
   const inp: React.CSSProperties = { width: '100%', border: '0.5px solid var(--line)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', background: '#fff' }
   const lbl: React.CSSProperties = { display: 'block', fontSize: '.64rem', fontWeight: 500, color: 'var(--muted2)', margin: '0 0 6px' }
 
-  return (
+  return createPortal(
     <>
       <style>{`
-        .ves-scrim{position:fixed;inset:0;background:rgba(14,14,20,.4);backdrop-filter:blur(2px);z-index:90;animation:vesf .14s ease}
-        .ves-sheet{position:fixed;left:0;right:0;bottom:0;z-index:95;background:#fff;border-radius:20px 20px 0 0;padding:14px 20px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -16px 48px rgba(14,14,20,.22);animation:vesu .16s cubic-bezier(.2,.8,.2,1);max-height:92dvh;overflow-y:auto}
+        .ves-root{position:fixed;inset:0;z-index:90;display:grid;align-items:end}
+        .ves-scrim{position:absolute;inset:0;background:rgba(14,14,20,.4);backdrop-filter:blur(2px);animation:vesf .14s ease}
+        .ves-sheet{position:relative;z-index:1;background:#fff;border-radius:20px 20px 0 0;padding:14px 20px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -16px 48px rgba(14,14,20,.22);animation:vesu .16s cubic-bezier(.2,.8,.2,1);max-height:100dvh;overflow-y:auto}
         .ves-grip{width:40px;height:4px;border-radius:3px;background:var(--line);margin:0 auto 14px}
         @keyframes vesu{from{transform:translateY(100%)}to{transform:translateY(0)}}
         @keyframes vesf{from{opacity:0}to{opacity:1}}
-        @media (min-width:520px){.ves-sheet{left:50%;transform:translate(-50%,-50%);top:50%;bottom:auto;width:440px;border-radius:18px;max-height:88dvh;animation:vesf .14s ease}}
+        @media (min-width:520px){.ves-root{place-items:center}.ves-sheet{width:440px;border-radius:18px;max-height:88dvh;animation:vesf .14s ease}}
       `}</style>
-      <div className="ves-scrim" onClick={onClose} />
-      <div className="ves-sheet" role="dialog" aria-label="経費を申請">
+      <div className="ves-root">
+        <div className="ves-scrim" onClick={onClose} />
+        <div className="ves-sheet" role="dialog" aria-modal="true" aria-label="経費を申請">
         <div className="ves-grip" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <b style={{ fontSize: '1rem' }}>経費を申請</b>
@@ -124,8 +127,10 @@ export default function VendorExpenseSheet({ open, onClose, presetAssignmentId, 
         )}
 
         <button onClick={submit} disabled={busy || !assignmentId} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>{busy ? '送信中…' : '申請する'}</button>
+        </div>
       </div>
       {toast && <div style={{ position: 'fixed', bottom: 'calc(20px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: '.74rem', fontWeight: 500, zIndex: 130 }}>{toast}</div>}
-    </>
+    </>,
+    document.body,
   )
 }

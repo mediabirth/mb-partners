@@ -127,6 +127,9 @@
 /* サプライヤー頁ヘッダ: SPはタイトル行と操作行を分離し、長い操作名でも縦潰れさせない。 */
 .supplier-topbar-title { flex-shrink: 0; min-width: 0; }
 .supplier-topbar-actions { flex-shrink: 0; }
+.console-mobile-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.console-mobile-title { min-width: 0; }
+.console-mobile-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
 @media (max-width: 600px) {
   .supplier-topbar {
     align-items: stretch !important;
@@ -137,6 +140,49 @@
     display: flex !important;
     flex-wrap: wrap;
     width: 100%;
+  }
+  .console-mobile-header {
+    align-items: stretch !important;
+    flex-direction: column;
+    padding: 12px 16px !important;
+    gap: 10px !important;
+  }
+  .console-mobile-title { width: 100%; }
+  .console-mobile-title h1 { white-space: nowrap; }
+  .console-mobile-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .console-mobile-actions > :only-child { max-width: 100%; }
+  .console-dashboard-kpis,
+  .console-dashboard-pipeline,
+  .console-dashboard-split,
+  div.console-funnel-grid,
+  .console-dashboard-skeleton-kpis,
+  .console-dashboard-skeleton-split {
+    grid-template-columns: 1fr !important;
+  }
+  .console-pay-row {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center !important;
+  }
+  .console-pay-amount,
+  .console-pay-actions,
+  .console-pay-chevron {
+    grid-column: 2;
+    justify-self: start;
+    text-align: left !important;
+  }
+  .console-payout-tabs {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+  }
+  .console-payout-tabs button {
+    min-width: 0;
+    padding-inline: 7px !important;
+    font-size: .64rem !important;
   }
 }
 

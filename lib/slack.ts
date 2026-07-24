@@ -12,6 +12,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function notifySlack(text: string): Promise<void> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return
   const url = process.env.SLACK_WEBHOOK_URL
   if (!url) return
   try {
@@ -43,6 +44,7 @@ const EVENT_COL: Record<SlackEvent, string> = {
  * If settings are missing/unreadable, it does NOT send (fail-closed). Never throws.
  */
 export async function notifySlackEvent(event: SlackEvent, text: string): Promise<void> {
+  if (process.env.CC_MAIL_SUPPRESS === '1') return
   if (!process.env.SLACK_WEBHOOK_URL) return
   try {
     const svc = await createServiceRoleClient()

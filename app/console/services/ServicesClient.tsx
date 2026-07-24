@@ -725,9 +725,9 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   return (
     <>
       {/* ── Top bar ── */}
-      <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>サービスマスタ</h1><PageGuide data={GUIDE_SERVICES} /></span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="console-mobile-header" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+        <span className="console-mobile-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>サービスマスタ</h1><PageGuide data={GUIDE_SERVICES} /></span>
+        <div className="console-mobile-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="chip chip-direct" style={{ fontVariantNumeric: 'tabular-nums' }}>{services.length} サービス</span>
           <button onClick={openAdd} className="ui-btn ui-btn--primary" style={{ fontSize: '.76rem', padding: '8px 16px' }}>＋ サービス追加</button>
         </div>

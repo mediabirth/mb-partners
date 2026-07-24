@@ -12,6 +12,8 @@ import BankBranchSelect, { type BankDraft } from '@/components/ui/BankBranchSele
 type Step = 1 | 2 | 3 | 4
 type Step2Field = 'name' | 'phone' | 'address'
 type Step2Errors = Partial<Record<Step2Field, string>>
+type Step3Field = 'bank' | 'branch' | 'accountNumber' | 'accountHolder'
+type Step3Errors = Partial<Record<Step3Field, string>>
 const STEP_LABELS = ['アカウント', '基本情報', '報酬受取', '確認と同意']
 
 const card: React.CSSProperties = { width: '100%', maxWidth: 430, background: '#fff', minHeight: '100dvh', boxShadow: '0 0 48px rgba(14,14,20,.10)', display: 'flex', flexDirection: 'column' }
@@ -57,12 +59,12 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
   const [accountNumber, setAccountNumber] = useState('')
   const [accountHolder, setAccountHolder] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [step3Errors, setStep3Errors] = useState<Step3Errors>({})
   // STEP4
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
 
   const step1ok = password.length >= 8 && password === passwordConfirm
-  const step3ok = !!bankName.trim() && !!branchName.trim() && !!accountNumber.trim() && !!accountHolder.trim()
   const step4ok = agreeTerms && agreePrivacy
 
   function clearStep2Error(field: Step2Field) {
@@ -71,6 +73,15 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
       const nextErrors = { ...current }
       delete nextErrors[field]
       return nextErrors
+    })
+  }
+
+  function clearStep3Error(field: Step3Field) {
+    setStep3Errors(current => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
     })
   }
 
@@ -86,7 +97,18 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
       setStep2Errors(errors)
       if (Object.keys(errors).length > 0) { setError('必須項目を入力してください'); return }
     }
-    if (step === 3 && !step3ok) { setError('振込先口座をすべて入力してください'); return }
+    if (step === 3) {
+      const holder = accountHolder.trim()
+      const errors: Step3Errors = {
+        ...(!bankName.trim() && { bank: '銀行を選択または入力してください' }),
+        ...(!branchName.trim() && { branch: '支店を選択または入力してください' }),
+        ...(!accountNumber.trim() && { accountNumber: '口座番号を入力してください' }),
+        ...(!holder && { accountHolder: '口座名義を入力してください' }),
+        ...(holder && !/^[ァ-ヶー 　・]+$/.test(holder) && { accountHolder: 'カタカナで入力してください' }),
+      }
+      setStep3Errors(errors)
+      if (Object.keys(errors).length > 0) { setError('振込先口座を確認してください'); return }
+    }
     setStep(s => Math.min(4, s + 1) as Step)
   }
   function back() { setError(''); setStep(s => Math.max(1, s - 1) as Step) }
@@ -180,7 +202,7 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
                   ))}
                 </div>
               </Field>
-              <BankBranchSelect value={bankDraft} onChange={setBankDraft} />
+              <BankBranchSelect value={bankDraft} onChange={setBankDraft} errors={step3Errors} onFieldChange={clearStep3Error} />
               <Field label="種別 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {['普通', '当座'].map(v => (
@@ -188,8 +210,8 @@ export default function VendorAcceptForm({ email, defaultName, token }: { email:
                   ))}
                 </div>
               </Field>
-              <Field label="口座番号 *"><input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="1234567" inputMode="numeric" style={input} /></Field>
-              <Field label="口座名義（カナ）*"><input value={accountHolder} onChange={e => setAccountHolder(e.target.value)} placeholder="タナカフォト" style={input} /></Field>
+              <Field label="口座番号 *" error={step3Errors.accountNumber}><input aria-invalid={!!step3Errors.accountNumber} value={accountNumber} onChange={e => { setAccountNumber(e.target.value); clearStep3Error('accountNumber') }} placeholder="1234567" inputMode="numeric" style={{ ...input, borderColor: step3Errors.accountNumber ? 'var(--red)' : 'var(--line)' }} /></Field>
+              <Field label="口座名義（カナ）*" error={step3Errors.accountHolder}><input aria-invalid={!!step3Errors.accountHolder} value={accountHolder} onChange={e => { setAccountHolder(e.target.value); clearStep3Error('accountHolder') }} placeholder="タナカフォト" style={{ ...input, borderColor: step3Errors.accountHolder ? 'var(--red)' : 'var(--line)' }} /></Field>
               <Field label="インボイス登録番号（任意・後から追加可）"><input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="T0000000000000" style={input} /></Field>
             </>
           )}

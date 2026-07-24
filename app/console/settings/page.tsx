@@ -208,8 +208,8 @@ export default function SettingsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>設定</h1><PageGuide data={GUIDE_SETTINGS} /></span>
+        <div className="console-mobile-header" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30 }}>
+          <span className="console-mobile-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>設定</h1><PageGuide data={GUIDE_SETTINGS} /></span>
         </div>
 
         <div className="stagger" style={{ padding: '30px 28px', maxWidth: 720 }}>

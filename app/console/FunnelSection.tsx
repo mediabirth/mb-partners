@@ -40,7 +40,7 @@ export default async function FunnelSection() {
         <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>直近{WINDOW_DAYS}日</span>
         <PageGuide data={GUIDE_FUNNEL} />
       </div>
-      <div className="ckanban" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div className="ckanban console-funnel-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {stages.map((s, i) => (
           <div key={s.label} style={{ background: 'var(--bg2)', borderRadius: 12, padding: '13px 15px' }}>
             <div style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 500 }}>{i + 1}. {s.label}</div>

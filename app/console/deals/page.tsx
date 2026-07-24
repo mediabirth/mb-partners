@@ -550,8 +550,8 @@ export default function DealsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
-          <div style={{ flex: 1 }}>
+        <div className="console-topbar console-mobile-header" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 30 }}>
+          <div className="console-mobile-title" style={{ flex: 1 }}>
             <p className="eyebrow" style={{ marginBottom: 2 }}>案件管理</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>{view === 'board' ? '案件ボード' : 'アーカイブ'}</h1>
@@ -563,7 +563,7 @@ export default function DealsPage() {
           </div>
 
           {/* QR: ボード / アーカイブ 切替 */}
-          <div style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
+          <div className="console-mobile-actions" style={{ display: 'flex', background: 'var(--bg2)', borderRadius: 9, padding: 3 }}>
             {([['board', 'ボード'], ['archive', 'アーカイブ']] as const).map(([v, lbl]) => (
               <button key={v} onClick={() => setView(v)} style={{
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.74rem', fontWeight: 500,
@@ -1035,4 +1035,3 @@ export default function DealsPage() {
     </div>
   )
 }
-

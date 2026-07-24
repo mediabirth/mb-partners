@@ -262,13 +262,13 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   return (
     <>
         {/* Top bar */}
-        <div className="console-topbar" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className="console-topbar console-mobile-header" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+          <div className="console-mobile-title" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, letterSpacing: '-.01em' }}>ダッシュボード</h1><PageGuide data={GUIDE_DASHBOARD} /></span>
             <MonthSelector months={monthOptions} selected={selectedYm} current={ym} />
           </div>
           {/* 情報再構造化: ファネル=本文常設・再活性化=サイドバー「パートナー」配下へ移動。残る子ページ導線は詳細分析のみ。 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="console-mobile-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Button variant="secondary" size="sm" href="/console/analytics">詳細分析</Button>
             <GlobalSearchClient />
           </div>
@@ -315,7 +315,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           </div>
 
           {/* 最重要KPI（ヒーロー直下に集約・3指標。重複を作らない＝対応中見込みは下のパイプラインへ） */}
-          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
+          <div className="stagger console-dashboard-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 16 }}>
             <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の成約数`} value={curWon} suffix="件" icon="deal" delta={{ cur: curWon, prev: prevWon }} />
             <KpiCard label={`${isCurrentMonth ? '今月' : selMonthLabel}の総受注額`} value={cur.revenue} format="yen" icon="yen" delta={{ cur: cur.revenue, prev: prev.revenue }} />
             <KpiCard label="成約率" value={winRate ?? 0} suffix="%" icon="deal" />
@@ -347,7 +347,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
           {/* ③ パイプライン（受注前の見込み・平均・商談ステージを1セクションに集約） */}
           <SectionTitle title="パイプライン" />
           <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, padding: '18px 22px', marginBottom: 28 }}>
-            <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            <div className="stagger console-dashboard-pipeline" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
               {/* v2.2：KPIの数値は中立（accent=neutral → var(--txt)）。塗り・色数値はヒーロー1面のみ。 */}
               <StatCard label="対応中の見込み" value={`¥${pipeline.toLocaleString()}`} />
               <StatCard label="パイプライン金額" value={`¥${pipelineAmount.toLocaleString()}`} />
@@ -363,7 +363,7 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
 
           {/* ⑥ 要対応（アラート＋停滞＋直近商談を1セクションに統合）＋最近の動き */}
           <SectionTitle title="要対応・最近の動き" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
+          <div className="console-dashboard-split" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 28 }}>
             {/* 要対応（統合）：アラート → 停滞中 → 直近の商談 */}
             <div className="card-hover ui-card" style={{ background: 'var(--s-0)', border: '0.5px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ padding: '15px 18px', borderBottom: '0.5px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -463,11 +463,11 @@ function ConsoleDashboardSkeleton() {
       </div>
       <div style={{ padding: '30px 32px 44px', maxWidth: 1120, margin: '0 auto' }}>
         <div className="ui-skeleton" style={{ height: 140, borderRadius: 16, marginBottom: 18 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
+        <div className="console-dashboard-skeleton-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
           {[0, 1, 2].map(i => <div key={i} className="ui-skeleton" style={{ height: 96, borderRadius: 14 }} />)}
         </div>
         <div className="ui-skeleton" style={{ height: 210, borderRadius: 14, marginBottom: 18 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
+        <div className="console-dashboard-skeleton-split" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
           <div className="ui-skeleton" style={{ height: 170, borderRadius: 14 }} />
           <div className="ui-skeleton" style={{ height: 170, borderRadius: 14 }} />
         </div>
@@ -493,5 +493,4 @@ function HeroDelta({ cur, prev }: { cur: number; prev: number }) {
   const sign = diff > 0 ? '+' : diff < 0 ? '−' : '±'
   return <span>¥{sign}{Math.abs(diff).toLocaleString()}</span>
 }
-
 

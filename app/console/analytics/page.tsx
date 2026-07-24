@@ -19,12 +19,12 @@ export default async function AnalyticsPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg2)' }}>
       <ConsoleNav profileName={profile?.name ?? '管理者'} profileColor={profile?.color ?? '#0E0E14'} />
       <div style={{ flex: 1, marginLeft: 230 }}>
-        <div style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
+        <div className="console-mobile-header" style={{ background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid var(--line)', padding: '13px 28px', position: 'sticky', top: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="console-mobile-title">
             <p className="eyebrow" style={{ marginBottom: 2 }}>ダッシュボード</p>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1 }}>成約分析・深掘り</h1><PageGuide data={GUIDE_ANALYTICS} /></span>
           </div>
-          <Link href="/console" style={{ fontSize: '.7rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>← ダッシュボード</Link>
+          <Link className="console-mobile-actions" href="/console" style={{ fontSize: '.7rem', color: 'var(--c-blue)', fontWeight: 500, textDecoration: 'none' }}>← ダッシュボード</Link>
         </div>
         <AnalyticsClient />
       </div>

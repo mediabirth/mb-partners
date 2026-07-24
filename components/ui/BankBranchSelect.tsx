@@ -21,10 +21,12 @@ function useDebounced<T>(value: T, ms: number): T {
   return v
 }
 
-export default function BankBranchSelect({ value, onChange, labelWeight = 500 }: {
+export default function BankBranchSelect({ value, onChange, labelWeight = 500, errors, onFieldChange }: {
   value: BankDraft
   onChange: (v: BankDraft) => void
   labelWeight?: number
+  errors?: Partial<Record<'bank' | 'branch', string>>
+  onFieldChange?: (field: 'bank' | 'branch') => void
 }) {
   const [manual, setManual] = useState(false)
   // 検索ステート（選択済みなら閉じた表示）
@@ -66,11 +68,13 @@ export default function BankBranchSelect({ value, onChange, labelWeight = 500 }:
       <div>
         <div style={{ marginBottom: 13 }}>
           <span style={lbl}>銀行 *</span>
-          <input value={value.bank_name} onChange={e => onChange({ ...value, bank_name: e.target.value, bank_code: undefined })} placeholder="例：〇〇信用金庫" style={bx} />
+          <input aria-invalid={!!errors?.bank} value={value.bank_name} onChange={e => { onChange({ ...value, bank_name: e.target.value, bank_code: undefined }); onFieldChange?.('bank') }} placeholder="例：〇〇信用金庫" style={{ ...bx, borderColor: errors?.bank ? 'var(--red)' : 'var(--line)' }} />
+          {errors?.bank && <p role="alert" style={{ color: 'var(--red)', fontSize: '.62rem', margin: '4px 0 0' }}>{errors.bank}</p>}
         </div>
         <div style={{ marginBottom: 6 }}>
           <span style={lbl}>支店 *</span>
-          <input value={value.branch_name} onChange={e => onChange({ ...value, branch_name: e.target.value, branch_code: undefined })} placeholder="例：本店" style={bx} />
+          <input aria-invalid={!!errors?.branch} value={value.branch_name} onChange={e => { onChange({ ...value, branch_name: e.target.value, branch_code: undefined }); onFieldChange?.('branch') }} placeholder="例：本店" style={{ ...bx, borderColor: errors?.branch ? 'var(--red)' : 'var(--line)' }} />
+          {errors?.branch && <p role="alert" style={{ color: 'var(--red)', fontSize: '.62rem', margin: '4px 0 0' }}>{errors.branch}</p>}
         </div>
         <button type="button" onClick={() => { setManual(false); onChange({ bank_name: '', branch_name: '' }) }} style={clearBtn}>検索に戻す</button>
       </div>
@@ -93,14 +97,16 @@ export default function BankBranchSelect({ value, onChange, labelWeight = 500 }:
               onChange={e => { setBankQ(e.target.value); setBankOpen(true) }}
               onFocus={() => setBankOpen(true)}
               placeholder="銀行名で検索（例：みずほ）"
-              style={bx}
+              aria-invalid={!!errors?.bank}
+              style={{ ...bx, borderColor: errors?.bank ? 'var(--red)' : 'var(--line)' }}
               autoComplete="off"
             />
+            {errors?.bank && <p role="alert" style={{ color: 'var(--red)', fontSize: '.62rem', margin: '4px 0 0' }}>{errors.bank}</p>}
             {bankOpen && bankOpts.length > 0 && (
               <div style={listBox}>
                 {bankOpts.map(b => (
                   <button key={b.code} type="button" style={rowBtn}
-                    onClick={() => { onChange({ bank_name: b.display, bank_code: b.code, branch_name: '', branch_code: undefined }); setBranchQ(''); setBranchOpen(true) }}>
+                    onClick={() => { onChange({ bank_name: b.display, bank_code: b.code, branch_name: '', branch_code: undefined }); onFieldChange?.('bank'); setBranchQ(''); setBranchOpen(true) }}>
                     <span>{b.display}</span>
                     <span style={{ fontFamily: 'Inter', fontSize: '.66rem', color: 'var(--muted)' }}>{b.code}</span>
                   </button>
@@ -129,14 +135,16 @@ export default function BankBranchSelect({ value, onChange, labelWeight = 500 }:
                 onChange={e => { setBranchQ(e.target.value); setBranchOpen(true) }}
                 onFocus={() => setBranchOpen(true)}
                 placeholder="支店名で検索（例：渋谷）"
-                style={bx}
+                aria-invalid={!!errors?.branch}
+                style={{ ...bx, borderColor: errors?.branch ? 'var(--red)' : 'var(--line)' }}
                 autoComplete="off"
               />
+              {errors?.branch && <p role="alert" style={{ color: 'var(--red)', fontSize: '.62rem', margin: '4px 0 0' }}>{errors.branch}</p>}
               {branchOpen && branchOpts.length > 0 && (
                 <div style={listBox}>
                   {branchOpts.map(b => (
                     <button key={b.code} type="button" style={rowBtn}
-                      onClick={() => onChange({ ...value, branch_name: b.display, branch_code: b.code })}>
+                      onClick={() => { onChange({ ...value, branch_name: b.display, branch_code: b.code }); onFieldChange?.('branch') }}>
                       <span>{b.display}</span>
                       <span style={{ fontFamily: 'Inter', fontSize: '.66rem', color: 'var(--muted)' }}>{b.code}</span>
                     </button>

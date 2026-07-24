@@ -56,17 +56,17 @@ export default function BroadcastsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div style={{
+        <div className="console-mobile-header" style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
           borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, zIndex: 30,
         }}>
-          <div>
+          <div className="console-mobile-title">
             <div className="eyebrow">CONSOLE</div>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><h1 style={{ fontSize: '1rem', fontWeight: 500 }}>配信</h1><PageGuide data={GUIDE_BROADCASTS} /></span>
           </div>
-          <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg" style={{
+          <Link href="/console/broadcasts/new" className="ui-btn ui-btn--primary ui-btn--lg console-mobile-actions" style={{
             fontSize: '.75rem', fontWeight: 500, padding: '8px 16px', borderRadius: 9,
             background: 'var(--c-blue)', color: '#fff', textDecoration: 'none',
           }}>

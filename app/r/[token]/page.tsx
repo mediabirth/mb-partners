@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import ServiceIcon from '@/components/ServiceIcon'
+import ServiceAvatar from '@/components/ServiceAvatar'
 import { trackFunnel } from '@/lib/funnel-client'
 
 type Menu = { id: string; name: string; public_description: string | null }
@@ -13,10 +13,9 @@ type LinkInfo = {
 // アトリエ/r/ 第3稿：サービス自身の清潔な相談ページ（紹介の機構は透けさせない）。ページスコープ完結。
 // 白×墨黒・インディゴは署名（リンク/フォーカス）・角4px・明朝は表題のみ（控えめ）。顧客向けの言葉だけを置く。
 const ATELIER_CSS = `
-@font-face{font-family:'RMincho';src:url('/fonts/zen-old-mincho-500.woff2') format('woff2');font-weight:500;font-style:normal;font-display:optional;}
 .r-atelier{--ink:#1B1A17;--ink-2:#57544B;--ink-3:#8C887C;--r-line:#E7E5E0;--indigo:#4733E6;min-height:100vh;background:#FFFFFF;color:var(--ink);display:flex;justify-content:center;align-items:flex-start;padding:0;font-feature-settings:'palt' 1;}
 .r-wrap{width:100%;max-width:480px;padding:34px 26px 56px;}
-.r-mincho{font-family:'RMincho',serif;font-weight:500;letter-spacing:.01em;}
+.r-mincho{font-family:var(--font-display),var(--font-sans),Inter,system-ui,sans-serif;font-weight:500;letter-spacing:-.01em;}
 .r-svchead{display:flex;align-items:center;gap:10px;}
 .r-svchead .nm{font-size:.86rem;font-weight:600;color:var(--ink);letter-spacing:.01em;}
 .r-hero{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;margin-top:20px;display:block;background:#F4F2EE;}
@@ -125,16 +124,14 @@ export default function ReferralLandingPage() {
     }
   }
 
-  const preload = <link rel="preload" href="/fonts/zen-old-mincho-500.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-
   if (loading) return (
-    <div className="r-atelier"><style>{ATELIER_CSS}</style>{preload}
+    <div className="r-atelier"><style>{ATELIER_CSS}</style>
       <div className="r-center"><div style={{ fontSize: '.8rem', color: 'var(--ink-3)' }}>読み込み中…</div></div>
     </div>
   )
 
   if (notFound) return (
-    <div className="r-atelier"><style>{ATELIER_CSS}</style>{preload}
+    <div className="r-atelier"><style>{ATELIER_CSS}</style>
       <div className="r-center">
         <h2 className="r-mincho" style={{ fontSize: '1.4rem', marginBottom: 10 }}>リンクが見つかりません</h2>
         <p style={{ fontSize: '.76rem', color: 'var(--ink-2)', lineHeight: 1.9 }}>
@@ -145,7 +142,7 @@ export default function ReferralLandingPage() {
   )
 
   if (done) return (
-    <div className="r-atelier"><style>{ATELIER_CSS}</style>{preload}
+    <div className="r-atelier"><style>{ATELIER_CSS}</style>
       <div className="r-center">
         <svg width="52" height="52" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 18 }}>
           <circle cx="12" cy="12" r="10" stroke="var(--indigo)" strokeWidth="1.4"/>
@@ -168,13 +165,13 @@ export default function ReferralLandingPage() {
   const imageUrl = info?.service.image_url?.trim() || null
 
   return (
-    <div className="r-atelier"><style>{ATELIER_CSS}</style>{preload}
+    <div className="r-atelier"><style>{ATELIER_CSS}</style>
       <div className="r-wrap">
         {/* このページの顔＝サービス（ロゴ＋名称・小） */}
         {info && (
           <div className="r-svchead">
-            <ServiceIcon icon={info.service.icon} color={info.service.color} size={30} />
-            <span className="nm">{info.service.name}</span>
+            <ServiceAvatar logoPath={null} icon={info.service.icon} color={info.service.color} name={info.service.name} size={30} />
+            {linkedMenu && <span className="nm">{info.service.name}</span>}
           </div>
         )}
 
