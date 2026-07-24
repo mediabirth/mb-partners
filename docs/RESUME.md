@@ -32,6 +32,13 @@
 
 ## 作業ログ
 
+### 2026-07-24 password-reset 検収合格（dac2c56）＝リセット動線の穴クローズ
+
+- 発端=オーナー復旧劇で顕在化した「リセット動線ゼロ」。3面に forgot/reset 新設。
+- diff精査（認証域）: メール列挙防止（全失敗を同一成功表示・debugLinkはCC_MAIL_SUPPRESS+内部シンク時のみ＝本番構造上漏れない）・resetOriginはhost許可表＝open redirectなし・token_hash+verifyOtp（公式SSR文法・単回使用）・updateUserは回復セッション必須・signOut scope:local＝他面巻き添えゼロ・全て中央factory経由。action_linkのfragment問題への token_hash 迂回は正当な設計判断（開示どおり）。
+- Codex実測: 専用E2E 39/39・session 32/32×3・全ゲートgreen。リード独立実測: 6URL全200・3面ログインにリンク文言・stamp=dac2c56・money 4ハッシュ不変。
+- レート制限はインスタンス内best-effort（開示済・是認）。**合格**。
+
 ### 2026-07-24 ⛔インシデント続報: 復元後もログイン不能→真因2=CSV復元のNULL化→完全修理
 
 - 復元後も勝彦ログイン不能。真因=**COPY(csv)は空文字とNULLを区別できず**、auth.users の token系7カラム（confirmation_token/recovery_token/email_change×3/phone_change×2/reauthentication_token）が''→NULLに化け、GoTrueがscanエラー=全パスワードで500。
