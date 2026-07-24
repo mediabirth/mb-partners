@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { createClient, getCachedUid } from '@/lib/supabase/server'
+import { getCachedUid } from '@/lib/supabase/server'
+import { getAppPersonaContext } from '@/lib/app-persona'
 import AppNav from '@/components/AppNav'
 import SupplierShell from '@/components/SupplierShell'
 import SurfaceShell from '@/components/ui/SurfaceShell'
@@ -19,21 +20,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect(p && (p === '/app' || p.startsWith('/app/')) ? `/login?redirect=${encodeURIComponent(p)}` : '/login')
   }
 
-  const supabase = await createClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, color, avatar_url')
-    .eq('id', uid)
-    .single()
-  // ペルソナ・ホーム（2026-07-13）: サプライヤーはナビ差し替え（会社タブ）。判定は本人行のみ＝軽量。
-  const { data: navP } = await supabase.from('partners').select('id, code, supplier_rate_card, company_name, tax_type').eq('profile_id', uid).maybeSingle()
-  let navSupplier = !!navP?.supplier_rate_card
-  if (!navSupplier && navP) {
-    const { createServiceRoleClient } = await import('@/lib/supabase/server')
-    const adminNav = await createServiceRoleClient()
-    const { data: sv } = await adminNav.from('services').select('id').eq('supplier_partner_id', navP.id).limit(1)
-    navSupplier = !!sv?.length
-  }
+  // layout/pageで同じペルソナ解決を共有。profile+partner並列→依存servicesの2段に圧縮する。
+  const persona = await getAppPersonaContext()
+  const profile = persona?.profile
+  const navP = persona?.partner
+  const navSupplier = !!(navP?.supplier_rate_card || persona?.brands.length)
 
   // BR-V3：シェル chrome は単一ソース SurfaceShell。差分はルート/名前/色/ナビ config のみ。
   // SYNAPSE：ヘッダーのアイコンは撤去（導線は HOME ヒーローのノードへ移設）。既存ナビは不変。

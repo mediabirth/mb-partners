@@ -43,6 +43,20 @@ async function loadDealsAndLinks(admin: AnyClient) {
   return { deals: deals ?? [], linkById, metaById, supplierFrontiers }
 }
 
+async function loadFrozenOverrides(admin: AnyClient, batchIds: string[]) {
+  const frozenByBatch: Record<string, Record<string, number>> = {}
+  try {
+    const { data: frozen, error } = await admin.from('payout_overrides').select('batch_id, frontier_id, override_gross').in('batch_id', batchIds)
+    if (error) return { frozenByBatch, hasFrozenTable: false }
+    for (const f of frozen ?? []) {
+      ;(frozenByBatch[f.batch_id] ??= {})[f.frontier_id] = f.override_gross
+    }
+    return { frozenByBatch, hasFrozenTable: true }
+  } catch {
+    return { frozenByBatch, hasFrozenTable: false }
+  }
+}
+
 /**
  * 締め時点の override を凍結（payout_overrides に upsert）。close 直後に呼ぶ。
  * テーブル未作成時は no-op（false）。
@@ -80,19 +94,15 @@ export async function freezeOverridesForBatch(admin: AnyClient, batchId: string,
 export async function augmentBatches(admin: AnyClient, batches: any[]): Promise<any[]> {
   if (!batches?.length) return batches ?? []
 
-  const { deals, linkById, metaById, supplierFrontiers } = await loadDealsAndLinks(admin)
-
-  // 凍結値をまとめて取得（テーブル未作成なら null）
   const batchIds = batches.map(b => b.id)
-  let frozenByBatch: Record<string, Record<string, number>> = {}
-  let hasFrozenTable = true
-  try {
-    const { data: frozen, error } = await admin.from('payout_overrides').select('batch_id, frontier_id, override_gross').in('batch_id', batchIds)
-    if (error) hasFrozenTable = false
-    for (const f of frozen ?? []) {
-      ;(frozenByBatch[f.batch_id] ??= {})[f.frontier_id] = f.override_gross
-    }
-  } catch { hasFrozenTable = false }
+  // deals/紹介関係と凍結overrideは入力が独立しているため同時取得。値・fail-safe・以降の計算は不変。
+  const [
+    { deals, linkById, metaById, supplierFrontiers },
+    { frozenByBatch, hasFrozenTable },
+  ] = await Promise.all([
+    loadDealsAndLinks(admin),
+    loadFrozenOverrides(admin, batchIds),
+  ])
 
   for (const b of batches) {
     const ym = String(b.month).slice(0, 7)

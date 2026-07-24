@@ -4,7 +4,7 @@
  * 顧客受注額・パートナー報酬・MB粗利・他vendor は一切取得しない（明示 select）。
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { resolveVendor } from '@/lib/vendor-auth'
+import { resolveVendorContext } from '@/lib/vendor-auth'
 import { customerHonorific } from '@/lib/customer'
 
 export type VAssign = { id: string; base_fee: number; status: string; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
@@ -26,14 +26,9 @@ export type VendorBundle = {
 }
 
 export async function loadVendorBundle(): Promise<VendorBundle | null> {
-  const v = await resolveVendor()
+  const v = await resolveVendorContext()
   if (!v) return null
   const admin = await createServiceRoleClient()
-
-  const [{ data: prof }, { data: dlv }] = await Promise.all([
-    admin.from('profiles').select('name, color, avatar_url').eq('id', v.userId).maybeSingle(),
-    admin.from('deliveries').select('id, name, kind, nickname, display_code, phone, address, tax_type, bank_name, bank_branch, bank_account, bank_holder_kana, invoice_number, contact_email').eq('id', v.deliveryId).maybeSingle(),
-  ])
 
   // 【perf】3サーフェスのうち vendor だけ逐次await の waterfall で残っていた取得を、console/app と同じ並列方式へ。
   // クエリ文字列・select・order・map はすべて不変（取得結果は同一）。実行のみ並列化して往復段数を ~6→2 に短縮。
@@ -75,7 +70,14 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     return raw
   })()
 
-  const [rawAssigns, rawPayouts] = await Promise.all([assignmentsP, payoutsP])
+  // assignment idsへの依存をinner joinへ置き換え、本人deliveryの経費を同じ取得段で開始する。
+  const expensesP = q(admin
+    .from('expense_claims')
+    .select('id, delivery_assignment_id, kind, amount, status, evidence_path, created_at, approved_at, delivery_assignments!inner(delivery_id)')
+    .eq('delivery_assignments.delivery_id', v.deliveryId)
+    .order('created_at', { ascending: false }))
+
+  const [rawAssigns, rawPayouts, eData] = await Promise.all([assignmentsP, payoutsP, expensesP])
   const pos: VPayout[] = (rawPayouts ?? []).map((p: Record<string, unknown>) => {
     const deal = (p.deals as { customer_name?: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; services?: VPayout['service'] } | null) ?? null
     return { id: p.id as string, amount: (p.amount as number) ?? 0, base_fee: (p.base_fee as number) ?? 0, expense_total: (p.expense_total as number) ?? 0, period: p.period as string, status: p.status as string, paid_at: (p.paid_at as string) ?? null, frozen_at: (p.frozen_at as string) ?? null, customer_name: deal?.customer_name ?? null, customer_type: deal?.customer_type ?? null, company_name: deal?.company_name ?? null, contact_name: deal?.contact_name ?? null, service: deal?.services ?? null }
@@ -86,19 +88,14 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     return { id: a.id as string, base_fee: (a.base_fee as number) ?? 0, status: (a.status as string) ?? 'assigned', assigned_at: (a.assigned_at as string) ?? null, brief: deal?.delivery_brief ?? null, deal }
   })
 
-  const assignIds = assignments.map(a => a.id)
   // ベンダー純化P1: PM系4テーブル（tasks/deliverables/updates/schedule）の取得を撤去（vendor-redesign.md §1 V6）。
   //   残る取得＝経費のみ（3機能: 承諾/明細閲覧/経費エビデンス）。データ自体は残置・読み取りは運営側。
-  let expenses: VExpense[] = []
-  if (assignIds.length) {
-    const eData = await q(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, status, evidence_path, created_at, approved_at').in('delivery_assignment_id', assignIds).order('created_at', { ascending: false }))
-    expenses = (eData ?? []).map((e: Record<string, unknown>) => ({ id: e.id as string, assignment_id: e.delivery_assignment_id as string, kind: e.kind as string, amount: (e.amount as number) ?? 0, status: e.status as string, has_evidence: !!e.evidence_path, created_at: (e.created_at as string) ?? null, approved_at: (e.approved_at as string) ?? null }))
-  }
+  const expenses: VExpense[] = (eData ?? []).map((e: Record<string, unknown>) => ({ id: e.id as string, assignment_id: e.delivery_assignment_id as string, kind: e.kind as string, amount: (e.amount as number) ?? 0, status: e.status as string, has_evidence: !!e.evidence_path, created_at: (e.created_at as string) ?? null, approved_at: (e.approved_at as string) ?? null }))
 
-  const d = (dlv ?? {}) as Record<string, unknown>
+  const d = v.delivery as unknown as Record<string, unknown>
   return {
     userId: v.userId,
-    profile: { name: prof?.name ?? v.deliveryName, color: prof?.color ?? '#4733E6', avatar_url: (prof as { avatar_url?: string | null } | null)?.avatar_url ?? null },
+    profile: { name: v.profile.name ?? v.deliveryName, color: v.profile.color ?? '#4733E6', avatar_url: v.profile.avatar_url ?? null },
     delivery: {
       id: v.deliveryId, name: (d.name as string) ?? v.deliveryName, kind: (d.kind as string) ?? null,
       nickname: (d.nickname as string) ?? null, display_code: (d.display_code as string) ?? null,

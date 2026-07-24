@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { createClient, getCachedUser, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import CountUp from '@/components/CountUp'
 import KpiCard, { WaterRow } from '@/components/ui/KpiCard'
 import { waterfallFromDeals } from '@/lib/supplier-money'
@@ -14,12 +14,15 @@ import { DEAL_STATUS } from '@/lib/status'
  * ★KPIカード・内訳バーは components/ui/KpiCard（MBコンソールと同一実装）＝乖離不能。
  * ★洗練: シェル（トップバー）を即描画し、概況本体は独立Suspenseでストリーム（MBダッシュボードと同方式）。
  */
-export default function SupplierConsoleHome() {
+type SupplierIdentity = { id: string; isFrontier: boolean }
+type SupplierBrand = { id: string; name: string }
+
+export default function SupplierConsoleHome({ supplier, brands }: { supplier: SupplierIdentity; brands: SupplierBrand[] }) {
   return (
     <div className="page-anim">
       <SupplierTopbar title="ダッシュボード" guide={SG_HOME} />
       <Suspense fallback={<HomeSkeleton />}>
-        <SupplierHomeBody />
+        <SupplierHomeBody supplier={supplier} brands={brands} />
       </Suspense>
     </div>
   )
@@ -37,20 +40,14 @@ function HomeSkeleton() {
   )
 }
 
-async function SupplierHomeBody() {
-  const user = await getCachedUser()
-  if (!user) return null
-  const supabase = await createClient()
-  const { data: me } = await supabase.from('partners').select('id, is_frontier, supplier_rate_card').eq('profile_id', user.id).maybeSingle()
-  if (!me) return null
+async function SupplierHomeBody({ supplier, brands }: { supplier: SupplierIdentity; brands: SupplierBrand[] }) {
   const admin = await createServiceRoleClient()
   const now = new Date()
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const inMonth = (d: { fixed_month?: string | null; created_at: string }) => ((d.fixed_month ?? d.created_at) || '').slice(0, 7) === ym
 
-  const { data: brands } = await admin.from('services').select('id, name').eq('supplier_partner_id', me.id)
-  const brandIds = (brands ?? []).map(b => b.id)
-  const nameByBrand = Object.fromEntries((brands ?? []).map(b => [b.id, b.name]))
+  const brandIds = brands.map(b => b.id)
+  const nameByBrand = Object.fromEntries(brands.map(b => [b.id, b.name]))
 
   type D = { id: string; customer_name: string | null; customer_type: string | null; company_name: string | null; contact_name: string | null; status: string; amount: number | null; fixed_month: string | null; created_at: string; service_id: string; deal_items: { id: string; revenue: number | null }[] | null }
   // サクサク: brands確定後の取得を全て並列化（結果は従来と同一・待ち時間のみ短縮）
@@ -61,9 +58,9 @@ async function SupplierHomeBody() {
     brandIds.length
       ? admin.from('deals').select('id, customer_name, customer_type, company_name, contact_name, status, amount, fixed_month, created_at, service_id, deal_items(id, revenue)').in('service_id', brandIds).neq('status', 'lost').order('created_at', { ascending: false }).limit(60)
       : Promise.resolve({ data: [] as never[] }),
-    me.is_frontier ? admin.from('partners').select('id, frontier_id, frontier_linked_at').eq('frontier_id', me.id) : Promise.resolve({ data: [] as never[] }),
+    supplier.isFrontier ? admin.from('partners').select('id, frontier_id, frontier_linked_at').eq('frontier_id', supplier.id) : Promise.resolve({ data: [] as never[] }),
     import('@/lib/supplier-charges'),
-    admin.from('supplier_change_requests').select('id, kind, reason').eq('supplier_partner_id', me.id).eq('status', 'rejected').order('decided_at', { ascending: false }).limit(3),
+    admin.from('supplier_change_requests').select('id, kind, reason').eq('supplier_partner_id', supplier.id).eq('status', 'rejected').order('decided_at', { ascending: false }).limit(3),
   ])
   const deals = (dealsRes.data ?? []) as D[]
   const revOf = (d: D) => (d.deal_items ?? []).reduce((s, it) => s + (Number(it.revenue) || 0), 0)
@@ -75,8 +72,8 @@ async function SupplierHomeBody() {
   const teamN = subs.length
   const teamNew = subs.filter(s => (s.frontier_linked_at ?? '').slice(0, 7) === ym).length
   const [previewRes, lastPreviewRes, asgRes, netRes, wfDealsRes, subNamesRes] = await Promise.all([
-    chargesMod.computeCharges(admin, me.id, ym).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
-    chargesMod.computeCharges(admin, me.id, lastYm).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
+    chargesMod.computeCharges(admin, supplier.id, ym).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
+    chargesMod.computeCharges(admin, supplier.id, lastYm).then(r => r.rows.reduce((s, x) => s + Number(x.amount), 0)).catch(() => 0),
     deals.length ? admin.from('delivery_assignments').select('id, status').in('deal_id', deals.map(d => d.id)) : Promise.resolve({ data: [] as never[] }),
     (subs.length && brandIds.length)
       ? admin.from('deals').select('partner_id, status, fixed_month, created_at, deal_items(revenue)').in('partner_id', subs.map(s => s.id)).in('service_id', brandIds).in('status', ['confirmed', 'paid'])

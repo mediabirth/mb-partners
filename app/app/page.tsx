@@ -12,6 +12,7 @@ import SynapseCrest from './synapse/SynapseCrest'
 import PushOptIn from '@/components/PushOptIn'
 import SupplierConsoleHome from './home/SupplierConsoleHome'
 import FrontierHomeTop from './home/FrontierHomeTop'
+import { getAppPersonaContext } from '@/lib/app-persona'
 
 export const runtime = 'edge'
 
@@ -25,21 +26,29 @@ export default async function AppPage() {
   // 磨き④: menus 全件（表示名解決）は何にも依存しないため初回並列に統合（従来は後追い直列＋service client二重生成）。
   const { createServiceRoleClient } = await import('@/lib/supabase/server')
   const admin = await createServiceRoleClient()
-  const [partnerResult, recentEvents, menusRes] = await Promise.all([
+  const [partnerResult, recentEvents, menusRes, persona] = await Promise.all([
     getPartnerWithDeals(supabase, uid),
     getRecentEventsByUserId(supabase, uid),
     admin.from('menus').select('id, name').then(r => r, () => ({ data: null })),
+    getAppPersonaContext(),
   ])
   // If no partner record, go to root — root page routes admins to /console.
   // Redirecting to /login here would loop: login→/app→/login for admins.
   if (!partnerResult) redirect('/')
   const { partner, deals } = partnerResult
   // ペルソナ・ホーム（2026-07-13）: 役割でホームが変わる。リファラル（役割なし）は以下の従来本文を一切変えない（追加行のみ＝diffで証明）。
-  const { data: personaRow } = await admin.from('partners').select('is_frontier, supplier_rate_card').eq('id', partner.id).maybeSingle()
-  const { data: personaBrand } = await admin.from('services').select('id').eq('supplier_partner_id', partner.id).limit(1)
-  const personaSupplier = !!(personaRow?.supplier_rate_card || (personaBrand ?? []).length)
+  const personaRow = persona?.partner
+  const personaBrands = persona?.brands ?? []
+  const personaSupplier = !!(personaRow?.supplier_rate_card || personaBrands.length)
   const personaFrontier = !!personaRow?.is_frontier && !personaSupplier
-  if (personaSupplier) return <SupplierConsoleHome />
+  if (personaSupplier) {
+    return (
+      <SupplierConsoleHome
+        supplier={{ id: partner.id, isFrontier: !!personaRow?.is_frontier }}
+        brands={personaBrands}
+      />
+    )
+  }
   // ★HOME clean：SYNAPSE の件数/示唆/先回りは一覧側へ集約（HOMEは控えめな導線pillのみ）。
 
   // Stats
