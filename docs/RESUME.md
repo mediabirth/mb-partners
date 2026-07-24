@@ -26,7 +26,7 @@
 
 1. **デプロイ正典コマンドの再徹底** — 次デプロイから `--build-env NEXT_PUBLIC_BUILD_SHA` + `NEXT_PUBLIC_BUILD_TIME` 両注入必須（本番stamp時刻が6/19のまま＝TIME未注入検出）。Vercel project env に残る古い `NEXT_PUBLIC_BUILD_TIME` の掃除＝本番env変更につき勝彦確認事項。
 2. **UX精査第2巡（リード）** — 通知タブ・オンボーディング動線（招待→初回到達の体験）・サプライヤーコンソール・PageGuide内容の実読照合。
-3. リード自身: AGENTS.md配置（勝彦ドラフト待ち）。
+3. ~~AGENTS.md配置~~（済 2026-07-24・リード起草＝完全自走の恒久指示・絶対規律10項・レポートの型を含む。git 直下 app/AGENTS.md）。
 4. 実運用ランウェイ: 完全撤去→beforeハッシュ復帰→高さん（オムニス）実招待→UI移行→公開→100人招待。第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ（PRAGMATION/EMANATIONの正規ロゴ含む）。
 5. バックログ: P3請求書発行代行（税務レビュー前提）・重ページ構造下限・ログインのサーバーアクション化（第5条件案件）・ダーク全面・書体展開・ティア制度。
 
@@ -41,7 +41,8 @@
 - **UX-2（bec60f2）検収**: diff 13ファイル=表示・文言・レイアウトのみ（waterfall は pct 計算のみ・api/mypage はコメント行のみ）。本番実測=mypage見出し「プロフィール」✓・口座導線「プロフィールから」✓・supplier partners h1 水平80×24px/scrollWidth375✓。**合格**。
 - **⛔重大検出**: 検収プローブの stamp が `743cfb7・2026-06-19`＝Codex の CLI デプロイ（bec60f2 stamp正常）の後、**Vercel Git 連携の自動デプロイ（git-main alias 付き・08:53 JST）が本番エイリアスを奪取**。`--build-env` 無しビルドのため stamp は6/19の古い project env 値で焼かれ、**SHA表示が嘘をつく**（内容は bec60f2 で正・機能マーカーで確認済み）。6月に解消した「デプロイ二重化」の再発形態＝**git push origin main が5条件デプロイ規律をバイパスして本番へ届く**構造問題。
 - 即応: 正典コマンドで bec60f2 を CLI 再デプロイ→本番stamp `bec60f2 ・ 2026-07-24 09:18 JST` 復元を実ブラウザ実測（money 4ハッシュ・残置ゼロ確認済）。**裁定が出るまで git push は停止**（push=自動デプロイ再発火のため）。
-- **恒久対処の裁定事項（勝彦）**: ①Vercel の main 自動本番デプロイを無効化（vercel.json `git.deploymentEnabled` または dashboard・推奨=CLI一本化の回復）②古い project env `NEXT_PUBLIC_BUILD_SHA`/`NEXT_PUBLIC_BUILD_TIME`（743cfb7/6-19値）の削除（本番env変更につき要承認）③保険として next.config で `VERCEL_GIT_COMMIT_SHA` fallback を焼く案（git経路でも stamp が嘘をつかない）。
+- **恒久対処の裁定（勝彦承認 2026-07-24）＋真因の更新**: 実査の結果、Vercel project env に BUILD_SHA/TIME は**不存在**＝「743cfb7・6/19」の値源は `lib/build-stamp.ts` の**ハードコードされたリテラル・フォールバック**（②env削除は対象不存在で完了扱い）。既存の `VERCEL_GIT_COMMIT_SHA` fallback は runtime 非露出で不発だった。採用対処=①vercel.json で git 自動デプロイ無効化（CLI一本化回復）③next.config の env ブロックでビルド時に SHA/TIME を焼き込み＋**「本物らしい嘘」リテラルの廃止**（fallback は 'local' 等の明示的に偽と分かる値へ）。→ stamp-truth バッチ発注。
+- **勝彦指示（恒久）**: Codex は毎回勝彦に聞かず完全自走。AGENTS.md に恒久明記（迷いはリードへの報告事項として安全側で続行）。
 
 ### 2026-07-24 UX精査第2巡（リード・本番実走12枚・残置ゼロ）
 
