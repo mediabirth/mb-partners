@@ -13,8 +13,8 @@
 
 ## 現在の本番状態
 
-- HEAD: `31ec7bd`(+docs) ＝ 本番stamp `31ec7bd`（リード独立実測済 2026-07-24）。デプロイはCLI一本（git自動デプロイ恒久停止・stamp-truth）。
-- デプロイ済バッチ列: 環境整備→パッケージA→perf-red-fix→UX-1→coop-freeze→UX-2→stamp-truth（76c0522）→perf-polish（f5b6084）→UX-3（31ec7bd）。全て検収合格。
+- HEAD: `dac2c56`(+docs) ＝ 本番stamp `dac2c56`（リード独立実測済 2026-07-24）。デプロイはCLI一本（git自動デプロイ恒久停止）。
+- デプロイ済バッチ列（全16本検収合格）: 環境整備→検証棚卸し→パッケージA→perf-red-fix→UX-1→coop-freeze→UX-2→stamp-truth→perf-polish→UX-3→login-server-action（f1f65c0）→demo-teardown（DBのみ）→password-reset（dac2c56）。
 - **money 4ハッシュ正典（2026-07-24 完全撤去後・リード独立再測定＝台帳§4案B事前計算と全桁一致）**:
   - menu_rewards: `c5317c594d08ee0afea4a4764082876c`（＝デモ投入前値へ復帰・MB seed補助: 16行/¥340,100 ✓）
   - deals: `f0cda850919327978126ece73d303434`（**残3件＝全て勝彦作成** ✓）
