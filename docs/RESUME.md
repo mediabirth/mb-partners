@@ -13,8 +13,8 @@
 
 ## 現在の本番状態
 
-- HEAD: `dac2c56`(+docs) ＝ 本番stamp `dac2c56`（リード独立実測済 2026-07-24）。デプロイはCLI一本（git自動デプロイ恒久停止）。
-- デプロイ済バッチ列（全16本検収合格）: 環境整備→検証棚卸し→パッケージA→perf-red-fix→UX-1→coop-freeze→UX-2→stamp-truth→perf-polish→UX-3→login-server-action（f1f65c0）→demo-teardown（DBのみ）→password-reset（dac2c56）。
+- HEAD: `96a0e66`(+docs) ＝ 本番stamp `96a0e66`（リード独立実測済 2026-07-26）。デプロイはCLI一本。
+- デプロイ済バッチ列（全18本検収合格）: …→password-reset（dac2c56）→hardening-1（304033b）→perf-deep（96a0e66・リード代行デプロイ）。
 - **money 4ハッシュ正典（2026-07-24 完全撤去後・リード独立再測定＝台帳§4案B事前計算と全桁一致）**:
   - menu_rewards: `c5317c594d08ee0afea4a4764082876c`（＝デモ投入前値へ復帰・MB seed補助: 16行/¥340,100 ✓）
   - deals: `f0cda850919327978126ece73d303434`（**残3件＝全て勝彦作成** ✓）
@@ -31,6 +31,12 @@
 ---
 
 ## 作業ログ
+
+### 2026-07-26 hardening-1／perf-deep 検収＋perf-deepデプロイ代行
+
+- **hardening-1（304033b・本番済）＝合格**: 自己管理2動線（パスワード変更=現行確認→updateUser・メール変更=secure email change 2通型+profiles同期失敗時のauth側ロールバック補償）＋公開フォーム防御（IP×対象キー5分5回・honeypot=正規同一200で静かに破棄・境界付き入力）。恒久 test:hardening 34/34 を test:verify へ配線。リード実測: 本番stamp 304033b・ハッシュ不変。generateLink(email_change_new) の hashed_token 無効問題への action_link token 抽出は実証済み開示＝是認。
+- **perf-deep（96a0e66）＝合格**: Server-Timing恒久計測（console deals/payouts 段別・vendorは /api/vendor/rewards-timing 観測口=本人401境界）。**真因確定=Edge runtime×11本同時発行の接続待ち**（Node+4本×3波=248ms・80%短縮、Edge11本=900-1062ms、Node11本=516ms、Node6本=835msの完全な実測系列）。console dealsのみNode化・select/値/認証不変・結果同一性20/20突合。vendor 326ms=構造下限を寄与msで証明（auth115ms+RSC/router162ms・DB49ms）。payouts 149ms=下限。
+- **Codex環境事故の開示**: CLI57検証中に自身のCLI認証を失効（新規認可はせず正しく保留）。**リードのCLI認証は健在→デプロイをリードが代行**（standing承認・全ゲートgreen確認済み）。本番stamp `96a0e66` 実測一致・3面307・webhook401・タグ/push完了。⏳勝彦: Codexターミナルで `vercel login` 再認証（次バッチまでに）。
 
 ### 2026-07-24 第4巡監査（機能整合・リード）＝reset穴と同型の欠落を全域捜索
 
