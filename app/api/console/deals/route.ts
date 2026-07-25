@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notifySlackEvent } from '@/lib/slack'
 import { phaseOf } from '@/lib/phase'
+import { serverTimingHeader, timingEntry, timingNow, type ServerTimingEntry } from '@/lib/server-timing'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -96,8 +97,15 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const totalStarted = timingNow()
+  const timings: ServerTimingEntry[] = []
+  const timed = async <T,>(name: string, promise: PromiseLike<T>): Promise<T> => {
+    const started = timingNow()
+    try { return await promise }
+    finally { timings.push(timingEntry(name, started)) }
+  }
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await timed('auth', supabase.auth.getUser())
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // owner認証では nested partners.profiles が RLS で null になるため、所有確認済みで service role 読取
@@ -110,44 +118,52 @@ export async function GET() {
       partners(code, frontier_id, frontier_linked_at, profiles(name, color))`
   // 無音A(2026-07-18): 相互独立な取得（役割確認・deals本体・副テーブル5本=元々未フィルタ全量・menus全量・menu_rewards(fixed)・directors・supplierFrontiers）を1段に統合。
   //   従来は5〜7段の直列往復（実測520ms）→1〜2段へ。select・集計ロジック・結果は完全不変（並べ替えのみ）。
-  const safeQ0 = (p2: PromiseLike<{ data: unknown }>) => Promise.resolve(p2).then(r => r, () => ({ data: null as unknown }))
+  const safeQ0 = (name: string, p2: PromiseLike<{ data: unknown }>) =>
+    timed(name, p2).then(r => r, () => ({ data: null as unknown }))
   const { dealFrontierOverride } = await import('@/lib/pnl')
   const { loadSupplierFrontiers } = await import('@/lib/frontier-payout')
-  const [profileRes, dealsR1, dasR, expsR, tksR, upsR, dvbR, menusAllR, mrsAllR, directorsR, supplierFrontiers] = await Promise.all([
-    supabase.from('profiles').select('name, role, color').eq('id', user.id).single(),
-    admin.from('deals')
+  // 実件数20件で、Node runtimeでも11本同時発行は接続待ちが約300ms膨らむことをServer-Timingで確認。
+  // select・フィルタ・結果は変えず、同時数を4本に制限した3波で取得する（各波内は並列）。
+  const [profileRes, dealsR1, dasR, expsR] = await Promise.all([
+    timed('profile', supabase.from('profiles').select('name, role, color').eq('id', user.id).single()),
+    timed('deals', admin.from('deals')
       .select(`${SEL_BASE}, delivery_brief, intake_type, project_status, review_stage, lost_at, lost_reason, lost_note, director_id, other_cost, deal_items(id, service_id, kind, amount, base_amount, revenue, sort, services(name))`)
-      .order('created_at', { ascending: false }).then(r => r, () => ({ data: null })),
-    safeQ0(admin.from('delivery_assignments').select('id, deal_id, deal_item_id, delivery_id, base_fee, status, deliveries(name, kind)')),
-    safeQ0(admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, evidence_path, status, approved_at, note, created_at').order('created_at', { ascending: true })),
-    safeQ0(admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').order('sort', { ascending: true })),
-    safeQ0(admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').order('created_at', { ascending: false })),
-    safeQ0(admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, note, created_at').order('created_at', { ascending: false })),
-    safeQ0(admin.from('menus').select('id, name')),
-    safeQ0(admin.from('menu_rewards').select('menu_id, reward_type, reward_value, active').eq('active', true).eq('reward_type', 'fixed')),
-    admin.from('profiles').select('id, name, role, color').neq('role', 'partner').order('name'),
-    loadSupplierFrontiers(admin),
+      .order('created_at', { ascending: false }).then(r => r, () => ({ data: null }))),
+    safeQ0('assignments', admin.from('delivery_assignments').select('id, deal_id, deal_item_id, delivery_id, base_fee, status, deliveries(name, kind)')),
+    safeQ0('expenses', admin.from('expense_claims').select('id, delivery_assignment_id, kind, amount, evidence_path, status, approved_at, note, created_at').order('created_at', { ascending: true })),
+  ])
+  const [tksR, upsR, dvbR, menusAllR] = await Promise.all([
+    safeQ0('tasks', admin.from('delivery_tasks').select('id, delivery_assignment_id, title, type, needs_deliverable, due_date, sort, status, done_at').order('sort', { ascending: true })),
+    safeQ0('updates', admin.from('delivery_updates').select('id, delivery_assignment_id, kind, body, status, created_at').order('created_at', { ascending: false })),
+    safeQ0('deliverables', admin.from('delivery_deliverables').select('id, delivery_assignment_id, task_id, file_name, note, created_at').order('created_at', { ascending: false })),
+    safeQ0('menus', admin.from('menus').select('id, name')),
+  ])
+  const [mrsAllR, directorsR, supplierFrontiers] = await Promise.all([
+    safeQ0('rewards', admin.from('menu_rewards').select('menu_id, reward_type, reward_value, active').eq('active', true).eq('reward_type', 'fixed')),
+    timed('directors', admin.from('profiles').select('id, name, role, color').neq('role', 'partner').order('name')),
+    timed('frontiers', loadSupplierFrontiers(admin)),
   ])
   const profile = profileRes.data
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let deals = dealsR1.data as Record<string, unknown>[] | null
   if (!deals) {
-    ;({ data: deals } = await admin
+    ;({ data: deals } = await timed('deals-fallback-1', admin
       .from('deals')
       .select(`${SEL_BASE}, lost_at, lost_reason, lost_note, deal_items(id, service_id, kind, amount, base_amount, sort, services(name))`)
-      .order('created_at', { ascending: false }))
+      .order('created_at', { ascending: false })))
   }
   if (!deals) {
-    ;({ data: deals } = await admin
+    ;({ data: deals } = await timed('deals-fallback-2', admin
       .from('deals')
       .select(`${SEL_BASE}, lost_at, lost_reason, lost_note`)
-      .order('created_at', { ascending: false }))
+      .order('created_at', { ascending: false })))
   }
   if (!deals) {
-    ;({ data: deals } = await admin.from('deals').select(SEL_BASE).order('created_at', { ascending: false }))
+    ;({ data: deals } = await timed('deals-fallback-3', admin.from('deals').select(SEL_BASE).order('created_at', { ascending: false })))
   }
 
+  const transformStarted = timingNow()
   // A2a: デリバリー割当 → 明細単位の割当行＋案件合計委託費。
   const deliveryByDeal: Record<string, { rows: Record<string, unknown>[]; cost: number }> = {}
   const assignToDeal: Record<string, string> = {}
@@ -256,15 +272,21 @@ export async function GET() {
   let deliveriesList: unknown[] = []
   try {
     // C1: service_id（得意サービス・null=全サービス扱い）を読み取り列に追加＝アサインselectの2群表示に使う。
-    const r1 = await admin.from('deliveries').select('id, name, kind, service_id, active').eq('active', true).order('name')
+    const r1 = await timed('delivery-list', admin.from('deliveries').select('id, name, kind, service_id, active').eq('active', true).order('name'))
     let dl: unknown[] | null = r1.data
     if (!dl) {
       // service_id 列未適用（completion_deliveries_service_ddl 前）でも従来どおり返す。
-      const r2 = await admin.from('deliveries').select('id, name, kind, active').eq('active', true).order('name')
+      const r2 = await timed('delivery-list-fallback', admin.from('deliveries').select('id, name, kind, active').eq('active', true).order('name'))
       dl = r2.data
     }
     deliveriesList = dl ?? []
   } catch { /* 未作成 */ }
 
-  return NextResponse.json({ deals: withOverride, profile, directors: directors ?? [], deliveries: deliveriesList })
+  timings.push(timingEntry('transform', transformStarted, 'aggregation and derived display fields'))
+  const renderStarted = timingNow()
+  const response = NextResponse.json({ deals: withOverride, profile, directors: directors ?? [], deliveries: deliveriesList })
+  timings.push(timingEntry('render', renderStarted, 'json serialization'))
+  timings.push(timingEntry('total', totalStarted))
+  response.headers.set('Server-Timing', serverTimingHeader(timings))
+  return response
 }

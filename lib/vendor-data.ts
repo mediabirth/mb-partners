@@ -6,6 +6,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveVendorContext } from '@/lib/vendor-auth'
 import { customerHonorific } from '@/lib/customer'
+import { timingEntry, timingNow, type ServerTimingEntry } from '@/lib/server-timing'
 
 export type VAssign = { id: string; base_fee: number; status: string; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
 export type VExpense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean; created_at: string | null; approved_at: string | null }
@@ -25,8 +26,14 @@ export type VendorBundle = {
   payouts: VPayout[]
 }
 
-export async function loadVendorBundle(): Promise<VendorBundle | null> {
-  const v = await resolveVendorContext()
+export async function loadVendorBundle(timings?: ServerTimingEntry[]): Promise<VendorBundle | null> {
+  const timed = async <T,>(name: string, promise: PromiseLike<T>): Promise<T> => {
+    if (!timings) return await promise
+    const started = timingNow()
+    try { return await promise }
+    finally { timings.push(timingEntry(name, started)) }
+  }
+  const v = await timed('auth-context', resolveVendorContext())
   if (!v) return null
   const admin = await createServiceRoleClient()
 
@@ -39,45 +46,46 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
   // 並列ステップ1：assignments(delivery_id) と payouts(delivery_id) は相互独立 → 同時実行。
   const assignmentsP: Promise<Record<string, unknown>[] | null> = (async () => {
     // V-1 の delivery_brief を同梱（列未追加でも壊さないよう staged フォールバック）。
-    let raw = (await admin
+    let raw = (await timed('assignments', admin
       .from('delivery_assignments')
       .select('id, base_fee, status, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
-      .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
+      .order('assigned_at', { ascending: false }))).data as Record<string, unknown>[] | null
     if (!raw) {
-      raw = (await admin
+      raw = (await timed('assignments-fallback', admin
         .from('delivery_assignments')
         .select('id, base_fee, status, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, services(name, icon, color, logo_path))')
         .eq('delivery_id', v.deliveryId)
-        .order('assigned_at', { ascending: false })).data as Record<string, unknown>[] | null
+        .order('assigned_at', { ascending: false }))).data as Record<string, unknown>[] | null
     }
     return raw
   })()
   // 委託費明細はサービスアイコン表示用に deal/service を同梱（列無しでも壊さない staged フォールバック）。
   const payoutsP: Promise<Record<string, unknown>[] | null> = (async () => {
-    let raw = (await admin
+    let raw = (await timed('payouts', admin
       .from('delivery_payout_items')
       .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at, deals(customer_name, customer_type, company_name, contact_name, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
-      .order('period', { ascending: false })).data as Record<string, unknown>[] | null
+      .order('period', { ascending: false }))).data as Record<string, unknown>[] | null
     if (!raw) {
-      raw = (await admin
+      raw = (await timed('payouts-fallback', admin
         .from('delivery_payout_items')
         .select('id, amount, base_fee, expense_total, period, status, paid_at, frozen_at')
         .eq('delivery_id', v.deliveryId)
-        .order('period', { ascending: false })).data as Record<string, unknown>[] | null
+        .order('period', { ascending: false }))).data as Record<string, unknown>[] | null
     }
     return raw
   })()
 
   // assignment idsへの依存をinner joinへ置き換え、本人deliveryの経費を同じ取得段で開始する。
-  const expensesP = q(admin
+  const expensesP = q(timed('expenses', admin
     .from('expense_claims')
     .select('id, delivery_assignment_id, kind, amount, status, evidence_path, created_at, approved_at, delivery_assignments!inner(delivery_id)')
     .eq('delivery_assignments.delivery_id', v.deliveryId)
-    .order('created_at', { ascending: false }))
+    .order('created_at', { ascending: false })))
 
   const [rawAssigns, rawPayouts, eData] = await Promise.all([assignmentsP, payoutsP, expensesP])
+  const transformStarted = timings ? timingNow() : 0
   const pos: VPayout[] = (rawPayouts ?? []).map((p: Record<string, unknown>) => {
     const deal = (p.deals as { customer_name?: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; services?: VPayout['service'] } | null) ?? null
     return { id: p.id as string, amount: (p.amount as number) ?? 0, base_fee: (p.base_fee as number) ?? 0, expense_total: (p.expense_total as number) ?? 0, period: p.period as string, status: p.status as string, paid_at: (p.paid_at as string) ?? null, frozen_at: (p.frozen_at as string) ?? null, customer_name: deal?.customer_name ?? null, customer_type: deal?.customer_type ?? null, company_name: deal?.company_name ?? null, contact_name: deal?.contact_name ?? null, service: deal?.services ?? null }
@@ -93,7 +101,7 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
   const expenses: VExpense[] = (eData ?? []).map((e: Record<string, unknown>) => ({ id: e.id as string, assignment_id: e.delivery_assignment_id as string, kind: e.kind as string, amount: (e.amount as number) ?? 0, status: e.status as string, has_evidence: !!e.evidence_path, created_at: (e.created_at as string) ?? null, approved_at: (e.approved_at as string) ?? null }))
 
   const d = v.delivery as unknown as Record<string, unknown>
-  return {
+  const result = {
     userId: v.userId,
     profile: { name: v.profile.name ?? v.deliveryName, color: v.profile.color ?? '#4733E6', avatar_url: v.profile.avatar_url ?? null },
     delivery: {
@@ -106,6 +114,8 @@ export async function loadVendorBundle(): Promise<VendorBundle | null> {
     },
     assignments, expenses, payouts: pos,
   }
+  if (timings) timings.push(timingEntry('transform', transformStarted, 'bundle mapping'))
+  return result
 }
 
 /** vendor 通知（既存データからの導出・DDLなし）。経費承認/却下・支払凍結/完了・案件アサインを時系列に。 */
