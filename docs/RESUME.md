@@ -32,6 +32,13 @@
 
 ## 作業ログ
 
+### 2026-07-24 第4巡監査（機能整合・リード）＝reset穴と同型の欠落を全域捜索
+
+- **健全確認**: 撤去後の孤児参照=全域0（deal_events/items/notifications/referral_links/audit actor/creator/frontier/synapse）。監視・恒久検証に旧ハッシュ/件数の固定ピンなし＝偽アラームリスクなし。/api/inquiries は認証必須＝スパム面なし。招待は再発行で運用可＝穴でない。
+- **発見（同型穴3件）**: ①**ログイン中のパスワード変更UIなし**（reset メール経由しか正道がない）②**メールアドレス変更動線なし**（変更依頼が来たら運営がSupabase直触り＝オーナー事故と同じ土壌）③**公開フォーム2本が無防備**＝/api/referral（/r/相談）・/api/partner-apply（/join応募）にレート制限/honeypotゼロ→公開シェアが前提の面につきスパム起票・応募洪水が可能。
+- **推奨（勝彦の手番・各1行）**: Supabase の自動バックアップ/PITR設定の確認（ダッシュボード）。console 2FA は過去に撤去裁定済みのため再提案しない（必要なら一声で）。
+- → hardening-1（自己管理2動線＋公開フォーム防御）と perf-deep（Server-Timing恒久計測＋vendor324ms真因）を発注。
+
 ### 2026-07-24 password-reset 検収合格（dac2c56）＝リセット動線の穴クローズ
 
 - 発端=オーナー復旧劇で顕在化した「リセット動線ゼロ」。3面に forgot/reset 新設。
