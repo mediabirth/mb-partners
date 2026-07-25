@@ -68,6 +68,7 @@ try {
     ['integrity', 'node', ['scripts/verification/permanent/verify-integrity.mjs']],
     ['session', 'node', ['scripts/verification/permanent/session-isolation.e2e.mjs']],
     ['password reset', 'node', ['scripts/verification/permanent/password-reset.e2e.mjs']],
+    ['account and public form hardening', 'node', ['scripts/verification/permanent/hardening.e2e.mjs']],
     ['performance', 'pnpm', ['exec', 'tsx', 'scripts/verification/permanent/perf-sakusaku.mts']],
     ['resume reload', 'pnpm', ['exec', 'tsx', 'scripts/verification/permanent/resume-reload.e2e.mts']],
     ['resume performance', 'pnpm', ['exec', 'tsx', 'scripts/verification/permanent/resume-perf.mts', 'permanent']],

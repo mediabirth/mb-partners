@@ -74,6 +74,7 @@ export default function ReferralLandingPage() {
   const [phone, setPhone]       = useState('')
   const [email, setEmail]       = useState('')
   const [memo, setMemo]         = useState('')
+  const [website, setWebsite]   = useState('')
   const [consent, setConsent]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone]         = useState(false)
@@ -112,6 +113,7 @@ export default function ReferralLandingPage() {
           customerEmail: email.trim(),
           customerType: company ? 'corporate' : 'individual',
           phone, memo: chosenMenuName ? [`ご相談メニュー: ${chosenMenuName}`, memo].filter(Boolean).join('\n') : memo, via,
+          website,
         }),
       })
       const data = await res.json()
@@ -219,6 +221,10 @@ export default function ReferralLandingPage() {
         <p className="r-formsub">下記をご入力のうえ送信してください。担当者より追ってご連絡いたします。</p>
 
         <form onSubmit={handleSubmit}>
+          <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
+            <label htmlFor="referral-website">ウェブサイト</label>
+            <input id="referral-website" name="website" value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />
+          </div>
           <div className="r-field">
             <label>お名前<span className="req">*</span></label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required />

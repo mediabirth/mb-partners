@@ -1,19 +1,22 @@
 import { redirect } from 'next/navigation'
 import { loadVendorBundle } from '@/lib/vendor-data'
 import VendorMypageClient from './VendorMypageClient'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const runtime = 'edge'
 
 export default async function VendorMypage() {
   const b = await loadVendorBundle()
   if (!b) redirect('/vendor/login')
+  const admin = await createServiceRoleClient()
+  const { data: profile } = await admin.from('profiles').select('email').eq('id', b.userId).maybeSingle()
   const d = b.delivery
   // 表示名は受託者アイデンティティ（お名前/屋号＝delivery.name）を正とする＝partner 面の profiles.name を混ぜない。
   const name = d.name || d.nickname || '—'
   return (
     <VendorMypageClient
       name={name}
-      email={d.contact_email ?? '—'}
+      email={profile?.email ?? d.contact_email ?? '—'}
       avatarUrl={b.profile.avatar_url ?? null}
       avatarColor={b.profile.color ?? 'var(--c-blue)'}
       displayCode={d.display_code ?? null}

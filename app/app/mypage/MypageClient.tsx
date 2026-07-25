@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import ProfileHeader from '@/components/ui/ProfileHeader'
 import AvatarEditor from '@/components/ui/AvatarEditor'
 import BankBranchSelect, { type BankDraft } from '@/components/ui/BankBranchSelect'
+import AccountSecurityPanel from '@/components/auth/AccountSecurityPanel'
 
 type Bank = {
   bank_name?: string; branch_name?: string
@@ -220,6 +221,8 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
           </div>
         </div>
       )}
+
+      <AccountSecurityPanel surface="app" email={email} />
 
       <div style={{ height: 32 }} />
 

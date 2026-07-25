@@ -2,18 +2,63 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import { notifySlackEvent } from '@/lib/slack'
+import {
+  isHoneypotFilled,
+  isPlainObject,
+  readBoundedString,
+  takePublicFormLimit,
+} from '@/lib/public-form-defense'
 
 export const runtime = 'edge'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    // ③ B2B 任意項目を additive 受領（帰属insert には不使用＝後段の best-effort update のみで保存）。
-    const { token, customerName, phone, memo, via, companyName, contactName, contactTitle, customerEmail, customerType } = body
-
-    if (!token || !customerName) {
-      return NextResponse.json({ error: 'token and customerName are required' }, { status: 400 })
+    const parsed = await req.json().catch(() => null)
+    if (!isPlainObject(parsed)) {
+      return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
     }
+    const body = parsed
+    if (isHoneypotFilled(body.website)) {
+      return NextResponse.json({ success: true })
+    }
+    const fields = {
+      token: readBoundedString(body, 'token', 128, { required: true }),
+      customerName: readBoundedString(body, 'customerName', 200, { required: true }),
+      phone: readBoundedString(body, 'phone', 50),
+      memo: readBoundedString(body, 'memo', 2_000),
+      companyName: readBoundedString(body, 'companyName', 200),
+      contactName: readBoundedString(body, 'contactName', 200),
+      contactTitle: readBoundedString(body, 'contactTitle', 100),
+      customerEmail: readBoundedString(body, 'customerEmail', 254, { normalizeEmail: true }),
+    }
+    if (
+      !fields.token.ok || !fields.customerName.ok || !fields.phone.ok || !fields.memo.ok
+      || !fields.companyName.ok || !fields.contactName.ok || !fields.contactTitle.ok
+      || !fields.customerEmail.ok
+    ) {
+      return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
+    }
+    const customerType = body.customerType === 'corporate' ? 'corporate' : 'individual'
+    const via = body.via === 'qr' ? 'qr' : 'link'
+    if (fields.customerEmail.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.customerEmail.value)) {
+      return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 })
+    }
+    const rate = await takePublicFormLimit(req, fields.token.value)
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: '送信できませんでした。時間をおいて再度お試しください' },
+        { status: 429, headers: { 'Retry-After': '300' } },
+      )
+    }
+    // ③ B2B 任意項目を additive 受領（帰属insert には不使用＝後段の best-effort update のみで保存）。
+    const token = fields.token.value
+    const customerName = fields.customerName.value
+    const phone = fields.phone.value
+    const memo = fields.memo.value
+    const companyName = fields.companyName.value
+    const contactName = fields.contactName.value
+    const contactTitle = fields.contactTitle.value
+    const customerEmail = fields.customerEmail.value
 
     const supabase = await createServiceRoleClient()
 
@@ -56,7 +101,7 @@ export async function POST(req: NextRequest) {
       } catch { /* fail-safe: 正典値 */ }
     }
     const amount = menu?.ref_type === 'fixed' ? Number(menu.ref_value) : 0
-    const source = via === 'qr' ? 'qr' : 'link'
+    const source = via
 
     // Create deal
     const { data: deal, error: dealErr } = await supabase
@@ -193,7 +238,8 @@ export async function POST(req: NextRequest) {
       })
     } catch { /* best-effort・計測失敗は登録を止めない */ }
 
-    return NextResponse.json({ success: true, dealId: deal.id })
+    // botの静かな破棄と同型にして、外部から保存有無を応答差で判別させない。
+    return NextResponse.json({ success: true })
   } catch (err) {
     console.error('referral API error', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

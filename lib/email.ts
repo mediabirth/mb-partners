@@ -50,6 +50,35 @@ ${params.url}
   })
 }
 
+/** メールアドレス変更の二重確認メール（Secure Email Change）。 */
+export async function sendEmailChangeConfirmation(params: {
+  to: string
+  url: string
+  destination: 'current' | 'new'
+}): Promise<{ sent: boolean; skipped?: string; error?: string }> {
+  const lead = params.destination === 'current'
+    ? 'メールアドレス変更のご依頼を受け付けました。'
+    : '新しいメールアドレスの確認をお願いします。'
+  const text =
+`${lead}
+
+下記のリンクから変更を確認してください。
+${params.url}
+
+変更を完了するには、現在と新しいメールアドレスの両方で確認が必要です。
+このメールに心当たりがない場合は、操作せずに破棄してください。
+ご不明な点は ${SUPPORT} までお問い合わせください。
+
+— MB Partners 運営事務局`
+
+  return sendEmail({
+    to: params.to,
+    subject: '【MB Partners】メールアドレス変更の確認',
+    text,
+    buttons: [{ label: 'メールアドレス変更を確認する', url: params.url }],
+  })
+}
+
 /**
  * R1① 顧客への予約完了メール（ベストエフォート）。予約日時＋打ち合わせ案内。
  */

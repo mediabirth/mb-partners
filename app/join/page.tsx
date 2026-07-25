@@ -20,13 +20,19 @@ export default function JoinPage() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
+  const [website, setWebsite] = useState('')
   const [consent, setConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   // Feature E（E-2）：招待リンク /join?ref=<partner_id> の紹介元を捕捉（非金銭・保存はサーバで実在検証）。
   const [ref, setRef] = useState<string | null>(null)
-  useEffect(() => { try { setRef(new URLSearchParams(window.location.search).get('ref')) } catch { /* noop */ } }, [])
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try { setRef(new URLSearchParams(window.location.search).get('ref')) } catch { /* noop */ }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,7 +45,7 @@ export default function JoinPage() {
       const res = await fetch('/api/partner-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, org, expertise, email, phone, message, consent, ref }),
+        body: JSON.stringify({ name, org, expertise, email, phone, message, consent, ref, website }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error ?? '送信に失敗しました'); return }
@@ -162,6 +168,10 @@ export default function JoinPage() {
               </div>
             ) : (
               <form onSubmit={submit} style={card}>
+                <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
+                  <label htmlFor="join-website">ウェブサイト</label>
+                  <input id="join-website" name="website" value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />
+                </div>
                 <div className="fld">
                   <label>お名前 <span style={{ color: 'var(--red)' }}>*</span></label>
                   <input value={name} onChange={e => setName(e.target.value)} placeholder="山田 太郎" required style={{ minHeight: 44 }} />

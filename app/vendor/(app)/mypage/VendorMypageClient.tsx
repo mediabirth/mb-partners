@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ProfileHeader from '@/components/ui/ProfileHeader'
 import AvatarEditor from '@/components/ui/AvatarEditor'
+import AccountSecurityPanel from '@/components/auth/AccountSecurityPanel'
 
 type Props = {
   name: string; email: string
@@ -130,6 +131,8 @@ export default function VendorMypageClient({ name, email, avatarUrl, avatarColor
           </div>
         </div>
       )}
+
+      <AccountSecurityPanel surface="vendor" email={email} />
 
       <div style={{ height: 32 }} />
       <div style={{ position: 'fixed', bottom: 98, left: '50%', transform: `translateX(-50%) translateY(${toast ? 0 : 16}px)`, background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 9, fontSize: '.74rem', fontWeight: 500, opacity: toast ? 1 : 0, pointerEvents: 'none', transition: 'all .28s', zIndex: 130, whiteSpace: 'nowrap', boxShadow: '0 8px 28px rgba(14,14,20,.18)' }}>{toast}</div>

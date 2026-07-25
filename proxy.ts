@@ -133,6 +133,7 @@ export async function proxy(request: NextRequest) {
     && !pathname.startsWith('/vendor/accept')
     && !pathname.startsWith('/vendor/forgot-password')
     && !pathname.startsWith('/vendor/reset-password')
+    && !pathname.startsWith('/vendor/confirm-email-change')
   ) {
     if (!uid) return NextResponse.redirect(new URL('/vendor/login', request.url))
     return response
@@ -155,11 +156,13 @@ export const config = {
     '/login',
     '/forgot-password',
     '/reset-password',
+    '/confirm-email-change',
     '/console/login',
     '/console/forgot-password',
     '/console/reset-password',
     '/vendor/forgot-password',
     '/vendor/reset-password',
+    '/vendor/confirm-email-change',
     '/api/:path*',
     // 招待動線修理（2026-07-11）: console ホスト封じ込めのため受諾/公開パスも proxy を通す。
     '/invite/:path*',

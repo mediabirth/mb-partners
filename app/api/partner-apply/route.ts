@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { partnerFacingOrigin, requestOrigin } from '@/lib/app-origin'
+import {
+  isHoneypotFilled,
+  isPlainObject,
+  readBoundedString,
+  takePublicFormLimit,
+} from '@/lib/public-form-defense'
 
 // 外向けLP B1：/join の応募受け口（公開・認証不要）。partner_applications に保存するだけ。
 // ★お金・deals・auth・アカウント作成・既存テーブルには一切触れない。常に例外安全。
@@ -8,14 +14,43 @@ export const runtime = 'edge'
 
 export async function POST(req: NextRequest) {
   try {
-    const b = await req.json().catch(() => ({}))
-    const name = typeof b.name === 'string' ? b.name.trim().slice(0, 200) : ''
-    const email = typeof b.email === 'string' ? b.email.trim().slice(0, 200) : ''
-    const phone = typeof b.phone === 'string' ? b.phone.trim().slice(0, 50) : ''
+    const parsed = await req.json().catch(() => null)
+    if (!isPlainObject(parsed)) {
+      return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
+    }
+    const b = parsed
+    if (isHoneypotFilled(b.website)) return NextResponse.json({ ok: true })
+
+    const nameField = readBoundedString(b, 'name', 200, { required: true })
+    const emailField = readBoundedString(b, 'email', 254, { required: true, normalizeEmail: true })
+    const phoneField = readBoundedString(b, 'phone', 50)
+    const orgField = readBoundedString(b, 'org', 200)
+    const expertiseField = readBoundedString(b, 'expertise', 200)
+    const messageField = readBoundedString(b, 'message', 2_000)
+    if (
+      !nameField.ok || !emailField.ok || !phoneField.ok
+      || !orgField.ok || !expertiseField.ok || !messageField.ok
+      || b.consent !== true
+    ) {
+      return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
+    }
+    const name = nameField.value
+    const email = emailField.value
+    const phone = phoneField.value
 
     // 最低限のサーバ側検証：name必須／email必須（面談予約リンクの送付先＝招待制の起点）。
     if (!name) return NextResponse.json({ error: 'お名前を入力してください' }, { status: 400 })
     if (!email) return NextResponse.json({ error: 'メールアドレスを入力してください' }, { status: 400 })
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'メールアドレスを確認してください' }, { status: 400 })
+    }
+    const rate = await takePublicFormLimit(req, email)
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: '送信できませんでした。時間をおいて再度お試しください' },
+        { status: 429, headers: { 'Retry-After': '300' } },
+      )
+    }
 
     const admin = await createServiceRoleClient()
 
@@ -35,12 +70,12 @@ export async function POST(req: NextRequest) {
     const { data: inserted, error } = await admin.from('partner_applications').insert({
       kind,
       name,
-      org: typeof b.org === 'string' ? b.org.trim().slice(0, 200) : null,
-      expertise: typeof b.expertise === 'string' ? b.expertise.trim().slice(0, 200) : null,
+      org: orgField.value || null,
+      expertise: expertiseField.value || null,
       email,
       phone: phone || null,
-      message: typeof b.message === 'string' ? b.message.trim().slice(0, 2000) : null,
-      consent: b.consent === true,
+      message: messageField.value || null,
+      consent: true,
       source: 'join_lp',
       status: 'applied',
       user_agent: (req.headers.get('user-agent') || '').slice(0, 300) || null,

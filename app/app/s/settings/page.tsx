@@ -19,6 +19,7 @@ import { SG_SETTINGS } from '@/lib/supplier-guides'
 import LogoutButton from '@/components/LogoutButton'
 import BankCard from './BankCard'
 import CompanyNameField from './CompanyNameField'
+import AccountSecurityPanel from '@/components/auth/AccountSecurityPanel'
 // 設定: 会社情報・変更申請履歴・通知先
 const KIND_JP: Record<string, string> = { public_description: '顧客向け説明', image: 'イメージ画像', menu_name: 'メニュー名', visibility: '公開/非公開' }
 export default async function SupplierSettingsPage() {
@@ -48,6 +49,10 @@ export default async function SupplierSettingsPage() {
       <div style={{ ...CARD, padding: '11px 15px', marginTop: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ flex: 1, fontSize: '.72rem' }}>あなた自身のこと（プロフィール・連絡先・パスワード）</span>
         <a href="/app/mypage" style={{ flexShrink: 0, fontSize: '.68rem', color: 'var(--c-blue)', textDecoration: 'none' }}>プロフィール →</a>
+      </div>
+
+      <div style={{ margin: '0 -20px' }}>
+        <AccountSecurityPanel surface="app" email={prof?.email ?? ''} />
       </div>
 
       <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>変更申請の履歴</h2>

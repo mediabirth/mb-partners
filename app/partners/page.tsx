@@ -151,6 +151,7 @@ export default function PartnersLP() {
 
   const [name, setName] = useState(''), [org, setOrg] = useState(''), [expertise, setExpertise] = useState('')
   const [email, setEmail] = useState(''), [phone, setPhone] = useState(''), [message, setMessage] = useState('')
+  const [website, setWebsite] = useState('')
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false)
   const [err, setErr] = useState(''), [done, setDone] = useState(false)
   // LP種別（既存問い合わせ経路への接続・出品CTAで supplier に切替）
@@ -166,7 +167,7 @@ export default function PartnersLP() {
     try {
       const r = await fetch('/api/partner-apply', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, org, expertise, email, phone, message, consent, kind }),
+        body: JSON.stringify({ name, org, expertise, email, phone, message, consent, kind, website }),
       })
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '送信に失敗しました。') }
       // 完了は専用ページへ（丁寧な受付＋期待感の演出）。応募完了メール＝面談予約リンクはサーバ側で送信済み。
@@ -349,6 +350,10 @@ export default function PartnersLP() {
             ) : (
               <>
                 <form className="plp-form" data-st onSubmit={submit}>
+                  <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: 1, height: 1, overflow: 'hidden' }}>
+                    <label htmlFor="partners-website">ウェブサイト</label>
+                    <input id="partners-website" name="website" value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />
+                  </div>
                   <div className="plp-kind" role="radiogroup" aria-label="種別">
                     {([['partner', 'パートナー応募'], ['supplier', '出品の相談']] as const).map(([v, l]) => (
                       <button key={v} type="button" className={`plp-kind-chip${kind === v ? ' on' : ''}`} onClick={() => setKind(v)}>{l}</button>
