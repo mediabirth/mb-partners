@@ -27,9 +27,9 @@
 
 - HEAD: `4efdb02`(+docs) ＝ 本番stamp `4efdb02 ・ 2026-07-26 20:50 JST`（リード独立実測済）。デプロイはCLI一本。
 - デプロイ済バッチ列（全20本検収合格）: …→hardening-1→perf-deep→**UX-5b（64a9cf1・語彙統一）→UX-5c（4efdb02・機能パリティ）＝第5巡163行クローズ**。
-- **money 4ハッシュ正典（2026-07-24 完全撤去後・リード独立再測定＝台帳§4案B事前計算と全桁一致）**:
-  - menu_rewards: `c5317c594d08ee0afea4a4764082876c`（＝デモ投入前値へ復帰・MB seed補助: 16行/¥340,100 ✓）
-  - deals: `f0cda850919327978126ece73d303434`（**残3件＝全て勝彦作成** ✓）
+- **money 4ハッシュ正典（2026-07-26 まっさら化後・リード実行/実測）**:
+  - menu_rewards: `c5317c594d08ee0afea4a4764082876c`（MB seed補助: 16行/¥340,100 ✓）
+  - deals: **`(empty)`（0件＝完全にまっさら・以後入るものは全て本物）**
   - fee: `(empty)`／override: `(empty)`
 - **テストデータ残骸: ゼロ**（demo-teardown 2026-07-24 完遂・partners=MBHOUSE+ZZ6347のみ・services=MB6・broadcasts 0・demo profiles 0・cc-monitor×2生存・孤児frontier参照0）。バックアップ63ファイル/456行はCodex出力ディレクトリに退避（外部共有禁止・復元手順同梱）。
 
@@ -43,6 +43,13 @@
 ---
 
 ## 作業ログ
+
+### 2026-07-26 まっさら化（勝彦指示・リード実行）＝運用台帳ゼロでスタート地点へ
+
+- 勝彦指示「案件とフロンティアも全てテスト＝削除」→スコープ裁定（AskUser）=**パートナー行のみ**（auth/profile残置=監査21件の孤児化なし・同メールで再招待可）。
+- 実行（リード直接・COPY退避→単一トランザクション）: deals3+items3+通知2+紹介リンク2+ZZ6347 partner行。バックアップ=~/Documents/mb-blank-slate-backup-20260726（600権限）。
+- 検収: deals **(empty)/0件**・menu不変 c5317c59…・partners=**MBHOUSEのみ**・bfb3c027 profile生存・孤児audit 0・MB seed 16行/¥340,100。
+- **deals-cleanup-rule 改定**: 「勝彦deals3件は錨」条項は勝彦自身の指示で失効。新規則=**台帳は空が正・以後 deals に入る行は全て本物**（検証でのthrowaway起票は従来どおり作成即撤去・ハッシュ復元証明）。
 
 ### 2026-07-26 UX-5b/5c 検収合格＝第5巡163行クローズ・横断整合の完成
 
