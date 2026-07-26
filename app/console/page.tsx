@@ -182,8 +182,8 @@ async function ConsoleDashboardBody({ uid, m: mParam }: { uid: string; m?: strin
   const intakeOf = (id: string) => dimByDeal[id]?.intake ?? 'referral_coop'
   const psOf = (id: string) => dimByDeal[id]?.ps ?? null
 
-  // ② 商談パイプライン：受付/商談中 の件数・金額（パイプライン健全性）。
-  const shodanStages = ([['received', '受付'], ['in_progress', '商談中']] as const).map(([key, label]) => {
+  // ② 商談パイプライン：受付/対応中 の件数・金額（パイプライン健全性）。
+  const shodanStages = ([['received', '受付'], ['in_progress', '対応中']] as const).map(([key, label]) => {
     const ds = deals.filter(d => d.status === key)
     return { key, label, count: ds.length, amount: ds.reduce((s, d) => s + (d.amount || 0), 0) }
   })

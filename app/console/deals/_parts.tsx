@@ -265,7 +265,7 @@ export const PREV: Record<string, Status | null> = {
 export type Lane = { key: string; label: string; group: 'shodan' | 'project'; tone: 'warn' | 'progress' | 'success' | 'danger' | 'neutral' }
 export const SHODAN_LANES: Lane[] = [
   { key: 'received',    label: '受付',   group: 'shodan', tone: 'warn' },
-  { key: 'in_progress', label: '商談中', group: 'shodan', tone: 'progress' },
+  { key: 'in_progress', label: '対応中', group: 'shodan', tone: 'progress' },
 ]
 // 純化バッチ(B): プロジェクトレーンは「納品」を軸に2レーンへ統合。
 //   進行中（納品前）／納品済み（＝経費申請・粗利確定のゲート）。旧6値は表示写像で吸収（project_status は非破壊deprecate）。
@@ -289,7 +289,7 @@ export function laneKeyOf(d: { status: string; intake_type?: string | null; proj
   return projectLaneOf(d)
 }
 
-// A2b: 割当ごとの経費（一覧＋承認/却下＋追加＋領収書プレビュー）。
+// A2b: 割当ごとの経費（一覧＋承認/差戻し＋追加＋領収書プレビュー）。
 export const EXP_KINDS = ['交通', '宿泊', 'その他'] as const
 export function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDelete, onView }: {
   assign: DeliveryAssign; editable: boolean; busy: boolean
@@ -305,7 +305,7 @@ export function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDe
   const exps = assign._expenses ?? []
   const approved = exps.filter(e => e.status === 'approved').reduce((s, e) => s + (e.amount ?? 0), 0)
   const badge = (s: string) => s === 'approved' ? { t: '承認済', c: 'var(--green)', bg: 'var(--green-bg)' }
-    : s === 'rejected' ? { t: '却下', c: 'var(--red)', bg: 'var(--red-bg)' } : { t: '申請中', c: 'var(--amber)', bg: 'var(--amber-bg)' }
+    : s === 'rejected' ? { t: '差戻し', c: 'var(--red)', bg: 'var(--red-bg)' } : { t: '申請中', c: 'var(--amber)', bg: 'var(--amber-bg)' }
   function submit() {
     if (!amount.trim()) return
     onAdd(assign.id, kind, amount, file)
@@ -326,7 +326,7 @@ export function DeliveryExpenses({ assign, editable, busy, onAdd, onStatus, onDe
             {e.has_evidence && <button onClick={() => onView(e.id)} title="領収書を開く" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}>領収書</button>}
             <span style={{ flex: 1 }} />
             {e.status !== 'approved' && <button onClick={() => onStatus(e.id, 'approved')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--green)', background: 'none', border: '1px solid var(--green)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>承認</button>}
-            {e.status !== 'rejected' && <button onClick={() => onStatus(e.id, 'rejected')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>却下</button>}
+            {e.status !== 'rejected' && <button onClick={() => onStatus(e.id, 'rejected')} disabled={busy} style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 6, padding: '1px 6px', cursor: 'pointer' }}>差戻し</button>}
             <button onClick={() => onDelete(e.id)} disabled={busy} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '.62rem' }}>✕</button>
           </div>
         )

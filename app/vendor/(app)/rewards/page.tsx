@@ -36,7 +36,7 @@ export default async function VendorRewards() {
         {b.payouts.length === 0 ? (
           <div style={{ background: '#fff', border: '0.5px dashed var(--line)', borderRadius: 14, padding: '22px 16px', textAlign: 'center' }}>
             <div style={{ fontSize: '.74rem', fontWeight: 500 }}>まだ明細はありません</div>
-            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>案件を納品し MB が確定すると、ここに委託費が積み上がります。</div>
+            <div style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 3, lineHeight: 1.6 }}>案件を納品し MB Partners が確定すると、ここに委託費が積み上がります。</div>
           </div>
         ) : b.payouts.map(p => {
           const isPaid = p.status === 'paid'
@@ -69,7 +69,7 @@ export default async function VendorRewards() {
           )
         })}
       </div>
-      <p style={{ fontSize: '.6rem', color: 'var(--muted)', padding: '0 20px 20px', lineHeight: 1.7 }}>※ 支払予定は MB が支払を確定した時点の金額です。承認済の経費が反映されます。</p>
+      <p style={{ fontSize: '.6rem', color: 'var(--muted)', padding: '0 20px 20px', lineHeight: 1.7 }}>※ 支払予定は MB Partners が支払を確定した時点の金額です。承認済の経費が反映されます。</p>
     </div>
   )
 }

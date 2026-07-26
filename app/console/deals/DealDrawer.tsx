@@ -55,7 +55,7 @@ function DealHearing({ dealId, editable }: { dealId: string; editable: boolean }
           ) : (
             <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: data.answers[it.id] ? 'var(--txt)' : 'var(--muted2)' }}>{data.answers[it.id] || '—'}</span>
           )}
-          <span style={{ width: 30, flexShrink: 0, fontSize: '.56rem', color: 'var(--green)', opacity: saved === it.id ? 1 : 0, transition: 'opacity .3s' }}>保存</span>
+          <span style={{ width: 30, flexShrink: 0, fontSize: '.56rem', color: 'var(--green)', opacity: saved === it.id ? 1 : 0, transition: 'opacity .3s' }}>保存済</span>
         </div>
       ))}
     </div>

@@ -41,7 +41,7 @@ export default function HearingItemsEditor({ menuId }: { menuId: string }) {
     <div style={{ borderTop: '0.5px solid var(--line)', marginTop: 16, paddingTop: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)' }}>ヒアリング項目（このメニューの案件で確認すること）</span>
-        {items.length > 0 && <button type="button" onClick={save} disabled={busy} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>{busy ? '保存中…' : '項目を保存'}</button>}
+        {items.length > 0 && <button type="button" onClick={save} disabled={busy} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>{busy ? '保存中…' : '保存する'}</button>}
       </div>
       {items.map((it, i) => (
         <div key={it.id ?? `n-${i}`} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>

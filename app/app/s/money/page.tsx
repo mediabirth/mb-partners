@@ -13,7 +13,7 @@ import MoneyTabs from './MoneyTabs'
  * ★内訳バーは components/ui/KpiCard の WaterRow（MBダッシュボードと同一実装）。
  */
 const KIND_JP: Record<string, string> = { omnis_monthly: '月額利用料', half_commission: 'サービス利用料', passthrough_revenue_fee: '販売手数料', payment_fee_5: '決済手数料' }
-const CHG_ST: Record<string, { label: string; color: string }> = { unbilled: { label: '締め済み・請求書待ち', color: 'var(--muted2)' }, invoiced: { label: '請求済み', color: 'var(--c-blue)' }, settled: { label: 'お支払い確認済み', color: 'var(--green)' } }
+const CHG_ST: Record<string, { label: string; color: string }> = { unbilled: { label: '締め済み・請求書待ち', color: 'var(--muted2)' }, invoiced: { label: '請求済', color: 'var(--c-blue)' }, settled: { label: 'お支払い確認済み', color: 'var(--green)' } }
 const yen = (n: number) => `¥${Number(n || 0).toLocaleString()}`
 
 export default async function SupplierMoneyPage() {
@@ -53,7 +53,7 @@ export default async function SupplierMoneyPage() {
     for (const e of evs ?? []) (evByDeal[e.deal_id as string] ??= []).push({ id: e.id as string, label: (e.label as string) ?? null })
   }
   // ② 紹介者別の内訳（氏名主体＋コード小・service role読取=RLS名前落ちなし・数字は支払と同一入力 deals.amount）
-  // ③ 委託先への委託費（アサイン別・支払はMB Partnersが代行）— 名前解決は service role 経由（RLS名前落ちなし）
+  // ③ 委託先への委託費（委託別・支払はMB Partnersが代行）— 名前解決は service role 経由（RLS名前落ちなし）
   const brandIds0 = (myBrands ?? []).map(b => b.id)
   const [mdsRes, dsAllRes] = await Promise.all([
     brandIds0.length
@@ -153,7 +153,7 @@ export default async function SupplierMoneyPage() {
       <div style={{ ...CARD, overflow: 'hidden', marginBottom: 20 }}>
         <div style={SUB}>請求の履歴</div>
         {(charges ?? []).length === 0 ? (
-          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>確定済みの請求はまだありません。</p>
+          <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '4px 15px 13px', margin: 0 }}>確定済の請求はまだありません。</p>
         ) : (charges ?? []).map((c, i) => {
           const st = CHG_ST[c.status] ?? { label: c.status, color: 'var(--muted2)' }
           const evs = (c as { deal_id?: string | null }).deal_id ? evByDeal[(c as { deal_id?: string | null }).deal_id as string] : undefined
@@ -239,7 +239,7 @@ export default async function SupplierMoneyPage() {
             {bank.account_type ?? '普通'} <span className="tnum" style={{ fontFamily: 'Inter' }}>{bank.account_number}</span> ・ {bank.account_holder}
           </div>
         ) : <p style={{ fontSize: '.72rem', color: 'var(--muted2)', margin: 0 }}>未登録です。</p>}
-        <a href="/app/s/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: '.66rem', color: 'var(--c-blue)', textDecoration: 'none' }}>口座の変更は設定から →</a>
+        <a href="/app/s/settings" style={{ display: 'inline-block', marginTop: 8, fontSize: '.66rem', color: 'var(--c-blue)', textDecoration: 'none' }}>会社の受取口座は設定から変更を申請</a>
       </div>
     </div>
   )

@@ -70,7 +70,7 @@ export default async function FrontierSection() {
   }
   const momDelta = monthOverride - lastMonthOverride
 
-  // ★表示専用の見込み試算（あくまでイメージ・実際の payout / オーバーライド確定額には一切影響しない）。
+  // ★表示専用の見込み試算（あくまでイメージ・実際の payout / チーム還元確定額には一切影響しない）。
   //   平均成約額：チーム実績があればそれ、無ければ説明用サンプル。式＝人数×平均×率（既存 OVERRIDE_RATE 流用）。
   const SAMPLE_DEAL = 100_000
   const teamGross = Object.values(perSub).reduce((s, p) => s + p.gross, 0)
@@ -111,11 +111,11 @@ export default async function FrontierSection() {
           </div>
         </div>
 
-        {/* ② オーバーライドの仕組み */}
+        {/* ② チームからの還元の仕組み */}
         <div style={{ margin: '16px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
-          <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', letterSpacing: '.06em', marginBottom: 7 }}>オーバーライドとは</div>
+          <div style={{ fontSize: '.56rem', fontWeight: 500, color: 'var(--c-blue)', letterSpacing: '.06em', marginBottom: 7 }}>チームからの還元とは</div>
           <p style={{ fontSize: '.74rem', lineHeight: 1.7, margin: 0 }}>
-            あなたが招待した仲間が成約すると、その<span style={{ fontWeight: 500 }}>{ratePct}%</span>が<span style={{ fontWeight: 500 }}>12ヶ月間</span>あなたのオーバーライド収入になります。
+            あなたが招待した仲間が成約すると、その<span style={{ fontWeight: 500 }}>{ratePct}%</span>が<span style={{ fontWeight: 500 }}>12ヶ月間</span>チームからの還元になります。
           </p>
           <div style={{ marginTop: 12, background: 'var(--blue-bg2)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ fontSize: '.7rem', lineHeight: 1.6 }}>
@@ -173,7 +173,7 @@ export default async function FrontierSection() {
       {/* ③ フル稼働したら */}
       <div style={{ margin: '14px 20px 0', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ fontSize: '.72rem', lineHeight: 1.6 }}>
-          今のチーム <span style={{ fontWeight: 500 }}>{teamN}名</span> が毎月成約すると、月 <span className="tnum" style={{ fontWeight: 500, color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{projFull.toLocaleString()}</span> のオーバーライド見込み
+          今のチーム <span style={{ fontWeight: 500 }}>{teamN}名</span> が毎月成約すると、月 <span className="tnum" style={{ fontWeight: 500, color: 'var(--c-blue)', fontFamily: 'Inter' }}>¥{projFull.toLocaleString()}</span> の還元見込み
           <span style={{ display: 'block', fontSize: '.54rem', color: 'var(--muted2)', marginTop: 2 }}>※ イメージの試算です</span>
         </div>
       </div>

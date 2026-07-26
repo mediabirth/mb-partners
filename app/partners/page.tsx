@@ -330,7 +330,7 @@ export default function PartnersLP() {
         {/* ── サプライヤー（出品・控えめな1節。文言は正典＝生成禁止） ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap plp-supplier">
-            <h2 className="plp-h2" data-st>サービスを、紹介の流通網へ。</h2>
+            <h2 className="plp-h2" data-st>サービスを、信頼できる紹介者へ。</h2>
             <p className="plp-lead" data-st>自社のサービスをMB Partnersに出品し、パートナーの紹介ネットワークを通じてお客さまと出会う。紹介者への報酬管理も、お支払いも、すべてMB Partnersが代行します。</p>
             <div className="plp-cta-row" data-st>
               <button className="plp-cta2" onClick={() => { setKind('supplier'); scrollForm() }}>出品について問い合わせる<span className="plp-arrow">→</span></button>

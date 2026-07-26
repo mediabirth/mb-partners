@@ -59,7 +59,7 @@ export default function SuppliersPage() {
   async function promote() {
     if (!selPartner || busy) return
     const cardName = cards.find(c => c.id === selCard)?.name ?? selCard
-    if (!confirm(`このフロンティアをサプライヤーに昇格します。\n\n・適用レートカード: ${cardName}\n・以後、系統×メニューの組み合わせで手数料（パススルー+受注額5%／折半／決済／月額／override）が自動判定されます\n・確定済み・凍結済みの案件には波及しません\n\nよろしいですか？`)) return
+    if (!confirm(`このフロンティアをサプライヤーに昇格します。\n\n・適用レートカード: ${cardName}\n・以後、系統×メニューの組み合わせで手数料（パススルー+受注額5%／折半／決済／月額／override）が自動判定されます\n・確定済・凍結済みの案件には波及しません\n\nよろしいですか？`)) return
     setBusy(true)
     const r = await fetch('/api/console/suppliers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ partner_id: selPartner, rate_card_id: selCard }) })
     const j = await r.json().catch(() => ({}))

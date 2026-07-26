@@ -52,7 +52,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
           <div className="modal-pop" style={{ position: 'fixed', top: '50%', left: '50%', width: 440, maxWidth: '94vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px', boxSizing: 'border-box' }}>
             <b style={{ fontSize: '.9rem', fontWeight: 500 }}>{isP ? 'パートナーを招待' : '委託先を招待'}</b>
             <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '6px 0 14px', lineHeight: 1.7 }}>
-              {isP ? 'リンクを共有するだけ。登録した方があなたのパートナーになります。' : '実務を担う委託先を招待します。登録後、案件から委託（アサイン）できます。'}
+              {isP ? 'リンクを共有するだけ。登録した方があなたのパートナーになります。' : '実務を担う委託先を招待します。登録後、案件から委託できます。'}
             </p>
             {!isP && (
               <>
@@ -91,7 +91,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={close} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '8px 14px' }}>閉じる</button>
               <button onClick={create} disabled={busy || (!asPartner && !name.trim())} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '8px 16px' }}>
-                {busy ? '作成中…' : copied ? 'コピーしました ✓' : url ? 'もう一度作成' : '招待リンクを作成'}
+                {busy ? '作成中…' : copied ? 'コピーしました' : url ? 'もう一度作成' : '招待リンクを作成'}
               </button>
             </div>
           </div>

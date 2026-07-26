@@ -17,6 +17,8 @@ for (const k of DEAL_STATUS_KEYS) {
   eq(t.vendor, VENDOR_DEAL_ST[k].label, `${k}: vendor=正典VENDOR_DEAL_ST`)
 }
 eq(projectLaneTranslation(), { partner: DEAL_STATUS.confirmed.label, vendor: VENDOR_DEAL_ST.confirmed.label }, 'projectレーン=confirmedの翻訳')
+eq(DEAL_STATUS.in_progress.label, '対応中', 'in_progressの正典ラベル=対応中')
+eq(OPS_NEXT_ACTION.received?.cta, 'お客さまへ連絡して対応中へ', 'received CTA=対応中へ')
 
 // 遷移予告（実体 route.ts の副作用と対）
 {

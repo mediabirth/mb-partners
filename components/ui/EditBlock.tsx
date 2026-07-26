@@ -54,7 +54,7 @@ export default function EditBlock({ view, edit, onEdit, onCancel, onSave, editLa
           className="btn btn-p"
           style={{ fontSize: '.74rem', padding: '9px 18px', opacity: saving ? .6 : 1 }}
         >
-          {saving ? '保存中…' : '保存'}
+          {saving ? '保存中…' : '保存する'}
         </button>
       </div>
     </div>

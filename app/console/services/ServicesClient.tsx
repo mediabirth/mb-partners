@@ -10,7 +10,7 @@ import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase
 import { parseAmount } from '@/lib/num'
 import { rewardValueText } from '@/lib/reward-format'
 import RewardPill from '@/components/ui/RewardPill'
-import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
+import { resolveMenuCoopTasks, sameCoopTaskLabel, type CoopTaskItem } from '@/lib/coop-task-display'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display
 const COOP_TASK_MASTER: { label: string; kind: 'auto' | 'manual' }[] = [
   { label: 'つなぐ',           kind: 'auto' },
   { label: 'アポイント',        kind: 'auto' },
-  { label: 'ヒヤリング',        kind: 'manual' },
+  { label: 'ヒアリング',        kind: 'manual' },
   { label: 'アシスト/フォロー', kind: 'manual' },
   { label: '価格/条件合意',     kind: 'manual' },
   { label: 'クロージング',      kind: 'manual' },
@@ -465,7 +465,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
   const removeReward = (i: number, ri: number) =>
     setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.filter((_, k) => k !== ri) } : d))
   const toggleRewardTask = (i: number, ri: number, label: string) =>
-    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.map((r, k) => k === ri ? { ...r, tasks: r.tasks.includes(label) ? r.tasks.filter(l => l !== label) : [...r.tasks, label] } : r) } : d))
+    setMenuDrafts(p => p.map((d, j) => j === i ? { ...d, rewards: d.rewards.map((r, k) => k === ri ? { ...r, tasks: r.tasks.some(task => sameCoopTaskLabel(task, label)) ? r.tasks.filter(task => !sameCoopTaskLabel(task, label)) : [...r.tasks, label] } : r) } : d))
 
   // サービス編集を開いた時：menus＋報酬(menu_rewards)＋報酬単位タスクを draft に seed。
   async function loadMenuEditor(svc: ServiceWithMenus) {
@@ -562,11 +562,12 @@ export default function ServicesClient({ initialServices }: { initialServices: S
         }
         builtRewards.push({ id: rewardId, menu_id: menuId, active: true, ...payload })
         const existing = origTasks[r.id ?? ''] ?? []
-        const existingLabels = new Set(existing.map(t => t.label))
         for (const mt of COOP_TASK_MASTER) {
-          const want = r.tasks.includes(mt.label), have = existingLabels.has(mt.label)
+          const want = r.tasks.some(label => sameCoopTaskLabel(label, mt.label))
+          const existingTask = existing.find(t => sameCoopTaskLabel(t.label, mt.label))
+          const have = !!existingTask
           if (want && !have) await fetch('/api/console/task-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: editing.id, reward_id: rewardId, label: mt.label, kind: mt.kind, required: true, trigger_key: mt.kind === 'auto' ? 'in_progress' : null, sort: COOP_TASK_MASTER.findIndex(x => x.label === mt.label) }) }).catch(() => {})
-          else if (!want && have) { const tid = existing.find(t => t.label === mt.label)?.id; if (tid) await fetch(`/api/console/task-templates/${tid}`, { method: 'DELETE' }).catch(() => {}) }
+          else if (!want && have) { const tid = existingTask?.id; if (tid) await fetch(`/api/console/task-templates/${tid}`, { method: 'DELETE' }).catch(() => {}) }
         }
       }
       ;(rebuilt[d.service_menu_id] ??= []).push({
@@ -988,7 +989,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク</label>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {COOP_TASK_MASTER.map(mt => {
-                              const on = r.tasks.includes(mt.label)
+                              const on = r.tasks.some(label => sameCoopTaskLabel(label, mt.label))
                               const taskKey = `${mi}:${ri}:${mt.label}`
                               return (
                                 <div key={mt.label}>
@@ -997,7 +998,7 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                                     <span style={{ fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{mt.label}</span>
                                     {/* タスク説明の✎（ラベル単位・登録ページのⓘに表示。旧 TaskDescriptionEditor をここへ統一） */}
                                     <button type="button" title="タスク説明を編集（登録ページのⓘに表示）"
-                                      onClick={e => { e.preventDefault(); setTaskDescDraft(taskDescs[mt.label] ?? ''); setEditTaskFor(taskKey) }}
+                                      onClick={e => { e.preventDefault(); setTaskDescDraft(taskDescs[mt.label] ?? taskDescs['ヒヤリング'] ?? ''); setEditTaskFor(taskKey) }}
                                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: '.6rem', color: 'var(--muted)', lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 }}>✎</button>
                                     <span style={{ flex: 1 }} />
                                     <span style={{ fontSize: '.48rem', fontWeight: 500, color: mt.kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: mt.kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px', flexShrink: 0 }}>{mt.kind === 'auto' ? '自動検知' : '手動'}</span>

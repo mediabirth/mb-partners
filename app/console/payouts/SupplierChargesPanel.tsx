@@ -146,7 +146,7 @@ export default function SupplierChargesPanel() {
                           <td style={TD}><span style={{ fontSize: '.58rem', fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: ST[c.status]?.bg, color: ST[c.status]?.fg }}>{ST[c.status]?.label ?? c.status}</span></td>
                           <td style={{ ...TD, whiteSpace: 'nowrap' }}>
                             {c.status === 'unbilled' && <>
-                              <button onClick={() => act(c.id, 'invoice')} disabled={busy} style={{ fontSize: '.6rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', marginRight: 6 }}>請求済みにする</button>
+                              <button onClick={() => act(c.id, 'invoice')} disabled={busy} style={{ fontSize: '.6rem', fontWeight: 700, color: '#fff', background: 'var(--blue)', border: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', marginRight: 6 }}>請求済にする</button>
                               <button onClick={() => act(c.id, 'delete')} disabled={busy} style={{ fontSize: '.6rem', color: 'var(--muted2)', background: 'transparent', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>凍結解除</button>
                             </>}
                             {c.status === 'invoiced' && <button onClick={() => act(c.id, 'settle')} disabled={busy} style={{ fontSize: '.6rem', fontWeight: 700, color: '#fff', background: 'var(--green)', border: 'none', borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>入金済みにする</button>}

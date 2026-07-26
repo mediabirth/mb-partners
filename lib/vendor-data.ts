@@ -118,7 +118,7 @@ export async function loadVendorBundle(timings?: ServerTimingEntry[]): Promise<V
   return result
 }
 
-/** vendor 通知（既存データからの導出・DDLなし）。経費承認/却下・支払凍結/完了・案件アサインを時系列に。 */
+/** vendor 通知（既存データからの導出・DDLなし）。経費承認/差戻し・支払凍結/完了・案件委託を時系列に。 */
 export type VNotif = { id: string; icon: 'ok' | 'ng' | 'pay' | 'freeze' | 'assign'; title: string; sub: string; at: string; href?: string }
 export function deriveVendorNotifs(b: VendorBundle): VNotif[] {
   // 顧客名は敬称付き（法人=「法人名 様」/個人=「氏名 様」）で統一（lib/customer.ts 単一ソース）。
@@ -126,14 +126,14 @@ export function deriveVendorNotifs(b: VendorBundle): VNotif[] {
   const out: VNotif[] = []
   for (const e of b.expenses) {
     if (e.status === 'approved') out.push({ id: 'e' + e.id, icon: 'ok', title: '経費が承認されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} ・ ${labelOf(e.assignment_id)}`, at: e.approved_at ?? e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
-    else if (e.status === 'rejected') out.push({ id: 'e' + e.id, icon: 'ng', title: '経費が却下されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} ・ ${labelOf(e.assignment_id)}`, at: e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
+    else if (e.status === 'rejected') out.push({ id: 'e' + e.id, icon: 'ng', title: '経費が差し戻されました', sub: `${e.kind} ¥${e.amount.toLocaleString()} ・ ${labelOf(e.assignment_id)}`, at: e.created_at ?? '', href: `/vendor/cases/${e.assignment_id}` })
   }
   for (const p of b.payouts) {
     if (p.status === 'paid') out.push({ id: 'p' + p.id, icon: 'pay', title: '支払が完了しました', sub: `${p.period} ・ ¥${p.amount.toLocaleString()}`, at: p.paid_at ?? p.frozen_at ?? '', href: '/vendor/rewards' })
     else out.push({ id: 'p' + p.id, icon: 'freeze', title: '支払予定が確定しました', sub: `${p.period} ・ ¥${p.amount.toLocaleString()}（未払い）`, at: p.frozen_at ?? '', href: '/vendor/rewards' })
   }
   for (const a of b.assignments) {
-    out.push({ id: 'a' + a.id, icon: 'assign', title: '案件にアサインされました', sub: `${(a.deal && customerHonorific(a.deal)) || '案件'} ・ 委託費 ¥${a.base_fee.toLocaleString()}`, at: a.assigned_at ?? '', href: `/vendor/cases/${a.id}` })
+    out.push({ id: 'a' + a.id, icon: 'assign', title: '案件を委託されました', sub: `${(a.deal && customerHonorific(a.deal)) || '案件'} ・ 委託費 ¥${a.base_fee.toLocaleString()}`, at: a.assigned_at ?? '', href: `/vendor/cases/${a.id}` })
   }
   return out.filter(n => n.at).sort((x, y) => (y.at).localeCompare(x.at))
 }

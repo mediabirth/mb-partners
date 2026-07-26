@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   } catch { /* best-effort */ }
 
   // Batch B ④: 支払確定通知（運営Slack/メール＋該当パートナーへ「報酬が確定しました」）。
-  // money path はRPCで確定済み。以降は best-effort（例外は握りつぶし締め処理に影響させない）。
+  // money path はRPCで確定済。以降は best-effort（例外は握りつぶし締め処理に影響させない）。
   // 多重送信防止：自動月末締め（?month指定なし）かつ JST 月末日に走った回のみ通知。
   try {
     const result = data as { batch_id?: string } | null

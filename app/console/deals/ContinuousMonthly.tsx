@@ -109,9 +109,9 @@ export default function ContinuousMonthly({ deal, onChanged }: { deal: DealLite;
         </button>
       </div>
 
-      {/* 確定済みの月 */}
+      {/* 確定済の月 */}
       <div style={{ padding: '12px 16px', borderTop: '0.5px solid var(--line)', background: '#fff' }}>
-        <p style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>確定済みの月</p>
+        <p style={{ fontSize: '.6rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 8 }}>確定済の月</p>
         {loading ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>読み込み中…</p>
           : confirmedRows.length === 0 ? <p style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>まだありません</p>
           : (

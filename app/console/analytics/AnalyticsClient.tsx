@@ -79,7 +79,7 @@ export default function AnalyticsClient() {
   const shodanCur = view.cur.filter(r => r.intake !== 'direct')
   const funnel = [
     { key: 'received', label: '受付', n: shodanCur.filter(r => r.status === 'received').length, tone: 'warn' as const, color: 'var(--amber)' },
-    { key: 'in_progress', label: '商談中', n: shodanCur.filter(r => r.status === 'in_progress').length, tone: 'progress' as const, color: 'var(--blue)' },
+    { key: 'in_progress', label: '対応中', n: shodanCur.filter(r => r.status === 'in_progress').length, tone: 'progress' as const, color: 'var(--blue)' },
     { key: 'won', label: '成約', n: shodanCur.filter(r => WON(r.status)).length, tone: 'success' as const, color: 'var(--green)' },
     { key: 'lost', label: '不成立', n: shodanCur.filter(r => r.status === 'lost').length, tone: 'neutral' as const, color: 'var(--muted2)' },
   ]

@@ -3,7 +3,7 @@
  * GET   ?deal_id=...        — 案件の月次一覧（period_month 昇順）
  * POST  {deal_id, period_month, gross_input}        — 今月分を確定（confirmed_amount = round(gross × 率/100)）
  * PATCH {deal_id, months}   — 案件の継続期間（deals.continuous_months）を変更
- * ★率は deal.reward_snapshot に凍結された reward_value を正とする（メニュー側が後で変わっても確定済みは不変）。
+ * ★率は deal.reward_snapshot に凍結された reward_value を正とする（メニュー側が後で変わっても確定済は不変）。
  *   月次確定額の式は round(gross × rate/100)＝既存 reward 計算式と同一・byte-unchanged。
  */
 import { NextRequest, NextResponse } from 'next/server'

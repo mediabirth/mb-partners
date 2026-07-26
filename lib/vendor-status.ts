@@ -36,6 +36,5 @@ export const VENDOR_OFFER_ST: Record<string, VendorSt> = {
 export const VENDOR_EXPENSE_ST: Record<string, VendorSt> = {
   submitted: { label: '申請中', c: 'var(--amber)', bg: 'var(--amber-bg)' },
   approved: { label: '承認済', c: 'var(--green)', bg: 'var(--green-bg)' },
-  rejected: { label: '却下', c: 'var(--red)', bg: 'var(--red-bg)' },
+  rejected: { label: '差戻し', c: 'var(--red)', bg: 'var(--red-bg)' },
 }
-

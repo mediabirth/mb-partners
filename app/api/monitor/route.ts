@@ -131,7 +131,7 @@ async function tier3(admin: Awaited<ReturnType<typeof createServiceRoleClient>>)
       const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const prev = ym(new Date(now.getFullYear(), now.getMonth() - 1, 1))
       const stale = rows.filter(r => r.status === 'unbilled' && (r.period < prev || (r.period === prev && (Date.now() - new Date(r.frozen_at).getTime()) > 7 * 86400_000)))
-      out.push({ key: 't3.unbilled_stale', label: 'サプライヤー請求の未請求滞留', ok: stale.length === 0, detail: stale.length ? `${stale.length}件が未請求のまま滞留` : 'OK', where: 'コンソール→サプライヤー請求', next: '請求書を発行し「請求済みにする」を実行' })
+      out.push({ key: 't3.unbilled_stale', label: 'サプライヤー請求の未請求滞留', ok: stale.length === 0, detail: stale.length ? `${stale.length}件が未請求のまま滞留` : 'OK', where: 'コンソール→サプライヤー請求', next: '請求書を発行し「請求済にする」を実行' })
     }
   } catch { /* fail-open（テーブル未作成等） */ }
 

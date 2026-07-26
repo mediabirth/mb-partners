@@ -31,7 +31,7 @@ export default function SupplierInvite() {
       <div style={{ fontSize: '.78rem', fontWeight: 700, marginBottom: 10 }}>パートナーを招待</div>
       <button onClick={() => createLink()} disabled={busy}
         style={{ width: '100%', minHeight: 44, fontFamily: 'inherit', fontSize: '.78rem', fontWeight: 700, color: '#fff', background: 'var(--c-blue)', border: 'none', borderRadius: 10, cursor: 'pointer' }}>
-        {busy ? '作成中…' : copied ? 'コピーしました ✓' : '招待リンクを作成してコピー'}
+        {busy ? '作成中…' : copied ? 'コピーしました' : '招待リンクを作成してコピー'}
       </button>
       {url && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>

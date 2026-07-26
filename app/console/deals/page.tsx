@@ -231,14 +231,14 @@ export default function DealsPage() {
       else showToast(data.error ?? '申請に失敗しました')
     } catch { showToast('申請に失敗しました') } finally { setItemBusy(false) }
   }
-  // A2b: 経費の承認/却下/差戻し。承認＝approved のみ粗利に算入。
+  // A2b: 経費の承認/差戻し。承認＝approved のみ粗利に算入。
   async function setExpenseStatus(expId: string, status: 'approved' | 'rejected' | 'submitted') {
     if (!selected) return
     setItemBusy(true)
     try {
       const res = await fetch(`/api/console/expenses/${expId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
       const data = await res.json().catch(() => ({}))
-      if (res.ok && data.expense) { await refreshDeals(selected.id); showToast(status === 'approved' ? '承認しました' : status === 'rejected' ? '却下しました' : '差戻しました') }
+      if (res.ok && data.expense) { await refreshDeals(selected.id); showToast(status === 'approved' ? '承認しました' : '差し戻しました') }
       else showToast(data.error ?? '更新に失敗しました')
     } catch { showToast('更新に失敗しました') } finally { setItemBusy(false) }
   }
@@ -268,7 +268,7 @@ export default function DealsPage() {
       setLostReason(''); setLostNote(''); setLostModal(deal)
       return
     }
-    // 無音B: 楽観的更新は「表示・状態遷移で金額に影響しないもの」のみ（受付↔商談中）。
+    // 無音B: 楽観的更新は「表示・状態遷移で金額に影響しないもの」のみ（受付↔対応中）。
     //   確定系（成約confirmed=snapshot凍結・支払済paid・不成立lost）は従来どおりサーバ確定を待つ（CLAUDE.md恒久線引き）。
     const optimistic = (newStatus === 'received' || newStatus === 'in_progress') && deal.status !== 'paid' && deal.status !== 'confirmed'
     const prevStatus = deal.status
@@ -496,7 +496,7 @@ export default function DealsPage() {
     const srcPhase = deal._phase ?? phaseOf(deal)
     if (lane.group === 'shodan') {
       if (srcPhase === 'project') { showToast('プロジェクトの案件は商談へ戻せません'); dragItem.current = null; return }
-      requestStatusMove(deal, lane.key as Status)         // 受付↔商談中（既存処理＋実装2の結果予告）
+      requestStatusMove(deal, lane.key as Status)         // 受付↔対応中（既存処理＋実装2の結果予告）
     } else if (srcPhase === 'shodan') {
       // 商談→プロジェクト列（進行中）へのドロップ＝成約フロー。
       requestStatusMove(deal, 'confirmed')
@@ -666,7 +666,7 @@ export default function DealsPage() {
           </div>
         ) : (
         <div style={{ padding: '18px 0 28px' }}>
-          {/* F-3a: フェーズ×ステータスのパイプライン。左→右で 商談(受付→商談中)→成約→プロジェクト(進行中→納品済み)。
+          {/* F-3a: フェーズ×ステータスのパイプライン。左→右で 商談(受付→対応中)→成約→プロジェクト(進行中→納品済み)。
               直営業は商談を飛ばしプロジェクト列に出現。レーン間ドラッグ：商談=status変更／成約=既存の成約フロー／プロジェクト間=project_status変更（お金非干渉）。 */}
           {/* 静音化v2.1(A4): ゾーン見出し＝PHASE_LABEL正典（商談/プロジェクト）から導出・11px/muted 1行。
               ゾーン間ガター24px・レーン間12px。projectの3面写像ツールチップ（MappingTip）はゾーン見出しに1回のみ。
@@ -725,7 +725,7 @@ export default function DealsPage() {
                         // ライフサイクル: 率案件は成約後に粗利計算→報酬確定。未確定＝要対応（成約前は正常状態なので出さない）。
                         d.status === 'confirmed' && needsBase(d) && '報酬が未確定です（粗利の確定待ち）',
                         (d._deliveries ?? []).some(a => a.status === 'proposed') && 'ベンダーの承諾待ちの提示があります',
-                        rejectedExp && '却下された経費があります',
+                        rejectedExp && '差し戻された経費があります',
                         revenueMissing && '受注額（売上）が未入力',
                       ].filter(Boolean) as string[]
                       {/* 静音化v2(C): カード2行文法＝名前13px/500＋「ブランド ─ メニュー」11px/muted。担当/委託は3行目11px。詳細はドロワーが語る。 */}

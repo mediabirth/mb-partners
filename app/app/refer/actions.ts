@@ -130,7 +130,7 @@ export async function submitPartnerReferral(formData: FormData) {
         ...mr,
         reward_type: mr.reward_type, reward_value: effValue, reward_base: mr.reward_base, reward_trigger: mr.reward_trigger,
         ref_type: mr.reward_type, ref_value: effValue, ref_base: mr.reward_base,
-        // 継続条件を凍結（メニュー側の率・期間が後で変わっても確定済み月は不変）。
+        // 継続条件を凍結（メニュー側の率・期間が後で変わっても確定済月は不変）。
         months: mr.reward_type === 'continuous' ? (mr.default_months ?? null) : null,
         ...(overrideApplied ? { override_applied: overrideApplied } : {}),
       }

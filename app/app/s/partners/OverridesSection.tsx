@@ -1,7 +1,7 @@
 'use client'
 /**
  * 個別条件（B・2026-07-18）— 特定のパートナーだけ報酬を変える（自社の紹介者×自社メニューのみ）。
- * 機構はMBコンソールの個別条件と同一（partner_reward_overrides・値のみ・確定済みはsnapshot凍結で不変）。
+ * 機構はMBコンソールの個別条件と同一（partner_reward_overrides・値のみ・確定済はsnapshot凍結で不変）。
  */
 import { useEffect, useState } from 'react'
 import { rewardValueText } from '@/lib/reward-format'
@@ -45,7 +45,7 @@ export default function OverridesSection() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 15px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '.72rem', fontWeight: 500 }}>個別条件（特定のパートナーだけ報酬を変える）</div>
-          <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>そのパートナーのアプリにだけ表示されます。確定済みの案件には影響しません。</div>
+          <div style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 2 }}>そのパートナーのアプリにだけ表示されます。確定済の案件には影響しません。</div>
         </div>
         {data.partners.length > 0 && data.rewards.length > 0 && (
           <button onClick={() => setOpen(o => !o)} className="ui-btn ui-btn--ghost" style={{ fontSize: '.68rem', padding: '7px 13px', flexShrink: 0 }}>{open ? '閉じる' : '＋ 設定する'}</button>

@@ -135,9 +135,9 @@ export async function PATCH(req: NextRequest) {
     const { data: d } = await admin.from('deals').select('id, service_id, status, customer_name, deal_items(id)').eq('id', b.deal_id).maybeSingle()
     if (!d) return NextResponse.json({ error: '案件が見つかりません' }, { status: 404 })
     if (!(await ownService(admin, me.partnerId, d.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみ入力できます' }, { status: 403 })
-    if (d.status !== 'confirmed') return NextResponse.json({ error: d.status === 'paid' ? 'この案件は確定済みです（受注額の変更はMB Partnersへご連絡ください）' : '受注額は成約後の案件に入力できます' }, { status: 400 })
+    if (d.status !== 'confirmed') return NextResponse.json({ error: d.status === 'paid' ? 'この案件は確定済です（受注額の変更はMB Partnersへご連絡ください）' : '受注額は成約後の案件に入力できます' }, { status: 400 })
     const { data: frozenRow } = await admin.from('supplier_charges').select('id').eq('supplier_partner_id', me.partnerId).eq('deal_id', d.id).limit(1)
-    if (frozenRow?.length) return NextResponse.json({ error: 'この案件の請求は締め済みです（確定済み・変更はMB Partnersへ）' }, { status: 400 })
+    if (frozenRow?.length) return NextResponse.json({ error: 'この案件の請求は締め済みです（確定済・変更はMB Partnersへ）' }, { status: 400 })
     const revenue = Math.round(Number(b.revenue))
     if (!Number.isFinite(revenue) || revenue < 0 || revenue > 1_000_000_000) return NextResponse.json({ error: '受注額が不正です' }, { status: 400 })
     const item = ((d.deal_items as { id: string }[] | null) ?? [])[0]
@@ -213,16 +213,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: dv.id, invite_url, emailed })
   }
 
-  // v6②: 自社案件への委託アサイン（提示）＝受託者のアプリに承諾待ちで表示（既存vendorフローに接続）
+  // v6②: 自社案件の委託提示＝受託者のアプリに承諾待ちで表示（既存vendorフローに接続）
   if (kind === 'assign') {
     const dealId = typeof b.deal_id === 'string' ? b.deal_id : ''
     const deliveryId = typeof b.delivery_id === 'string' ? b.delivery_id : ''
     const baseFee = Math.round(Number(b.base_fee))
     if (!dealId || !deliveryId || !Number.isFinite(baseFee) || baseFee < 0) return NextResponse.json({ error: 'deal_id / delivery_id / base_fee は必須です' }, { status: 400 })
     const { data: dl } = await admin.from('deals').select('id, service_id, customer_name').eq('id', dealId).maybeSingle()
-    if (!dl || !(await ownService(admin, me.partnerId, dl.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみアサインできます' }, { status: 403 })
+    if (!dl || !(await ownService(admin, me.partnerId, dl.service_id as string))) return NextResponse.json({ error: '自社メニューの案件のみ委託できます' }, { status: 403 })
     const { data: dv } = await admin.from('deliveries').select('id, name, supplier_partner_id').eq('id', deliveryId).maybeSingle()
-    if (!dv || dv.supplier_partner_id !== me.partnerId) return NextResponse.json({ error: '自社の委託先のみアサインできます' }, { status: 403 })
+    if (!dv || dv.supplier_partner_id !== me.partnerId) return NextResponse.json({ error: '自社の委託先にのみ委託できます' }, { status: 403 })
     const { data: ins, error } = await admin.from('delivery_assignments').insert({ deal_id: dealId, delivery_id: deliveryId, base_fee: baseFee, status: 'proposed', assigned_at: new Date().toISOString(), note: `サプライヤー（${me.name}）から提示` }).select('id').single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     try { await admin.from('deal_events').insert({ deal_id: dealId, body: `委託を提示: ${dv.name} ・ 委託費 ¥${baseFee.toLocaleString()}（サプライヤー ${me.name} から）`, visible_to_partner: false, created_by: null }) } catch { /* best-effort */ }

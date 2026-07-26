@@ -233,7 +233,7 @@ export async function GET() {
   })
 
   // ベンダー純化P2: 受注額の乖離琥珀フラグ（vendor-redesign.md §3(b)・表示専用の導出値）。
-  //   同一メニュー直近90日の確定済み受注額の中央値±70%（N<3は1桁ずれの緩い帯・N==0はfixed報酬×10からの1桁ずれのみ）。
+  //   同一メニュー直近90日の確定済受注額の中央値±70%（N<3は1桁ずれの緩い帯・N==0はfixed報酬×10からの1桁ずれのみ）。
   //   ★保存/請求/報酬には一切影響しない（判定失敗は静かにフラグなし）。
   try {
     const { judgeDeviation } = await import('@/lib/revenue-flag')

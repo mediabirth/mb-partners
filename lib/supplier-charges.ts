@@ -55,7 +55,7 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
     const deliveryCost = asg.reduce((s: number, a: { base_fee: number | null }) => s + (Number(a.base_fee) || 0), 0)
     const deliveryExpense = asg.reduce((s: number, a: { id: string }) => s + (expByAsg[a.id] ?? 0), 0)
     const base = supplierChargeBase({ revenue, deliveryCost, deliveryExpense, otherCost: Number(d.other_cost) || 0 })
-    // Feature I: 率は凍結済みfee_snapshot.rateを正とする（レートカード改定が確定済み案件に波及しない）
+    // Feature I: 率は凍結済みfee_snapshot.rateを正とする（レートカード改定が確定済案件に波及しない）
     const frozenRate = Number((d.fee_snapshot as { rate?: number }).rate) || FEE_RATE.half_commission
     const amount = Math.round(Math.max(0, base) * frozenRate)
     // base≦0（受注額未入力等）は凍結しない＝0円でロックせず、入力後の再クローズで拾える（凍結済みskipの対象外のため）。

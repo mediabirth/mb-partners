@@ -117,7 +117,7 @@ export default function ShareLinkSheet({ serviceId, serviceName, menus = [], onC
           ) : (
             <div className="ui-skeleton" style={{ width: 148, height: 148, borderRadius: 10 }} />
           )}
-          <button onClick={saveQr} disabled={!qr} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.72rem', fontWeight: 500, cursor: qr ? 'pointer' : 'default', fontFamily: 'inherit' }}>QRコードを保存</button>
+          <button onClick={saveQr} disabled={!qr} style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: '.72rem', fontWeight: 500, cursor: qr ? 'pointer' : 'default', fontFamily: 'inherit' }}>QRコードを保存する</button>
         </div>
       </div>
     </>

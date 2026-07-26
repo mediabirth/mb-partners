@@ -32,12 +32,12 @@ await p.goto(BASE+'/console/deals',{waitUntil:'domcontentloaded'});await p.waitF
 const laneOf=async(name:string)=>await p.evaluate(`(()=>{
   const card=[...document.querySelectorAll('b')].find(b=>b.textContent.includes('${name}')); if(!card) return null
   const cx=card.getBoundingClientRect().x
-  const heads=[...document.querySelectorAll('span')].filter(s=>['受付','商談中','進行中'].includes(s.textContent.trim())&&s.getBoundingClientRect().width>0)
+  const heads=[...document.querySelectorAll('span')].filter(s=>['受付','対応中','進行中'].includes(s.textContent.trim())&&s.getBoundingClientRect().width>0)
   let best=null,bd=1e9
   for(const h of heads){const d=Math.abs(h.getBoundingClientRect().x-cx); if(d<bd){bd=d;best=h.textContent.trim()}}
   return best })()`) as string|null
-// 1) 楽観移動: 受付→商談中（drag→確認モーダル→移動する→即時反映）
-await p.locator('b:has-text("CCOB移動")').first().dragTo(p.locator('text=商談中').first())
+// 1) 楽観移動: 受付→対応中（drag→確認モーダル→移動する→即時反映）
+await p.locator('b:has-text("CCOB移動")').first().dragTo(p.locator('text=対応中').first())
 await p.waitForTimeout(600)
 const confirmBtn=p.locator('.modal-pop button:has-text("移動する"), button:has-text("移動する")')
 ok((await confirmBtn.count())>0,'結果予告モーダル（ripple）表示')
@@ -52,17 +52,17 @@ await p.route('**/api/console/deals/*',async r=>{
 const t0=Date.now()
 await confirmBtn.first().click()
 let movedAt=-1
-while(Date.now()-t0<3000){ const lane=await laneOf('CCOB移動'); if(lane&&lane.includes('商談中')){movedAt=Date.now()-t0;break}; await p.waitForTimeout(16) }
+while(Date.now()-t0<3000){ const lane=await laneOf('CCOB移動'); if(lane&&lane.includes('対応中')){movedAt=Date.now()-t0;break}; await p.waitForTimeout(16) }
 ok(movedAt>=0&&movedAt<300,`楽観反映: 押下→カード移動 ${movedAt}ms（サーバ1200ms遅延中に反映=同期待ちなし）`,String(movedAt))
 await p.waitForTimeout(1800)
 // 2) 失敗ロールバック: PATCHを500で落とす→カードが受付に戻る＋明示トースト
 routeMode='fail'
-await p.locator('b:has-text("CCOB失敗")').first().dragTo(p.locator('text=商談中').first())
+await p.locator('b:has-text("CCOB失敗")').first().dragTo(p.locator('text=対応中').first())
 await p.waitForTimeout(600)
 await p.locator('button:has-text("移動する")').first().click()
 await p.waitForTimeout(250)
 const laneMid=await laneOf('CCOB失敗')
-ok(!!laneMid&&laneMid.includes('商談中'),'失敗前に楽観反映されている',String(laneMid))
+ok(!!laneMid&&laneMid.includes('対応中'),'失敗前に楽観反映されている',String(laneMid))
 await p.waitForTimeout(1500)
 const laneAfter=await laneOf('CCOB失敗')
 ok(!!laneAfter&&laneAfter.includes('受付'),'失敗→受付へロールバック',String(laneAfter))

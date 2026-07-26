@@ -12,7 +12,7 @@ import SupplierChargesPanel from './SupplierChargesPanel'
 /* ============================================================
  * 支払（BR-C4 再設計＋情報再構造化 2026-07-14）— お金の出入りの唯一の画面。
  *   タブ①パートナーへの支払（MBが払う・従来の支払管理）／タブ②サプライヤーからの請求（MBが請求する・旧 /console/supplier-charges を統合）。
- * 内部用語（凍結/未凍結/override/源泉…）は前面に出さず、確定/確定前/支払済み のプレーンな言葉に。
+ * 内部用語（凍結/未凍結/override/源泉…）は前面に出さず、確定/確定前/支払済 のプレーンな言葉に。
  * ★お金の計算・操作（締め/確定=凍結/支払済/取消/請求済/入金済）の処理ロジックは既存ハンドラをそのまま呼ぶ＝不変。
  * ============================================================ */
 
@@ -233,7 +233,7 @@ export default function PayoutsPage() {
     return [...m.values()].sort((a, b) => b.total - a.total)
   })()
   const partnerMax = Math.max(...partnerTotals.map(p => p.total), 1)
-  // 延滞アラート：確定済み(closed)で未払いのまま日数が経過（翌月末払い≒30日超で要対応）。表示のみ。
+  // 延滞アラート：確定済(closed)で未払いのまま日数が経過（翌月末払い≒30日超で要対応）。表示のみ。
   const overdueDays = (() => {
     const closed = batches.filter(b => b.status === 'closed' && b.closed_at)
     if (!closed.length) return null
@@ -289,11 +289,11 @@ export default function PayoutsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <span style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)' }}>{monthLabel(`${jstYm}-01`)}の支払{thisMonthConfirmed ? '' : '見込み'}</span>
                 <span style={{ fontSize: '.52rem', fontWeight: 500, color: thisMonthConfirmed ? 'var(--green)' : 'var(--amber)', background: thisMonthConfirmed ? 'var(--green-bg)' : 'var(--amber-bg)', borderRadius: 20, padding: '2px 8px' }}>
-                  {thisMonthConfirmed ? '確定済み' : '締め後に確定'}
+                  {thisMonthConfirmed ? '確定済' : '締め後に確定'}
                 </span>
               </div>
               <div className="tnum" style={{ fontFamily: 'Inter', fontSize: '1.6rem', fontWeight: 500, color: 'var(--c-blue)', lineHeight: 1.1 }}>{yen(thisMonthNet)}</div>
-              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>対象 {thisMonthPartners} 名{!thisMonthConfirmed && ' ・ 確定済み案件の見込み（締めで確定）'}</div>
+              <div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 5 }}>対象 {thisMonthPartners} 名{!thisMonthConfirmed && ' ・ 確定済案件の見込み（締めで確定）'}</div>
             </div>
             {/* 要支払い（即振込）＋延滞 */}
             <div style={{ background: '#fff', border: `0.5px solid ${overdue ? 'var(--red)' : 'var(--line)'}`, borderRadius: 16, padding: '18px 20px' }}>

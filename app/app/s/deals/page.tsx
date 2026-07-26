@@ -197,12 +197,12 @@ export default function SupplierDealsPage() {
                           <input inputMode="numeric" value={draft[d.id] ?? (d.revenue ? String(d.revenue) : '')} placeholder="未入力"
                             onChange={e => setDraft(p => ({ ...p, [d.id]: e.target.value }))}
                             style={{ width: 110, minHeight: 34, padding: '0 9px', borderRadius: 8, border: d.revenue ? '0.5px solid var(--line)' : '1.5px solid var(--amber)', fontFamily: 'Inter', fontSize: '.72rem', textAlign: 'right' }} />
-                          <button disabled={busy === d.id} onClick={() => saveRevenue(d)} style={{ fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 500, minHeight: 34, padding: '0 12px', borderRadius: 8, border: 'none', cursor: 'pointer', color: '#fff', background: 'var(--c-blue)' }}>{busy === d.id ? '…' : '保存'}</button>
+                          <button disabled={busy === d.id} onClick={() => saveRevenue(d)} style={{ fontFamily: 'inherit', fontSize: '.62rem', fontWeight: 500, minHeight: 34, padding: '0 12px', borderRadius: 8, border: 'none', cursor: 'pointer', color: '#fff', background: 'var(--c-blue)' }}>{busy === d.id ? '…' : '保存する'}</button>
                         </span>
                       ) : (d.status === 'paid' || d.frozen) ? (
                         <span style={{ fontSize: '.7rem' }}>
                           <span className="tnum" style={{ fontFamily: 'Inter' }}>{d.revenue ? `¥${d.revenue.toLocaleString()}` : '—'}</span>
-                          <span style={{ fontSize: '.56rem', color: 'var(--muted2)', marginLeft: 6 }}>確定済み</span>
+                          <span style={{ fontSize: '.56rem', color: 'var(--muted2)', marginLeft: 6 }}>確定済</span>
                         </span>
                       ) : (
                         <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>成約後に入力</span>
@@ -235,7 +235,7 @@ export default function SupplierDealsPage() {
                ['状態', DEAL_STATUS[detail.status]?.label ?? detail.status],
                ['受付日', new Date(detail.created_at).toLocaleDateString('ja', { timeZone: 'Asia/Tokyo' })],
                ['成約月', detail.fixed_month ? detail.fixed_month.slice(0, 7).replace('-', '年') + '月' : '—'],
-               ['受注額（税抜）', detail.revenue ? `¥${detail.revenue.toLocaleString()}` + ((detail.status === 'paid' || detail.frozen) ? '（確定済み）' : '') : '未入力'],
+               ['受注額（税抜）', detail.revenue ? `¥${detail.revenue.toLocaleString()}` + ((detail.status === 'paid' || detail.frozen) ? '（確定済）' : '') : '未入力'],
               ] as const).map(([l, v]) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderBottom: '0.5px solid var(--line)', fontSize: '.74rem' }}>
                 <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{l}</span><span style={{ textAlign: 'right' }}>{v}</span>
@@ -249,7 +249,7 @@ export default function SupplierDealsPage() {
                   <input inputMode="numeric" value={draft[detail.id] ?? (detail.revenue ? String(detail.revenue) : '')} placeholder="未入力"
                     onChange={e => setDraft(p => ({ ...p, [detail.id]: e.target.value }))}
                     style={{ flex: 1, minHeight: 40, padding: '0 10px', borderRadius: 8, border: detail.revenue ? '0.5px solid var(--line)' : '1.5px solid var(--amber)', fontFamily: 'Inter', fontSize: '.76rem', textAlign: 'right', boxSizing: 'border-box' }} />
-                  <button disabled={busy === detail.id} onClick={() => saveRevenue(detail)} style={{ fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, minHeight: 40, padding: '0 16px', borderRadius: 8, border: 'none', cursor: 'pointer', color: '#fff', background: 'var(--c-blue)', flexShrink: 0 }}>{busy === detail.id ? '…' : '保存'}</button>
+                  <button disabled={busy === detail.id} onClick={() => saveRevenue(detail)} style={{ fontFamily: 'inherit', fontSize: '.68rem', fontWeight: 500, minHeight: 40, padding: '0 16px', borderRadius: 8, border: 'none', cursor: 'pointer', color: '#fff', background: 'var(--c-blue)', flexShrink: 0 }}>{busy === detail.id ? '…' : '保存する'}</button>
                 </div>
               </div>
             )}
@@ -259,7 +259,7 @@ export default function SupplierDealsPage() {
             {/* ベンダー純化P2: 売上エビデンス（任意）— 通常は不要・大型案件や記録用。money非接触。 */}
             <EvidenceSection dealId={detail.id} say={say} />
 
-            {/* 委託（v6: 自社の委託先へのアサイン提示＝受託者アプリに承諾待ちで表示） */}
+            {/* 委託（v6: 自社の委託先への提示＝受託者アプリに承諾待ちで表示） */}
             <div style={{ padding: '12px 0', fontSize: '.74rem' }}>
               <div style={{ color: 'var(--muted2)', marginBottom: 6 }}>委託</div>
               {detail.assignments.length === 0 ? <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginBottom: 8 }}>まだ委託はありません</div> : detail.assignments.map(a => (

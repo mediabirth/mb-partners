@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const now = new Date().toISOString()
   if (b.action === 'invoice') {
-    if (row.status !== 'unbilled') return NextResponse.json({ error: 'unbilled のみ請求済みにできます' }, { status: 409 })
+    if (row.status !== 'unbilled') return NextResponse.json({ error: 'unbilled のみ請求済にできます' }, { status: 409 })
     const { error } = await admin.from('supplier_charges').update({ status: 'invoiced', invoiced_at: now, updated_at: now }).eq('id', id).eq('status', 'unbilled')
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true, status: 'invoiced' })
@@ -47,7 +47,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const admin = await createServiceRoleClient()
   const { data: row } = await admin.from('supplier_charges').select('id, status').eq('id', id).maybeSingle()
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (row.status !== 'unbilled') return NextResponse.json({ error: '請求済み以降の凍結は解除できません' }, { status: 409 })
+  if (row.status !== 'unbilled') return NextResponse.json({ error: '請求済以降の凍結は解除できません' }, { status: 409 })
   const { error } = await admin.from('supplier_charges').delete().eq('id', id).eq('status', 'unbilled')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

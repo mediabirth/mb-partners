@@ -24,7 +24,7 @@ export default function CompanyNameField({ initial, fallback }: { initial: strin
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       <input value={val} onChange={e => setVal(e.target.value)} placeholder="株式会社〇〇" autoFocus
         style={{ border: '0.5px solid var(--line)', borderRadius: 8, padding: '6px 10px', fontFamily: 'inherit', fontSize: '.78rem', width: 200 }} />
-      <button disabled={busy} onClick={save} className="ui-btn ui-btn--primary" style={{ fontSize: '.64rem', padding: '6px 12px' }}>{busy ? '…' : '保存'}</button>
+      <button disabled={busy} onClick={save} className="ui-btn ui-btn--primary" style={{ fontSize: '.64rem', padding: '6px 12px' }}>{busy ? '…' : '保存する'}</button>
     </span>
   )
 }

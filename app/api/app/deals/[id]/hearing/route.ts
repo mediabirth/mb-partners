@@ -1,12 +1,13 @@
 /**
- * v2 リファラル：パートナーのヒヤリング入力を保存し、該当案件の協力タスク「ヒヤリング」を自動で完了に。
+ * v2 リファラル：パートナーのヒアリング入力を保存し、該当案件の協力タスク「ヒアリング」を自動で完了に。
  * POST /api/app/deals/[id]/hearing  body: { text }
  * ★money計算・reward・status・deal本体には触れない。deal_tasks の note/done（既存列）のみ更新。
- *   ヒヤリングタスクが無い/協力dealでない場合も 200（no-op）＝作成・報酬ゲートを壊さない fail-open。
+ *   ヒアリングタスクが無い/協力dealでない場合も 200（no-op）＝作成・報酬ゲートを壊さない fail-open。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerByUserId } from '@/lib/supabase/queries'
+import { isHearingTaskText } from '@/lib/coop-task-display'
 
 export const runtime = 'edge'
 
@@ -31,9 +32,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const text = raw
 
   const admin = await createServiceRoleClient()
-  // ヒヤリングタスク（kind か label に「ヒヤリング」を含む）を特定。
+  // ヒアリングタスクを特定。既存DBの旧表記「ヒヤリング」も後方互換で受理する。
   const { data: tasks } = await admin.from('deal_tasks').select('id, label, kind, done').eq('deal_id', id)
-  const hearing = (tasks ?? []).find((t: { label: string; kind: string }) => t.kind?.includes('ヒヤリング') || t.label?.includes('ヒヤリング'))
+  const hearing = (tasks ?? []).find((t: { label: string; kind: string }) => isHearingTaskText(t.kind) || isHearingTaskText(t.label))
 
   if (!hearing) {
     // タスクが無い（紹介deal 等）：note を保存できないので no-op で 200（UI側は保存済み表示）。

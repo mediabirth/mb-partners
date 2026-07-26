@@ -105,7 +105,7 @@ ok(frz.ok(), '月次凍結 POST ok')
 const { data: poi } = await admin.from('delivery_payout_items').select('id, amount, status').eq('deal_id', dealA)
 ok((poi ?? []).length === 1 && poi![0].amount === 30000 && poi![0].status === 'unpaid', '凍結明細（¥30,000・unpaid）生成', JSON.stringify(poi))
 const paid = await pg.request.patch(BASE + `/api/console/delivery-payouts/${poi![0].id}`, { data: { paid: true } })
-ok(paid.ok(), '支払済みへ PATCH ok')
+ok(paid.ok(), '支払済へ PATCH ok')
 const { data: poi2 } = await admin.from('delivery_payout_items').select('status, paid_at').eq('id', poi![0].id).single()
 ok(poi2?.status === 'paid' && !!poi2?.paid_at, '一気通貫: delivered→凍結→paid 完了')
 

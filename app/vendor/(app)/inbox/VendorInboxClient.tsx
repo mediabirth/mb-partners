@@ -2,7 +2,7 @@
 /**
  * 受託者の通知（純化バッチD）— 単一リスト。
  * 「お知らせ」タブは撤去：broadcasts に相当する受託者向け配信機能が存在しないため（存在しない機能の文法を移植しない）。
- * 通知はすべて本人宛の契約・お金イベント（経費承認/却下・支払・アサイン）。read-state は持たない（派生・DDLレス）。
+ * 通知はすべて本人宛の契約・お金イベント（経費承認/差戻し・支払・委託）。read-state は持たない（派生・DDLレス）。
  */
 import Link from 'next/link'
 import type { VNotif } from '@/lib/vendor-data'
@@ -26,7 +26,7 @@ export default function VendorInboxClient({ notifs }: { notifs: VNotif[] }) {
     <div className="page-anim">
       <div style={{ padding: '22px 20px 6px' }}><h2 className="ty-h2">通知</h2></div>
       {notifs.length === 0 ? (
-        <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>通知はありません</p>
+        <p style={{ padding: '40px 20px', fontSize: '.7rem', color: 'var(--muted2)', textAlign: 'center' }}>まだ通知はありません</p>
       ) : notifs.map(n => (
         <Link key={n.id} href={n.href ?? '/vendor'} className="lift" style={{ display: 'flex', gap: 12, padding: '14px 20px', borderBottom: '0.5px solid var(--line)', textDecoration: 'none', color: 'var(--txt)', alignItems: 'center' }}>
           <Icon type={n.icon} />

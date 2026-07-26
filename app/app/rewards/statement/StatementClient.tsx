@@ -205,7 +205,7 @@ export default function StatementClient({
       {/* Print button */}
       <div style={{ margin: '4px 20px 20px' }}>
         <button onClick={() => window.print()} className="btn btn-p" style={{ width: '100%' }}>
-          印刷 / PDFとして保存
+          印刷 / PDFとして保存する
           <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: .85 }}/>
         </button>
       </div>

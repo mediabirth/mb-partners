@@ -63,7 +63,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
 
 ・対象: ${label}
 ・値: ${ovValue}
-・以後に作成される案件から適用（受付済み・確定済みには波及しません）
+・以後に作成される案件から適用（受付済み・確定済には波及しません）
 
 よろしいですか？`)) return
     setBusy(true)
@@ -100,7 +100,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   async function changeCard() {
     if (!d || !selCard || selCard === d.supplier.rate_card || busy) return
     const to = cards.find(c => c.id === selCard)
-    if (!confirm(`レートカードを付け替えます（標準移行オプション）。\n\n・${cardLabel(d.supplier.rate_card)} → ${cardLabel(selCard)}\n・適用されるのは「以後に確定する案件」からです\n・確定済みの fee_snapshot・凍結済みの請求には一切波及しません\n・月額固定（${to?.monthly_fee != null ? 'あり' : 'なし'}）は次回の月次クローズから反映\n\nよろしいですか？`)) return
+    if (!confirm(`レートカードを付け替えます（標準移行オプション）。\n\n・${cardLabel(d.supplier.rate_card)} → ${cardLabel(selCard)}\n・適用されるのは「以後に確定する案件」からです\n・確定済の fee_snapshot・凍結済みの請求には一切波及しません\n・月額固定（${to?.monthly_fee != null ? 'あり' : 'なし'}）は次回の月次クローズから反映\n\nよろしいですか？`)) return
     setBusy(true)
     const r = await fetch(`/api/console/suppliers/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rate_card_id: selCard }) })
     const j = await r.json().catch(() => ({}))
@@ -121,7 +121,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   }
   async function attach() {
     if (!attachBrand || busy) return
-    if (!confirm(`ブランド「${allBrands.find(b => b.id === attachBrand)?.name}」の供給元をこのサプライヤーに結線します。\n以後に確定する案件から系統判定に反映されます（確定済みには波及しません）。`)) return
+    if (!confirm(`ブランド「${allBrands.find(b => b.id === attachBrand)?.name}」の供給元をこのサプライヤーに結線します。\n以後に確定する案件から系統判定に反映されます（確定済には波及しません）。`)) return
     setBusy(true)
     const r = await fetch(`/api/console/services/${attachBrand}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ supplier_partner_id: id }) })
     if (!r.ok) { const j = await r.json().catch(() => ({})); setNote(j.error ?? '失敗') }
@@ -228,7 +228,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                   <input value={ovNote} onChange={e => setOvNote(e.target.value)} placeholder="メモ（依頼の出自）" style={{ flex: 1, minWidth: 140, padding: '8px 10px', borderRadius: 8, border: '0.5px solid var(--line)', fontSize: '.72rem', fontFamily: 'inherit' }} />
                   <button onClick={addOverride} disabled={busy || !ovPartner || !ovValue} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '8px 14px' }}>設定</button>
                 </div>
-                <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 8 }}>値のみ上書き（型・基準はメニュー正典のまま）。適用は以後に作成される案件から＝受付済み・確定済みには波及しません。全操作は監査ログに記録されます。</p>
+                <p style={{ fontSize: '.6rem', color: 'var(--muted2)', marginTop: 8 }}>値のみ上書き（型・基準はメニュー正典のまま）。適用は以後に作成される案件から＝受付済み・確定済には波及しません。全操作は監査ログに記録されます。</p>
               </div>
 
               <div style={CARD}>

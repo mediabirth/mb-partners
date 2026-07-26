@@ -64,7 +64,7 @@ async function registerVia(url:string,last:string){const p=await ctx.newPage()
 async function confirmDeal(name:string,revenue?:string){
   await pg.goto(BASE+'/console/deals',{waitUntil:'domcontentloaded'});await pg.waitForTimeout(3000)
   await pg.locator(`text=${name}`).first().click();await pg.waitForTimeout(1200)
-  const cta1=pg.locator('button',{hasText:'商談中へ'})
+  const cta1=pg.locator('button',{hasText:'対応中へ'})
   if(await cta1.count()){await cta1.first().click();await pg.waitForTimeout(600)
     await pg.locator('button',{hasText:'実行する'}).click();await pg.waitForTimeout(1500)}
   await pg.locator('button',{hasText:'成約にする'}).first().click();await pg.waitForTimeout(900)
@@ -623,11 +623,11 @@ console.log('[19] craft検査（v2是正の実測）')
     if(t.includes('パートナーを招待'))formPages++
   }
   ok(formPages===1,'招待導線: パートナーページの1箇所のみ（rendered）',String(formPages))
-  // 支払済（CCE2E-E=paid）行に編集UI不在＋確定済み注記
+  // 支払済（CCE2E-E=paid）行に編集UI不在＋確定済注記
   await pp.goto(BASE+'/app/s/deals',{waitUntil:'domcontentloaded'});await pp.waitForTimeout(2800)
   const rowE=pp.locator('tr',{hasText:'CCE2E-E'})
   ok((await rowE.locator('input').count())===0,'支払済行: 編集欄・保存ボタン不在（読み取り表示）')
-  ok((await rowE.innerText()).includes('確定済み'),'支払済行: 「確定済み」注記')
+  ok((await rowE.innerText()).includes('確定済'),'支払済行: 「確定済」注記')
   // 設定: 口座＋ログイン情報
   await pp.goto(BASE+'/app/s/settings',{waitUntil:'domcontentloaded'});await pp.waitForTimeout(2500)
   const ts=await pp.evaluate(`document.body.innerText`) as string

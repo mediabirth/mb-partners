@@ -14,7 +14,7 @@ export default function DeliverySection() {
     <div>
       <div style={{ ...CARD, overflow: 'hidden' }}>
         {list === null ? <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>読み込み中…</p>
-        : list.length === 0 ? <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>まだ委託先がいません。招待すると、案件への委託（アサイン）ができるようになります。</p>
+        : list.length === 0 ? <p style={{ fontSize: '.72rem', color: 'var(--muted2)', padding: '14px 15px', margin: 0 }}>まだ委託先がいません。招待すると、案件を委託できるようになります。</p>
         : list.map((v, i) => (
           <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 15px', borderTop: i === 0 ? 'none' : '0.5px solid var(--line)' }}>
             <span style={{ flex: 1, minWidth: 0, fontSize: '.76rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.name}<span style={{ fontSize: '.6rem', color: 'var(--muted2)', fontWeight: 400, marginLeft: 8 }}>{v.kind ?? ''}</span></span>
@@ -25,7 +25,7 @@ export default function DeliverySection() {
           </div>
         ))}
       </div>
-      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '8px 2px 0' }}>案件への委託（アサイン）は「案件」の詳細から。委託費のお支払いはMB Partnersの月次サイクルで行われます。</p>
+      <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '8px 2px 0' }}>案件の委託は「案件」の詳細から。委託費のお支払いはMB Partnersの月次サイクルで行われます。</p>
     </div>
   )
 }

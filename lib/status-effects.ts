@@ -114,7 +114,7 @@ export type OpsAction = {
   precondition?: string
 }
 export const OPS_NEXT_ACTION: Record<DealStatusKey, OpsAction | null> = {
-  received:    { cta: 'お客さまへ連絡済みにして商談中へ', to: 'in_progress' },
+  received:    { cta: 'お客さまへ連絡して対応中へ', to: 'in_progress' },
   in_progress: { cta: '成約にする', to: 'confirmed', precondition: '明細1件以上（率・継続・直営は成約時に受注額を入力）' },
   confirmed:   { cta: '支払済にする', to: 'paid', precondition: '通常は月次締め（cron）が実施' },
   paid:        null,

@@ -5,6 +5,7 @@ import { getPartnerByUserId, getDealWithEvents } from '@/lib/supabase/queries'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import RewardPill from '@/components/ui/RewardPill'
 import { rewardValueText } from '@/lib/reward-format'
+import { isHearingTaskText } from '@/lib/coop-task-display'
 import DealNextActions from '@/components/DealNextActions'
 import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import MenuInfoButton from '@/components/MenuInfoButton'
@@ -84,7 +85,7 @@ export default async function CaseDetailPage({
   const method: 'send' | 'self' = next === 'self' ? 'self' : 'send'
   // 担い＝reward_type由来の channel。cooperation=アポイント→予約(/book/)、referral=連絡のみ（リンク導線なし）。
   const hasAppointment = deal.channel === 'cooperation'
-  const hearingTask = tasks.find(t => (t.kind ?? '').includes('ヒヤリング') || (t.label ?? '').includes('ヒヤリング'))
+  const hearingTask = tasks.find(t => isHearingTaskText(t.kind) || isHearingTaskText(t.label))
   // ① 正式なフルURL（相対だとコピー/送付先が壊れるため）。
   const bookingUrl = partner.code ? `https://mb-partners.app/book/${partner.code}` : null
   const custDisplay = customerHonorific(deal) || 'お客さま'

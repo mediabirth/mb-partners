@@ -116,7 +116,7 @@ export default function InviteForm() {
           <div style={{ marginTop: 24, padding: 16, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 10 }}>
             <p style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--blue)', marginBottom: 8 }}>{cur.label}の招待リンクが作成されました（有効期限: 7日間）</p>
             <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 7, padding: '10px 12px', fontSize: '.68rem', fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 10, color: 'var(--txt)' }}>{shareUrl}</div>
-            <button className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '8px 16px' }} onClick={handleCopy}>{copied ? 'コピーしました ✓' : 'リンクをコピー'}</button>
+            <button className="ui-btn ui-btn--secondary" style={{ fontSize: '.72rem', padding: '8px 16px' }} onClick={handleCopy}>{copied ? 'コピーしました' : 'リンクをコピー'}</button>
             <p style={{ fontSize: '.65rem', color: 'var(--muted2)', marginTop: 10, lineHeight: 1.6 }}>
               {emailed ? '招待メールを送信しました。このリンクを直接共有することもできます。' : '招待メールを送信できませんでした。このリンクを直接共有してください。'}
             </p>

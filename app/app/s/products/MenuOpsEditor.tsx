@@ -5,8 +5,9 @@
  * 型はレートカードで制約（標準=固定/受注額%のみ・サーバvalidateが正）。削除=無効化（過去案件の記録保全）。
  */
 import { useEffect, useState } from 'react'
+import { sameCoopTaskLabel } from '@/lib/coop-task-display'
 
-const COOP_TASK_MASTER = ['つなぐ', 'アポイント', 'ヒヤリング', 'アシスト/フォロー', '価格/条件合意', 'クロージング']
+const COOP_TASK_MASTER = ['つなぐ', 'アポイント', 'ヒアリング', 'アシスト/フォロー', '価格/条件合意', 'クロージング']
 const LINE = '0.5px solid var(--line)'
 const inputStyle: React.CSSProperties = { border: LINE, borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.8rem', background: '#fff', boxSizing: 'border-box' }
 type RewardDraft = { id?: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: string; reward_trigger: string; reward_months: string; tasks: string[] }
@@ -81,10 +82,10 @@ export default function MenuOpsEditor({ menuId, onSaved }: { menuId: string; onS
             <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク（パートナーの役割分担）</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {COOP_TASK_MASTER.map(label => {
-                const on = r.tasks.includes(label)
+                const on = r.tasks.some(task => sameCoopTaskLabel(task, label))
                 return (
                   <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
-                    <input type="checkbox" checked={on} onChange={() => setR(ri, { tasks: on ? r.tasks.filter(t => t !== label) : [...r.tasks, label] })} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
+                    <input type="checkbox" checked={on} onChange={() => setR(ri, { tasks: on ? r.tasks.filter(t => !sameCoopTaskLabel(t, label)) : [...r.tasks, label] })} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
                     <span style={{ fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{label}</span>
                   </label>
                 )

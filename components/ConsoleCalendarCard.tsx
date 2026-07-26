@@ -177,7 +177,7 @@ export default function ConsoleCalendarCard() {
       <Row label="祝日を予約不可" desc="日本の祝日は枠を出さない"><Tg on={s.no_holiday} set={v => setS(p => ({ ...p, no_holiday: v }))} /></Row>
 
       <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={save} disabled={saving} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px', opacity: saving ? .6 : 1 }}>{saving ? '保存中…' : '土日・祝日を保存'}</button>
+        <button onClick={save} disabled={saving} className="btn btn-p" style={{ fontSize: '.74rem', padding: '9px 18px', opacity: saving ? .6 : 1 }}>{saving ? '保存中…' : '土日・祝日を保存する'}</button>
         {note && <span style={{ fontSize: '.64rem', color: note.includes('しました') ? 'var(--green)' : 'var(--amber)' }}>{note}</span>}
       </div>
     </div>

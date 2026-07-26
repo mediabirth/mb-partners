@@ -6,16 +6,17 @@
  *        set-semantics: 一覧に無い既存報酬は無効化（過去案件の正典参照を保全＝物理削除しない）。
  *        検証は既存 validateSupplierReward（逆ザヤ50%・standardは固定/受注額%のみ）＝サーバが正。
  * POST { op:'hearing_set', menu_id, items:[...] } — コンソール定義APIと同一のset-semantics（回答残存はinactive保全）。
- * ★境界: menus→service_menus→services.supplier_partner_id=本人 のみ。確定済み案件は reward_snapshot 凍結で不変（money非接触）。
+ * ★境界: menus→service_menus→services.supplier_partner_id=本人 のみ。確定済案件は reward_snapshot 凍結で不変（money非接触）。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { validateSupplierReward, STD_RATE_CARD } from '@/lib/supplier-fee'
+import { sameCoopTaskLabel } from '@/lib/coop-task-display'
 
 export const runtime = 'nodejs'
 const HEARING_TYPES = ['text', 'number', 'select']
 const COOP_TASK_MASTER: { label: string; kind: 'auto' | 'manual' }[] = [
-  { label: 'つなぐ', kind: 'auto' }, { label: 'アポイント', kind: 'auto' }, { label: 'ヒヤリング', kind: 'manual' },
+  { label: 'つなぐ', kind: 'auto' }, { label: 'アポイント', kind: 'auto' }, { label: 'ヒアリング', kind: 'manual' },
   { label: 'アシスト/フォロー', kind: 'manual' }, { label: '価格/条件合意', kind: 'manual' }, { label: 'クロージング', kind: 'manual' },
 ]
 
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       const g = await validateSupplierReward(admin, menuId, type, value, base)
       if (!g.ok) return NextResponse.json({ error: g.error }, { status: 400 })
       if (g.warning) warnings.push(g.warning)
-      normalized.push({ id: r.id, reward_type: type, reward_value: value, reward_base: base, reward_trigger: String(r.reward_trigger ?? '').trim().slice(0, 120) || null, default_months: type === 'continuous' ? (Math.round(Number(r.reward_months)) || null) : null, tasks: Array.isArray(r.tasks) ? r.tasks.filter(t => COOP_TASK_MASTER.some(m => m.label === t)) : [] })
+      normalized.push({ id: r.id, reward_type: type, reward_value: value, reward_base: base, reward_trigger: String(r.reward_trigger ?? '').trim().slice(0, 120) || null, default_months: type === 'continuous' ? (Math.round(Number(r.reward_months)) || null) : null, tasks: Array.isArray(r.tasks) ? r.tasks.filter(t => COOP_TASK_MASTER.some(m => sameCoopTaskLabel(m.label, t))) : [] })
     }
     // set-semantics: 一覧に無い既存報酬は無効化（物理削除しない＝過去案件の正典参照を保全）
     const { data: cur } = await admin.from('menu_rewards').select('id').eq('menu_id', menuId).eq('active', true)
@@ -125,10 +126,10 @@ export async function POST(req: NextRequest) {
       savedIds.push(rid!)
       // 協力タスク同期（MB保存と同一の器: cooperation_task_templates・reward_id紐付け）
       const { data: exist } = await admin.from('cooperation_task_templates').select('id, label, active').eq('reward_id', rid)
-      const existBy = new Map(((exist ?? []) as { id: string; label: string; active: boolean }[]).map(t => [t.label, t]))
+      const existing = (exist ?? []) as { id: string; label: string; active: boolean }[]
       for (const mt of COOP_TASK_MASTER) {
-        const want = r.tasks.includes(mt.label)
-        const have = existBy.get(mt.label)
+        const want = r.tasks.some(label => sameCoopTaskLabel(label, mt.label))
+        const have = existing.find(t => sameCoopTaskLabel(t.label, mt.label))
         if (want && !have) await admin.from('cooperation_task_templates').insert({ service_id: own.serviceId, reward_id: rid, label: mt.label, kind: mt.kind, required: true, trigger_key: mt.kind === 'auto' ? 'in_progress' : null, sort: COOP_TASK_MASTER.findIndex(x => x.label === mt.label), active: true }).then(() => {}, () => {})
         else if (want && have && !have.active) await admin.from('cooperation_task_templates').update({ active: true }).eq('id', have.id)
         else if (!want && have && have.active) await admin.from('cooperation_task_templates').update({ active: false }).eq('id', have.id)

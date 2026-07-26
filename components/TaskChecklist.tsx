@@ -1,20 +1,21 @@
 'use client'
 import { useState } from 'react'
+import { isHearingTaskText } from '@/lib/coop-task-display'
 
 export type DealTask = {
   id: string; label: string; kind: string; required: boolean; done: boolean; note?: string | null; sort: number
 }
 
 // v2.1：案件のタスク＝「状態表示」。完了＝accent塗りドット＋✓＋右端「完了」／未完了＝薄い輪郭ドット。
-// 操作できる形（checkbox）は使わない（運営更新＋ヒヤリング自動のみ）。ヒヤリングだけ行直下にインデントで入力＋保存。
+// 操作できる形（checkbox）は使わない（運営更新＋ヒアリング自動のみ）。ヒアリングだけ行直下にインデントで入力＋保存。
 // ★保存API・自動✓・データは不変。表示・配置のみ。
 export default function TaskChecklist({ tasks: initial, descriptions = {}, hearing }: {
   tasks: DealTask[]
   descriptions?: Record<string, string>
   hearing?: { dealId: string; initial: string; done: boolean } | null
 }) {
-  // ② ヒヤリング（入力枠つき）は常に最下部（表示順のみ・sortデータは不変）。
-  const isHearingRow = (t: DealTask) => (t.kind ?? '').includes('ヒヤリング') || (t.label ?? '').includes('ヒヤリング')
+  // ② ヒアリング（入力枠つき）は常に最下部（旧DB表記も受理・sortデータは不変）。
+  const isHearingRow = (t: DealTask) => isHearingTaskText(t.kind) || isHearingTaskText(t.label)
   const tasks = [...initial].sort((a, b) => (isHearingRow(a) ? 1 : 0) - (isHearingRow(b) ? 1 : 0) || a.sort - b.sort)
   const [openInfo, setOpenInfo] = useState<string | null>(null)
   const [hearingDone, setHearingDone] = useState(!!hearing?.done)
@@ -26,7 +27,7 @@ export default function TaskChecklist({ tasks: initial, descriptions = {}, heari
       <div>
         {tasks.map(t => {
           const desc = descriptions[t.label]
-          const isHearing = !!hearing && ((t.kind ?? '').includes('ヒヤリング') || (t.label ?? '').includes('ヒヤリング'))
+          const isHearing = !!hearing && (isHearingTaskText(t.kind) || isHearingTaskText(t.label))
           const done = t.done || (isHearing && hearingDone)
           return (
             <div key={t.id} style={{ position: 'relative' }}>
@@ -61,7 +62,7 @@ export default function TaskChecklist({ tasks: initial, descriptions = {}, heari
   )
 }
 
-// ヒヤリング入力（該当タスク行の直下・インデント）。保存＝Secondary小（右寄せ）。保存で親の完了表示を更新。
+// ヒアリング入力（該当タスク行の直下・インデント）。保存＝Secondary小（右寄せ）。保存で親の完了表示を更新。
 function HearingInline({ dealId, initial, onSaved }: { dealId: string; initial: string; onSaved: () => void }) {
   const [text, setText] = useState(initial)
   const [saving, setSaving] = useState(false)
@@ -89,7 +90,7 @@ function HearingInline({ dealId, initial, onSaved }: { dealId: string; initial: 
         <span style={{ fontSize: '.6rem', color: 'var(--muted)' }}>{text.length}/4000</span>
         <button onClick={save} disabled={saving}
           style={{ height: 34, padding: '0 16px', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', color: 'var(--c-blue)', background: 'transparent', border: '0.5px solid var(--line)', borderRadius: 8, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
-          {saving ? '保存中…' : '保存'}
+          {saving ? '保存中…' : '保存する'}
         </button>
       </div>
     </div>

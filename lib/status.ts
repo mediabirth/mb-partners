@@ -43,11 +43,11 @@ export function partnerStatus(status: string): { tone: Tone; children: string } 
   return { tone: p.tone, children: p.label }
 }
 
-// ── 経費承認（申請中/承認済/却下）──
+// ── 経費承認（申請中/承認済/差戻し）──
 export const EXPENSE_STATUS: Record<string, Pill> = {
   submitted: { tone: 'warn',    label: '申請中' },
   approved:  { tone: 'success', label: '承認済' },
-  rejected:  { tone: 'danger',  label: '却下' },
+  rejected:  { tone: 'danger',  label: '差戻し' },
 }
 export function expenseStatus(status: string): { tone: Tone; children: string } {
   const p = EXPENSE_STATUS[status] ?? { tone: 'warn' as Tone, label: status }
