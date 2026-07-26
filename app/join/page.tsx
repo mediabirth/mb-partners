@@ -2,9 +2,15 @@
 /**
  * 外向けLP B1：プロ紹介者(士業・コンサル)募集ページ /join（公開・未認証で閲覧可）。
  * 応募は /api/partner-apply に保存するだけ（アカウント作成・auth・お金には一切関与しない）。
- * ★報酬の金額・率はLP上に一切表示しない（面談で個別案内）。既存ブランドトークン流用・新hexなし。
+ * 報酬の具体例は公開面共通正典から軽量表示。既存ブランドトークン流用・新hexなし。
  */
 import { useState, useEffect } from 'react'
+import CompanyTrustBlock from '@/components/public/CompanyTrustBlock'
+import {
+  PUBLIC_JOIN_REWARD_EXAMPLE,
+  PUBLIC_REWARD_DISCLAIMER,
+  PUBLIC_REWARD_PAYMENT,
+} from '@/lib/public-partner-content'
 
 const SERVICES = [
   { name: 'PRAGMATION', desc: 'DX・AI導入' },
@@ -62,6 +68,11 @@ export default function JoinPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#E9E9ED' }}>
+      <style>{`
+        .join-company-info{display:flex;flex-direction:column;gap:8px;margin:28px 0 0;padding:18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+        .join-company-info>div{display:grid;grid-template-columns:70px 1fr;gap:10px;font-size:.66rem;line-height:1.7;}
+        .join-company-info dt{color:var(--muted);font-weight:600}.join-company-info dd{margin:0;color:var(--muted2)}
+      `}</style>
       <div style={{ maxWidth: 480, margin: '0 auto', background: '#fff', minHeight: '100vh', boxShadow: '0 0 48px rgba(14,14,20,.1)' }}>
 
         {/* ── Hero ── */}
@@ -108,9 +119,9 @@ export default function JoinPage() {
             <h2 style={sectionTitle}>仕組み（3ステップ）</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { n: '1', t: '紹介する', d: 'お客さまの課題をMBにつなぐだけ。' },
-                { n: '2', t: 'MBが対応', d: '商談・提案・成約・納品まで一貫してMBが実行します。' },
-                { n: '3', t: '成果に応じた報酬', d: '成約に応じてパートナー報酬。※具体条件は面談で個別にご案内します。' },
+                { n: '1', t: '紹介する', d: 'お客さまの課題をMedia Birthにつなぐだけ。' },
+                { n: '2', t: 'Media Birthが対応', d: '商談・提案・成約・納品まで一貫してMedia Birthが実行します。' },
+                { n: '3', t: '成果に応じた報酬', d: '成約に応じてパートナー報酬をお支払いします。' },
               ].map(s => (
                 <div key={s.n} style={{ ...card, display: 'flex', gap: 13, alignItems: 'flex-start', padding: '15px 16px' }}>
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 10, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', color: '#fff', fontSize: '.84rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>{s.n}</span>
@@ -120,6 +131,16 @@ export default function JoinPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* ── 士業向け報酬例（公開面共通正典の軽量版） ── */}
+          <section style={{ marginBottom: 26 }}>
+            <h2 style={sectionTitle}>報酬のイメージ</h2>
+            <div style={{ ...card, background: 'var(--blue-bg2)', borderColor: 'var(--blue-bg)' }}>
+              <strong style={{ display: 'block', color: 'var(--blue-dk)', fontSize: '.9rem', lineHeight: 1.6 }}>{PUBLIC_JOIN_REWARD_EXAMPLE}</strong>
+              <p style={{ marginTop: 8, fontSize: '.7rem', lineHeight: 1.7, color: 'var(--muted2)' }}>{PUBLIC_REWARD_PAYMENT}</p>
+              <p style={{ marginTop: 7, fontSize: '.6rem', lineHeight: 1.65, color: 'var(--muted)' }}>{PUBLIC_REWARD_DISCLAIMER}</p>
             </div>
           </section>
 
@@ -134,7 +155,7 @@ export default function JoinPage() {
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>…など幅広い専門領域を、MBが責任を持って実行します。</p>
+            <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7 }}>…など幅広い専門領域を、Media Birthが責任を持って実行します。</p>
           </section>
 
           {/* ── パートナーの安心 ── */}
@@ -142,7 +163,7 @@ export default function JoinPage() {
             <h2 style={sectionTitle}>パートナーの安心</h2>
             <div style={{ ...card, padding: '16px 18px' }}>
               {[
-                '紹介後の対応はすべてMBが担当。先生の手間は増えません。',
+                '紹介後の対応はすべてMedia Birthが担当。先生の手間は増えません。',
                 'お客さまとの関係はそのまま。信頼を損なう対応はしません。',
                 '専門外の相談も、“つなげる先がある”状態に。',
               ].map((t, i) => (
@@ -164,7 +185,14 @@ export default function JoinPage() {
                   <path d="M7 12l3.5 3.5L17 8" stroke="var(--c-blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <h3 style={{ fontSize: '1.02rem', fontWeight: 900, marginBottom: 8 }}>応募を受け付けました</h3>
-                <p style={{ fontSize: '.74rem', color: 'var(--muted2)', lineHeight: 1.8 }}>ありがとうございます。担当者より個別にご案内いたします。</p>
+                <p style={{ fontSize: '.74rem', color: 'var(--muted2)', lineHeight: 1.8 }}>ありがとうございます。3営業日以内にご連絡いたします。</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 18 }}>
+                  {['審査', '面談', 'ご招待'].map((step, index) => (
+                    <div key={step} style={{ padding: '10px 4px', borderRadius: 10, background: 'var(--blue-bg2)', fontSize: '.68rem', fontWeight: 700, color: 'var(--blue-dk)' }}>
+                      <span style={{ display: 'block', marginBottom: 3, fontFamily: 'Inter', opacity: .7 }}>{index + 1}</span>{step}
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <form onSubmit={submit} style={card}>
@@ -201,7 +229,7 @@ export default function JoinPage() {
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 8, padding: 12, marginBottom: 14 }}>
                   <input type="checkbox" id="join-consent" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, accentColor: 'var(--c-blue)', width: 15, height: 15 }} />
                   <label htmlFor="join-consent" style={{ fontSize: '.66rem', lineHeight: 1.6, color: '#41419E', cursor: 'pointer' }}>
-                    <b>Media Birth株式会社からのご連絡に同意します</b>。
+                    <b>株式会社Media Birthからのご連絡に同意します</b>。
                   </label>
                 </div>
 
@@ -217,9 +245,7 @@ export default function JoinPage() {
             )}
           </section>
 
-          <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 28, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
-            Media Birth株式会社
-          </p>
+          <CompanyTrustBlock className="join-company-info" />
         </div>
       </div>
     </div>

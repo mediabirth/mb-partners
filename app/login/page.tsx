@@ -166,6 +166,11 @@ export default function LoginPage() {
           }}>
             本プログラムは招待制です。パスワードは招待時に設定します。
           </p>
+          <p style={{ marginTop: 10, textAlign: 'center' }}>
+            <Link href="/partners" style={{ color: 'var(--blue)', fontSize: '.7rem', fontWeight: 700 }}>
+              パートナー応募はこちら →
+            </Link>
+          </p>
         </div>
       </div>
     </div>

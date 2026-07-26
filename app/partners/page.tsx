@@ -6,6 +6,12 @@
  * 応募は既存 /api/partner-apply(partner_applications)。会社表記「株式会社Media Birth」。ページスコープ(three は /partners のみ動的import)。
  */
 import { useEffect, useRef, useState } from 'react'
+import CompanyTrustBlock from '@/components/public/CompanyTrustBlock'
+import {
+  PUBLIC_REWARD_DISCLAIMER,
+  PUBLIC_REWARD_PAYMENT,
+  PUBLIC_REWARD_TYPES,
+} from '@/lib/public-partner-content'
 import { useNetwork, useMotion, useInteractions } from './scene'
 
 // ── 数字セクション。field=6は実値(services active)。partner/fee は仮値＝実データに差し替え可。 ──
@@ -16,7 +22,7 @@ const STATS: { key: string; to: number; prefix?: string; suffix?: string; label:
   { key: 'fee', to: 3200, prefix: '+', suffix: 'K', label: 'fee' },
 ]
 
-// ステップ用「動くオブジェクト」＝グラスタイル内で動くアイコン(つなげる/はなす/もたらす)
+// ステップ用「動くオブジェクト」＝グラスタイル内で動くアイコン
 const STEP_GLYPH: Record<string, React.ReactNode> = {
   connect: <svg viewBox="0 0 56 56" fill="none"><circle cx="16" cy="28" r="6.5" className="pg-node" /><circle cx="40" cy="28" r="6.5" className="pg-node" /><line x1="22.5" y1="28" x2="33.5" y2="28" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" opacity=".5" /><circle cx="22.5" cy="28" r="3" fill="currentColor" className="pg-travel" /></svg>,
   talk: <svg viewBox="0 0 56 56" fill="none"><path d="M13 19h26a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5H24l-8 6v-6a5 5 0 0 1-5-5v-7a5 5 0 0 1 5-5z" fill="currentColor" opacity=".16" stroke="currentColor" strokeWidth="2.2" className="pg-bubble" /><circle cx="21" cy="27.5" r="1.9" fill="currentColor" /><circle cx="27" cy="27.5" r="1.9" fill="currentColor" className="pg-blink" /><circle cx="33" cy="27.5" r="1.9" fill="currentColor" /></svg>,
@@ -77,6 +83,7 @@ const FAQ = [
   { q: '何を紹介すればいいですか？', a: '不動産・人材・制作・DXなど、お困りごとをお持ちの方をおつなぎいただくだけです。' },
   { q: '手間はかかりますか？', a: 'ご紹介いただくだけ。商談も実務も、すべて当社が対応します。' },
   { q: '報酬はどう決まりますか？', a: '固定・成果連動・継続の3タイプがあります。内容はメニューにより異なります。' },
+  { q: '審査では何を確認しますか？', a: 'お人柄と、普段どのような文脈でご紹介が生まれるかを確認します。落とすための試験ではなく、安心してご一緒するための顔合わせです。' },
 ]
 
 // 安心して紹介できる理由（動くアイコン・枠なし）
@@ -177,13 +184,8 @@ export default function PartnersLP() {
 
   const STEPS = [
     { key: 'connect', c: 'b1', t: 'つなげる', d: 'つながりをご紹介いただく' },
-    { key: 'talk', c: 'b2', t: 'はなす', d: '当社が丁寧に対応します' },
-    { key: 'bring', c: 'b3', t: 'もたらす', d: '成果をあなたに還元します' },
-  ]
-  const REWARDS = [
-    { key: 'fixed', c: 'var(--indigo)', t: '固定', d: '成約ごとに' },
-    { key: 'perf', c: 'var(--teal)', t: '成果', d: '成果に応じて' },
-    { key: 'recur', c: 'var(--gold)', t: '継続', d: '毎月つづく' },
+    { key: 'talk', c: 'b2', t: 'まかせる', d: '商談から実務まで当社にまかせる' },
+    { key: 'bring', c: 'b3', t: 'うけとる', d: '成約後に報酬をうけとる' },
   ]
 
   return (
@@ -230,7 +232,7 @@ export default function PartnersLP() {
           {[FIELDS, [...FIELDS.slice(3), ...FIELDS.slice(0, 3)]].map((row, ri) => (
             <div key={ri} className="plp-marquee plp-fmarquee" aria-hidden>
               <div className={`plp-mq-track plp-ftrack${ri ? ' plp-ftrack-r' : ''}`}>
-                {Array.from({ length: 4 }).flatMap((_, r) => row.map(fl => (
+                {Array.from({ length: 2 }).flatMap((_, r) => row.map(fl => (
                   <div key={`${ri}-${r}-${fl.key}`} className="plp-fmq" style={{ ['--fc' as string]: fl.c }}>
                     <span className={`plp-fobj fobj-${fl.key}`}>{FIELD_GLYPH[fl.key]}</span>
                     <span className="plp-fname">{fl.n}</span>
@@ -241,7 +243,7 @@ export default function PartnersLP() {
           ))}
         </section>
 
-        {/* ── 流れ：つなげる・はなす・もたらす(動くオブジェクト) ── */}
+        {/* ── 流れ：つなげる・まかせる・うけとる ── */}
         <section className="plp-sec plp-calm plp-io">
           <div className="plp-wrap">
             <h2 className="plp-h2" data-st>シンプルな仕組み。</h2>
@@ -263,13 +265,16 @@ export default function PartnersLP() {
           <div className="plp-wrap">
             <h2 className="plp-h2" data-st>報酬バリエーション。</h2>
             <div className="plp-rewards">
-              {REWARDS.map(r => (
-                <div key={r.key} className="plp-rw" data-st style={{ ['--rc' as string]: r.c }}>
+              {PUBLIC_REWARD_TYPES.map(r => (
+                <div key={r.key} className="plp-rw" data-st style={{ ['--rc' as string]: r.color }}>
                   <span className="plp-rw-card" aria-hidden>{REWARD_ILLUS[r.key]}</span>
-                  <span className="plp-rw-t">{r.t}</span>
+                  <span className="plp-rw-t">{r.shortTitle}</span>
+                  <span className="plp-rw-d">{r.example}</span>
                 </div>
               ))}
             </div>
+            <p className="plp-rw-payment" data-st>{PUBLIC_REWARD_PAYMENT}</p>
+            <p className="plp-rw-note" data-st>{PUBLIC_REWARD_DISCLAIMER}</p>
             <div style={{ textAlign: 'center' }}><a className="plp-textlink" href="/partners/rewards" data-st>報酬の詳細を見る<span className="plp-arrow">→</span></a></div>
           </div>
         </section>
@@ -385,10 +390,7 @@ export default function PartnersLP() {
                 </a>
                 <p className="plp-foot-tag">「つながり」を、資産に。</p>
               </div>
-              <dl className="plp-foot-info">
-                <div><dt>運営会社</dt><dd>株式会社Media Birth</dd></div>
-                <div><dt>事業内容</dt><dd>パートナープログラム「MB Partners」の運営／ブランディング・制作・DX・人材など各領域の支援</dd></div>
-              </dl>
+              <CompanyTrustBlock className="plp-foot-info" />
             </div>
             <div className="plp-foot-bottom">
               <nav className="plp-foot-nav">
@@ -486,7 +488,7 @@ const CSS = `
 .plp-statnum{font-size:clamp(3.4rem,7vw,5.6rem);font-weight:820;line-height:1.04;letter-spacing:-.05em;background:linear-gradient(155deg,#5646e6,#8b5cf6 55%,#f2971b);-webkit-background-clip:text;background-clip:text;color:transparent;font-variant-numeric:tabular-nums;}
 .plp-statlab{font-size:.82rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);padding-left:.24em;}
 
-/* 流れ：動くオブジェクト(つなげる/はなす/もたらす) */
+/* 流れ：動くオブジェクト(つなげる/まかせる/うけとる) */
 .plp-steps{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;}
 .plp-thread{position:absolute;top:52px;left:16.6%;width:66.8%;height:2px;background:linear-gradient(90deg,rgba(86,70,230,.45),rgba(21,145,126,.45),rgba(242,151,27,.45));border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform 1.3s cubic-bezier(.4,0,.2,1) .1s;z-index:0;}
 .plp-steps.seq .plp-thread{transform:scaleX(1);}
@@ -517,7 +519,9 @@ const CSS = `
 .plp-rw:hover .plp-rw-card{transform:translateY(-6px);box-shadow:0 30px 64px color-mix(in srgb,var(--rc) 22%,rgba(40,30,80,.12));}
 .plp-rw-card svg{width:84px;height:84px;}
 .plp-rw-t{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
-.plp-rw-d{font-size:.82rem;color:var(--ink2);margin-top:-8px;}
+.plp-rw-d{font-size:.82rem;color:var(--ink2);margin-top:-8px;text-align:center;line-height:1.55;}
+.plp-rw-payment{margin:30px auto 0;text-align:center;font-size:.94rem;font-weight:750;color:var(--ink);}
+.plp-rw-note{max-width:680px;margin:10px auto 0;text-align:center;font-size:.72rem;line-height:1.7;color:var(--mut);}
 /* fee type：動くオブジェクト */
 .ri-coin{transform-box:fill-box;transform-origin:center;animation:cointurn 3.6s ease-in-out infinite;}
 @keyframes cointurn{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.72)}}

@@ -1,4 +1,9 @@
 import type { Metadata } from 'next'
+import {
+  PUBLIC_REWARD_DISCLAIMER,
+  PUBLIC_REWARD_PAYMENT,
+  PUBLIC_REWARD_TYPES,
+} from '@/lib/public-partner-content'
 import { SubShell } from '../shell'
 
 export const metadata: Metadata = {
@@ -12,22 +17,16 @@ const ILLUS: Record<string, React.ReactNode> = {
   recur: <svg viewBox="0 0 88 88" fill="none"><circle cx="44" cy="44" r="20" fill="currentColor" opacity=".14" /><g className="ri-cyc"><path d="M60 38a18 18 0 1 0 1.5 11" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" /><path d="M61 26v13H48" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /></g><circle cx="44" cy="44" r="4.5" fill="currentColor" /></svg>,
 }
 
-const TYPES = [
-  { key: 'fixed', c: '#5646e6', t: '固定報酬', d: 'メニューごとに定められた金額を、成約時にお支払いします。例：¥30,000（金額はメニューにより異なります）。' },
-  { key: 'perf', c: '#15917e', t: '成果連動報酬', d: '成約の粗利など、成果に応じてお支払いします。大きな案件ほど、報酬も大きくなります。' },
-  { key: 'recur', c: '#f2971b', t: '継続報酬', d: '継続的なご契約に対して、毎月つづく報酬をお支払いします。ストック型で積み上がります。' },
-]
-
 export default function RewardsPage() {
   return (
     <SubShell kicker="reward" title="報酬について。" lead="報酬は、固定・成果連動・継続の3タイプ。ご紹介の内容やメニューに応じて組み合わせます。">
       <div className="sp-rwd">
-        {TYPES.map(x => (
-          <div key={x.key} className="sp-card sp-rwd-item" style={{ ['--rc' as string]: x.c }}>
+        {PUBLIC_REWARD_TYPES.map(x => (
+          <div key={x.key} className="sp-card sp-rwd-item" style={{ ['--rc' as string]: x.color }}>
             <span className={`sp-rwd-badge rwd-${x.key}`} aria-hidden>{ILLUS[x.key]}</span>
             <div>
-              <h2 className="sp-rwd-t"><b>{x.t}</b></h2>
-              <p className="sp-rwd-d">{x.d}</p>
+              <h2 className="sp-rwd-t"><b>{x.title}</b></h2>
+              <p className="sp-rwd-d">{x.description}<br /><strong>{x.example}</strong></p>
             </div>
           </div>
         ))}
@@ -35,10 +34,10 @@ export default function RewardsPage() {
 
       <h2 className="sp-h2">お支払いのタイミング</h2>
       <div className="sp-card">
-        <p className="sp-rwd-d"><strong>成約月の翌月末</strong>にお支払いします。進捗・報酬の状況は、アプリでいつでもご確認いただけます。</p>
+        <p className="sp-rwd-d"><strong>{PUBLIC_REWARD_PAYMENT}</strong> 進捗・報酬の状況は、アプリでいつでもご確認いただけます。</p>
       </div>
 
-      <p className="sp-note">※本ページの金額（例：¥30,000 等）は一例です。実際の報酬はメニュー・成約内容により異なり、収入を保証するものではありません。</p>
+      <p className="sp-note">{PUBLIC_REWARD_DISCLAIMER}</p>
     </SubShell>
   )
 }

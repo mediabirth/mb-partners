@@ -179,11 +179,11 @@ export const MAIL_REGISTRY: MailTemplateDef[] = [
   },
   // ── パートナー応募（招待制の起点：応募→面談→承認で招待） ──────────
   {
-    key: 'application-received', name: '応募完了・面談予約のご案内（応募者）', audience: 'invitee',
+    key: 'application-received', name: '応募受付・面談予約のご案内（応募者）', audience: 'invitee',
     event: 'パートナー応募', trigger: 'LPからパートナー応募があったとき（応募者へ自動送信）',
     vars: [V.name('お名前'), V.link],
     defaultSubject: '【MB Partners】ご応募ありがとうございます｜面談予約のご案内',
-    defaultBody: '${name} 様\n\nこの度は MB Partners にご応募いただき、誠にありがとうございます。\n確かに受付いたしました。\n\nMB Partners は、ご紹介いただく信頼をお預かりするプログラムです。\nまずは一度、オンラインで顔合わせの面談をさせてください。\n下記より、ご都合のよい日時をお選びいただけます（所要 30 分・オンライン）。\n\n▼ 面談を予約する\n${link}\n\nお会いできますことを楽しみにしております。\n— MB Partners（株式会社Media Birth）',
+    defaultBody: '${name} 様\n\nこの度は MB Partners にご応募いただき、誠にありがとうございます。\n確かに受付いたしました。応募内容を拝見し、3営業日以内にご連絡いたします。\n\n今後は「審査 → 面談 → ご招待」の順にご案内します。審査は落とすための試験ではなく、お人柄とご紹介の文脈を確認し、安心してご一緒するためのものです。\n\n先に面談の希望日時をお選びいただく場合は、下記をご利用ください（所要30分・オンライン）。\n\n▼ 面談を予約する\n${link}\n\nお会いできますことを楽しみにしております。\n— MB Partners（株式会社Media Birth）',
     buttons: [{ label: '面談を予約する', urlVar: 'link' }],
   },
   {

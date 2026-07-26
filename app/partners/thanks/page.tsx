@@ -33,6 +33,9 @@ const CSS = `
 .pt-mail svg{flex-shrink:0;margin-top:1px;}
 .pt-mail b{font-size:.86rem;font-weight:800;color:#2b2550;}
 .pt-mail p{margin-top:5px;font-size:.78rem;line-height:1.75;color:#54506e;}
+.pt-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;}
+.pt-step{padding:12px 6px;border-radius:14px;background:rgba(86,70,230,.06);color:#2b2550;font-size:.76rem;font-weight:750;}
+.pt-step span{display:block;margin-bottom:4px;color:#5646e6;font-size:.66rem;letter-spacing:.08em;}
 .pt-note{margin-top:16px;font-size:.68rem;line-height:1.7;color:#9a95b0;}
 .pt-back{margin-top:26px;display:inline-flex;align-items:center;gap:7px;font-size:.8rem;font-weight:700;color:#5646e6;text-decoration:none;transition:gap .2s;}
 .pt-back:hover{gap:11px;}
@@ -69,9 +72,15 @@ export default function ThanksPage() {
         <div className="pt-mail pt-fade4">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5646e6" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></svg>
           <div>
-            <b>ご登録のメールに、面談予約のご案内をお送りしました。</b>
-            <p>MB Partners は、ご紹介いただく信頼をお預かりするプログラムです。まずは一度オンラインで顔合わせをさせてください。メール内のリンクから、ご都合のよい日時をお選びいただけます。</p>
+            <b>ご登録のメールに、受付と面談予約のご案内をお送りしました。</b>
+            <p>応募内容を拝見し、3営業日以内にご連絡いたします。メール内のリンクから、先に面談の希望日時をお選びいただくこともできます。</p>
           </div>
+        </div>
+
+        <div className="pt-steps pt-fade4" aria-label="応募後の流れ">
+          {['審査', '面談', 'ご招待'].map((step, index) => (
+            <div className="pt-step" key={step}><span>STEP {index + 1}</span>{step}</div>
+          ))}
         </div>
 
         <p className="pt-note pt-fade5">

@@ -4,6 +4,7 @@
  * LPと同じ世界観（明るいグラデ＋グラス＋光のネットワーク＋モーション）を共有。scene.tsx を使い全ページに動きを付与。
  */
 import { useRef, type ReactNode } from 'react'
+import CompanyTrustBlock from '@/components/public/CompanyTrustBlock'
 import { useNetwork, useInteractions } from './scene'
 
 const LOGO = (
@@ -42,7 +43,8 @@ export function SubShell({ kicker, title, lead, children }: { kicker: string; ti
             <a href="/partners/rewards">報酬について</a>
             <a href="/partners/faq">よくある質問</a>
           </nav>
-          <span className="sp-foot-meta">株式会社Media Birth ・ <a href="/legal/privacy">プライバシーポリシー</a></span>
+          <CompanyTrustBlock className="sp-company-info" />
+          <span className="sp-foot-meta"><a href="/legal/privacy">プライバシーポリシー</a></span>
         </footer>
       </div>
     </main>
@@ -137,11 +139,15 @@ export const SP_CSS = `
 .sp-cta{display:inline-flex;align-items:center;justify-content:center;height:56px;padding:0 40px;border-radius:999px;background:linear-gradient(100deg,#5646e6,#7c4ff0);color:#fff;text-decoration:none;font-size:15px;font-weight:650;box-shadow:0 12px 34px rgba(86,70,230,.34);transition:transform .2s,box-shadow .2s,filter .2s;}
 .sp-cta:hover{transform:translateY(-3px);box-shadow:0 20px 46px rgba(86,70,230,.44);filter:brightness(1.06);} .sp-arrow{transition:transform .22s;} .sp-cta:hover .sp-arrow{transform:translateX(4px);}
 .sp-foot-nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 24px;} .sp-foot-nav a{font-size:.8rem;font-weight:600;color:var(--ink2);text-decoration:none;transition:color .18s;} .sp-foot-nav a:hover{color:var(--indigo);}
+.sp-company-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px;width:min(100%,620px);text-align:left;}
+.sp-company-info>div{display:grid;grid-template-columns:66px 1fr;gap:10px;font-size:.72rem;line-height:1.7;}
+.sp-company-info dt{color:var(--mut);font-weight:600}.sp-company-info dd{color:var(--ink2)}
 .sp-foot-meta{font-size:.72rem;color:var(--mut);} .sp-foot-meta a{color:var(--indigo);text-decoration:none;} .sp-foot-meta a:hover{text-decoration:underline;}
 
 @media (prefers-reduced-motion:reduce){.sp *{animation:none!important;} .sp-glow{display:none;}}
 @media (max-width:640px){
   .sp-hd{padding:12px 18px;} .sp-hero{padding:110px 0 32px;}
   .sp-rwd-item,.sp-tl{gap:14px;} .sp-tl-num{width:46px;height:46px;font-size:.95rem;}
+  .sp-company-info{grid-template-columns:1fr;}
 }
 `
