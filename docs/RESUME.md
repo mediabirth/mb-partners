@@ -32,6 +32,18 @@
 
 ## 作業ログ
 
+### 2026-07-26 第5巡監査（横断UX整合・リード先行調査）＝確定所見7件
+
+勝彦指示「全画面通しの辻褄」。コードレベル突合で確定した不整合:
+1. **in_progress の二語問題**: console案件ボード=「商談中」（_parts.tsx）／supplierボード=「対応中」／正典DEAL_STATUS・パートナー面=「対応中」。1状態に面またぎ2語。
+2. **サービスマスタ編集の語彙ドリフト**（console vs supplier 同項目別名7組）: 一言説明/ひとこと説明・こんな方に(Who)/こんなお客さまに・紹介対象(フック文)/紹介しやすい方・詳細説明/詳しい説明・説明(〜とは)/サービス概要・サービスサイトURL/WebサイトURL・ブランド名(必須)/サービス名。
+3. **「ヒヤリング」表記が data-coupled**: COOP_TASK_MASTER と hearing API の `includes('ヒヤリング')` マッチャが旧表記に依存＝UI全域の「ヒアリング」と不一致。**安易な一括置換は自動タスク完了を壊す地雷**（是正は両表記マッチ+新規はヒアリング）。
+4. **console運営者の自己パスワード変更なし**（hardening-1はAPP/vendor/supplierのみ＝運営はresetメール経由しか正道がない取り残し）。
+5. **経費の 却下/差戻し 二語問題**: vendor=却下・consoleは差戻し/却下が混在（EXPENSE_STATUS正典=却下）。
+6. vendor設定に「サービスガイド」欠落（APPにあり・受託者だけ道標なし）。
+7. console板だけ「進行中/納品済み」プロジェクトフェーズ列が状態語と同居（PageGuide対応表はあるが語の統一裁定は未）。
+→ UX-5a（read-only全画面ペア差分表・Codex）→リード全行裁定→UX-5b（是正）の二段で完全化。5aはデプロイ不要=CLI認証未復旧でも実行可。
+
 ### 2026-07-26 hardening-1／perf-deep 検収＋perf-deepデプロイ代行
 
 - **hardening-1（304033b・本番済）＝合格**: 自己管理2動線（パスワード変更=現行確認→updateUser・メール変更=secure email change 2通型+profiles同期失敗時のauth側ロールバック補償）＋公開フォーム防御（IP×対象キー5分5回・honeypot=正規同一200で静かに破棄・境界付き入力）。恒久 test:hardening 34/34 を test:verify へ配線。リード実測: 本番stamp 304033b・ハッシュ不変。generateLink(email_change_new) の hashed_token 無効問題への action_link token 抽出は実証済み開示＝是認。
