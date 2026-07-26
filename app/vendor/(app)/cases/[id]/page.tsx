@@ -6,6 +6,7 @@ import { VENDOR_CASE_ST, VENDOR_OFFER_ST } from '@/lib/vendor-status'
 import { customerHonorific } from '@/lib/customer'
 import VendorOfferActions from './VendorOfferActions'
 import VendorCaseExpense from './VendorCaseExpense'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const runtime = 'edge'
 
@@ -18,6 +19,24 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
   if (!b) redirect('/vendor/login')
   const a = b.assignments.find(x => x.id === id)
   if (!a) redirect('/vendor/cases')   // 自分の割当以外は不可（隔離）
+  const admin = await createServiceRoleClient()
+  const snapshotMenuId = a.deal?.reward_snapshot?.menu_id ?? null
+  const legacyServiceMenuId = snapshotMenuId ? null : a.deal?.menu_id ?? null
+  const [menuRes, eventsRes] = await Promise.all([
+    snapshotMenuId
+      ? admin.from('menus').select('name').eq('id', snapshotMenuId).maybeSingle()
+      : legacyServiceMenuId
+        ? admin.from('menus').select('name').eq('service_menu_id', legacyServiceMenuId).eq('active', true).order('sort').limit(1).maybeSingle()
+        : Promise.resolve({ data: null }),
+    a.deal?.id
+      ? admin.from('deal_events').select('body, created_at').eq('deal_id', a.deal.id).order('created_at')
+      : Promise.resolve({ data: [] as { body: string; created_at: string }[] }),
+  ])
+  const events = (eventsRes.data ?? []) as { body: string; created_at: string }[]
+  const eventAt = (pattern: RegExp) => events.find(event => pattern.test(event.body))?.created_at ?? null
+  const offeredAt = eventAt(/委託を提示/) ?? a.assigned_at
+  const acceptedAt = eventAt(/委託を承諾/)
+  const deliveredAt = eventAt(/納品済みにしました/)
   const svc = a.deal?.services
   const expenses = b.expenses.filter(e => e.assignment_id === id)
   const cust = (a.deal && customerHonorific(a.deal)) || ''
@@ -41,7 +60,7 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
               <span style={{ fontSize: '.6rem', color: 'var(--muted2)' }}>{offerSt.label}</span>
             </span>
           </div>
-          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{cust || 'お客さま'} ・ {svc?.name ?? 'サービス'}</div>
+          <div style={{ fontSize: '.64rem', color: 'var(--muted)', marginTop: 2 }}>{cust || 'お客さま'} ・ {svc?.name ?? 'サービス'}{menuRes.data?.name ? ` ・ ${menuRes.data.name}` : ''}</div>
         </div>
       </div>
 
@@ -63,6 +82,22 @@ export default async function VendorCaseDetail({ params }: { params: Promise<{ i
           </div>
         </div>
       )}
+
+      <div style={{ padding: '12px 20px 4px' }}>
+        <div style={{ background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '11px 16px' }}>
+          {([
+            ['提示', offeredAt, !!offeredAt],
+            ['受諾', acceptedAt, ['accepted', 'assigned', 'delivered'].includes(a.status)],
+            ['納品', deliveredAt, a.status === 'delivered'],
+          ] as const).map(([label, at, done], index) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 38, borderTop: index ? '0.5px solid var(--line)' : 'none' }}>
+              <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: done ? 'var(--green)' : 'var(--line)', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: '.72rem', color: done ? 'var(--txt)' : 'var(--muted)' }}>{label}</span>
+              <span style={{ fontSize: '.58rem', color: 'var(--muted)' }}>{at ? new Date(at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : done ? '日時記録なし' : '未完了'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* 経費（納品済みで申請可・納品の確認は発注元が行う） */}
       {(accepted || delivered) && (

@@ -172,10 +172,10 @@ export default function MypageClient({ name: initialName, email, avatarUrl, avat
         <div style={{ margin: '0 20px' }}>
           <div style={{ background: '#fff', border: LINE, borderRadius: 13, padding: '18px 16px' }}>
             <Fld label="お名前" value={name} onChange={setName} placeholder="山田 太郎" />
-            <FldDisabled label={<>メールアドレス {LOCK}</>} value={email} hint="ログインIDのため変更はサポートまでご連絡ください" />
+            <FldDisabled label={<>メールアドレス {LOCK}</>} value={email} />
             <Fld label="電話番号" value={phone} onChange={setPhone} placeholder="09012345678" inputMode="tel" />
             <Fld label="住所" value={address} onChange={setAddress} placeholder="大阪府〇〇市…" />
-            <FldDisabled label="税区分" value={taxLabel} hint="変更はサポートまでご連絡ください" />
+            <FldDisabled label="税区分" value={taxLabel} />
             <Fld label="インボイス登録番号（任意）" value={invoice} onChange={setInvoice} placeholder="T0000000000000" />
 
             <div style={{ margin: '14px 0 10px', paddingTop: 12, borderTop: '0.5px dashed var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>

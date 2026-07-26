@@ -45,6 +45,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!upd?.length) return NextResponse.json({ error: '状態が変化していません' }, { status: 409 })
 
   const verb = action === 'accept' ? '承諾' : '辞退'
+  if (action === 'accept') {
+    await admin.from('deal_events').insert({
+      deal_id: cur.deal_id,
+      visible_to_partner: false,
+      created_by: null,
+      body: `委託を承諾しました: ${vendor.deliveryName}`,
+    }).then(() => {}, () => {})
+  }
   await notifySlackEvent('status_change', `📦 ${vendor.deliveryName} が委託を${verb}（¥${(cur.base_fee ?? 0).toLocaleString()}）`)
   return NextResponse.json({ ok: true, status: next })
 }

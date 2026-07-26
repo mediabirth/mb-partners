@@ -56,12 +56,13 @@ type ServiceForm = {
   target_audience: string   // リファラルWave1：紹介対象（STEP1で太字表示）
   image_url: string         // menu_context v2：詳細シートのイメージ画像（任意）
   category: string          // 紹介入口v3：カテゴリ（一覧チップ絞り込み・任意）
+  supplier_memo: string     // サプライヤーと運営だけが読む社内向けメモ
   logo_path: string; active: boolean
   icon: string; color: string  // kept for backward compat, not shown in UI
 }
 
 const defaultServiceForm: ServiceForm = {
-  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', image_url: '', category: '', logo_path: '',
+  name: '', subtitle: '', description: '', who: '', url: '', target_audience: '', image_url: '', category: '', supplier_memo: '', logo_path: '',
   active: true, icon: 'arrows', color: '#4733e6',
 }
 
@@ -75,6 +76,7 @@ function svcFormToPayload(f: ServiceForm) {
     target_audience: f.target_audience || null,
     image_url:      f.image_url       || null,
     category:       f.category        || null,
+    supplier_memo:  f.supplier_memo   || null,
     logo_path:      f.logo_path      || null,
     active:         f.active,
     icon:           f.icon,
@@ -92,6 +94,7 @@ function svcToForm(svc: ServiceWithMenus): ServiceForm {
     target_audience: (svc as { target_audience?: string | null }).target_audience ?? '',
     image_url:      (svc as { image_url?: string | null }).image_url ?? '',
     category:       (svc as { category?: string | null }).category ?? '',
+    supplier_memo:  svc.supplier_memo ?? '',
     logo_path:      svc.logo_path   ?? '',
     active:         svc.active,
     icon:           svc.icon        || 'arrows',
@@ -896,6 +899,11 @@ export default function ServicesClient({ initialServices }: { initialServices: S
                           <option value="">MB自社</option>
                           {suppliers.map(sp => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
                         </select>
+                      </Fld>
+                    )}
+                    {editing && (
+                      <Fld label="社内向けメモ">
+                        <FTextarea value={svcForm.supplier_memo} onChange={value => setF({ supplier_memo: value })} placeholder="サプライヤーと運営だけが確認するメモ" />
                       </Fld>
                     )}
                     {/* 担当（ブランド既定・一覧v2でインライン担当selectをここへ移設。既存 setBrandMember 配線＝即時PATCH） */}

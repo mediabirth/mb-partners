@@ -65,8 +65,9 @@ export default function ConsoleLoginPage() {
         </p>
         <form onSubmit={handleLogin}>
           <div className="fld">
-            <label>メールアドレス</label>
+            <label htmlFor="console-email">メールアドレス</label>
             <input
+              id="console-email"
               className="ui-field"
               type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="admin@example.com" required autoComplete="email"

@@ -1,5 +1,17 @@
 'use client'
 import { useState } from 'react'
+import PageGuide from '@/components/PageGuide'
+
+const FRONTIER_INVITE_GUIDE = {
+  title: 'チーム招待について',
+  lead: '招待した方が登録すると、あなたのチームに紐づきます。',
+  sections: [
+    { h: '条件', items: [
+      { b: '対象期間', t: '登録から12ヶ月間、チームからの還元対象です' },
+      { b: '還元', t: '対象の方の成果に応じて、あなたへの還元が記録されます。確定済みの報酬には影響しません' },
+    ] },
+  ],
+}
 
 // フロンティアのチーム招待リンク発行（?f=自分 で自動紐づけ）
 export default function FrontierInvite() {
@@ -23,7 +35,7 @@ export default function FrontierInvite() {
 
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '16px 16px' }}>
-      <b style={{ fontSize: '.82rem', display: 'block', marginBottom: 4 }}>パートナーを招待</b>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}><b style={{ fontSize: '.82rem' }}>パートナーを招待</b><PageGuide data={FRONTIER_INVITE_GUIDE} /></span>
       <p style={{ fontSize: '.64rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>このリンクから登録した方はあなたのチームに自動で紐づきます（12ヶ月間、チームからの還元対象）。</p>
       <div className="fld" style={{ marginBottom: 8 }}>
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="招待する方のメール" type="email"
@@ -46,6 +58,7 @@ export default function FrontierInvite() {
           <p style={{ fontSize: '.6rem', color: 'var(--muted2)', margin: '8px 2px 0', lineHeight: 1.6 }}>
             {emailed ? '招待メールを送信しました。リンクの共有も可能です。' : 'メールを送信できませんでした。このリンクを共有してください。'}
           </p>
+          <p style={{ fontSize: '.6rem', color: 'var(--muted)', margin: '4px 2px 0' }}>招待リンクの有効期限は7日です。</p>
         </div>
       )}
     </div>

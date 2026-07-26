@@ -9,6 +9,9 @@ import MembersSection from './MembersSection'
 import ProfileSection from './ProfileSection'
 import EditBlock from '@/components/ui/EditBlock'
 import { SECTION_KEYS } from './messaging-sections'
+import AccountSecurityPanel from '@/components/auth/AccountSecurityPanel'
+import { useConsoleSession } from '@/components/ConsoleSession'
+import { BUILD_STAMP } from '@/lib/build-stamp'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AuditLog  = { id: string; actor_name: string; category: string; target: string; action: string; created_at: string }
@@ -59,6 +62,7 @@ function RowItem({ label, desc, children }: { label: string; desc?: string; chil
 }
 
 export default function SettingsPage() {
+  const { identity } = useConsoleSession()
   // 磨き③: 旧カレンダー連携の死んだ保存関数（saveCal/calEnabled/calUrl＝トースト表示のみ・未レンダ）を撤去。
   const [notifEmail, setNotifEmail]           = useState(true)
   const [notifSlack, setNotifSlack]           = useState(false)
@@ -218,6 +222,8 @@ export default function SettingsPage() {
           <SectionCard title="プロフィール">
             <ProfileSection />
           </SectionCard>
+
+          <AccountSecurityPanel surface="console" email={identity?.email ?? ''} />
 
           {/* MBメンバー（内部・案件のMB担当）— サイドバーから統合 */}
           <SectionCard title="MBメンバー（管理者）">
@@ -408,8 +414,9 @@ export default function SettingsPage() {
           </SectionCard>
 
           {/* ログアウト（設定画面の一番下） */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 48px' }}>
-            <LogoutButton />
+          <div style={{ padding: '8px 0 8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}><LogoutButton /></div>
+            <div style={{ textAlign: 'center', fontSize: '.5rem', color: 'var(--muted)', padding: '8px 0 30px', fontFamily: 'Inter' }}>build {BUILD_STAMP}</div>
           </div>
 
         </div>

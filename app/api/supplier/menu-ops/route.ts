@@ -60,16 +60,20 @@ export async function GET(req: NextRequest) {
   if (!own) return NextResponse.json({ error: '自社メニューのみ参照できます' }, { status: 403 })
   const [{ data: rewards }, { data: tpls }, { data: hearing }] = await Promise.all([
     admin.from('menu_rewards').select('id, reward_type, reward_value, reward_base, reward_trigger, default_months, sort, active').eq('menu_id', menuId).eq('active', true).order('sort'),
-    admin.from('cooperation_task_templates').select('reward_id, label, active').eq('service_id', own.serviceId).eq('active', true),
+    admin.from('cooperation_task_templates').select('reward_id, label, kind, description, active').eq('service_id', own.serviceId).eq('active', true),
     admin.from('menu_hearing_items').select('id, label, input_type, options, required, sort, active').eq('menu_id', menuId).order('sort'),
   ])
   const tasksByReward: Record<string, string[]> = {}
-  for (const t of (tpls ?? []) as { reward_id: string | null; label: string }[]) {
+  const taskMeta: Record<string, { kind: 'auto' | 'manual'; description: string }> = {}
+  for (const t of (tpls ?? []) as { reward_id: string | null; label: string; kind: 'auto' | 'manual'; description: string | null }[]) {
     if (t.reward_id) (tasksByReward[t.reward_id] ??= []).push(t.label)
+    const master = COOP_TASK_MASTER.find(item => sameCoopTaskLabel(item.label, t.label))
+    if (master && !taskMeta[master.label]) taskMeta[master.label] = { kind: t.kind, description: t.description ?? '' }
   }
   return NextResponse.json({
     card: me.card, passthrough: me.card === STD_RATE_CARD,
     rewards: ((rewards ?? []) as { id: string }[]).map(r => ({ ...r, tasks: tasksByReward[r.id] ?? [] })),
+    task_meta: taskMeta,
     hearing: ((hearing ?? []) as { active: boolean }[]).filter(h => h.active),
   })
 }
@@ -167,6 +171,31 @@ export async function POST(req: NextRequest) {
     await notify(admin, me, `menu-hearing:${menuId}`, { count: items.length })
     const { data } = await admin.from('menu_hearing_items').select('id, label, input_type, options, required, sort, active').eq('menu_id', menuId).eq('active', true).order('sort')
     return NextResponse.json({ ok: true, items: data ?? [] })
+  }
+
+  if (b.op === 'task_descriptions') {
+    const descriptions = b.descriptions && typeof b.descriptions === 'object'
+      ? b.descriptions as Record<string, unknown>
+      : null
+    if (!descriptions) return NextResponse.json({ error: 'descriptions は必須です' }, { status: 400 })
+    const { data: current, error: readError } = await admin
+      .from('cooperation_task_templates')
+      .select('id, label')
+      .eq('service_id', own.serviceId)
+    if (readError) return NextResponse.json({ error: readError.message }, { status: 500 })
+    for (const master of COOP_TASK_MASTER) {
+      if (!(master.label in descriptions)) continue
+      const description = String(descriptions[master.label] ?? '').trim().slice(0, 500) || null
+      const ids = ((current ?? []) as { id: string; label: string }[])
+        .filter(row => sameCoopTaskLabel(row.label, master.label))
+        .map(row => row.id)
+      if (ids.length) {
+        const { error } = await admin.from('cooperation_task_templates').update({ description }).in('id', ids)
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+    }
+    await notify(admin, me, `task-descriptions:${menuId}`, { labels: Object.keys(descriptions).length })
+    return NextResponse.json({ ok: true })
   }
 
   return NextResponse.json({ error: '不明な操作です' }, { status: 400 })

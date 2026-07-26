@@ -1,5 +1,11 @@
 # MB Partners — 開発記録 / RESUME（リポ内正本）
 
+## 2026-07-26 UX-5c（Codex・機能パリティ）
+
+- console自己管理を中央factory/面別cookie文法のまま追加し、session 32/32×2・4面自己管理43/43を実走。
+- supplierのタスク説明・保存入口・案件タスク・社内メモ、vendorのガイド・案件メニュー/時系列・既読、招待4点を是正。money計算/凍結値は非接触。
+- production UX-5bとcandidateを同一throwawayで8画面×before/after撮影。専用E2E 12/12、恒久スイート全green、残置0。詳細は `docs/reports/ux5c_20260726.md`。
+
 ## 2026-07-26 UX-5b（Codex・語彙／文言統一）
 
 - `docs/reports/ux5-parity-matrix.md` と勝彦／リード裁定に従い、in_progress=`対応中`、services.name=`ブランド名`、expense rejected=`差戻し` を全対外面へ反映。意味・状態遷移・moneyは不変。

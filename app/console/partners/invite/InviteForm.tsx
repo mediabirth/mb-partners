@@ -6,7 +6,7 @@ const KINDS: { id: Kind; label: string; note: string }[] = [
   { id: 'partner', label: 'パートナー', note: '' },
   { id: 'frontier', label: 'フロンティア', note: '' },
   { id: 'supplier', label: 'サプライヤー（会社）', note: '' },
-  { id: 'delivery', label: 'デリバリー', note: '' },
+  { id: 'delivery', label: 'デリバリー', note: '営業・紹介も担う方は「パートナー」で迎えてください。デリバリーは実務のみを担う委託先です。' },
 ]
 type Card = { id: string; name: string; deprecated?: boolean }
 

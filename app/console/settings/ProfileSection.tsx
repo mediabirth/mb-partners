@@ -1,7 +1,7 @@
 'use client'
 // 自分のプロフィール（表示名・アイコン）を各メンバー(owner/manager)が自分でいつでも変更。表示/編集モード。
 // ★本人のみ＝サーバ側 /api/console/me PATCH・/api/console/avatar が auth.uid 行のみ更新。money/権限 非接触。
-// ★メールは認証に紐づくため表示のみ（変更不可）。★色パレットは廃止（画像 or イニシャル＋色fallback）。
+// ★メールはこのプロフィール編集では表示のみ。変更は設定内のアカウント欄で行う。
 import { useState } from 'react'
 import AvatarEditor from '@/components/ui/AvatarEditor'
 import Avatar from '@/components/ui/Avatar'
@@ -66,7 +66,7 @@ export default function ProfileSection() {
           />
         </div>
         <div>
-          <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>メールアドレス（変更不可）</label>
+          <label style={{ fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 6 }}>メールアドレス（変更は下のアカウント欄）</label>
           <input
             value={email}
             readOnly

@@ -70,15 +70,17 @@ export async function GET() {
   const ds = (dsRes.data ?? []) as Record<string, unknown>[]
   const dealIds = ds.map(x => x.id as string)
   const menuNameById: Record<string, string> = Object.fromEntries(menus.map(m => [m.id, m.name]))
-  const [rewardsRes, frRes, asgRes] = await Promise.all([
+  const [rewardsRes, frRes, asgRes, taskRes] = await Promise.all([
     mIds.length ? admin.from('menu_rewards').select('id, menu_id, reward_type, reward_value, reward_base').in('menu_id', mIds).eq('active', true).order('sort') : Promise.resolve({ data: [] as never[] }),
     dealIds.length ? admin.from('supplier_charges').select('deal_id').eq('supplier_partner_id', me.partnerId).in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
     dealIds.length ? admin.from('delivery_assignments').select('id, deal_id, delivery_id, status, base_fee').in('deal_id', dealIds) : Promise.resolve({ data: [] as never[] }),
+    dealIds.length ? admin.from('deal_tasks').select('id, deal_id, label, kind, required, done, note, sort').in('deal_id', dealIds).order('sort') : Promise.resolve({ data: [] as never[] }),
   ])
   const rewards = (rewardsRes.data ?? []) as { id: string; menu_id: string; reward_type: string; reward_value: number; reward_base: string | null }[]
   const { customerHonorific } = honorificMod
   const frozenSet = new Set(((frRes.data ?? []) as { deal_id: string | null }[]).map(x => x.deal_id))
   const asg = (asgRes.data ?? []) as { id: string; deal_id: string; delivery_id: string; status: string | null; base_fee: number | null }[]
+  const tasks = (taskRes.data ?? []) as { id: string; deal_id: string; label: string; kind: string; required: boolean; done: boolean; note: string | null; sort: number }[]
   // v6: 自社の委託先（supplier_partner_id=本人）一覧
   const { data: dlvs } = await admin.from('deliveries').select('id, name, kind, contact_email, active, auth_user_id').eq('supplier_partner_id', me.partnerId).order('created_at', { ascending: false })
   const dlvIds = [...new Set(asg.map(a => a.delivery_id))]
@@ -96,6 +98,7 @@ export async function GET() {
     item_id: ((d.deal_items as { id: string }[] | null) ?? [])[0]?.id ?? null,
     from_network: !!(d.fee_snapshot as { self_service?: boolean } | null)?.self_service,
     frozen: frozenSet.has(d.id as string),
+    tasks: tasks.filter(task => task.deal_id === d.id).map(({ id, label, kind, required, done, note }) => ({ id, label, kind, required, done, note })),
     // own=自社委託先（納品済みの宣言は own のみ・MB直の委託は運営が確認）
     assignments: asg.filter(a => a.deal_id === d.id).map(a => ({ id: a.id, status: a.status, base_fee: a.base_fee, delivery_name: dlvNameById[a.delivery_id] ?? '委託先', own: (dlvs ?? []).some(v => v.id === a.delivery_id) })),
   }))

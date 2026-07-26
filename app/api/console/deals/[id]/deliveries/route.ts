@@ -48,6 +48,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       base_fee: baseFee, assigned_by: user.id, status: 'proposed',
     }).select('id').single()
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
+    const { data: delivery } = await admin.from('deliveries').select('name').eq('id', deliveryId).maybeSingle()
+    await admin.from('deal_events').insert({
+      deal_id: id,
+      visible_to_partner: false,
+      created_by: user.id,
+      body: `委託を提示: ${delivery?.name ?? '委託先'} ・ 委託費 ¥${baseFee.toLocaleString()}`,
+    }).then(() => {}, () => {})
     return NextResponse.json({ ok: true, assignment: ins })
   }
 

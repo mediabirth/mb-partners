@@ -7,11 +7,11 @@
  * 全項目=差分をまとめて「変更を申請」・MB Partners確認後にAPPへ）。
  * データ・境界は /api/supplier/self（セッションスコープ）。ドロワーはcreatePortal（包含ブロック事故回避）。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import { rewardValueText } from '@/lib/reward-format'
-import MenuOpsEditor from './MenuOpsEditor'
+import MenuOpsEditor, { type MenuOpsEditorHandle } from './MenuOpsEditor'
 
 type Brand = { id: string; name: string; active: boolean; supplier_memo: string | null; image_url: string | null; logo_path: string | null; icon: string | null; color: string | null; category: string | null; subtitle: string | null; description: string | null; who: string | null; target_audience: string | null; url: string | null }
 type Menu = { id: string; name: string; service_id: string; public_description: string | null; short_description: string | null; description: string | null; active?: boolean }
@@ -64,6 +64,7 @@ function Fld({ label, pending, children }: { label: string; pending?: boolean; c
 
 export default function ProductsClient() {
   const [data, setData] = useState<{ brands: Brand[]; menus: Menu[]; rewards: Reward[]; requests: Req[] } | null>(null)
+  const menuOpsRef = useRef<MenuOpsEditorHandle>(null)
   const [editing, setEditing] = useState<string>('')
   const [navSel, setNavSel] = useState<string>('basic')
   const [draft, setDraft] = useState<Record<string, string>>({})
@@ -117,6 +118,10 @@ export default function ProductsClient() {
   async function saveInstant() {
     if (!brand) return
     let saved = 0
+    if (selMenu && menuOpsRef.current) {
+      if (!(await menuOpsRef.current.save())) return
+      saved++
+    }
     const memoKey = 'memo:' + brand.id
     if (draft[memoKey] != null && draft[memoKey] !== (brand.supplier_memo ?? '')) {
       if (await call('PATCH', { service_id: brand.id, supplier_memo: draft[memoKey] }, '')) saved++
@@ -251,7 +256,7 @@ export default function ProductsClient() {
                   </Fld>
                   </Group>
                   <Group label="報酬・協力タスク・ヒアリング項目（すぐ反映＝MB Partnersに通知されます）">
-                    <MenuOpsEditor menuId={selMenu.id} onSaved={load} />
+                    <MenuOpsEditor ref={menuOpsRef} menuId={selMenu.id} onSaved={load} />
                   </Group>
                 </div>
               ) : null}

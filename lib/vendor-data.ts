@@ -8,7 +8,7 @@ import { resolveVendorContext } from '@/lib/vendor-auth'
 import { customerHonorific } from '@/lib/customer'
 import { timingEntry, timingNow, type ServerTimingEntry } from '@/lib/server-timing'
 
-export type VAssign = { id: string; base_fee: number; status: string; assigned_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
+export type VAssign = { id: string; base_fee: number; status: string; assigned_at: string | null; updated_at: string | null; brief: string | null; deal: { id: string; customer_name: string; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; status: string; created_at: string | null; menu_id?: string | null; reward_snapshot?: { menu_id?: string | null } | null; delivery_brief?: string | null; services: { name: string; icon: string; color: string; logo_path: string | null } | null } | null }
 export type VExpense = { id: string; assignment_id: string; kind: string; amount: number; status: string; has_evidence: boolean; created_at: string | null; approved_at: string | null }
 export type VPayout = { id: string; amount: number; base_fee: number; expense_total: number; period: string; status: string; paid_at: string | null; frozen_at: string | null; customer_name: string | null; customer_type?: string | null; company_name?: string | null; contact_name?: string | null; service: { name: string; icon: string; color: string; logo_path: string | null } | null }
 export type VDelivery = {
@@ -48,13 +48,13 @@ export async function loadVendorBundle(timings?: ServerTimingEntry[]): Promise<V
     // V-1 の delivery_brief を同梱（列未追加でも壊さないよう staged フォールバック）。
     let raw = (await timed('assignments', admin
       .from('delivery_assignments')
-      .select('id, base_fee, status, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, delivery_brief, services(name, icon, color, logo_path))')
+      .select('id, base_fee, status, assigned_at, updated_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, menu_id, reward_snapshot, delivery_brief, services(name, icon, color, logo_path))')
       .eq('delivery_id', v.deliveryId)
       .order('assigned_at', { ascending: false }))).data as Record<string, unknown>[] | null
     if (!raw) {
       raw = (await timed('assignments-fallback', admin
         .from('delivery_assignments')
-        .select('id, base_fee, status, assigned_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, services(name, icon, color, logo_path))')
+        .select('id, base_fee, status, assigned_at, updated_at, deals(id, customer_name, customer_type, company_name, contact_name, status, created_at, menu_id, reward_snapshot, services(name, icon, color, logo_path))')
         .eq('delivery_id', v.deliveryId)
         .order('assigned_at', { ascending: false }))).data as Record<string, unknown>[] | null
     }
@@ -93,7 +93,7 @@ export async function loadVendorBundle(timings?: ServerTimingEntry[]): Promise<V
 
   const assignments: VAssign[] = (rawAssigns ?? []).map((a: Record<string, unknown>) => {
     const deal = (a.deals as VAssign['deal']) ?? null
-    return { id: a.id as string, base_fee: (a.base_fee as number) ?? 0, status: (a.status as string) ?? 'assigned', assigned_at: (a.assigned_at as string) ?? null, brief: deal?.delivery_brief ?? null, deal }
+    return { id: a.id as string, base_fee: (a.base_fee as number) ?? 0, status: (a.status as string) ?? 'assigned', assigned_at: (a.assigned_at as string) ?? null, updated_at: (a.updated_at as string) ?? null, brief: deal?.delivery_brief ?? null, deal }
   })
 
   // ベンダー純化P1: PM系4テーブル（tasks/deliverables/updates/schedule）の取得を撤去（vendor-redesign.md §1 V6）。
@@ -119,7 +119,7 @@ export async function loadVendorBundle(timings?: ServerTimingEntry[]): Promise<V
 }
 
 /** vendor 通知（既存データからの導出・DDLなし）。経費承認/差戻し・支払凍結/完了・案件委託を時系列に。 */
-export type VNotif = { id: string; icon: 'ok' | 'ng' | 'pay' | 'freeze' | 'assign'; title: string; sub: string; at: string; href?: string }
+export type VNotif = { id: string; icon: 'ok' | 'ng' | 'pay' | 'freeze' | 'assign'; title: string; sub: string; at: string; href?: string; read_at?: string | null }
 export function deriveVendorNotifs(b: VendorBundle): VNotif[] {
   // 顧客名は敬称付き（法人=「法人名 様」/個人=「氏名 様」）で統一（lib/customer.ts 単一ソース）。
   const labelOf = (assignId: string) => { const d = b.assignments.find(a => a.id === assignId)?.deal; return (d && customerHonorific(d)) || '案件' }

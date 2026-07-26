@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (profile?.role === 'partner' || !profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { name, subtitle, description, who, url, active, logo_path, icon, color, target_audience, image_url, category } = body
+  const { name, subtitle, description, who, url, active, logo_path, icon, color, target_audience, image_url, category, supplier_memo } = body
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
   // 協力はメニュー単位（service_menus.coop_*）に一本化。サービス単位 coop_* は廃止。
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       target_audience: target_audience || null,
       image_url:      image_url      || null,
       category:       category       || null,
+      supplier_memo:  typeof supplier_memo === 'string' ? supplier_memo.trim().slice(0, 2000) || null : null,
       sort:           99,
     })
     .select('*')

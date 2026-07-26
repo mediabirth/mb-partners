@@ -20,6 +20,7 @@ import LogoutButton from '@/components/LogoutButton'
 import BankCard from './BankCard'
 import CompanyNameField from './CompanyNameField'
 import AccountSecurityPanel from '@/components/auth/AccountSecurityPanel'
+import { BUILD_STAMP } from '@/lib/build-stamp'
 // 設定: 会社情報・変更申請履歴・通知先
 const KIND_JP: Record<string, string> = { public_description: '顧客向け説明', image: 'イメージ画像', menu_name: 'メニュー名', visibility: '公開/非公開' }
 export default async function SupplierSettingsPage() {
@@ -69,8 +70,9 @@ export default async function SupplierSettingsPage() {
         ))}
       </div>
       {/* ログアウト（設定の末尾・MBコンソール/APPの設定内ログアウトと同文法。機構は不変=LogoutButton scope:'local'） */}
-      <div style={{ marginTop: 24, paddingTop: 14, borderTop: '0.5px solid var(--line)', display: 'flex', justifyContent: 'flex-end' }}>
-        <LogoutButton />
+      <div style={{ marginTop: 24, paddingTop: 14, borderTop: '0.5px solid var(--line)' }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}><LogoutButton /></div>
+        <div style={{ textAlign: 'center', fontSize: '.5rem', color: 'var(--muted)', padding: '8px 0 30px', fontFamily: 'Inter' }}>build {BUILD_STAMP}</div>
       </div>
 
       </div>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 恒久回帰: アカウント自己管理（APP/vendor/サプライヤー）と公開フォーム防御。
+ * 恒久回帰: アカウント自己管理（APP/vendor/サプライヤー/console）と公開フォーム防御。
  * 専用throwawayだけを生成し、成功・失敗を問わず全行撤去する。
  */
 import { readFileSync } from 'node:fs'
@@ -45,6 +45,15 @@ const PERSONAS = {
     login: '/login',
     profile: '/app/s/settings',
     home: '/app',
+  },
+  console: {
+    oldEmail: 'cc-hard1-console-old@mb-system.internal',
+    newEmail: 'cc-hard1-console-new@mb-system.internal',
+    role: 'owner',
+    name: '自己管理検証運営者',
+    login: '/console/login',
+    profile: '/console/settings',
+    home: '/console',
   },
 }
 const DELIVERY_NAME = '自己管理検証委託先（throwaway）'
@@ -125,7 +134,7 @@ async function createFixtures() {
       }).select('id').single()
       if (partner.error) throw partner.error
       created[`${kind}Partner`] = partner.data.id
-    } else {
+    } else if (kind === 'vendor') {
       const delivery = await admin.from('deliveries').insert({
         name: DELIVERY_NAME,
         kind: 'エンジニア',
@@ -161,13 +170,20 @@ async function runPersona(page, context, kind, persona) {
   await login(page, persona, persona.oldEmail, OLD_PASSWORD)
   ok(new URL(page.url()).pathname === persona.home, `${kind}: 初期ログイン`)
   await page.goto(APP + persona.profile, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(900)
   const openPassword = page.getByRole('button', { name: 'パスワードを変更', exact: true })
-  await openPassword.click()
+  await page.waitForFunction(() => {
+    const button = [...document.querySelectorAll('button')].find(candidate => candidate.textContent?.trim() === 'パスワードを変更')
+    if (!(button instanceof HTMLButtonElement)) return false
+    button.click()
+    return true
+  }, null, { timeout: 15_000 })
   const currentField = page.getByLabel('現在のパスワード', { exact: true })
   await currentField.waitFor({ state: 'visible', timeout: 2_000 }).catch(async () => {
     console.log('  account debug:', (await page.locator('[data-account-security]').innerText()).replaceAll('\n', ' / '))
-    await openPassword.click()
+    await page.evaluate(() => {
+      const button = [...document.querySelectorAll('button')].find(candidate => candidate.textContent?.trim() === 'パスワードを変更')
+      if (button instanceof HTMLButtonElement) button.click()
+    })
     await currentField.waitFor({ state: 'visible', timeout: 5_000 })
   })
   await page.getByRole('button', { name: '変更する', exact: true }).last().click()
@@ -215,8 +231,26 @@ async function runPersona(page, context, kind, persona) {
   ok(new URL(page.url()).pathname === persona.home, `${kind}: 新メールでログイン`)
 
   await page.goto(APP + persona.profile, { waitUntil: 'domcontentloaded' })
-  const overflow = await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)
-  ok(overflow === 0, `${kind}: 375px横溢れ0`, overflow)
+  if (kind === 'console') {
+    await page.locator('[data-account-security="console"]').waitFor({ state: 'visible', timeout: 15_000 })
+    await page.waitForFunction(() => {
+      const aside = document.querySelector('aside[data-cnav]')
+      const content = aside?.nextElementSibling
+      return content instanceof HTMLElement && Number.parseFloat(getComputedStyle(content).marginLeft) === 0
+    }, null, { timeout: 10_000 })
+  }
+  const overflowState = await page.evaluate(() => {
+    const overflow = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth
+    const culprits = [...document.querySelectorAll('body *')]
+      .map(element => {
+        const rect = element.getBoundingClientRect()
+        return { tag: element.tagName.toLowerCase(), cls: element.className || '', left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) }
+      })
+      .filter(rect => rect.left < 0 || rect.right > innerWidth)
+      .slice(0, 8)
+    return { overflow, culprits }
+  })
+  ok(overflowState.overflow === 0, `${kind}: 375px横溢れ0`, JSON.stringify(overflowState))
 }
 
 async function publicFormChecks() {

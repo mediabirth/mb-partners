@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { confirmAppEmailChange, confirmVendorEmailChange } from '@/app/account-security/actions'
+import { confirmAppEmailChange, confirmConsoleEmailChange, confirmVendorEmailChange } from '@/app/account-security/actions'
 
 type State = 'checking' | 'pending' | 'completed' | 'invalid' | 'failed'
 
 export default function EmailChangeConfirmation({ surface, loginHref }: {
-  surface: 'app' | 'vendor'
+  surface: 'app' | 'vendor' | 'console'
   loginHref: string
 }) {
   const started = useRef(false)
@@ -17,7 +17,11 @@ export default function EmailChangeConfirmation({ surface, loginHref }: {
     started.current = true
     const params = new URLSearchParams(window.location.search)
     const tokenHash = params.get('token_hash') ?? ''
-    const action = surface === 'vendor' ? confirmVendorEmailChange : confirmAppEmailChange
+    const action = surface === 'vendor'
+      ? confirmVendorEmailChange
+      : surface === 'console'
+        ? confirmConsoleEmailChange
+        : confirmAppEmailChange
     action(tokenHash).then(result => {
       if (!result.ok) {
         setState(result.error === 'invalid-link' ? 'invalid' : 'failed')

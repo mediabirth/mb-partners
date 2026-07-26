@@ -4,44 +4,61 @@
  * 報酬（複数・型/値/トリガー/期間）＋協力タスク（6マスタ）＋ヒアリング項目。すべて即時反映（保存で一括）＋監査＋運営通知。
  * 型はレートカードで制約（標準=固定/受注額%のみ・サーバvalidateが正）。削除=無効化（過去案件の記録保全）。
  */
-import { useEffect, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import { sameCoopTaskLabel } from '@/lib/coop-task-display'
 
-const COOP_TASK_MASTER = ['つなぐ', 'アポイント', 'ヒアリング', 'アシスト/フォロー', '価格/条件合意', 'クロージング']
+const COOP_TASK_MASTER: { label: string; kind: 'auto' | 'manual' }[] = [
+  { label: 'つなぐ', kind: 'auto' },
+  { label: 'アポイント', kind: 'auto' },
+  { label: 'ヒアリング', kind: 'manual' },
+  { label: 'アシスト/フォロー', kind: 'manual' },
+  { label: '価格/条件合意', kind: 'manual' },
+  { label: 'クロージング', kind: 'manual' },
+]
 const LINE = '0.5px solid var(--line)'
 const inputStyle: React.CSSProperties = { border: LINE, borderRadius: 8, padding: '8px 11px', fontFamily: 'inherit', fontSize: '.8rem', background: '#fff', boxSizing: 'border-box' }
 type RewardDraft = { id?: string; reward_type: 'fixed' | 'rate' | 'continuous'; reward_value: string; reward_trigger: string; reward_months: string; tasks: string[] }
 type HearingDraft = { id?: string; label: string; input_type: 'text' | 'number' | 'select'; options: string; required: boolean }
 
-export default function MenuOpsEditor({ menuId, onSaved }: { menuId: string; onSaved?: () => void }) {
+export type MenuOpsEditorHandle = { save: () => Promise<boolean> }
+
+const MenuOpsEditor = forwardRef<MenuOpsEditorHandle, { menuId: string; onSaved?: () => void }>(function MenuOpsEditor({ menuId, onSaved }, ref) {
   const [passthrough, setPassthrough] = useState(true)
   const [rewards, setRewards] = useState<RewardDraft[] | null>(null)
   const [hearing, setHearing] = useState<HearingDraft[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  const [taskDescriptions, setTaskDescriptions] = useState<Record<string, string>>({})
+  const [editingTask, setEditingTask] = useState<string | null>(null)
   useEffect(() => {
     setRewards(null); setHearing(null); setNote('')
     fetch(`/api/supplier/menu-ops?menu_id=${menuId}`).then(r => r.ok ? r.json() : null).then(d => {
       setPassthrough(d?.passthrough !== false)
       setRewards(((d?.rewards ?? []) as { id: string; reward_type: RewardDraft['reward_type']; reward_value: number; reward_trigger: string | null; default_months: number | null; tasks: string[] }[]).map(r => ({ id: r.id, reward_type: r.reward_type, reward_value: String(r.reward_value ?? ''), reward_trigger: r.reward_trigger ?? '', reward_months: r.default_months != null ? String(r.default_months) : '', tasks: r.tasks ?? [] })))
       setHearing(((d?.hearing ?? []) as { id: string; label: string; input_type: HearingDraft['input_type']; options: string[] | null; required: boolean }[]).map(h => ({ id: h.id, label: h.label, input_type: h.input_type, options: Array.isArray(h.options) ? h.options.join('、') : '', required: h.required })))
+      setTaskDescriptions(Object.fromEntries(COOP_TASK_MASTER.map(task => [task.label, d?.task_meta?.[task.label]?.description ?? ''])))
     }).catch(() => { setRewards([]); setHearing([]) })
   }, [menuId])
   const setR = (i: number, patch: Partial<RewardDraft>) => setRewards(p => p!.map((r, j) => j === i ? { ...r, ...patch } : r))
   const setH = (i: number, patch: Partial<HearingDraft>) => setHearing(p => p!.map((h, j) => j === i ? { ...h, ...patch } : h))
 
-  async function save() {
-    if (!rewards || !hearing || busy) return
+  async function save(): Promise<boolean> {
+    if (!rewards || !hearing || busy) return false
     setBusy(true); setNote('')
     const r1 = await fetch('/api/supplier/menu-ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'rewards_set', menu_id: menuId, rewards: rewards.map(r => ({ id: r.id, reward_type: r.reward_type, reward_value: Number(r.reward_value), reward_trigger: r.reward_trigger, reward_months: r.reward_months ? Number(r.reward_months) : null, tasks: r.tasks })) }) })
     const j1 = await r1.json().catch(() => ({}))
-    if (!r1.ok) { setNote(j1.error ?? '報酬の保存に失敗しました'); setBusy(false); return }
+    if (!r1.ok) { setNote(j1.error ?? '報酬の保存に失敗しました'); setBusy(false); return false }
     const r2 = await fetch('/api/supplier/menu-ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'hearing_set', menu_id: menuId, items: hearing.map((h, i) => ({ id: h.id, label: h.label, input_type: h.input_type, options: h.input_type === 'select' ? h.options.split(/[、,]/).map(s => s.trim()).filter(Boolean) : null, required: h.required, sort: i })) }) })
     const j2 = await r2.json().catch(() => ({}))
-    setNote(r2.ok ? (j1.warning ? `保存しました ／ ⚠ ${j1.warning}` : '保存しました（すぐに反映されます）') : (j2.error ?? 'ヒアリング項目の保存に失敗しました'))
+    if (!r2.ok) { setNote(j2.error ?? 'ヒアリング項目の保存に失敗しました'); setBusy(false); return false }
+    const r3 = await fetch('/api/supplier/menu-ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'task_descriptions', menu_id: menuId, descriptions: taskDescriptions }) })
+    const j3 = await r3.json().catch(() => ({}))
+    setNote(r3.ok ? (j1.warning ? `保存しました ／ ⚠ ${j1.warning}` : '保存しました（すぐに反映されます）') : (j3.error ?? 'タスク説明の保存に失敗しました'))
     setBusy(false)
-    if (r1.ok && r2.ok) onSaved?.()
+    if (r3.ok) onSaved?.()
+    return r3.ok
   }
+  useImperativeHandle(ref, () => ({ save }), [rewards, hearing, busy, taskDescriptions, menuId])
 
   if (rewards === null || hearing === null) return <div className="ui-skeleton" style={{ height: 90, borderRadius: 10, marginTop: 8 }} />
   const TYPES: ['fixed' | 'rate' | 'continuous', string][] = passthrough
@@ -81,13 +98,22 @@ export default function MenuOpsEditor({ menuId, onSaved }: { menuId: string; onS
           <div style={{ marginTop: 12 }}>
             <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', display: 'block', marginBottom: 5 }}>協力タスク（パートナーの役割分担）</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {COOP_TASK_MASTER.map(label => {
+              {COOP_TASK_MASTER.map(taskMaster => {
+                const { label, kind } = taskMaster
                 const on = r.tasks.some(task => sameCoopTaskLabel(task, label))
                 return (
-                  <label key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
-                    <input type="checkbox" checked={on} onChange={() => setR(ri, { tasks: on ? r.tasks.filter(t => !sameCoopTaskLabel(t, label)) : [...r.tasks, label] })} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
-                    <span style={{ fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{label}</span>
-                  </label>
+                  <div key={label}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem', cursor: 'pointer', padding: '4px 0' }}>
+                      <input type="checkbox" checked={on} onChange={() => setR(ri, { tasks: on ? r.tasks.filter(t => !sameCoopTaskLabel(t, label)) : [...r.tasks, label] })} style={{ accentColor: 'var(--c-blue)', width: 14, height: 14 }} />
+                      <span style={{ fontWeight: 500, color: on ? 'var(--txt)' : 'var(--muted2)' }}>{label}</span>
+                      <button type="button" aria-label={`${label}の説明を編集`} onClick={event => { event.preventDefault(); setEditingTask(current => current === label ? null : label) }} style={{ border: 'none', background: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 2, fontSize: '.6rem' }}>✎</button>
+                      <span style={{ flex: 1 }} />
+                      <span style={{ fontSize: '.48rem', fontWeight: 500, color: kind === 'auto' ? 'var(--green)' : 'var(--muted)', background: kind === 'auto' ? 'var(--green-bg)' : 'var(--bg2)', borderRadius: 20, padding: '1px 7px' }}>{kind === 'auto' ? '自動検知' : '手動'}</span>
+                    </label>
+                    {editingTask === label && (
+                      <textarea value={taskDescriptions[label] ?? ''} onChange={event => setTaskDescriptions(current => ({ ...current, [label]: event.target.value }))} rows={2} placeholder="登録画面のⓘに表示する説明" style={{ ...inputStyle, margin: '2px 0 7px 22px', width: 'calc(100% - 22px)', resize: 'vertical', fontSize: '.68rem' }} />
+                    )}
+                  </div>
                 )
               })}
             </div>
@@ -119,10 +145,9 @@ export default function MenuOpsEditor({ menuId, onSaved }: { menuId: string; onS
           style={{ background: 'none', border: 'none', color: 'var(--c-blue)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>＋ 項目を追加</button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-        <button type="button" onClick={save} disabled={busy} className="ui-btn ui-btn--secondary" style={{ fontSize: '.7rem', padding: '8px 16px' }}>{busy ? '保存中…' : 'この定義を保存する（すぐ反映）'}</button>
-        {note && <span style={{ fontSize: '.64rem', color: /失敗|エラー/.test(note) ? 'var(--red)' : 'var(--muted2)' }}>{note}</span>}
-      </div>
+      {note && <p role="status" style={{ fontSize: '.64rem', margin: '10px 0 0', color: /失敗|エラー/.test(note) ? 'var(--red)' : 'var(--muted2)' }}>{note}</p>}
     </div>
   )
-}
+})
+
+export default MenuOpsEditor

@@ -268,6 +268,7 @@ export type ServiceRow = {
   logo_path: string | null
   image_url?: string | null   // menu_context v2：サービスのイメージ画像（詳細シート用・null=非表示）
   category?: string | null    // 紹介入口v3：カテゴリ（スケール層のチップ絞り込み用・null=「すべて」のみ）
+  supplier_memo?: string | null // サプライヤーと運営だけが読む社内向けメモ
   // ※サービス単位 coop_*/ft_* は廃止（協力は service_menus.coop_* に一本化）
   coverage_steps: { label: string; included: boolean }[] | null
 }

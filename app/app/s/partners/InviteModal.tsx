@@ -25,7 +25,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
     setBusy(true); setNote('')
     try {
       const r = asPartner
-        ? await fetch('/api/app/frontier/invite', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(email.trim() ? { email: email.trim() } : {}) })
+        ? await fetch('/api/app/frontier/invite', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...(email.trim() ? { email: email.trim() } : {}), ...(name.trim() ? { name: name.trim() } : {}) }) })
         : await fetch('/api/supplier/self', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'invite_delivery', name: name.trim(), work: work.trim(), email: email.trim() }) })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j.invite_url) { setNote(j.error ?? '作成できませんでした'); return }
@@ -79,6 +79,12 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
                 )}
               </>
             )}
+            {asPartner && (
+              <>
+                <label style={LBL}>お名前（任意）</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="例：山田 太郎" style={{ ...FLD, marginBottom: 12 }} />
+              </>
+            )}
             <label style={LBL}>メールアドレス（任意・入力すると招待メールも送信）</label>
             <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="taro@example.com" style={{ ...FLD, marginBottom: 16 }} />
             {url && (
@@ -88,6 +94,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
               </div>
             )}
             {note && <p style={{ fontSize: '.66rem', color: 'var(--muted2)', margin: '0 0 12px' }}>{note}</p>}
+            <p style={{ fontSize: '.6rem', color: 'var(--muted)', margin: '0 0 12px' }}>招待リンクの有効期限は7日です。</p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={close} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '8px 14px' }}>閉じる</button>
               <button onClick={create} disabled={busy || (!asPartner && !name.trim())} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '8px 16px' }}>

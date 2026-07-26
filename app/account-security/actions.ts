@@ -5,13 +5,14 @@ import { createServiceRoleClient, createSurfaceActionClient } from '@/lib/supaba
 import type { Surface } from '@/lib/supabase/surface'
 import { sendEmailChangeConfirmation } from '@/lib/email'
 
-type AccountSurface = Extract<Surface, 'app' | 'vendor'>
+type AccountSurface = Extract<Surface, 'app' | 'vendor' | 'console'>
 
 const RATE_LIMIT_MS = 5 * 60 * 1000
 const recentEmailChanges = new Map<string, number>()
 const PATHS: Record<AccountSurface, { profile: string; confirm: string }> = {
   app: { profile: '/app/mypage', confirm: '/confirm-email-change' },
   vendor: { profile: '/vendor/mypage', confirm: '/vendor/confirm-email-change' },
+  console: { profile: '/console/settings', confirm: '/console/confirm-email-change' },
 }
 
 export type PasswordChangeResult =
@@ -208,15 +209,24 @@ export async function changeAppPassword(current: string, password: string, confi
 export async function changeVendorPassword(current: string, password: string, confirmation: string) {
   return changePassword('vendor', current, password, confirmation)
 }
+export async function changeConsolePassword(current: string, password: string, confirmation: string) {
+  return changePassword('console', current, password, confirmation)
+}
 export async function requestAppEmailChange(email: string) {
   return requestEmailChange('app', email)
 }
 export async function requestVendorEmailChange(email: string) {
   return requestEmailChange('vendor', email)
 }
+export async function requestConsoleEmailChange(email: string) {
+  return requestEmailChange('console', email)
+}
 export async function confirmAppEmailChange(tokenHash: string) {
   return confirmEmailChange('app', tokenHash)
 }
 export async function confirmVendorEmailChange(tokenHash: string) {
   return confirmEmailChange('vendor', tokenHash)
+}
+export async function confirmConsoleEmailChange(tokenHash: string) {
+  return confirmEmailChange('console', tokenHash)
 }

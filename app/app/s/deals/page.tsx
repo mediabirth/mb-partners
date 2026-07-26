@@ -11,7 +11,8 @@ import { DEAL_STATUS } from '@/lib/status'
 
 type Asg = { id: string; status: string | null; base_fee: number | null; delivery_name: string; own?: boolean }
 type Dlv = { id: string; name: string; active: boolean }
-type Deal = { id: string; customer: string; status: string; brand: string; menu_name: string | null; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: Asg[] }
+type CoopTask = { id: string; label: string; kind: string; required: boolean; done: boolean; note: string | null }
+type Deal = { id: string; customer: string; status: string; brand: string; menu_name: string | null; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: Asg[]; tasks: CoopTask[] }
 const COLS = [['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
 const ASG_JP: Record<string, string> = { proposed: '提示中', accepted: '了承済', assigned: '了承済', delivered: '納品済み', declined: '辞退' }
 const FILTERS = [['all', 'すべて'], ['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
@@ -255,6 +256,22 @@ export default function SupplierDealsPage() {
             )}
             {/* ①メニュー別ヒアリング（読み取り・定義があるメニューのみ表示） */}
             <HearingView dealId={detail.id} />
+
+            {detail.tasks.length > 0 && (
+              <div style={{ padding: '12px 0', borderBottom: '0.5px solid var(--line)' }}>
+                <div style={{ fontSize: '.7rem', color: 'var(--muted2)', marginBottom: 6 }}>協力タスク</div>
+                {detail.tasks.map(task => (
+                  <div key={task.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 0', fontSize: '.7rem' }}>
+                    <span aria-hidden style={{ width: 16, height: 16, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1, color: task.done ? '#fff' : 'var(--muted)', background: task.done ? 'var(--green)' : 'var(--bg2)', border: task.done ? 'none' : '0.5px solid var(--line)' }}>{task.done ? '✓' : ''}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', color: task.done ? 'var(--txt)' : 'var(--muted2)' }}>{task.label}{task.required ? '' : '（任意）'}</span>
+                      {task.note && <span style={{ display: 'block', marginTop: 2, color: 'var(--muted)', fontSize: '.62rem', whiteSpace: 'pre-wrap' }}>{task.note}</span>}
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: '.58rem', color: task.done ? 'var(--green)' : 'var(--muted)' }}>{task.done ? '完了' : '未完了'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* ベンダー純化P2: 売上エビデンス（任意）— 通常は不要・大型案件や記録用。money非接触。 */}
             <EvidenceSection dealId={detail.id} say={say} />

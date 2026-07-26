@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import {
   changeAppPassword,
+  changeConsolePassword,
   changeVendorPassword,
   requestAppEmailChange,
+  requestConsoleEmailChange,
   requestVendorEmailChange,
   type PasswordChangeResult,
 } from '@/app/account-security/actions'
 
-type Surface = 'app' | 'vendor'
+type Surface = 'app' | 'vendor' | 'console'
 type FieldErrors = Partial<Record<'current' | 'password' | 'confirmation' | 'email', string>>
 
 const FIELD: React.CSSProperties = {
@@ -76,7 +78,11 @@ export default function AccountSecurityPanel({ surface, email }: { surface: Surf
     }
     setBusy(true)
     setErrors({})
-    const action = surface === 'vendor' ? changeVendorPassword : changeAppPassword
+    const action = surface === 'vendor'
+      ? changeVendorPassword
+      : surface === 'console'
+        ? changeConsolePassword
+        : changeAppPassword
     const result = await action(current, password, confirmation)
     if (!result.ok) {
       const next = passwordErrors(result)
@@ -102,7 +108,11 @@ export default function AccountSecurityPanel({ surface, email }: { surface: Surf
     }
     setBusy(true)
     setErrors({})
-    const action = surface === 'vendor' ? requestVendorEmailChange : requestAppEmailChange
+    const action = surface === 'vendor'
+      ? requestVendorEmailChange
+      : surface === 'console'
+        ? requestConsoleEmailChange
+        : requestAppEmailChange
     const result = await action(normalized)
     setRateLimited(!!result.rateLimited)
     setDebugLinks(result.debugLinks ?? null)

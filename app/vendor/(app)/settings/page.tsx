@@ -1,5 +1,5 @@
 // BR-V3：単一ソース SettingsScreen を vendor config で描画（app と同一画面・同一ラベル）。
-// ★紹介者専用（サービスガイド・知り合いを推薦/招待）はベンダーに出さない。
+// ★知り合いを推薦/招待は紹介者専用。サービスガイドは受託案件の理解用に提供する。
 // 磨き③: 「プッシュ通知 準備中」行と「LINE連携 準備中」カード（押せない張りぼて）を撤去。
 //   Push購読はpartner紐付けのためベンダーには提供対象外（提供時に行ごと復活させる）。
 import SettingsScreen from '@/components/ui/SettingsScreen'
@@ -12,6 +12,7 @@ export default function VendorSettings() {
     <SettingsScreen
       links={[
         { href: '/vendor/mypage', label: 'プロフィール' },
+        { href: '/vendor/guide', label: 'サービスガイド' },
         { href: '/vendor/terms', label: '業務委託規約・ヘルプ' },
         { href: '/vendor/support', label: 'お問い合わせ' },
       ]}

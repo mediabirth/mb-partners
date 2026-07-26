@@ -107,19 +107,19 @@ export default function VendorMypageClient({ name, email, avatarUrl, avatarColor
       ) : (
         <div style={{ margin: '0 20px' }}>
           <div style={{ background: '#fff', border: LINE, borderRadius: 13, padding: '18px 16px' }}>
-            <FldDisabled label="お名前" value={name} hint="本人確認で確定した項目のため、変更はサポートまでご連絡ください" />
-            <FldDisabled label={<>メールアドレス {LOCK}</>} value={email} hint="ログインIDのため変更はサポートまでご連絡ください" />
+            <FldDisabled label="お名前" value={name} hint="変更はお問い合わせから" />
+            <FldDisabled label={<>メールアドレス {LOCK}</>} value={email} />
             <Fld label="電話番号" value={phone} onChange={setPhone} placeholder="09012345678" inputMode="tel" />
             <Fld label="住所" value={address} onChange={setAddress} placeholder="大阪府〇〇市…" />
-            <FldDisabled label="税区分" value={taxLabel} hint="変更はサポートまでご連絡ください" />
-            <FldDisabled label="インボイス登録番号" value={invoiceNumber || '未登録'} hint="本人確認で確定した項目のため、変更はサポートまでご連絡ください" />
+            <FldDisabled label="税区分" value={taxLabel} hint="変更はお問い合わせから" />
+            <FldDisabled label="インボイス登録番号" value={invoiceNumber || '未登録'} hint="変更はお問い合わせから" />
 
             <div style={{ margin: '14px 0 10px', paddingTop: 12, borderTop: '0.5px dashed var(--line)' }}>
               <label style={{ fontSize: '.63rem', fontWeight: 500, color: 'var(--muted2)' }}>振込先口座</label>
               <div style={{ fontSize: '.74rem', color: 'var(--muted2)', lineHeight: 1.7, marginTop: 8 }}>
                 {bankDisplay ? `${bankDisplay}　${accountDisplay ?? ''}` : '未登録'}
               </div>
-              <p style={{ fontSize: '.6rem', color: 'var(--muted)', margin: '6px 0 0' }}>本人確認で確定した項目のため、変更はサポートまでご連絡ください。</p>
+              <p style={{ fontSize: '.6rem', color: 'var(--muted)', margin: '6px 0 0' }}>変更はお問い合わせから</p>
             </div>
 
             {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginTop: 10 }}>{error}</p>}
