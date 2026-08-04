@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-// 一覧ヒーロー直下の「今日の動き」枠：先回りナッジ＋今日の示唆を静かに最大2件。各々に理由＋アクション＋「後で」。
+// 一覧の提案1行。match/nudge は裏方に保ち、UIは理由＋次の一手だけに絞る。
 // 「後で」＝localStorage（本人端末スコープ・DB/money非接触）。表示item が無ければ枠ごと非表示（null＝沈黙）。
 
-export type PreemptItem = { id: string; badge: string; text: string; href: string; actionLabel: string }
+export type PreemptItem = { id: string; text: string; href: string; actionLabel: string }
 
 const KEY = 'syn_preempt_dismissed_v1'
 
@@ -20,16 +20,15 @@ export default function SynapsePreempt({ items }: { items: PreemptItem[] }) {
       return n
     })
   }
-  const shown = items.filter(i => !dismissed.has(i.id)).slice(0, 2)
+  const shown = items.filter(i => !dismissed.has(i.id)).slice(0, 1)
   if (ready && shown.length === 0) return null   // 全て却下/0件＝沈黙
 
   return (
-    <div style={{ margin: '0 20px 4px', background: '#fff', border: '1px solid var(--blue-bg)', borderRadius: 14, padding: '13px 15px' }}>
-      <div style={{ fontSize: '.56rem', fontWeight: 500, letterSpacing: '.1em', color: 'var(--blue)', marginBottom: 9 }}>今日の動き</div>
+    <div style={{ margin: '0 20px 12px', background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 12, padding: '11px 13px' }}>
+      <div style={{ fontSize: '.58rem', fontWeight: 500, color: 'var(--blue)', marginBottom: 7 }}>合いそうな提案</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {(ready ? shown : items.slice(0, 2)).map(i => (
+        {(ready ? shown : items.slice(0, 1)).map(i => (
           <div key={i.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-            <span style={{ flexShrink: 0, fontSize: '.5rem', fontWeight: 500, color: i.badge === '先回り' ? '#fff' : 'var(--blue)', background: i.badge === '先回り' ? 'var(--blue)' : 'var(--blue-bg)', borderRadius: 5, padding: '2px 6px', marginTop: 1 }}>{i.badge}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '.66rem', color: 'var(--txt)', lineHeight: 1.6 }}>{i.text}</div>
               <div style={{ display: 'flex', gap: 13, marginTop: 5 }}>

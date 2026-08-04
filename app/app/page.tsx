@@ -8,7 +8,6 @@ import StatusPill from '@/components/ui/StatusPill'
 import { dealStatus } from '@/lib/status'
 import { nextPayoutDate } from '@/lib/payout'
 import { customerHonorific } from '@/lib/customer'
-import SynapseCrest from './synapse/SynapseCrest'
 import PushOptIn from '@/components/PushOptIn'
 import SupplierConsoleHome from './home/SupplierConsoleHome'
 import FrontierHomeTop from './home/FrontierHomeTop'
@@ -49,7 +48,7 @@ export default async function AppPage() {
       />
     )
   }
-  // ★HOME clean：SYNAPSE の件数/示唆/先回りは一覧側へ集約（HOMEは控えめな導線pillのみ）。
+  // つながりの件数・提案は一覧側へ集約し、HOMEは既存カード文法の入口だけにする。
 
   // Stats
   const active = deals.filter(d => ['received', 'in_progress'].includes(d.status))
@@ -125,16 +124,6 @@ export default async function AppPage() {
         background: 'linear-gradient(135deg,#5240F2 0%,#4733E6 52%,#3A28CE 100%)',
         borderRadius: 18, padding: '24px 22px 18px', color: '#fff', position: 'relative', overflow: 'hidden',
       }}>
-        {/* Ring decoration（微回転・prefers-reduced-motion で静止） */}
-        <div style={{ position: 'absolute', right: -60, top: -60, width: 200, height: 200, pointerEvents: 'none' }}>
-          <div className="syn-spin" style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,.14)', borderRadius: '50%' }} />
-          <div className="syn-spin-rev" style={{ position: 'absolute', inset: 28, border: '1.5px solid rgba(255,255,255,.22)', borderRadius: '50%' }} />
-        </div>
-        {/* SYNAPSE 導線：共有紋章（light）＋「SYNAPSE」のみ。件数の主表示は一覧へ集約。タップで /app/synapse へ。 */}
-        <Link href="/app/synapse" aria-label="SYNAPSE つながり" style={{ position: 'absolute', top: 12, right: 12, zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', padding: '4px 9px 4px 4px', borderRadius: 999, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.18)' }}>
-          <SynapseCrest size={30} tone="light" />
-          <span style={{ fontSize: '.56rem', fontWeight: 500, letterSpacing: '.06em', color: 'rgba(255,255,255,.95)', whiteSpace: 'nowrap' }}>SYNAPSE</span>
-        </Link>
         <div style={{ fontSize: '.54rem', fontFamily: 'Inter', letterSpacing: '.26em', opacity: .85, marginBottom: 7, textTransform: 'uppercase' }}>
           確定残高
         </div>
@@ -163,6 +152,14 @@ export default async function AppPage() {
           </div>
         </div>
       </div>
+
+      <Link href="/app/synapse" className="row-hover lift" style={{ margin: '12px 20px 0', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'var(--txt)' }}>
+        <span aria-hidden style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'var(--blue-bg2)', color: 'var(--c-blue)' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M8 7h8M8 12h5M8 17h7" strokeLinecap="round"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}><b style={{ display: 'block', fontSize: '.76rem', fontWeight: 500 }}>つながり</b><small style={{ display: 'block', fontSize: '.62rem', color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>知り合いをメモして、合いそうなメニューを見る</small></span>
+        <span aria-hidden style={{ color: 'var(--muted)', fontSize: '.9rem' }}>›</span>
+      </Link>
 
       {/* フロンティア導線は設定へ移設（A確定）。ホームからは撤去。 */}
 

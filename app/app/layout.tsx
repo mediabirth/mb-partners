@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navSupplier = !!(navP?.supplier_rate_card || persona?.brands.length)
 
   // BR-V3：シェル chrome は単一ソース SurfaceShell。差分はルート/名前/色/ナビ config のみ。
-  // SYNAPSE：ヘッダーのアイコンは撤去（導線は HOME ヒーローのノードへ移設）。既存ナビは不変。
+  // ヘッダーに固有アイコンは置かず、ホーム本文の「つながり」導線に統合。既存ナビは不変。
   return (
     /* サプライヤー・コンソール（2026-07-13）: サプライヤーのAPP体験はシェルごと置換（PC=固定サイドバー/SP=ドロワー）。
        リファラル/フロンティアは従来の SurfaceShell（下の分岐に一切触れない）。 */

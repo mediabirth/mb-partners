@@ -7,7 +7,7 @@ import { computeNudges } from '@/lib/synapse-nudge'
 import SynapseClient, { type SynapseContact, type ReferredEntry } from './SynapseClient'
 import { type PreemptItem } from './SynapsePreempt'
 
-// SYNAPSE 一覧：私的台帳(synapse_contacts)＋過去に紹介した顧客(deal由来・SELECT)を1リストに統合。
+// つながり一覧：私的台帳(synapse_contacts)＋過去に紹介した顧客(deal由来・SELECT)を1リストに統合。
 // ★紹介履歴/deal参照は完全read-only（getPartnerWithDeals＝RLSで本人の自分データのみ）。money/deals/帰属に書き込みゼロ。
 // ★synapse_contacts は本人RLS。サービス目録は読むだけ。既存ナビ・3サイト分離は不変。
 export const runtime = 'edge'
@@ -59,7 +59,7 @@ export default async function SynapsePage() {
   const sd = (s: string | null | undefined) => (s ?? '').replace(/\s*【デモ】\s*/g, '').trim()   // 表示用デモ除去
   const synCatalog = ((svcRes.data ?? []) as Array<{ name: string }>).map(s => s.name).filter(Boolean)
   const suggestion = topSuggestion(contacts, synCatalog)
-  const nudges = computeNudges(contacts, { nowMs: Date.now(), dormantDays: 90, max: 2 })
+  const nudges = computeNudges(contacts, { nowMs: Date.now(), dormantDays: 90, max: 1 })
   const byId = new Map(contacts.map(c => [c.id, c]))
   const referHrefFor = (c: SynapseContact, memo: string) => {
     const p = new URLSearchParams()
@@ -71,15 +71,15 @@ export default async function SynapsePage() {
     return `/app/refer?${p.toString()}`
   }
   const preemptItems: PreemptItem[] = []
-  for (const n of nudges) {
+  for (const n of nudges.slice(0, 1)) {
     const c = byId.get(n.contactId)
     const href = n.action === 'refer' && c ? referHrefFor(c, n.serviceName ?? n.title) : `/app/synapse/${n.contactId}`
-    preemptItems.push({ id: `nd-${n.kind}-${n.contactId}`, badge: '先回り', text: sd(n.reason), href, actionLabel: n.action === 'refer' ? '紹介する' : '読み解く' })
+    preemptItems.push({ id: `nd-${n.kind}-${n.contactId}`, text: sd(n.reason), href, actionLabel: n.action === 'refer' ? '紹介する' : '詳しく見る' })
   }
-  if (suggestion) {
+  if (suggestion && preemptItems.length === 0) {
     const t = sd(suggestion.candidate.title)
     const text = `${sd(suggestion.focusTitle)}：${suggestion.candidate.kind === 'service' ? `「${t}」を紹介できそう` : `${t} とつなげそう`}（${sd(suggestion.candidate.reason)}）`
-    preemptItems.push({ id: `sg-${suggestion.focusId}`, badge: '今日の示唆', text, href: `/app/synapse/${suggestion.focusId}`, actionLabel: '見る' })
+    preemptItems.push({ id: `sg-${suggestion.focusId}`, text, href: `/app/synapse/${suggestion.focusId}`, actionLabel: '詳しく見る' })
   }
 
   const aiEnabled = !!process.env.ANTHROPIC_API_KEY

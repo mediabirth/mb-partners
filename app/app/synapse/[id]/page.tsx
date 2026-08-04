@@ -7,7 +7,7 @@ import { matchForContact, synapseConclusion } from '@/lib/synapse-match'
 import { nudgeForContact } from '@/lib/synapse-nudge'
 import SynapseDetailClient, { type DetailContact, type HistoryItem } from './SynapseDetailClient'
 
-// SYNAPSE 資産ページ：つながり1件の詳細（個人/法人を同一体裁・同一機能に統一）。
+// つながり1件の詳細（個人/法人を同一体裁・同一機能に統一）。
 //  ・台帳(synapse_contacts)由来＝全情報・編集・URL取込・需要分析・紹介アーカイブ・引き継ぎ紹介。
 //  ・deal由来（識別子 'deal-<dealId>'）＝開いた時点で台帳に lazy-create（synapse_contacts のみ・本人スコープ）→ 編集可詳細へ redirect。
 //    既に名寄せ一致の台帳があれば既存へ redirect（重複防止）。書込は synapse_contacts のみ＝money/帰属/deals 非接触。
@@ -93,7 +93,7 @@ export default async function SynapseDetailPage({ params }: { params: Promise<{ 
   // A/B：つなげる候補（決定的・本人台帳＋目録のみ・最大3・重なりゼロは沈黙）。書込ゼロ。
   const catalog = ((svcRes.data ?? []) as Array<{ name: string }>).map(s => s.name).filter(Boolean)
   const candidates = matchForContact(c, allContacts, catalog, 3)
-  // 旗艦①：SYNAPSEの結論（決定的・AI非依存・新規I/O無し＝既計算 candidates＋demand_tags の整形のみ）。素材不足は null。
+  // 詳細の提案（決定的・AI非依存・新規I/O無し＝既計算 candidates＋demand_tags の整形のみ）。素材不足は null。
   const conclusion = synapseConclusion(c.demand_tags, candidates)
 
   // 詳細の一言ナッジ（該当時のみ・read-only）。新着は newServiceNames を渡さない＝発火しない。

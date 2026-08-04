@@ -1,14 +1,14 @@
 'use client'
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import SynapseCrest from './SynapseCrest'
 import SynapsePreempt, { type PreemptItem } from './SynapsePreempt'
 import EmptyState from '@/components/ui/EmptyState'
+import PageGuide, { type PageGuideData } from '@/components/PageGuide'
 
 // 表示用に【デモ】マーカーを除去（DBは不変＝go-live一括削除の対象を温存）。
 const stripDemo = (s: string | null | undefined) => (s ?? '').replace(/\s*【デモ】\s*/g, '').trim()
 
-// SYNAPSE 一覧（名簿＝資産）：個人/法人タブ撤去・検索なし・「話して追加」撤去。
+// つながり一覧：知り合いのメモと紹介履歴を1つの台帳にまとめる。
 // 各行＝左端に個人/法人タグ＋主(法人=会社名/個人=氏名)＋副(担当者・業種 or 役職・所属)＋chevron。行のステータスタグは撤去。
 // ★紹介履歴 read-only。書込は synapse_contacts のみ（本人スコープAPI）。再度紹介＝/app/refer deep-linkのみ。
 
@@ -29,6 +29,19 @@ export type ReferredEntry = {
 }
 
 const oneLine: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+
+const CONNECTIONS_GUIDE: PageGuideData = {
+  title: 'つながりとは',
+  lead: '知り合いを覚えておくための自分専用メモです。過去の紹介も同じ一覧で確認できます。',
+  sections: [
+    { h: 'できること', items: [
+      { b: 'メモする', t: '名前や会社を控えて、あとから情報を足せます' },
+      { b: '提案を見る', t: '登録した情報をもとに、合いそうなメニューを1件だけ提案します' },
+      { b: '紹介する', t: 'つながりの情報を紹介フォームへ引き継げます' },
+    ] },
+  ],
+  notes: [{ t: 'この一覧は本人だけが見られます。案件や報酬の金額は変更しません。' }],
+}
 
 export default function SynapseClient({ initialContacts, referred = [], preemptItems = [] }: { initialContacts: SynapseContact[]; referred?: ReferredEntry[]; aiEnabled: boolean; preemptItems?: PreemptItem[] }) {
   const [prospects, setProspects] = useState<SynapseContact[]>(initialContacts)
@@ -71,31 +84,28 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
 
   return (
     <div style={{ padding: '4px 0 24px' }}>
-      {/* A1. ヒーロー：紋章＋件数（表示のみ・money非依存）＋資産の一言 */}
-      <div style={{ margin: '14px 20px 16px', display: 'flex', alignItems: 'center', gap: 14, background: 'linear-gradient(135deg, var(--blue-bg) 0%, var(--blue-bg2) 70%)', border: '1px solid var(--blue-bg)', borderRadius: 18, padding: '18px 18px' }}>
-        <div style={{ flexShrink: 0 }}><SynapseCrest size={74} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '.54rem', fontWeight: 500, letterSpacing: '.16em', color: 'var(--c-blue)' }}>SYNAPSE</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
-            <span style={{ fontSize: '1.9rem', fontWeight: 500, letterSpacing: '-.02em', color: 'var(--blue-dk)', lineHeight: 1 }}>{entries.length}</span>
-            <span style={{ fontSize: '.72rem', fontWeight: 500, color: 'var(--muted2)' }}>のつながり</span>
-          </div>
+      {/* 一覧は台帳＋紹介履歴＋提案1行に限定。 */}
+      <div style={{ margin: '18px 20px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{ fontSize: '1.08rem', fontWeight: 500, margin: 0 }}>つながり</h1>
+          <PageGuide data={CONNECTIONS_GUIDE} width={420} />
         </div>
+        <p style={{ fontSize: '.68rem', color: 'var(--muted2)', lineHeight: 1.7, margin: '6px 0 0' }}>知り合いを覚えておくメモ。合いそうなメニューも提案します。</p>
       </div>
 
-      {/* D. 今日の動き（先回りナッジ＋今日の示唆）をヒーロー直下に。0件なら枠ごと非表示（沈黙）。read-only・本人台帳のみ。 */}
+      {/* 提案は高確度の1行だけ。0件なら枠ごと非表示。 */}
       <SynapsePreempt items={preemptItems} />
 
       {/* A2. リストカード：先頭行「すべてのつながり」＋＋追加。各行＝区分色のノード点＋主＋タグ＋副＋chevron。 */}
       <div style={{ margin: '0 20px', background: '#fff', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px 12px' }}>
-          <b style={{ fontSize: '.78rem', fontWeight: 500 }}>すべてのつながり</b>
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}><b style={{ fontSize: '.78rem', fontWeight: 500 }}>すべてのつながり</b><small style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>{entries.length}件</small></span>
           <button onClick={() => { setAdding({ name: '', company: '' }); setAddErr('') }} className="lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--c-blue)', color: '#fff', border: 'none', borderRadius: 9, padding: '7px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.7rem', fontWeight: 500 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>追加
           </button>
         </div>
         {entries.length === 0 ? (
-          <EmptyState title="まだつながりはありません" hint="右上の「＋追加」から、繋いだ人・これから繋ぐ人を増やしましょう。" style={{ borderTop: '1px solid var(--line)' }} />
+          <EmptyState title="まだつながりはありません" hint="右上の「追加」から、覚えておきたい方を登録しましょう。" style={{ borderTop: '1px solid var(--line)' }} />
         ) : (
           entries.map(e => {
             const corp = e.entity === 'corporate'
@@ -126,7 +136,7 @@ export default function SynapseClient({ initialContacts, referred = [], preemptI
               <b style={{ fontSize: '.86rem', fontWeight: 500 }}>つながりを追加</b>
               <button onClick={() => setAdding(null)} style={{ background: 'none', border: 'none', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>閉じる</button>
             </div>
-            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>まず名前だけでもOK。詳細ページから会社URLを渡せばSYNAPSEが埋めます。</p>
+            <p style={{ fontSize: '.62rem', color: 'var(--muted2)', margin: '0 0 12px', lineHeight: 1.6 }}>まず名前だけでも登録できます。詳しい情報はあとから追加できます。</p>
             {([['お名前', 'name'], ['会社・組織', 'company']] as const).map(([label, key]) => (
               <div key={key} style={{ marginBottom: 10 }}>
                 <label style={{ display: 'block', fontSize: '.62rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 4 }}>{label}</label>

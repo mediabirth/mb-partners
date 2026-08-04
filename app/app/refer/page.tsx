@@ -102,7 +102,7 @@ export default function ReferPage() {
 
   useEffect(() => { startTransition(async () => { try { await getPartnerInfo() } catch { /* silent */ } }) }, [])
 
-  // SYNAPSE 引き継ぎ：クエリ（ct/co/nm/phone/memo）で入力欄の初期値だけ補完（送信・帰属・金額には非関与）。
+  // 「つながり」からの引き継ぎ：クエリ（ct/co/nm/phone/memo）で入力欄の初期値だけ補完（送信・帰属・金額には非関与）。
   useEffect(() => {
     try {
       const q = new URLSearchParams(window.location.search)
@@ -188,8 +188,8 @@ export default function ReferPage() {
         }
         setActionState('success')
         await new Promise(resolve => setTimeout(resolve, 320))
-        if (res.dealIds.length > 1 && res.referralGroupId) router.push(`/app/cases?group=${res.referralGroupId}`)
-        else router.push(`/app/cases/${res.dealId}?next=${introMethod}`)
+        if (res.dealIds.length > 1 && res.referralGroupId) router.push(`/app/cases?group=${res.referralGroupId}&from=refer`)
+        else router.push(`/app/cases/${res.dealId}?next=${introMethod}&from=refer`)
       } catch (err: unknown) { setError(err instanceof Error ? err.message : '登録に失敗しました'); setActionState('idle') }
     })
   }

@@ -12,6 +12,7 @@ import CasesSearch from '@/components/CasesSearch'
 import { rewardValueText } from '@/lib/reward-format'
 import { DEAL_STATUS } from '@/lib/status'
 import CountUp from '@/components/CountUp'
+import ReferralNextSuggestion from '@/components/ReferralNextSuggestion'
 
 // 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
@@ -76,7 +77,7 @@ export const runtime = 'edge'
 export default async function CasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string; group?: string }>
+  searchParams: Promise<{ f?: string; group?: string; from?: string }>
 }) {
   const user = await getCachedUser()
   if (!user) redirect('/login')
@@ -85,7 +86,7 @@ export default async function CasesPage({
   const result = await getPartnerWithDeals(supabase, user.id)
   if (!result) redirect('/login')
   const { partner, deals } = result
-  const { f = 'active', group: focusedGroup } = await searchParams
+  const { f = 'active', group: focusedGroup, from } = await searchParams
 
   // ②B 確定報酬の累計（確定=confirmed/paid の deals.amount＝あなたの報酬・既存計算済み値の読み取り集計のみ。再計算なし）。
   // ②B深化(a) 支払済(paid)/未払い(confirmed) に分割（status を読むだけ・payout/frozenには触れない）。
@@ -129,6 +130,13 @@ export default async function CasesPage({
           <span style={{ fontSize: '.66rem', color: 'var(--muted2)' }}>{filtered.length}件</span>
         </div>
       </div>
+
+      {from === 'refer' && focusedGroup && (
+        <ReferralNextSuggestion
+          contextKey={focusedGroup}
+          excludeNames={deals.filter(deal => deal.referral_group_id === focusedGroup).flatMap(deal => [deal.customer_name ?? '', deal.company_name ?? ''])}
+        />
+      )}
 
       {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計）＋(a)支払済/未払い分割 */}
       <div style={{ margin: '6px 20px 14px', background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>

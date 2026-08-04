@@ -21,4 +21,4 @@ export async function aiGlobalDailyExceeded(admin: SupabaseClient, day: string, 
   } catch { return false }   // 集計失敗時は止めない（機能を殺さない）
 }
 
-export const AI_BUSY_MESSAGE = 'ただいまSYNAPSEの分析が混み合っています。時間をおいてお試しください。'
+export const AI_BUSY_MESSAGE = 'ただいま情報の整理が混み合っています。時間をおいてお試しください。'

@@ -128,7 +128,7 @@ export function rewardTermLine(d: Deal): string | null {
 export const SOURCE_LABEL: Record<string, string> = {
   partner_form: 'パートナーフォームから',
   manual: '手入力',
-  synapse: 'Synapse連携',
+  synapse: 'つながり連携',
 }
 export function sourceLine(d: Deal): string {
   const label = SOURCE_LABEL[d.source] ?? '登録'

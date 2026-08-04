@@ -16,6 +16,7 @@ const PREFIX = 'CCREF1-'
 const FAIL_SERVICE = `${PREFIX}FAIL-BRAND`
 const FAIL_SERVICE_MENU = `${PREFIX}FAIL-SERVICE`
 const FAIL_MENU = `${PREFIX}FAIL-MENU`
+const NEXT_CONTACT = `${PREFIX}NEXT`
 let pass = 0; let fail = 0
 const ok = (condition: boolean, label: string, detail = '') => condition
   ? (pass++, console.log(`  ✓ ${label}`))
@@ -75,6 +76,7 @@ async function cleanup() {
   }
   await admin.from('mail_log').delete().ilike('to_email', 'ccref1-%@mb-system.internal').then(() => {}, () => {})
   await admin.from('mail_log').delete().ilike('subject', '%CC-REF1-%').then(() => {}, () => {})
+  await admin.from('synapse_contacts').delete().eq('name', NEXT_CONTACT)
   const users = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
   for (const user of users.data.users.filter(item => item.email === PARTNER_EMAIL || item.email === OWNER_EMAIL)) {
     await admin.from('audit_logs').delete().eq('actor_profile_id', user.id).then(() => {}, () => {})
@@ -131,7 +133,18 @@ async function waitForAfterEffects(dealIds: string[], toEmail: string) {
 await cleanup()
 let browser = await launchChromium({ headless: true })
 try {
-  await fixtureUsers()
+  const fixture = await fixtureUsers()
+  const nextContact = await admin.from('synapse_contacts').insert({
+    partner_id: fixture.partnerId,
+    name: NEXT_CONTACT,
+    entity_type: 'individual',
+    source: 'manual',
+    demand_summary: '採用について相談できそう',
+    demand_tags: ['採用'],
+    recommended_services: ['採用'],
+    updated_at: new Date(Date.now() - 120 * 86_400_000).toISOString(),
+  }).select('id').single()
+  if (!nextContact.data) throw nextContact.error || new Error('connections fixture failed')
   // /api/services is intentionally shared-cached. Seed before its first request so the
   // selected throwaway remains visible after DB removal for the partial-failure probe.
   await addFailMenu()
@@ -150,6 +163,8 @@ try {
 
   const partnerContext = await browser.newContext({ viewport: { width: 375, height: 667 } })
   const page = await partnerContext.newPage()
+  const pageErrors: string[] = []
+  page.on('pageerror', error => pageErrors.push(error.message))
   await login(page, '/login', PARTNER_EMAIL)
 
   // 2 menus across brands + consultation => 3 deals in one group.
@@ -213,6 +228,26 @@ try {
   const single = (await admin.from('deals').select('id,referral_group_id,reward_snapshot').eq('customer_name', `${PREFIX}SINGLE`).single()).data
   ok(single?.referral_group_id == null && Boolean(single?.reward_snapshot), '単選は従来どおり非グループ＋snapshot凍結')
 
+  // SYN-1: 紹介完了の提案→つながり一覧→詳細から次の紹介へ。
+  await page.getByText('次はこの方はいかがですか？', { exact: true }).waitFor({ timeout: 10_000 })
+  ok(await page.getByText(NEXT_CONTACT, { exact: true }).isVisible(), '紹介完了に次の方の提案カード1枚')
+  await page.screenshot({ path: '/private/tmp/syn1-completion-375.png', fullPage: true })
+  await page.goto(BASE + '/app/synapse', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('heading', { name: 'つながり', exact: true }).waitFor({ timeout: 10_000 })
+  await page.locator('#mbp-splash').waitFor({ state: 'detached', timeout: 10_000 })
+  ok(await page.getByText('知り合いを覚えておくメモ。合いそうなメニューも提案します。', { exact: true }).isVisible(), 'つながり一覧を平易な台帳として表示')
+  const connectionsOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  ok(connectionsOverflow <= 0, `つながり一覧 375px横溢れゼロ (${connectionsOverflow}px)`)
+  ok(await page.getByRole('button', { name: 'つながりとはを開く' }).count() === 1, 'つながりの需要時説明を配線')
+  await page.screenshot({ path: '/private/tmp/syn1-connections-375.png', fullPage: true })
+  const connectionRow = page.locator(`a[href="/app/synapse/${nextContact.data.id}"]`)
+  await connectionRow.click()
+  await page.getByRole('link', { name: 'このつながりを紹介する →', exact: true }).click()
+  await page.waitForURL(/\/app\/refer\?/, { timeout: 10_000 })
+  await choose(page, first)
+  await page.getByRole('button', { name: 'この内容で紹介する', exact: true }).click()
+  ok(await page.getByPlaceholder('山田 太郎').first().inputValue() === NEXT_CONTACT, 'つながり詳細から紹介フォームへ氏名を引継ぎ')
+
   // EXP-1: 成約・報酬確定は案件ごとに一度だけ。連続スクショで一時演出と再生抑止を実証する。
   if (!single?.id) throw new Error('single deal id missing')
   await admin.from('deals').update({ status: 'confirmed' }).eq('id', single.id)
@@ -251,6 +286,7 @@ try {
   ok(consultPendingMs <= 50, '相談ボタンpendingが50ms以内', `${consultPendingMs}ms`)
   await page.waitForURL(/\/app\/cases\/[0-9a-f-]+/, { timeout: 35_000 })
   console.log(`[EXP1_UI] consultation_ms=${Math.round(performance.now() - consultSubmitStartedAt)}`)
+  ok(pageErrors.length === 0, 'パートナー実走のpage errorsゼロ', pageErrors.join(' | '))
 
   // Codex single-process fallback is intentionally short-lived; isolate the console proof.
   await partnerContext.close()

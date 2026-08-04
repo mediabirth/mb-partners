@@ -30,7 +30,7 @@ export default function SurfaceShell({ homeHref, mypageHref, settingsHref, name,
   color: string | null
   avatarUrl?: string | null // A6: 設定済みアバター画像。未指定/未設定は従来の人型シルエット。
   nav: React.ReactNode
-  headerExtra?: React.ReactNode // surface固有の追加ヘッダー導線（app=SYNAPSE等）。未指定なら何も出ない（vendor不変）。
+  headerExtra?: React.ReactNode // surface固有の追加ヘッダー導線。未指定なら何も出ない（vendor不変）。
   children: React.ReactNode
 }) {
   return (

@@ -72,7 +72,7 @@ export default function RootLayout({
   return (
     <html lang="ja" className={`${inter.variable} ${zenKaku.variable}`}>
       <body>
-        {/* PWA起動スプラッシュ：初回ロード/リロード時のみ。SYNAPSE紋章の§9低振幅パルス（system+SVG＝webフォント非依存）。
+        {/* PWA起動スプラッシュ：初回ロード/リロード時のみ。ブランドノードの低振幅パルス（system+SVG＝webフォント非依存）。
             critical inline CSS で外部CSS読込前から表示→hydration完了(load)で200msフェードアウト→DOMから除去。
             SPA内遷移ではroot layoutは再描画されず＝再表示されない。reduced-motionで静止。 */}
         <style dangerouslySetInnerHTML={{ __html: `

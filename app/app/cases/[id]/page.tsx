@@ -15,6 +15,7 @@ import { consultNarrative } from '@/lib/consult-narrative'
 import { DEAL_STATUS } from '@/lib/status'
 import { toPublicTimeline } from '@/lib/public-timeline'
 import SuccessMoment from '@/components/SuccessMoment'
+import ReferralNextSuggestion from '@/components/ReferralNextSuggestion'
 
 // 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
@@ -28,7 +29,7 @@ export default async function CaseDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; from?: string }>
 }) {
   const user = await getCachedUser()
   if (!user) redirect('/login')
@@ -100,7 +101,7 @@ export default async function CaseDetailPage({
   } catch { /* best-effort */ }
   const menuLabel: string | null = newMenuName || ((deal as any).service_menus?.name ?? null)
 
-  const { next } = await searchParams
+  const { next, from } = await searchParams
   const method: 'send' | 'self' = next === 'self' ? 'self' : 'send'
   // 担い＝reward_type由来の channel。cooperation=アポイント→予約(/book/)、referral=連絡のみ（リンク導線なし）。
   const hasAppointment = deal.channel === 'cooperation'
@@ -130,6 +131,12 @@ export default async function CaseDetailPage({
       <Link href="/app/cases" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 400, textDecoration: 'none' }}>
         ← 案件一覧
       </Link>
+
+      {from === 'refer' && (
+        <div style={{ marginTop: 14 }}>
+          <ReferralNextSuggestion contextKey={deal.id} excludeNames={[deal.customer_name ?? '', (deal as { company_name?: string | null }).company_name ?? '']} />
+        </div>
+      )}
 
       {/* 1. ヘッダ */}
       <div style={{ padding: '10px 20px 20px', display: 'flex', gap: 13, alignItems: 'center' }}>
