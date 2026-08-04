@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 
 type Kind = 'partner' | 'frontier' | 'supplier' | 'delivery'
 const KINDS: { id: Kind; label: string; note: string }[] = [
@@ -18,6 +19,7 @@ export default function InviteForm() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [actionState, setActionState] = useState<ActionPendingState>('idle')
   const [error, setError] = useState('')
   const [inviteUrl, setInviteUrl] = useState('')
   const [emailed, setEmailed] = useState(false)
@@ -35,26 +37,29 @@ export default function InviteForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true); setError(''); setInviteUrl('')
+    setLoading(true); setActionState('pending'); setError(''); setInviteUrl('')
     try {
       if (kind === 'delivery') {
-        if (!name.trim()) { setError('デリバリーは名称（屋号）が必須です'); setLoading(false); return }
+        if (!name.trim()) { setError('デリバリーは名称（屋号）が必須です'); setLoading(false); setActionState('idle'); return }
         const dr = await fetch('/api/console/deliveries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), contact_email: email.trim() }) })
         const dd = await dr.json().catch(() => ({}))
-        if (!dr.ok || !dd.delivery) { setError(dd.error || 'デリバリーの作成に失敗しました'); setLoading(false); return }
+        if (!dr.ok || !dd.delivery) { setError(dd.error || 'デリバリーの作成に失敗しました'); setLoading(false); setActionState('idle'); return }
         const ir = await fetch(`/api/console/deliveries/${dd.delivery.id}/invite`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim() }) })
         const id = await ir.json().catch(() => ({}))
-        if (!ir.ok || !id.invite_url) { setError(id.error || '招待リンクの発行に失敗しました'); setLoading(false); return }
+        if (!ir.ok || !id.invite_url) { setError(id.error || '招待リンクの発行に失敗しました'); setLoading(false); setActionState('idle'); return }
         setInviteUrl(id.invite_url); setEmailed(!!id.emailed); setName('')
       } else {
-        if (kind === 'supplier' && !name.trim()) { setError('サプライヤーは会社名が必須です'); setLoading(false); return }
+        if (kind === 'supplier' && !name.trim()) { setError('サプライヤーは会社名が必須です'); setLoading(false); setActionState('idle'); return }
         const res = await fetch('/api/console/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined, role: 'partner', frontier: kind === 'frontier', supplier_card: kind === 'supplier' ? selCard : undefined }) })
         const data = await res.json().catch(() => ({}))
-        if (!res.ok) { setError(data.error || '招待リンクを発行できませんでした。時間をおいて再度お試しください'); setLoading(false); return }
+        if (!res.ok) { setError(data.error || '招待リンクを発行できませんでした。時間をおいて再度お試しください'); setLoading(false); setActionState('idle'); return }
         setInviteUrl(data.invite_url); setEmailed(!!data.emailed); setName('')
       }
       setEmail('')
-    } catch { setError('招待リンクを発行できませんでした。時間をおいて再度お試しください') } finally { setLoading(false) }
+      setActionState('success')
+      await new Promise(resolve => setTimeout(resolve, 320))
+      setActionState('idle')
+    } catch { setError('招待リンクを発行できませんでした。時間をおいて再度お試しください'); setActionState('idle') } finally { setLoading(false) }
   }
   async function handleCopy() { await navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const cur = KINDS.find(k => k.id === kind)!
@@ -108,7 +113,7 @@ export default function InviteForm() {
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
 
           <button type="submit" className="ui-btn ui-btn--primary" style={{ justifyContent: 'center' }} disabled={loading || !email.trim() || ((kind === 'delivery' || kind === 'supplier') && !name.trim())}>
-            {loading ? '作成中…' : '招待リンクを作成'}
+            <ActionPending state={actionState} idleLabel="招待リンクを作成" pendingLabel="招待を準備しています…" successLabel="作成しました" />
           </button>
         </form>
 

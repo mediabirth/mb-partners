@@ -14,6 +14,7 @@ import { statusNarrative } from '@/lib/deal-status-narrative'
 import { consultNarrative } from '@/lib/consult-narrative'
 import { DEAL_STATUS } from '@/lib/status'
 import { toPublicTimeline } from '@/lib/public-timeline'
+import SuccessMoment from '@/components/SuccessMoment'
 
 // 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
@@ -124,6 +125,8 @@ export default async function CaseDetailPage({
 
   return (
     <div>
+      {deal.status === 'confirmed' && <SuccessMoment eventKey={`contract:${deal.id}`} kind="contract" />}
+      {deal.status === 'paid' && <SuccessMoment eventKey={`reward:${deal.id}`} kind="reward" />}
       <Link href="/app/cases" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted2)', padding: '14px 20px 0', fontWeight: 400, textDecoration: 'none' }}>
         ← 案件一覧
       </Link>
@@ -149,7 +152,7 @@ export default async function CaseDetailPage({
             )}
             {/* ステータス＝6pxドット＋テキスト（塗りピル廃止） */}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: deal.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)', display: 'inline-block' }} />
+              <span className={deal.status === 'confirmed' || deal.status === 'paid' ? 'status-pulse-once' : undefined} style={{ width: 6, height: 6, borderRadius: '50%', background: deal.status === 'lost' ? 'var(--muted)' : 'var(--c-blue)', display: 'inline-block' }} />
               <span style={{ fontSize: 12, color: 'var(--muted2)' }}>{STATUS_LABEL[deal.status] ?? deal.status}</span>
             </span>
           </div>

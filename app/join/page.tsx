@@ -5,6 +5,7 @@
  * 報酬の具体例は公開面共通正典から軽量表示。既存ブランドトークン流用・新hexなし。
  */
 import { useState, useEffect } from 'react'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 import CompanyTrustBlock from '@/components/public/CompanyTrustBlock'
 import {
   PUBLIC_JOIN_REWARD_EXAMPLE,
@@ -29,6 +30,7 @@ export default function JoinPage() {
   const [website, setWebsite] = useState('')
   const [consent, setConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [actionState, setActionState] = useState<ActionPendingState>('idle')
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   // Feature E（E-2）：招待リンク /join?ref=<partner_id> の紹介元を捕捉（非金銭・保存はサーバで実在検証）。
@@ -46,7 +48,7 @@ export default function JoinPage() {
     if (!name.trim()) { setError('お名前を入力してください'); return }
     if (!email.trim() && !phone.trim()) { setError('ご連絡のため、メールか電話のいずれかを入力してください'); return }
     if (!consent) { setError('ご連絡への同意確認が必要です'); return }
-    setSubmitting(true)
+    setSubmitting(true); setActionState('pending')
     try {
       const res = await fetch('/api/partner-apply', {
         method: 'POST',
@@ -54,10 +56,12 @@ export default function JoinPage() {
         body: JSON.stringify({ name, org, expertise, email, phone, message, consent, ref, website }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(data.error ?? '送信に失敗しました'); return }
+      if (!res.ok) { setError(data.error ?? '送信に失敗しました'); setActionState('idle'); return }
+      setActionState('success')
+      await new Promise(resolve => setTimeout(resolve, 320))
       setDone(true)
     } catch {
-      setError('送信に失敗しました。時間をおいて再度お試しください')
+      setError('送信に失敗しました。時間をおいて再度お試しください'); setActionState('idle')
     } finally {
       setSubmitting(false)
     }
@@ -236,7 +240,7 @@ export default function JoinPage() {
                 {error && <p style={{ fontSize: '.7rem', color: 'var(--red)', marginBottom: 10 }}>{error}</p>}
 
                 <button type="submit" disabled={submitting} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', minHeight: 48, fontSize: '.9rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--c-blue), var(--blue-dk))', boxShadow: '0 8px 20px rgba(71,51,230,.28)' }}>
-                  {submitting ? '送信中…' : '応募する'}
+                  <ActionPending state={actionState} idleLabel="応募する" pendingLabel="応募を届けています…" successLabel="受け付けました" />
                 </button>
                 <p style={{ fontSize: '.6rem', color: 'var(--muted)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>
                   応募いただいても費用は発生しません。担当者より個別にご案内します。

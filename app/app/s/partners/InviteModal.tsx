@@ -4,6 +4,7 @@
  *  委託先＝実務を担う方専用の席（vendor-redesign.md §2）。 */
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 
 export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) {
   const [open, setOpen] = useState(false)
@@ -13,6 +14,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
   const [url, setUrl] = useState('')
   const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [actionState, setActionState] = useState<ActionPendingState>('idle')
   const [note, setNote] = useState('')
   // 分岐: 営業・紹介もする方＝パートナー（既定）／実務のみ＝委託先
   const [role, setRole] = useState<'sales' | 'work'>('sales')
@@ -22,18 +24,21 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
   async function create() {
     if (busy) return
     if (!asPartner && !name.trim()) { setNote('委託先の名称は必須です'); return }
-    setBusy(true); setNote('')
+    setBusy(true); setActionState('pending'); setNote('')
     try {
       const r = asPartner
         ? await fetch('/api/app/frontier/invite', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...(email.trim() ? { email: email.trim() } : {}), ...(name.trim() ? { name: name.trim() } : {}) }) })
         : await fetch('/api/supplier/self', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'invite_delivery', name: name.trim(), work: work.trim(), email: email.trim() }) })
       const j = await r.json().catch(() => ({}))
-      if (!r.ok || !j.invite_url) { setNote(j.error ?? '作成できませんでした'); return }
+      if (!r.ok || !j.invite_url) { setNote(j.error ?? '作成できませんでした'); setActionState('idle'); return }
       setUrl(j.invite_url)
       await navigator.clipboard?.writeText(j.invite_url).catch(() => {})
       setCopied(true); setTimeout(() => setCopied(false), 2400)
       setNote(email.trim() ? (j.emailed ? '招待メールを送信し、リンクをコピーしました' : 'リンクをコピーしました（メールは送信できませんでした）') : 'リンクをコピーしました。相手に共有してください')
-    } finally { setBusy(false) }
+      setActionState('success')
+      await new Promise(resolve => setTimeout(resolve, 320))
+      setActionState('idle')
+    } catch { setNote('作成できませんでした'); setActionState('idle') } finally { setBusy(false) }
   }
   function close() { setOpen(false); setUrl(''); setNote(''); setName(''); setWork(''); setEmail(''); setRole('sales') }
 
@@ -98,7 +103,7 @@ export default function InviteModal({ mode }: { mode: 'partner' | 'delivery' }) 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={close} className="ui-btn ui-btn--ghost" style={{ fontSize: '.72rem', padding: '8px 14px' }}>閉じる</button>
               <button onClick={create} disabled={busy || (!asPartner && !name.trim())} className="ui-btn ui-btn--primary" style={{ fontSize: '.72rem', padding: '8px 16px' }}>
-                {busy ? '作成中…' : copied ? 'コピーしました' : url ? 'もう一度作成' : '招待リンクを作成'}
+                <ActionPending state={actionState} idleLabel={copied ? 'コピーしました' : url ? 'もう一度作成' : '招待リンクを作成'} pendingLabel="招待を準備しています…" successLabel="作成しました" />
               </button>
             </div>
           </div>

@@ -351,7 +351,7 @@ body {
 /* ============================================================
    Stagger list — first 6 children animate in sequence（体感: 遅延を大幅短縮・可視即応） */
 .stagger > * {
-  animation: pageIn .22s var(--ease-out) both;
+  animation: pageIn .28s cubic-bezier(.16,1.12,.3,1) both;
 }
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
 .stagger > *:nth-child(2) { animation-delay: 28ms; }
@@ -360,6 +360,14 @@ body {
 .stagger > *:nth-child(5) { animation-delay: 88ms; }
 .stagger > *:nth-child(6) { animation-delay: 100ms; }
 .stagger > *:nth-child(n+7) { animation-delay: 108ms; }
+
+/* EXP-1: 状態の節目を一度だけ知らせる。寸法を変えず transform/opacity のみ。 */
+.status-pulse-once { animation: statusPulseOnce .7s cubic-bezier(.16,1.25,.3,1) both; }
+@keyframes statusPulseOnce {
+  0% { opacity: .55; transform: scale(.65); box-shadow: 0 0 0 0 rgba(71,51,230,.28); }
+  58% { opacity: 1; transform: scale(1.22); box-shadow: 0 0 0 6px rgba(71,51,230,0); }
+  100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(71,51,230,0); }
+}
 
 /* ============================================================
    Toast

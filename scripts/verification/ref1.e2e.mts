@@ -65,6 +65,7 @@ async function cleanup() {
   const { data: deals } = await admin.from('deals').select('id').like('customer_name', `${PREFIX}%`)
   const ids = (deals ?? []).map(row => row.id)
   if (ids.length) {
+    for (const dealId of ids) await admin.from('mail_log').delete().contains('meta', { deal_id: dealId }).then(() => {}, () => {})
     await admin.from('delivery_expenses').delete().in('deal_id', ids).then(() => {}, () => {})
     await admin.from('delivery_assignments').delete().in('deal_id', ids)
     await admin.from('deal_tasks').delete().in('deal_id', ids)
@@ -72,6 +73,8 @@ async function cleanup() {
     await admin.from('deal_items').delete().in('deal_id', ids)
     await admin.from('deals').delete().in('id', ids)
   }
+  await admin.from('mail_log').delete().ilike('to_email', 'ccref1-%@mb-system.internal').then(() => {}, () => {})
+  await admin.from('mail_log').delete().ilike('subject', '%CC-REF1-%').then(() => {}, () => {})
   const users = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
   for (const user of users.data.users.filter(item => item.email === PARTNER_EMAIL || item.email === OWNER_EMAIL)) {
     await admin.from('audit_logs').delete().eq('actor_profile_id', user.id).then(() => {}, () => {})
@@ -100,12 +103,29 @@ async function choose(page: Page, pick: Pick) {
 async function fillCommon(page: Page, customer: string, consult = false) {
   await page.getByPlaceholder('山田 太郎').first().fill(customer)
   await page.getByPlaceholder('09012345678').fill('09012345678')
+  await page.getByPlaceholder('customer@example.com').fill(`${customer.toLowerCase()}@mb-system.internal`)
   if (consult) {
     await page.getByRole('button', { name: '集客', exact: true }).click()
     await page.getByRole('button', { name: 'すぐ', exact: true }).click()
     await page.getByPlaceholder('いま困っていることを教えてください').fill('集客の順序を相談したい')
   }
   for (const checkbox of await page.locator('form input[type="checkbox"]').all()) await checkbox.check()
+}
+
+async function waitForAfterEffects(dealIds: string[], toEmail: string) {
+  const deadline = Date.now() + 6000
+  let last: { events: { deal_id: string }[]; mails: { to_email: string; status: string; detail: string | null; meta: unknown }[]; eventError?: string; mailError?: string } = { events: [], mails: [] }
+  while (Date.now() < deadline) {
+    const [eventRows, mailRows] = await Promise.all([
+      admin.from('deal_events').select('deal_id').in('deal_id', dealIds),
+      admin.from('mail_log').select('to_email,status,detail,meta').eq('template_key', 'customer-receipt').eq('to_email', toEmail),
+    ])
+    last = { events: eventRows.data ?? [], mails: mailRows.data ?? [], eventError: eventRows.error?.message, mailError: mailRows.error?.message }
+    if (last.events.length >= dealIds.length && last.mails.length >= dealIds.length) return last
+    await new Promise(resolve => setTimeout(resolve, 150))
+  }
+  console.error('[EXP1_AFTER_QUERY]', JSON.stringify(last))
+  return last
 }
 
 await cleanup()
@@ -138,13 +158,23 @@ try {
   await page.getByRole('button', { name: /まだ決まっていない/ }).click()
   await page.getByRole('button', { name: 'この内容で紹介する（3件）' }).click()
   await fillCommon(page, `${PREFIX}GROUP`, true)
-  await page.getByRole('button', { name: '3件を紹介する' }).click()
+  const groupedSubmitStartedAt = performance.now()
+  const groupedSubmit = page.locator('button[type="submit"]')
+  await groupedSubmit.click()
+  await groupedSubmit.locator('[data-action-state="pending"]').waitFor({ timeout: 1000 })
+  const groupedPendingMs = Math.round(performance.now() - groupedSubmitStartedAt)
+  console.log(`[EXP1_UI] grouped_pending_ms=${groupedPendingMs}`)
+  ok(groupedPendingMs <= 50, '複数紹介ボタンpendingが50ms以内', `${groupedPendingMs}ms`)
   await page.waitForURL(/\/app\/cases\?group=/, { timeout: 45_000 })
+  console.log(`[EXP1_UI] grouped_2_plus_consult_ms=${Math.round(performance.now() - groupedSubmitStartedAt)}`)
   const grouped = (await admin.from('deals').select('id,referral_group_id,is_consultation,consult_meta,reward_snapshot').eq('customer_name', `${PREFIX}GROUP`).order('created_at')).data ?? []
   ok(grouped.length === 3, '2メニュー＋相談から3案件を起票', String(grouped.length))
   ok(new Set(grouped.map(row => row.referral_group_id)).size === 1 && Boolean(grouped[0]?.referral_group_id), '3案件が同じreferral_group_id')
   ok(grouped.filter(row => row.is_consultation).length === 1 && grouped.find(row => row.is_consultation)?.consult_meta?.temperature === 'すぐ', '相談3問をconsult_metaへ保存')
   ok(grouped.filter(row => !row.is_consultation).every(row => row.reward_snapshot), '2メニューとも既存reward_snapshotを凍結')
+  const afterProof = await waitForAfterEffects(grouped.map(row => row.id), `${PREFIX}GROUP`.toLowerCase() + '@mb-system.internal')
+  ok(afterProof.events.length >= 3, 'after()後も案件通知イベント3件を記録')
+  ok(afterProof.mails.length >= 3 && afterProof.mails.every(row => row.status === 'skipped' && String(row.detail).includes('CC_MAIL_SUPPRESS')), '内部シンクmail_logへ3件記録し実送信を抑止')
   await page.getByText('同時に紹介した3件').waitFor({ timeout: 35_000 })
   ok(await page.getByText('同時に紹介した3件').isVisible(), 'APP案件一覧を顧客見出し＋子カードで表示')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -171,10 +201,56 @@ try {
   await page.goto(BASE + '/app/refer', { waitUntil: 'domcontentloaded' }); await choose(page, first)
   await page.getByRole('button', { name: 'この内容で紹介する', exact: true }).click()
   await fillCommon(page, `${PREFIX}SINGLE`)
-  await page.getByRole('button', { name: '紹介する', exact: true }).click()
+  const singleSubmitStartedAt = performance.now()
+  const singleSubmit = page.locator('button[type="submit"]')
+  await singleSubmit.click()
+  await singleSubmit.locator('[data-action-state="pending"]').waitFor({ timeout: 1000 })
+  const singlePendingMs = Math.round(performance.now() - singleSubmitStartedAt)
+  console.log(`[EXP1_UI] single_pending_ms=${singlePendingMs}`)
+  ok(singlePendingMs <= 50, '単選紹介ボタンpendingが50ms以内', `${singlePendingMs}ms`)
   await page.waitForURL(/\/app\/cases\/[0-9a-f-]+/, { timeout: 35_000 })
-  const single = (await admin.from('deals').select('referral_group_id,reward_snapshot').eq('customer_name', `${PREFIX}SINGLE`).single()).data
+  console.log(`[EXP1_UI] single_referral_ms=${Math.round(performance.now() - singleSubmitStartedAt)}`)
+  const single = (await admin.from('deals').select('id,referral_group_id,reward_snapshot').eq('customer_name', `${PREFIX}SINGLE`).single()).data
   ok(single?.referral_group_id == null && Boolean(single?.reward_snapshot), '単選は従来どおり非グループ＋snapshot凍結')
+
+  // EXP-1: 成約・報酬確定は案件ごとに一度だけ。連続スクショで一時演出と再生抑止を実証する。
+  if (!single?.id) throw new Error('single deal id missing')
+  await admin.from('deals').update({ status: 'confirmed' }).eq('id', single.id)
+  await page.goto(`${BASE}/app/cases/${single.id}`, { waitUntil: 'domcontentloaded' })
+  const contractMoment = page.locator('[data-success-moment="contract"]')
+  await contractMoment.waitFor({ timeout: 3000 })
+  await page.screenshot({ path: '/private/tmp/exp1-contract-1.png' })
+  await page.waitForTimeout(360)
+  await page.screenshot({ path: '/private/tmp/exp1-contract-2.png' })
+  await contractMoment.waitFor({ state: 'detached', timeout: 3000 })
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  ok(await page.locator('[data-success-moment="contract"]').count() === 0, '成約演出は同一案件で再生しない')
+
+  await admin.from('deals').update({ status: 'paid' }).eq('id', single.id)
+  await page.goto(`${BASE}/app/cases/${single.id}`, { waitUntil: 'domcontentloaded' })
+  const rewardMoment = page.locator('[data-success-moment="reward"]')
+  await rewardMoment.waitFor({ timeout: 3000 })
+  await page.screenshot({ path: '/private/tmp/exp1-reward-1.png' })
+  await page.waitForTimeout(420)
+  await page.screenshot({ path: '/private/tmp/exp1-reward-2.png' })
+  await rewardMoment.waitFor({ state: 'detached', timeout: 3000 })
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  ok(await page.locator('[data-success-moment="reward"]').count() === 0, '報酬確定の紙吹雪は同一案件で再生しない')
+
+  // Consultation-only response uses the same single path without a reward snapshot.
+  await page.goto(BASE + '/app/refer', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: /まだ決まっていない/ }).click()
+  await page.getByRole('button', { name: 'この内容で紹介する', exact: true }).click()
+  await fillCommon(page, `${PREFIX}CONSULT`, true)
+  const consultSubmitStartedAt = performance.now()
+  const consultSubmit = page.locator('button[type="submit"]')
+  await consultSubmit.click()
+  await consultSubmit.locator('[data-action-state="pending"]').waitFor({ timeout: 1000 })
+  const consultPendingMs = Math.round(performance.now() - consultSubmitStartedAt)
+  console.log(`[EXP1_UI] consultation_pending_ms=${consultPendingMs}`)
+  ok(consultPendingMs <= 50, '相談ボタンpendingが50ms以内', `${consultPendingMs}ms`)
+  await page.waitForURL(/\/app\/cases\/[0-9a-f-]+/, { timeout: 35_000 })
+  console.log(`[EXP1_UI] consultation_ms=${Math.round(performance.now() - consultSubmitStartedAt)}`)
 
   // Codex single-process fallback is intentionally short-lived; isolate the console proof.
   await partnerContext.close()
@@ -194,6 +270,8 @@ try {
   await ownerContext.close()
 } finally {
   await browser.close().catch(() => {})
+  // after() は応答後に完走するため、最後の起票副作用を待ってからテスト専用行を全撤去する。
+  await new Promise(resolve => setTimeout(resolve, 1500))
   await cleanup()
   const residue = await admin.from('deals').select('id').like('customer_name', `${PREFIX}%`)
   const users = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })

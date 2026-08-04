@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import PageGuide from '@/components/PageGuide'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 
 const FRONTIER_INVITE_GUIDE = {
   title: 'チーム招待について',
@@ -20,17 +21,21 @@ export default function FrontierInvite() {
   const [url, setUrl] = useState('')
   const [emailed, setEmailed] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [actionState, setActionState] = useState<ActionPendingState>('idle')
   const [copied, setCopied] = useState(false)
   const [err, setErr] = useState('')
 
   async function create() {
-    setLoading(true); setErr(''); setUrl('')
+    setLoading(true); setActionState('pending'); setErr(''); setUrl('')
     try {
       const r = await fetch('/api/app/frontier/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), name: name.trim() || undefined }) })
       const d = await r.json()
-      if (!r.ok) { setErr(d.error || '発行に失敗しました'); return }
+      if (!r.ok) { setErr(d.error || '発行に失敗しました'); setActionState('idle'); return }
       setUrl(d.invite_url); setEmailed(!!d.emailed); setEmail(''); setName('')
-    } catch { setErr('発行に失敗しました') } finally { setLoading(false) }
+      setActionState('success')
+      await new Promise(resolve => setTimeout(resolve, 320))
+      setActionState('idle')
+    } catch { setErr('発行に失敗しました'); setActionState('idle') } finally { setLoading(false) }
   }
 
   return (
@@ -47,7 +52,7 @@ export default function FrontierInvite() {
       </div>
       {err && <p style={{ fontSize: '.68rem', color: 'var(--red)', marginBottom: 8 }}>{err}</p>}
       <button onClick={create} disabled={loading || !email.trim()} className="btn btn-p lift" style={{ width: '100%', opacity: (loading || !email.trim()) ? .5 : 1 }}>
-        {loading ? '発行中…' : '招待リンクを発行'}
+        <ActionPending state={actionState} idleLabel="招待リンクを発行" pendingLabel="招待を準備しています…" successLabel="作成しました" />
       </button>
       {url && (
         <div style={{ marginTop: 12, background: 'var(--blue-bg2)', border: '1px solid var(--blue-bg)', borderRadius: 10, padding: 12 }}>

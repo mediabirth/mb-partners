@@ -11,6 +11,7 @@ import RewardPill from '@/components/ui/RewardPill'
 import CasesSearch from '@/components/CasesSearch'
 import { rewardValueText } from '@/lib/reward-format'
 import { DEAL_STATUS } from '@/lib/status'
+import CountUp from '@/components/CountUp'
 
 // 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
@@ -132,10 +133,10 @@ export default async function CasesPage({
       {/* ②B 確定報酬の累計（read-only・確定案件の報酬合計）＋(a)支払済/未払い分割 */}
       <div style={{ margin: '6px 20px 14px', background: 'linear-gradient(135deg,#4733E6 0%,#3A28CE 100%)', color: '#fff', borderRadius: 14, padding: '15px 18px' }}>
         <div style={{ fontSize: '.58rem', opacity: .9, letterSpacing: '.04em', fontWeight: 500 }}>確定報酬の累計</div>
-        <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}>¥{confirmedRewardTotal.toLocaleString()}</div>
+        <div style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: '1.5rem', letterSpacing: '-.02em', marginTop: 4, fontFeatureSettings: '"tnum"' }}><CountUp value={confirmedRewardTotal} format="yen" /></div>
         <div style={{ display: 'flex', gap: 16, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.25)' }}>
-          <div style={{ fontSize: '.56rem', opacity: .85 }}>支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{paidRewardTotal.toLocaleString()}</b></div>
-          <div style={{ fontSize: '.56rem', opacity: .85 }}>未払い（翌月末払い見込み）<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}>¥{unpaidRewardTotal.toLocaleString()}</b></div>
+          <div style={{ fontSize: '.56rem', opacity: .85 }}>支払済<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}><CountUp value={paidRewardTotal} format="yen" /></b></div>
+          <div style={{ fontSize: '.56rem', opacity: .85 }}>未払い（翌月末払い見込み）<b style={{ display: 'block', fontFamily: 'Inter', fontSize: '.84rem', fontWeight: 500, marginTop: 2, fontFeatureSettings: '"tnum"' }}><CountUp value={unpaidRewardTotal} format="yen" /></b></div>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 
 type Opt = { id: string; label: string; base_fee?: number }
 const KINDS = ['交通', '宿泊', 'その他']
@@ -19,6 +20,7 @@ export default function VendorExpenseSheet({ open, onClose, presetAssignmentId, 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [actionState, setActionState] = useState<ActionPendingState>('idle')
   const [toast, setToast] = useState('')
   const camRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -42,16 +44,19 @@ export default function VendorExpenseSheet({ open, onClose, presetAssignmentId, 
     const amt = Math.max(0, Number((amount || '').replace(/[,，\s]/g, '')))
     if (!assignmentId) { show('案件を選択してください'); return }
     if (!amt) { show('金額を入力してください'); return }
-    setBusy(true)
+    setBusy(true); setActionState('pending')
     try {
       const fd = new FormData()
       fd.append('delivery_assignment_id', assignmentId); fd.append('kind', kind); fd.append('amount', String(amt))
       if (file) fd.append('file', file)
       const r = await fetch('/api/vendor/expenses', { method: 'POST', body: fd })
       const d = await r.json().catch(() => ({}))
-      if (r.ok && d.expense) { reset(); onClose(); router.refresh() }
-      else { show(d.error ?? '申請に失敗しました'); setBusy(false) }
-    } catch { show('申請に失敗しました'); setBusy(false) }
+      if (r.ok && d.expense) {
+        setActionState('success')
+        await new Promise(resolve => setTimeout(resolve, 320))
+        reset(); setBusy(false); setActionState('idle'); onClose(); router.refresh()
+      } else { show(d.error ?? '申請に失敗しました'); setBusy(false); setActionState('idle') }
+    } catch { show('申請に失敗しました'); setBusy(false); setActionState('idle') }
   }
   if (!open) return null
   const inp: React.CSSProperties = { width: '100%', border: '0.5px solid var(--line)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.86rem', background: '#fff' }
@@ -126,7 +131,9 @@ export default function VendorExpenseSheet({ open, onClose, presetAssignmentId, 
           </div>
         )}
 
-        <button onClick={submit} disabled={busy || !assignmentId} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>{busy ? '送信中…' : '申請する'}</button>
+        <button onClick={submit} disabled={busy || !assignmentId} className="ui-btn ui-btn--primary ui-btn--lg" style={{ width: '100%', justifyContent: 'center' }}>
+          <ActionPending state={actionState} idleLabel="申請する" pendingLabel="申請を届けています…" successLabel="受け付けました" />
+        </button>
         </div>
       </div>
       {toast && <div style={{ position: 'fixed', bottom: 'calc(20px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', background: 'var(--txt)', color: '#fff', padding: '12px 22px', borderRadius: 10, fontSize: '.74rem', fontWeight: 500, zIndex: 130 }}>{toast}</div>}

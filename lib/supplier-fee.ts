@@ -52,18 +52,13 @@ export type FeeSnapshot = {
 export async function resolveFeeSnapshot(db: Db, args: { partnerId: string | null; serviceId: string | null }): Promise<FeeSnapshot | null> {
   try {
     const { partnerId, serviceId } = args
-    // 紹介パートナーの系統（frontier）
-    let referrerFrontierId: string | null = null
-    if (partnerId) {
-      const { data: p } = await db.from('partners').select('frontier_id').eq('id', partnerId).maybeSingle()
-      referrerFrontierId = (p?.frontier_id as string | null) ?? null
-    }
-    // 案件メニューのサプライヤー（services.supplier_partner_id・null=MBメニュー）
-    let menuSupplierId: string | null = null
-    if (serviceId) {
-      const { data: s } = await db.from('services').select('supplier_partner_id').eq('id', serviceId).maybeSingle()
-      menuSupplierId = (s?.supplier_partner_id as string | null) ?? null
-    }
+    // EXP-1: 互いに依存しない系統・メニュー所属の読取を1段にする。選択列・判定・凍結値は不変。
+    const [partnerResult, serviceResult] = await Promise.all([
+      partnerId ? db.from('partners').select('frontier_id').eq('id', partnerId).maybeSingle() : Promise.resolve({ data: null }),
+      serviceId ? db.from('services').select('supplier_partner_id').eq('id', serviceId).maybeSingle() : Promise.resolve({ data: null }),
+    ])
+    const referrerFrontierId = (partnerResult.data?.frontier_id as string | null) ?? null
+    const menuSupplierId = (serviceResult.data?.supplier_partner_id as string | null) ?? null
     // referrer の frontier が「サプライヤー」か（いずれかの services.supplier_partner_id に一致するか）
     let frontierIsSupplier = false
     if (referrerFrontierId) {

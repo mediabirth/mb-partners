@@ -5,13 +5,14 @@
  *   領収書は private bucket expense-evidence にサーバ保存、expense_claims に status='submitted'・submitted_by=vendor で挿入。
  *   vendor の DB/Storage 直書込はしない。承認は既存（A-2b・コンソール=MB）。
  */
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { resolveVendor, assertOwnAssignment } from '@/lib/vendor-auth'
 
 const KINDS = ['交通', '宿泊', 'その他']
 
 export async function POST(req: NextRequest) {
+  const timingStartedAt = performance.now()
   const vendor = await resolveVendor()
   if (!vendor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -54,11 +55,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // 運営へ通知（best-effort・申請完了は阻害しない）
-  try {
-    const { sendSlack } = await import('@/lib/notify')
-    await sendSlack(`🧾 委託先経費申請: ${vendor.deliveryName}（${kind} ¥${amount.toLocaleString()}）— コンソールで承認待ち`)
-  } catch { /* best-effort */ }
+  const timingCoreDoneAt = performance.now()
+
+  // EXP-1: 経費行のサーバ確定後、運営通知だけを応答後へ。金額入力・確定タイミングは従来どおり同期。
+  after(async () => {
+    const notifyStartedAt = performance.now()
+    try {
+      const { sendSlack } = await import('@/lib/notify')
+      await sendSlack(`🧾 委託先経費申請: ${vendor.deliveryName}（${kind} ¥${amount.toLocaleString()}）— コンソールで承認待ち`)
+    } catch { /* best-effort */ }
+    if (process.env.EXP1_TIMING === '1') {
+      console.info('[EXP1_TIMING]', JSON.stringify({ action: 'expense', mode: 'after', notifyMs: Math.round(performance.now() - notifyStartedAt) }))
+    }
+  })
+
+  if (process.env.EXP1_TIMING === '1') {
+    console.info('[EXP1_TIMING]', JSON.stringify({
+      action: 'expense',
+      mode: 'core',
+      coreMs: Math.round(timingCoreDoneAt - timingStartedAt),
+      responseMs: Math.round(timingCoreDoneAt - timingStartedAt),
+    }))
+  }
 
   return NextResponse.json({ expense: data })
 }

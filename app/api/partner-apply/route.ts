@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { partnerFacingOrigin, requestOrigin } from '@/lib/app-origin'
 import {
@@ -84,21 +84,22 @@ export async function POST(req: NextRequest) {
     }).select('interview_token').single()
     if (error || !inserted) return NextResponse.json({ error: '送信に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
 
-    // 応募完了メール＝面談予約リンク（招待制の起点）。best-effort（RESEND未設定なら no-op・応募自体は成立）。
-    try {
-      const origin = partnerFacingOrigin(requestOrigin(req))
-      const bookUrl = `${origin}/partners/interview/${inserted.interview_token}`
-      const { sendTemplatedEmail } = await import('@/lib/mail-send')
-      await sendTemplatedEmail({
-        key: 'application-received', to: email, toRole: 'invitee',
-        vars: { name, link: bookUrl },
-        buttons: [{ label: '面談を予約する', url: bookUrl }],
-        meta: { source: 'join_lp' },
-      })
-      // 運営にも着信（best-effort）
-      const { sendOpsEmail } = await import('@/lib/notify')
-      await sendOpsEmail(kind === 'supplier' ? '【MB Partners】出品の相談（サプライヤー）' : '【MB Partners】新規パートナー応募', `${kind === 'supplier' ? '出品の相談' : '新しい応募'}がありました。\n・お名前：${name}\n・メール：${email}${phone ? `\n・電話：${phone}` : ''}\n\nコンソール「パートナー応募」でステータスをご確認ください。`)
-    } catch { /* best-effort：メール失敗でも応募は成立 */ }
+    // EXP-1: 応募行の確定後、応募者・運営メールは応答後へ。メール失敗でも応募成功は従来どおり壊さない。
+    const origin = partnerFacingOrigin(requestOrigin(req))
+    const bookUrl = `${origin}/partners/interview/${inserted.interview_token}`
+    after(async () => {
+      try {
+        const [{ sendTemplatedEmail }, { sendOpsEmail }] = await Promise.all([import('@/lib/mail-send'), import('@/lib/notify')])
+        await Promise.all([
+          sendTemplatedEmail({
+            key: 'application-received', to: email, toRole: 'invitee',
+            vars: { name, link: bookUrl }, buttons: [{ label: '面談を予約する', url: bookUrl }],
+            meta: { source: 'join_lp' },
+          }),
+          sendOpsEmail(kind === 'supplier' ? '【MB Partners】出品の相談（サプライヤー）' : '【MB Partners】新規パートナー応募', `${kind === 'supplier' ? '出品の相談' : '新しい応募'}がありました。\n・お名前：${name}\n・メール：${email}${phone ? `\n・電話：${phone}` : ''}\n\nコンソール「パートナー応募」でステータスをご確認ください。`),
+        ])
+      } catch { /* best-effort：メール失敗でも応募は成立済み */ }
+    })
 
     return NextResponse.json({ ok: true })
   } catch {

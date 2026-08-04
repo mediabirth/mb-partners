@@ -10,6 +10,7 @@ import RewardPill from '@/components/ui/RewardPill'
 import MenuDetailSheet from '@/components/MenuDetailSheet'
 import ShareLinkSheet from './ShareLinkSheet'
 import { submitPartnerReferral, getPartnerInfo } from './actions'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 
 // リファラル v3.1：世界観は「紹介」1つ。協力タスクで報酬が変わるだけ。「協力/関わり方」はUIに出さない。
 // デザイン規律：塗りボタンは1画面1つ・見出し18px/500・本文14px・ラベル12px・注記11px・太さ400/500のみ・
@@ -96,6 +97,7 @@ export default function ReferPage() {
   const [retryGroupId, setRetryGroupId]   = useState<string | null>(null)
   const [agreementAt, setAgreementAt]     = useState('')
   const [pending, startTransition]        = useTransition()
+  const [actionState, setActionState]     = useState<ActionPendingState>('idle')
   const [error, setError]                 = useState('')
 
   useEffect(() => { startTransition(async () => { try { await getPartnerInfo() } catch { /* silent */ } }) }, [])
@@ -169,21 +171,26 @@ export default function ReferPage() {
     fd.set('memo', memo)
     fd.set('consultMeta', JSON.stringify({ areas: consultAreas, temperature: consultTemperature, note: consultNote.trim() }))
     if (retryGroupId) fd.set('referralGroupId', retryGroupId)
+    // クリックと同じ描画ターンで pending を出す。成功表示はサーバ確定後だけ。
+    setActionState('pending')
     startTransition(async () => {
       try {
         const res = await submitPartnerReferral(fd)
-        if (!res?.dealId) { setError('登録に失敗しました'); return }
+        if (!res?.dealId) { setError('登録に失敗しました'); setActionState('idle'); return }
         if (res.failures.length > 0) {
           const failedIds = new Set(res.failures.map(f => f.id))
           setPicks(current => current.filter(p => failedIds.has(p.id)))
           setConsultSelected(failedIds.has('consultation'))
           setRetryGroupId(res.referralGroupId)
           setError(`${res.requested}件中${res.registered}件を登録しました。登録できなかった内容をもう一度お試しください。`)
+          setActionState('idle')
           return
         }
+        setActionState('success')
+        await new Promise(resolve => setTimeout(resolve, 320))
         if (res.dealIds.length > 1 && res.referralGroupId) router.push(`/app/cases?group=${res.referralGroupId}`)
         else router.push(`/app/cases/${res.dealId}?next=${introMethod}`)
-      } catch (err: unknown) { setError(err instanceof Error ? err.message : '登録に失敗しました') }
+      } catch (err: unknown) { setError(err instanceof Error ? err.message : '登録に失敗しました'); setActionState('idle') }
     })
   }
 
@@ -201,7 +208,7 @@ export default function ReferPage() {
     ? customerEmail.trim().length > 0
     : (phone.trim().length > 0 || customerEmail.trim().length > 0)
   const consultationComplete = !consultSelected || (consultAreas.length > 0 && Boolean(consultTemperature))
-  const canSubmit = nameFilled && contactFilled && allTasksChecked && consultationComplete && consent && !pending
+  const canSubmit = nameFilled && contactFilled && allTasksChecked && consultationComplete && consent && !pending && actionState !== 'pending'
   const selectionsPayload = JSON.stringify([
     ...picks.map(p => ({
       id: p.id,
@@ -481,7 +488,13 @@ export default function ReferPage() {
               {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
               <button type="submit" disabled={!canSubmit}
                 style={{ ...btnPrimary, width: '100%', background: canSubmit ? 'var(--c-blue)' : '#E7E7ED', color: canSubmit ? '#fff' : 'var(--muted)', cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-                {pending ? '送信中…' : retryGroupId ? '登録できなかった内容を再試行する' : picks.length + (consultSelected ? 1 : 0) > 1 ? `${picks.length + (consultSelected ? 1 : 0)}件を紹介する` : '紹介する'}
+                <ActionPending
+                  state={actionState}
+                  count={picks.length + (consultSelected ? 1 : 0)}
+                  idleLabel={retryGroupId ? '登録できなかった内容を再試行する' : picks.length + (consultSelected ? 1 : 0) > 1 ? `${picks.length + (consultSelected ? 1 : 0)}件を紹介する` : '紹介する'}
+                  pendingLabel={picks.length === 0 && consultSelected ? '相談を届けています…' : '紹介を届けています…'}
+                  successLabel="受け付けました"
+                />
               </button>
             </div>
           </form>

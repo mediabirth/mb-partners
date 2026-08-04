@@ -1,7 +1,12 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { after } from 'next/server'
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notifySlackEvent } from '@/lib/slack'
+import { freezeFeeSnapshot } from '@/lib/supplier-fee'
+import { resolveEffectiveReward } from '@/lib/reward-override'
+import { createDealItem, dealItemKind } from '@/lib/deal-items'
+import { instantiateDealTasks, markAutoTaskDone } from '@/lib/coop-tasks'
 
 export async function getPartnerInfo(): Promise<{ code: string; id: string }> {
   const supabase = await createClient()
@@ -46,9 +51,11 @@ export async function getOrCreateReferralToken(serviceId: string): Promise<strin
 }
 
 async function submitSinglePartnerReferral(formData: FormData) {
+  const timingStartedAt = performance.now()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+  const timingAuthDoneAt = performance.now()
 
   const serviceId    = formData.get('serviceId') as string
   const menuId       = formData.get('menuId') as string
@@ -79,6 +86,13 @@ async function submitSinglePartnerReferral(formData: FormData) {
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) consultMeta = parsed as Record<string, unknown>
     } catch { throw new Error('相談内容を確認してください') }
   }
+  let coverageAgreed: Record<string, unknown> | null = null
+  if (channel === 'cooperation' && coverageAgreedRaw) {
+    try {
+      const parsed = JSON.parse(coverageAgreedRaw)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) coverageAgreed = parsed as Record<string, unknown>
+    } catch { /* 後方互換: 不正JSONは保存しないが起票は成立 */ }
+  }
 
   if (!customerName) throw new Error('お客さま情報は必須です')
   // v3.1/①：連絡先必須（相談起票を除く）。法人＝メール必須／個人＝電話orメールいずれか必須。client と二重で担保。
@@ -87,26 +101,20 @@ async function submitSinglePartnerReferral(formData: FormData) {
       if (!customerEmail) throw new Error('メールアドレスを入力してください')
     } else if (!(phone ?? '').trim() && !customerEmail) throw new Error('電話番号かメールアドレスのいずれかを入力してください')
   }
+  const timingValidateDoneAt = performance.now()
 
-  const { data: partner } = await supabase
-    .from('partners')
-    .select('id')
-    .eq('profile_id', user.id)
-    .single()
+  // EXP-1: 本人確認後の独立読取を並列化。認証・RLS・取得値は従来と同一。
+  const [partnerResult, profileResult, menuResult] = await Promise.all([
+    supabase.from('partners').select('id').eq('profile_id', user.id).single(),
+    supabase.from('profiles').select('name, email').eq('id', user.id).single(),
+    supabase.from('service_menus').select('*').eq('id', menuId).single(),
+  ])
+  const partner = partnerResult.data
   if (!partner) throw new Error('Partner not found')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, email')
-    .eq('id', user.id)
-    .single()
-
-  // Reward snapshot
-  const { data: menu } = await supabase
-    .from('service_menus')
-    .select('*')
-    .eq('id', menuId)
-    .single()
+  const profile = profileResult.data
+  const menu = menuResult.data
+  const admin = await createServiceRoleClient()
+  const timingResolveDoneAt = performance.now()
 
   // ⑧ cooperation→メニューcoop_*（固定=即額／料率=確定時にbase）、紹介→ref_*
   let amount = 0
@@ -128,8 +136,7 @@ async function submitSinglePartnerReferral(formData: FormData) {
       let effValue = Number(mr.reward_value || 0)
       let overrideApplied: { override_id: string; original_value: number } | null = null
       try {
-        const [{ resolveEffectiveReward }, { createServiceRoleClient: mkAdmin2 }] = await Promise.all([import('@/lib/reward-override'), import('@/lib/supabase/server')])
-        const eff = await resolveEffectiveReward(await mkAdmin2(), { partnerId: partner.id, reward: { id: mr.id, menu_id: mr.menu_id, reward_type: mr.reward_type, reward_value: Number(mr.reward_value || 0) } })
+        const eff = await resolveEffectiveReward(admin, { partnerId: partner.id, reward: { id: mr.id, menu_id: mr.menu_id, reward_type: mr.reward_type, reward_value: Number(mr.reward_value || 0) } })
         effValue = eff.value
         if (eff.overridden && eff.override_id) overrideApplied = { override_id: eff.override_id, original_value: eff.original_value }
       } catch { /* fail-safe: 正典値 */ }
@@ -146,6 +153,7 @@ async function submitSinglePartnerReferral(formData: FormData) {
       if (mr.reward_type === 'continuous') continuousMonths = mr.default_months ?? null
     }
   }
+  const timingRewardDoneAt = performance.now()
   // 協力報酬も紹介報酬と同じく起票時点で凍結する。既存snapshotキーは保持し、coop_*だけを加える。
   if (channel === 'cooperation') {
     rewardSnapshot = {
@@ -177,6 +185,11 @@ async function submitSinglePartnerReferral(formData: FormData) {
       referral_group_id: referralGroupId,
       is_consultation: isConsultation,
       consult_meta: isConsultation ? consultMeta : null,
+      customer_email: customerEmail || null,
+      contact_title: customerType === 'corporate' ? (contactTitle || null) : null,
+      reward_ref: rewardRefRaw || null,
+      menu_ref: menuRefRaw || null,
+      coverage_agreed: coverageAgreed,
       internal_memo: [isConsultation && '【相談（サービス未定）】', phone && `TEL: ${phone}`, memo].filter(Boolean).join('\n') || null,
       created_by: user.id,
     })
@@ -184,154 +197,124 @@ async function submitSinglePartnerReferral(formData: FormData) {
     .single()
 
   if (error) throw error
-
-  // P0-a: 系統連動レートの条件凍結（第1段・金額なし・best-effort＝作成を壊さない）。仕様正典 v2 §2。
-  // service-role で解決（RLSで他パートナー行の rate_card が読めないケースを排除）。
-  try {
-    const [{ freezeFeeSnapshot }, { createServiceRoleClient }] = await Promise.all([import('@/lib/supplier-fee'), import('@/lib/supabase/server')])
-    const feeAdmin = await createServiceRoleClient()
-    await freezeFeeSnapshot(feeAdmin, deal!.id, { partnerId: partner.id, serviceId: isConsultation ? null : serviceId })
-  } catch { /* best-effort */ }
-
-  // B-2: 顧客メールを保存（任意）。customer_email 列が未追加(DDL前)でも deal 作成を壊さないよう
-  // 本体insertとは分離した best-effort update（列なし時はエラーを無視）。
-  if (customerEmail) {
-    const { error: emailErr } = await supabase.from('deals').update({ customer_email: customerEmail }).eq('id', deal!.id)
-    if (emailErr) { /* 列未追加(DDL前) 等は無視 — 表示/通知のみ */ }
-  }
-
-  // ②b: 法人の部署・役職を保存（任意・additive）。contact_title 列が未追加でも deal 作成を壊さない best-effort。
-  if (customerType === 'corporate' && contactTitle) {
-    const { error: titleErr } = await supabase.from('deals').update({ contact_title: contactTitle }).eq('id', deal!.id)
-    if (titleErr) { /* 列未追加(DDL前) 等は無視 */ }
-  }
-
-  // 段階4：新メニュー参照 menu_ref を記録（任意・additive・best-effort）。
-  // ★money計算・reward_snapshot・channel・既存 menu_id には触れない。新規案件を新モデルへ繋ぐ追跡列のみ。
-  if (rewardRefRaw) {
-    const { error: rrErr } = await supabase.from('deals').update({ reward_ref: rewardRefRaw }).eq('id', deal!.id)
-    if (rrErr) { /* 列未追加 等は無視 */ }
-  }
-  if (menuRefRaw) {
-    const { error: menuRefErr } = await supabase.from('deals').update({ menu_ref: menuRefRaw }).eq('id', deal!.id)
-    if (menuRefErr) { /* 列未追加・不正id 等は無視（申込は成立） */ }
-  }
-
-  // ③: 協力の対応範囲 項目別同意を記録（任意・additive・揉め防止の証跡）。
-  // coverage_agreed 列が未追加(DDL前)でも deal 作成を壊さない best-effort。
-  // ★④報酬ゲート(deal_tasks)・帰属(partner_id)・money には一切触れない申込時UI同意の記録。
-  if (channel === 'cooperation' && coverageAgreedRaw) {
-    try {
-      const parsed = JSON.parse(coverageAgreedRaw)
-      const { error: covErr } = await supabase.from('deals').update({ coverage_agreed: parsed }).eq('id', deal!.id)
-      if (covErr) { /* 列未追加(DDL前) 等は無視 */ }
-    } catch { /* 不正JSONは無視 — 申込は成立させる（後方互換） */ }
-  }
+  const timingInsertDoneAt = performance.now()
 
   // L3: 相談案件は明細ゼロ・タスクなしで起票（面談後に運営が明細追加→そのとき service/タスクを割当）。
   if (!isConsultation) {
     // L1: 明細1行を同時生成（外見不変・内部のみ。deals.amount = SUM(deal_items.amount) を作成時点で満たす）。
     try {
-      const { createServiceRoleClient } = await import('@/lib/supabase/server')
-      const { createDealItem, dealItemKind } = await import('@/lib/deal-items')
-      const admin = await createServiceRoleClient()
       await createDealItem(admin, {
         deal_id: deal!.id, service_id: serviceId, menu_id: menuId || null,
         kind: dealItemKind(channel, menu as { ref_type?: string; coop_type?: string } | null),
         amount, base_amount: null,
       })
     } catch { /* best-effort */ }
-
-    // P: 協力dealはテンプレから対応タスクを実体化（best-effort・テーブル未作成なら no-op）。
-    if (channel === 'cooperation') {
-      try {
-        const { createServiceRoleClient } = await import('@/lib/supabase/server')
-        const { instantiateDealTasks, markAutoTaskDone } = await import('@/lib/coop-tasks')
-        const admin = await createServiceRoleClient()
-        await instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, menu_ref: menuRefRaw || null, reward_ref: rewardRefRaw || null, channel })
-        // ① 引き合わせタスク（＝紹介そのもの）は紹介成立で完了。専用 trigger_key='referral' で当該タスクのみ自動 done（アポイント等は不変）。
-        //   ★登録ページの本人チェック(coverage_agreed)とは別物・money/deal成立/他タスク非接触。
-        await markAutoTaskDone(admin, deal!.id, 'referral')
-      } catch { /* best-effort */ }
-    }
   }
+  const timingItemDoneAt = performance.now()
 
-  // Deal event
-  await supabase.from('deal_events').insert({
-    deal_id: deal!.id,
-    body: `${profile?.name ?? 'パートナー'}が紹介を登録しました。顧客: ${customerName}`,
-    visible_to_partner: true,
-    created_by: user.id,
-  })
+  // P0-a: 系統連動レートの条件凍結。reward_snapshot・deal_itemsと同じ同期コアから絶対に外さない。
+  try {
+    await freezeFeeSnapshot(admin, deal!.id, { partnerId: partner.id, serviceId: isConsultation ? null : serviceId })
+  } catch { /* 従来どおり best-effort。ただし完了までは同期で待つ */ }
 
-  // v3.1：パートナー向け通知から「協力/関わり方」の区分を排除（内部データ channel は不変）。
-  const caseUrl = `https://mb-partners.app/app/cases/${deal!.id}`
-  // お客さま向け新名称（menu_ref=新menus）を優先。無ければ従来の service_menu 名。★表示のみ・紐付き/money不変。
-  let menuName = (menu as { name?: string } | null)?.name ?? ''
-  if (menuRefRaw) {
+  const timingCoreDoneAt = performance.now()
+
+  // EXP-1: 成立条件と金額凍結が完了した後だけ、失敗しても成立を覆さない副作用を応答後へ送る。
+  // reward_snapshot / deal_items / freezeFeeSnapshot は上の同期コアに固定し、この after() へ移してはならない。
+  after(async () => {
+    const backgroundStartedAt = performance.now()
     try {
-      const { data: mm } = await supabase.from('menus').select('name').eq('id', menuRefRaw).single()
-      const resolvedMenu = mm as { name?: string } | null
+      const sideEffects = await Promise.all([
+        // deal_events はパートナーRLSでINSERT不可。本人認証・自案件作成済みを確認した同じ経路からservice roleで記録する。
+        admin.from('deal_events').insert({
+          deal_id: deal!.id,
+          body: `${profile?.name ?? 'パートナー'}が紹介を登録しました。顧客: ${customerName}`,
+          visible_to_partner: true,
+          created_by: user.id,
+        }),
+        supabase.from('audit_logs').insert({
+          actor_profile_id: user.id,
+          actor_name: profile?.name ?? 'パートナー',
+          category: '案件',
+          target: customerName,
+          action: '紹介登録(フォーム)',
+          meta: { service_id: serviceId, partner_id: partner.id, menu_id: menuId },
+        }),
+        notifySlackEvent('new_deal', `新規案件${isConsultation ? '（相談・サービス未定）' : ''}: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`),
+        channel === 'cooperation' && !isConsultation
+          ? instantiateDealTasks(admin, { id: deal!.id, service_id: serviceId, menu_id: menuId || null, menu_ref: menuRefRaw || null, reward_ref: rewardRefRaw || null, channel })
+              .then(() => markAutoTaskDone(admin, deal!.id, 'referral')).then(() => undefined, () => undefined)
+          : Promise.resolve(),
+      ])
+      if (process.env.EXP1_TIMING === '1') console.info('[EXP1_AFTER_RESULT]', JSON.stringify(sideEffects))
+    } catch { /* best-effort: 起票の成立を覆さない */ }
+    const notificationDoneAt = performance.now()
+
+    const caseUrl = `https://mb-partners.app/app/cases/${deal!.id}`
+    let menuName = (menu as { name?: string } | null)?.name ?? ''
+    try {
+      const [menuNameResult, serviceNameResult] = await Promise.all([
+        menuRefRaw ? supabase.from('menus').select('name').eq('id', menuRefRaw).single() : Promise.resolve({ data: null }),
+        isConsultation ? Promise.resolve({ data: null }) : supabase.from('services').select('name').eq('id', serviceId).single(),
+      ])
+      const resolvedMenu = menuNameResult.data as { name?: string } | null
       if (resolvedMenu?.name) menuName = resolvedMenu.name
-    } catch { /* fallback to old name */ }
-  }
-  const { data: svcRow } = isConsultation ? { data: null } : await supabase.from('services').select('name').eq('id', serviceId).single()
-  const svcName = svcRow?.name ?? ''
-  const menuLine = [svcName, menuName].filter(Boolean).join(' ─ ') || '—'
-
-  await notifySlackEvent('new_deal', `新規案件${isConsultation ? '（相談・サービス未定）' : ''}: ${customerName}（登録: ${profile?.name ?? 'パートナー'}）`)
-
-  // 運営メール（配信>自動メッセージ 'ops-new-deal' テンプレ優先・無ければ既定文面）。best-effort。
-  try {
-    const { sendOpsEmail } = await import('@/lib/notify')
-    const { resolveTemplate } = await import('@/lib/notify/template-resolve')
-    const vars = { customer: customerName, menu: menuLine, partner: profile?.name ?? 'パートナー', link: caseUrl }
-    const opsFallback = `新規案件が登録されました。${isConsultation ? '\n・種別：相談（サービス未定）' : ''}\n・お客さま：${customerName}\n・メニュー：${menuLine}\n・登録：${profile?.name ?? 'パートナー'}\n・案件ページ：${caseUrl}`
-    const opsBody = (await resolveTemplate('ops-new-deal', vars)) ?? opsFallback
-    await sendOpsEmail(`【MB Partners】新規案件: ${customerName}`, opsBody)
-  } catch { /* best-effort */ }
-
-  // Audit log
-  await supabase.from('audit_logs').insert({
-    actor_profile_id: user.id,
-    actor_name: profile?.name ?? 'パートナー',
-    category: '案件',
-    target: customerName,
-    action: '紹介登録(フォーム)',
-    meta: { service_id: serviceId, partner_id: partner.id, menu_id: menuId },
+      const svcName = (serviceNameResult.data as { name?: string } | null)?.name ?? ''
+      const menuLine = [svcName, menuName].filter(Boolean).join(' ─ ') || '—'
+      const [{ sendOpsEmail }, { resolveTemplate }, { sendReceiptEmail }, { customerHonorific }, { sendTemplatedEmail }] = await Promise.all([
+        import('@/lib/notify'),
+        import('@/lib/notify/template-resolve'),
+        import('@/lib/email'),
+        import('@/lib/customer'),
+        import('@/lib/mail-send'),
+      ])
+      const vars = { customer: customerName, menu: menuLine, partner: profile?.name ?? 'パートナー', link: caseUrl }
+      const opsFallback = `新規案件が登録されました。${isConsultation ? '\n・種別：相談（サービス未定）' : ''}\n・お客さま：${customerName}\n・メニュー：${menuLine}\n・登録：${profile?.name ?? 'パートナー'}\n・案件ページ：${caseUrl}`
+      const opsBody = (await resolveTemplate('ops-new-deal', vars)) ?? opsFallback
+      const customerLabel = customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }) || 'お客さま'
+      const mailResults = await Promise.all([
+        sendOpsEmail(`【MB Partners】新規案件: ${customerName}`, opsBody, undefined, { event: '紹介受付', meta: { deal_id: deal!.id } }),
+        profile?.email ? sendReceiptEmail({
+          to: profile.email, partnerName: profile.name, kind: 'referral', customerName: customerLabel,
+          serviceName: svcName || null, menuName: menuName || null, caseUrl,
+        }) : Promise.resolve({ sent: false }),
+        customerEmail ? sendTemplatedEmail({
+          key: 'customer-receipt', to: customerEmail, toRole: 'customer',
+          vars: { customer: customerLabel, partner: profile?.name ?? '', service: menuLine !== '—' ? menuLine : '' },
+          meta: { deal_id: deal!.id },
+        }) : Promise.resolve({ sent: false }),
+      ])
+      if (process.env.EXP1_TIMING === '1') console.info('[EXP1_MAIL_RESULT]', JSON.stringify({ dealId: deal!.id, customerEmail, results: mailResults }))
+    } catch { /* best-effort: メール失敗でも起票は成立済み */ }
+    if (process.env.EXP1_TIMING === '1') {
+      const backgroundDoneAt = performance.now()
+      console.info('[EXP1_TIMING]', JSON.stringify({
+        action: isConsultation ? 'consultation' : 'referral', mode: 'after',
+        coreMs: Math.round(timingCoreDoneAt - timingStartedAt),
+        notifyMs: Math.round(notificationDoneAt - backgroundStartedAt),
+        mailMs: Math.round(backgroundDoneAt - notificationDoneAt),
+        responseMs: Math.round(timingCoreDoneAt - timingStartedAt),
+      }))
+    }
   })
 
-  // C2④ パートナー本人へ受付確認メール（ベストエフォート・v3.1：紹介で統一・案件ページURL付き）
-  try {
-    if (profile?.email) {
-      const { sendReceiptEmail } = await import('@/lib/email')
-      const { customerHonorific } = await import('@/lib/customer')
-      await sendReceiptEmail({
-        to: profile.email,
-        partnerName: profile.name,
-        kind: 'referral',
-        customerName: customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }),
-        serviceName: svcName || null,
-        menuName: menuName || null,
-        caseUrl,
-      })
-    }
-  } catch { /* best-effort */ }
-
-  // D: お客さま本人へ受付確認メール（従来はパートナー/運営のみで、お客さまへの受付通知が皆無だった）。
-  // 顧客メールが入力された場合のみ・best-effort。磨き①: テンプレ経由（DB上書き可・送信履歴記録）。
-  try {
-    if (customerEmail) {
-      const { sendTemplatedEmail } = await import('@/lib/mail-send')
-      const { customerHonorific } = await import('@/lib/customer')
-      const label = customerHonorific({ customer_type: customerType, company_name: companyName, contact_name: contactName, customer_name: customerName }) || 'お客さま'
-      await sendTemplatedEmail({
-        key: 'customer-receipt', to: customerEmail, toRole: 'customer',
-        vars: { customer: label, partner: profile?.name ?? '', service: menuLine !== '—' ? menuLine : '' },
-        meta: { deal_id: deal!.id },
-      })
-    }
-  } catch { /* best-effort */ }
+  if (process.env.EXP1_TIMING === '1') {
+    console.info('[EXP1_TIMING]', JSON.stringify({
+      action: isConsultation ? 'consultation' : 'referral',
+      mode: 'core',
+      coreMs: Math.round(timingCoreDoneAt - timingStartedAt),
+      responseMs: Math.round(timingCoreDoneAt - timingStartedAt),
+      stages: {
+        auth: Math.round(timingAuthDoneAt - timingStartedAt),
+        validate: Math.round(timingValidateDoneAt - timingAuthDoneAt),
+        resolve: Math.round(timingResolveDoneAt - timingValidateDoneAt),
+        reward: Math.round(timingRewardDoneAt - timingResolveDoneAt),
+        insert: Math.round(timingInsertDoneAt - timingRewardDoneAt),
+        items: Math.round(timingItemDoneAt - timingInsertDoneAt),
+        freeze: Math.round(timingCoreDoneAt - timingItemDoneAt),
+      },
+    }))
+  }
 
   revalidatePath('/app')
   return { dealId: deal!.id }

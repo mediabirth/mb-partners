@@ -6,6 +6,7 @@
  * 応募は既存 /api/partner-apply(partner_applications)。会社表記「株式会社Media Birth」。ページスコープ(three は /partners のみ動的import)。
  */
 import { useEffect, useRef, useState } from 'react'
+import ActionPending, { type ActionPendingState } from '@/components/ActionPending'
 import CompanyTrustBlock from '@/components/public/CompanyTrustBlock'
 import {
   PUBLIC_REWARD_DISCLAIMER,
@@ -161,6 +162,7 @@ export default function PartnersLP() {
   const [website, setWebsite] = useState('')
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false)
   const [err, setErr] = useState(''), [done, setDone] = useState(false)
+  const [actionState, setActionState] = useState<ActionPendingState>('idle')
   // LP種別（既存問い合わせ経路への接続・出品CTAで supplier に切替）
   const [kind, setKind] = useState<'partner' | 'supplier'>('partner')
   const scrollForm = () => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' })
@@ -170,7 +172,7 @@ export default function PartnersLP() {
     if (!name.trim()) return setErr('お名前をご入力ください。')
     if (!email.trim()) return setErr('メールアドレスをご入力ください。')
     if (!consent) return setErr('ご案内の同意にチェックをお願いします。')
-    setBusy(true)
+    setBusy(true); setActionState('pending')
     try {
       const r = await fetch('/api/partner-apply', {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -178,8 +180,10 @@ export default function PartnersLP() {
       })
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '送信に失敗しました。') }
       // 完了は専用ページへ（丁寧な受付＋期待感の演出）。応募完了メール＝面談予約リンクはサーバ側で送信済み。
+      setActionState('success')
+      await new Promise(resolve => setTimeout(resolve, 320))
       window.location.assign('/partners/thanks')
-    } catch (e2) { setErr(e2 instanceof Error ? e2.message : '送信に失敗しました。'); setBusy(false) }
+    } catch (e2) { setErr(e2 instanceof Error ? e2.message : '送信に失敗しました。'); setBusy(false); setActionState('idle') }
   }
 
   const STEPS = [
@@ -376,7 +380,7 @@ export default function PartnersLP() {
                   <label className="plp-fld"><span>ひとこと（任意）</span><input value={message} onChange={e => setMessage(e.target.value)} placeholder="例：顧問先からの相談が増えています" /></label>
                   <label className="plp-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>株式会社Media Birth からのご連絡に同意します。いただいた情報はご案内のためにのみ使用します。</span></label>
                   {err && <p className="plp-err">{err}</p>}
-                  <button className="plp-cta plp-cta-full" type="submit" disabled={busy}>{busy ? '送信中…' : kind === 'supplier' ? '送信する' : 'パートナーに応募する'}</button>
+                  <button className="plp-cta plp-cta-full" type="submit" disabled={busy}><ActionPending state={actionState} idleLabel={kind === 'supplier' ? '送信する' : 'パートナーに応募する'} pendingLabel="応募を届けています…" successLabel="受け付けました" /></button>
                 </form>
               </>
             )}
