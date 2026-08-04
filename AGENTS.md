@@ -11,7 +11,7 @@
 
 ## 絶対規律（違反はバッチ不合格）
 
-1. **money 4ハッシュ**: バッチ開始時に menu_rewards／deals reward／fee／override の4ハッシュ（定義は CLAUDE.md 検証標準5）＋MB seed補助（16行/¥340,100）＋勝彦deals（created_by=bfb3c027* 3件）をスナップショットし、終了時・デプロイ後に一致を証明。変化した場合は「誰の操作か」を突合して報告。
+1. **money 4ハッシュ**: バッチ開始時に menu_rewards／deals reward／fee／override の4ハッシュ（定義は CLAUDE.md 検証標準5）＋MB seed補助（16行/¥340,100）をスナップショットし、終了時・デプロイ後に一致を証明。**deals は 2026-08-04 以降「生き値」**＝実運用の正当な操作で変わるため、変化した場合は「誰の操作か」（created_by・partner・時刻）を必ず突合して報告する。CC/Codex 起源の throwaway は復元証明（before/after 全桁一致）必須。
 2. **凍結不変**: reward_snapshot・fee_snapshot・supplier_charges・payout_overrides 等の凍結済み値は1ビットも変更しない。money計算式の意味変更はリードの設計書承認なしに不可。
 3. **検証標準**: `pnpm test:verify` 全green（build/typecheck/canon/integrity/session/perf/resume×2）。認証・cookie・招待に触れたら第5条件=test:session 32/32（運営者case[7]込み）必須。
 4. **残置ゼロ**: throwaway は成功・失敗を問わず撤去し、機械検査で残置0を証明。実ユーザー・実案件・cc-monitor に非接触。
