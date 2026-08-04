@@ -119,10 +119,24 @@ async function fixture() {
 
 async function login(page: Page, path: '/login' | '/console/login', email: string) {
   await page.goto(BASE + path, { waitUntil: 'domcontentloaded' })
-  await page.locator('input[type="email"]').fill(email)
-  await page.locator('input[type="password"]').fill(PASSWORD)
-  await page.locator('button[type="submit"]').click()
-  await page.waitForFunction(() => !location.pathname.includes('login'), null, { timeout: 25_000 })
+  await page.waitForTimeout(1200)
+  if (!new URL(page.url()).pathname.includes('login')) return
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const submit = page.locator('button[type="submit"]').first()
+    const emailInput = page.locator('input[type="email"]')
+    const passwordInput = page.locator('input[type="password"]')
+    await submit.waitFor({ state: 'visible' })
+    await page.waitForFunction(() => !(document.querySelector('button[type="submit"]') as HTMLButtonElement | null)?.disabled, null, { timeout: 20_000 }).catch(() => {})
+    await emailInput.fill(email)
+    await passwordInput.fill(PASSWORD)
+    // hydrationが値を空へ戻した場合だけ再fillする（perf-sakusakuと同じ決定的文法）。
+    if (await emailInput.inputValue() !== email) await emailInput.fill(email)
+    if (await passwordInput.inputValue() !== PASSWORD) await passwordInput.fill(PASSWORD)
+    await submit.click()
+    await page.waitForFunction(() => !location.pathname.includes('login'), null, { timeout: 25_000 }).catch(() => {})
+    if (!new URL(page.url()).pathname.includes('login')) return
+  }
+  throw new Error(`login failed: ${path}`)
 }
 
 await fixture()
