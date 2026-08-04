@@ -45,7 +45,7 @@ export async function getOrCreateReferralToken(serviceId: string): Promise<strin
   return token
 }
 
-export async function submitPartnerReferral(formData: FormData) {
+async function submitSinglePartnerReferral(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
@@ -70,6 +70,15 @@ export async function submitPartnerReferral(formData: FormData) {
   const rewardRefRaw = (formData.get('rewardRef') as string) || ''   // 申し込まれた報酬（menu_rewards）
   // L3: 相談案件（サービス未定で起票）。service_id=null・明細ゼロ・is_consultation=true。
   const isConsultation = formData.get('isConsultation') === '1'
+  const referralGroupId = ((formData.get('referralGroupId') as string) || '').trim() || null
+  const consultMetaRaw = ((formData.get('consultMeta') as string) || '').trim()
+  let consultMeta: Record<string, unknown> | null = null
+  if (isConsultation && consultMetaRaw) {
+    try {
+      const parsed = JSON.parse(consultMetaRaw)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) consultMeta = parsed as Record<string, unknown>
+    } catch { throw new Error('相談内容を確認してください') }
+  }
 
   if (!customerName) throw new Error('お客さま情報は必須です')
   // v3.1/①：連絡先必須（相談起票を除く）。法人＝メール必須／個人＝電話orメールいずれか必須。client と二重で担保。
@@ -165,6 +174,9 @@ export async function submitPartnerReferral(formData: FormData) {
       amount: isConsultation ? 0 : amount,
       reward_snapshot: isConsultation ? null : rewardSnapshot,
       continuous_months: isConsultation ? null : continuousMonths,
+      referral_group_id: referralGroupId,
+      is_consultation: isConsultation,
+      consult_meta: isConsultation ? consultMeta : null,
       internal_memo: [isConsultation && '【相談（サービス未定）】', phone && `TEL: ${phone}`, memo].filter(Boolean).join('\n') || null,
       created_by: user.id,
     })
@@ -172,12 +184,6 @@ export async function submitPartnerReferral(formData: FormData) {
     .single()
 
   if (error) throw error
-
-  // L3: 相談マーカー（is_consultation 列が未追加(DDL前)でも作成を壊さない best-effort）。
-  if (isConsultation) {
-    const { error: cErr } = await supabase.from('deals').update({ is_consultation: true }).eq('id', deal!.id)
-    if (cErr) { /* 列未追加 等は無視 */ }
-  }
 
   // P0-a: 系統連動レートの条件凍結（第1段・金額なし・best-effort＝作成を壊さない）。仕様正典 v2 §2。
   // service-role で解決（RLSで他パートナー行の rate_card が読めないケースを排除）。
@@ -329,4 +335,88 @@ export async function submitPartnerReferral(formData: FormData) {
 
   revalidatePath('/app')
   return { dealId: deal!.id }
+}
+
+type ReferralSelection = {
+  id?: string
+  label?: string
+  serviceId?: string
+  menuId?: string
+  menuRef?: string
+  rewardRef?: string
+  channel?: 'referral' | 'cooperation'
+  isConsultation?: boolean
+  coverageAgreed?: string
+}
+
+/**
+ * REF-1: 顧客情報を一度だけ受け取り、既存の単件起票経路を選択順にN回実行する。
+ * 各単件の報酬解決・snapshot・fee凍結・明細・通知は submitSinglePartnerReferral が唯一の経路。
+ * 途中失敗時は既に成功した案件を戻さず、失敗選択だけを呼出側へ返す。
+ */
+export async function submitPartnerReferral(formData: FormData) {
+  const raw = ((formData.get('selections') as string) || '').trim()
+  let selections: ReferralSelection[] = []
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) throw new Error('not-array')
+      selections = parsed
+    } catch { throw new Error('選択内容を確認してください') }
+  }
+
+  // 旧UI・既存テストの単件payloadも同じ単件経路へ通す後方互換。
+  if (selections.length === 0) {
+    selections = [{
+      serviceId: (formData.get('serviceId') as string) || '',
+      menuId: (formData.get('menuId') as string) || '',
+      menuRef: (formData.get('menuRef') as string) || '',
+      rewardRef: (formData.get('rewardRef') as string) || '',
+      channel: ((formData.get('channel') as string) || 'referral') as 'referral' | 'cooperation',
+      isConsultation: formData.get('isConsultation') === '1',
+      coverageAgreed: (formData.get('coverageAgreed') as string) || '',
+      label: formData.get('isConsultation') === '1' ? 'まず相談' : '紹介',
+    }]
+  }
+  if (selections.length > 20) throw new Error('一度に登録できるのは20件までです')
+
+  const requestedGroupId = ((formData.get('referralGroupId') as string) || '').trim()
+  const referralGroupId = requestedGroupId || (selections.length > 1 ? crypto.randomUUID() : '')
+  const dealIds: string[] = []
+  const failures: { id: string; label: string; error: string }[] = []
+
+  for (const [index, selection] of selections.entries()) {
+    const single = new FormData()
+    for (const [key, value] of formData.entries()) {
+      if (key !== 'selections' && key !== 'referralGroupId') single.append(key, value)
+    }
+    single.set('serviceId', selection.serviceId || '')
+    single.set('menuId', selection.menuId || '')
+    single.set('menuRef', selection.menuRef || '')
+    single.set('rewardRef', selection.rewardRef || '')
+    single.set('channel', selection.channel || 'referral')
+    single.set('isConsultation', selection.isConsultation ? '1' : '0')
+    single.set('coverageAgreed', selection.coverageAgreed || '')
+    if (referralGroupId) single.set('referralGroupId', referralGroupId)
+    try {
+      const result = await submitSinglePartnerReferral(single)
+      dealIds.push(result.dealId)
+    } catch (error) {
+      failures.push({
+        id: selection.id || `selection-${index + 1}`,
+        label: selection.label || (selection.isConsultation ? 'まず相談' : `紹介${index + 1}`),
+        error: error instanceof Error ? error.message : '登録に失敗しました',
+      })
+    }
+  }
+
+  revalidatePath('/app')
+  return {
+    dealId: dealIds[0] ?? null,
+    dealIds,
+    referralGroupId: referralGroupId || null,
+    requested: selections.length,
+    registered: dealIds.length,
+    failures,
+  }
 }

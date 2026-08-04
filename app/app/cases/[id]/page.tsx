@@ -11,6 +11,7 @@ import TaskChecklist, { type DealTask } from '@/components/TaskChecklist'
 import MenuInfoButton from '@/components/MenuInfoButton'
 import { customerHonorific } from '@/lib/customer'
 import { statusNarrative } from '@/lib/deal-status-narrative'
+import { consultNarrative } from '@/lib/consult-narrative'
 import { DEAL_STATUS } from '@/lib/status'
 
 // 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
@@ -91,9 +92,10 @@ export default async function CaseDetailPage({
   const custDisplay = customerHonorific(deal) || 'お客さま'
   // 報酬ピル文言：reward_snapshot（凍結報酬）から値/率のみ。無ければ確定金額 or「成約時に確定」。★money表示値は既存を読むだけ。
   const snapReward = (deal as { reward_snapshot?: { reward_type?: string; reward_value?: number | string; reward_trigger?: string | null; default_months?: number | null } | null }).reward_snapshot
+  const isConsultation = Boolean((deal as { is_consultation?: boolean }).is_consultation)
   const rewardText = snapReward?.reward_type
     ? rewardValueText({ reward_type: snapReward.reward_type as 'fixed' | 'rate' | 'continuous', reward_value: snapReward.reward_value ?? 0 })
-    : (deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : '成約時に確定')
+    : (deal.amount > 0 ? `¥${deal.amount.toLocaleString()}` : isConsultation ? 'メニュー確定後にご案内' : '成約時に確定')
 
   // メニューⓘ（共有シート）：reward_snapshot.menu_id 経由でメニューが解決できた場合のみ表示（安全側）。
   const showMenuInfo = !!(svc && newMenuName && menuLabel)
@@ -170,19 +172,19 @@ export default async function CaseDetailPage({
           )}
 
           {/* 3b. 協力タスク0件＝つなぐだけ（⑦）：いまの状況ナラティブカード */}
-          {!(deal.channel === 'cooperation' && tasks.length > 0) && statusNarrative(deal.status) && (
+          {!(deal.channel === 'cooperation' && tasks.length > 0) && (isConsultation || statusNarrative(deal.status)) && (
             <div style={{ padding: '24px 20px 0' }}>
               <div style={{ border: '0.5px solid var(--line)', borderRadius: 14, padding: '16px 16px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted2)', letterSpacing: '.06em', marginBottom: 8 }}>いまの状況</div>
-                <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.55 }}>{statusNarrative(deal.status)!.title}</div>
-                {statusNarrative(deal.status)!.sub && (
-                  <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>{statusNarrative(deal.status)!.sub}</div>
+                <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.55 }}>{isConsultation ? consultNarrative(deal.status).title : statusNarrative(deal.status)!.title}</div>
+                {(isConsultation ? consultNarrative(deal.status).sub : statusNarrative(deal.status)!.sub) && (
+                  <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 5, lineHeight: 1.6 }}>{isConsultation ? consultNarrative(deal.status).sub : statusNarrative(deal.status)!.sub}</div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 13, borderTop: '0.5px solid var(--line)' }}>
                   <span style={{ color: 'var(--muted)', display: 'flex', flexShrink: 0 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="9" /><path d="M8.5 12.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--muted2)' }}>あなたのタスクはありません。あとはMBにお任せください</span>
+                  <span style={{ fontSize: 12, color: 'var(--muted2)' }}>あなたのタスクはありません。あとはMB Partnersにお任せください</span>
                 </div>
               </div>
             </div>

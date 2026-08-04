@@ -1,10 +1,10 @@
 'use client'
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import ServiceAvatar from '@/components/ServiceAvatar'
 import type { ServiceWithMenus, MenuRow, Menu, MenuReward } from '@/lib/supabase/queries'
-import { rewardValueText, rewardPillText, rewardRangeLabel } from '@/lib/reward-format'
+import { rewardValueText } from '@/lib/reward-format'
 import { resolveMenuCoopTasks, type CoopTaskItem } from '@/lib/coop-task-display'
 import RewardPill from '@/components/ui/RewardPill'
 import MenuDetailSheet from '@/components/MenuDetailSheet'
@@ -14,8 +14,19 @@ import { submitPartnerReferral, getPartnerInfo } from './actions'
 // リファラル v3.1：世界観は「紹介」1つ。協力タスクで報酬が変わるだけ。「協力/関わり方」はUIに出さない。
 // デザイン規律：塗りボタンは1画面1つ・見出し18px/500・本文14px・ラベル12px・注記11px・太さ400/500のみ・
 //   罫線0.5px・アイコン/チェック16px・セクションは余白で区切る・絵文字なし。
-type Step = 'select' | 'form' | 'consult'
-type TaskDetail = { label: string; description: string | null }
+type Step = 'select' | 'form'
+type ReferralPick = {
+  id: string
+  label: string
+  serviceId: string
+  serviceName: string
+  serviceMenu: MenuRow
+  menu: Menu
+  reward: MenuReward
+  channel: 'referral' | 'cooperation'
+}
+
+const CONSULT_AREAS = ['集客', '営業', '採用', '人材育成', '業務改善', 'IT・システム', '資金・財務', '法務', '労務', '不動産', '事業承継', 'その他'] as const
 
 const C = {
   line: '0.5px solid var(--line)',
@@ -30,28 +41,6 @@ function norm(s: string | null | undefined): string {
 }
 
 function rewardLabelFromReward(r: MenuReward | null): string { return r ? rewardValueText(r) : '' }
-function rewardPill(r: MenuReward): string { return rewardPillText(r) }
-function confirmTrailing(r: MenuReward): string {
-  // 決定①: 報酬は税抜統一。率報酬はラベル自体が「粗利（税抜）」を含むため、固定額のみ（税抜）を付す。
-  const tax = r.reward_type === 'fixed' ? '（税抜）' : ''
-  return `${rewardLabelFromReward(r)}${tax} ・ 成約時、翌月末払い`
-}
-
-// STEP1 タイルの報酬レンジ最小表記（1色）。
-function serviceRewardRange(svc: ServiceWithMenus): string {
-  const rewards = svc.service_menus.flatMap(sm => (sm.menus ?? []).flatMap(m => m.rewards ?? []))
-  if (rewards.length === 0) return ''
-  const fixedVals = rewards.filter(r => r.reward_type === 'fixed').map(r => Number(r.reward_value || 0)).filter(v => v > 0)
-  const hasVariable = rewards.some(r => r.reward_type === 'rate' || r.reward_type === 'continuous')
-  if (fixedVals.length) {
-    const min = Math.min(...fixedVals), max = Math.max(...fixedVals)
-    if (hasVariable) return `報酬 ¥${min.toLocaleString()}〜`
-    if (max > min)   return `報酬 ¥${min.toLocaleString()}〜¥${max.toLocaleString()}`
-    return `報酬 ¥${min.toLocaleString()}`
-  }
-  if (hasVariable) return '報酬 成約額に応じて'
-  return '報酬あり'
-}
 
 export default function ReferPage() {
   const router = useRouter()
@@ -84,9 +73,6 @@ export default function ReferPage() {
   }, [servicesRaw, myOv])
   const [step, setStep]                   = useState<Step>('select')
   const [expandedSvc, setExpandedSvc]     = useState<string | null>(null)   // グリッドで展開中のブランド
-  const [selSvc, setSelSvc]               = useState<ServiceWithMenus | null>(null)
-  const [selMenu, setSelMenu]             = useState<MenuRow | null>(null)
-  const [coopMode, setCoopMode]           = useState(false)   // 内部のみ：reward_type由来のchannel判定。UIには出さない。
   const [introMethod, setIntroMethod]     = useState<'send' | 'self'>('send')  // アポ型：日時の決めかた
   const [customerType, setCustomerType]   = useState<'individual' | 'corporate'>('individual')
   const [customerName, setCustomerName]   = useState('')
@@ -99,15 +85,16 @@ export default function ReferPage() {
   const [consent, setConsent]             = useState(false)
   const [taskChecks, setTaskChecks]       = useState<string[]>([])   // 個別タスクのチェック済みラベル
   const [openInfo, setOpenInfo]           = useState<string | null>(null)   // ⓘポップオーバーが開いているタスク
-  const [selMenuRef, setSelMenuRef]       = useState<string | null>(null)
-  const [selMenuName, setSelMenuName]     = useState<string>('')
-  const [selMenuData, setSelMenuData]     = useState<Menu | null>(null)
-  const [selReward, setSelReward]         = useState<MenuReward | null>(null)
-  const [showSheet, setShowSheet]         = useState(false)
   const [shareSvc, setShareSvc]           = useState<{ id: string; name: string; menus: { id: string; name: string }[] } | null>(null)  // 通水P1: 共有シート（＋メニュー選択）
   const [query, setQuery]                 = useState('')                 // v3：検索（クライアント絞り込み）
   const [category, setCategory]           = useState<string>('すべて')   // v3：カテゴリチップ（単一選択）
   const [consultNote, setConsultNote]     = useState('')
+  const [consultAreas, setConsultAreas]   = useState<string[]>([])
+  const [consultTemperature, setConsultTemperature] = useState<'すぐ' | '数ヶ月内' | '情報収集' | ''>('')
+  const [picks, setPicks]                 = useState<ReferralPick[]>([])
+  const [consultSelected, setConsultSelected] = useState(false)
+  const [retryGroupId, setRetryGroupId]   = useState<string | null>(null)
+  const [agreementAt, setAgreementAt]     = useState('')
   const [pending, startTransition]        = useTransition()
   const [error, setError]                 = useState('')
 
@@ -130,17 +117,23 @@ export default function ReferPage() {
     setExpandedSvc(prev => prev === svc.id ? null : svc.id)
   }
 
-  // メニュー行を選ぶ→登録ページ。channel は reward_type 由来（内部・表示なし）。
+  // メニュー行はチェック式。channel は reward_type 由来（内部・表示なし）。
   function pickReward(serviceMenu: MenuRow, menu: Menu, reward: MenuReward) {
-    setSelSvc(services.find(s => s.service_menus.some(sm => sm.id === serviceMenu.id)) ?? null)
-    setSelMenu(serviceMenu)
-    setSelMenuRef(menu.id)
-    setSelMenuName(menu.name)
-    setSelMenuData(menu)
-    setSelReward(reward)
-    setShowSheet(false)
-    setCoopMode(reward.reward_type === 'rate' || reward.reward_type === 'continuous')
-    setTaskChecks([]); setConsent(false); setIntroMethod('send'); setOpenInfo(null); setError('')
+    const svc = services.find(s => s.service_menus.some(sm => sm.id === serviceMenu.id))
+    if (!svc) return
+    setPicks(current => current.some(p => p.id === menu.id)
+      ? current.filter(p => p.id !== menu.id)
+      : [...current, {
+          id: menu.id, label: `${svc.name} / ${menu.name}`, serviceId: svc.id, serviceName: svc.name,
+          serviceMenu, menu, reward,
+          channel: reward.reward_type === 'rate' || reward.reward_type === 'continuous' ? 'cooperation' : 'referral',
+        }])
+    setTaskChecks([]); setError(''); setRetryGroupId(null)
+  }
+
+  function proceedToForm() {
+    if (picks.length === 0 && !consultSelected) return
+    setConsent(false); setIntroMethod('send'); setOpenInfo(null); setError(''); setAgreementAt(new Date().toISOString())
     setStep('form')
   }
 
@@ -167,49 +160,39 @@ export default function ReferPage() {
     } else if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかを入力してください'); return }
     if (!allTasksChecked) { setError('担当する内容をすべてご確認ください'); return }
     if (!consent) { setError('お客さまの了承の確認が必要です'); return }
-    const fd = new FormData()
-    fd.set('serviceId', selSvc!.id)
-    fd.set('menuId', selMenu?.id ?? '')
+    if (consultSelected && (consultAreas.length === 0 || !consultTemperature)) {
+      setError('相談の領域と温度感を選んでください'); return
+    }
+    const fd = new FormData(e.currentTarget as HTMLFormElement)
     applyCustomerFields(fd)
     fd.set('phone', phone)
     fd.set('memo', memo)
-    fd.set('channel', coopMode ? 'cooperation' : 'referral')
-    if (selMenuRef) fd.set('menuRef', selMenuRef)
-    if (selReward) fd.set('rewardRef', selReward.id)
-    if (coopMode) fd.set('coverageAgreed', JSON.stringify({ labels: coverageTasks, at: new Date().toISOString() }))
+    fd.set('consultMeta', JSON.stringify({ areas: consultAreas, temperature: consultTemperature, note: consultNote.trim() }))
+    if (retryGroupId) fd.set('referralGroupId', retryGroupId)
     startTransition(async () => {
       try {
         const res = await submitPartnerReferral(fd)
-        if (res?.dealId) router.push(`/app/cases/${res.dealId}?next=${introMethod}`)
-        else setError('登録に失敗しました')
-      } catch (err: any) { setError(err.message ?? '登録に失敗しました') }
-    })
-  }
-
-  function handleConsultSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError('')
-    const nm = (customerType === 'corporate' ? companyName : customerName).trim()
-    if (!nm) { setError('お名前を入力してください'); return }
-    if (!phone.trim() && !customerEmail.trim()) { setError('電話番号かメールアドレスのどちらかを入力してください'); return }
-    if (!consent) { setError('お客さまの了承の確認が必要です'); return }
-    const fd = new FormData()
-    fd.set('serviceId', ''); fd.set('menuId', '')
-    applyCustomerFields(fd)
-    fd.set('phone', phone); fd.set('memo', consultNote)
-    fd.set('channel', 'referral'); fd.set('isConsultation', '1')
-    startTransition(async () => {
-      try {
-        const res = await submitPartnerReferral(fd)
-        if (res?.dealId) router.push(`/app/cases/${res.dealId}`)
-        else setError('起票に失敗しました')
-      } catch (err: any) { setError(err.message ?? '起票に失敗しました') }
+        if (!res?.dealId) { setError('登録に失敗しました'); return }
+        if (res.failures.length > 0) {
+          const failedIds = new Set(res.failures.map(f => f.id))
+          setPicks(current => current.filter(p => failedIds.has(p.id)))
+          setConsultSelected(failedIds.has('consultation'))
+          setRetryGroupId(res.referralGroupId)
+          setError(`${res.requested}件中${res.registered}件を登録しました。登録できなかった内容をもう一度お試しください。`)
+          return
+        }
+        if (res.dealIds.length > 1 && res.referralGroupId) router.push(`/app/cases?group=${res.referralGroupId}`)
+        else router.push(`/app/cases/${res.dealId}?next=${introMethod}`)
+      } catch (err: unknown) { setError(err instanceof Error ? err.message : '登録に失敗しました') }
     })
   }
 
   // 担い：rate/continuous（=coopMode）はアポイント担当→「日時の決めかた」を出す。fixed は連絡のみ。
-  const hasAppointment = coopMode
+  const hasAppointment = picks.some(p => p.channel === 'cooperation')
   // ★協力タスクは一覧ピルと完全同一の解決経路（resolveMenuCoopTasks）＝共通純関数から出す（構造的整合保証）。
-  const taskDetails: CoopTaskItem[] = resolveMenuCoopTasks((selMenu as { coverage_task_details?: CoopTaskItem[] } | null)?.coverage_task_details, selReward?.reward_type)
+  const taskDetails: CoopTaskItem[] = Array.from(new Map(picks.flatMap(p =>
+    resolveMenuCoopTasks((p.serviceMenu as { coverage_task_details?: CoopTaskItem[] }).coverage_task_details, p.reward.reward_type)
+  ).map(t => [t.label, t])).values())
   const coverageTasks = taskDetails.map(t => t.label)
   const allTasksChecked = coverageTasks.every(t => taskChecks.includes(t))
   const nameFilled = (customerType === 'corporate' ? companyName : customerName).trim().length > 0
@@ -217,7 +200,26 @@ export default function ReferPage() {
   const contactFilled = customerType === 'corporate'
     ? customerEmail.trim().length > 0
     : (phone.trim().length > 0 || customerEmail.trim().length > 0)
-  const canSubmit = nameFilled && contactFilled && allTasksChecked && consent && !pending
+  const consultationComplete = !consultSelected || (consultAreas.length > 0 && Boolean(consultTemperature))
+  const canSubmit = nameFilled && contactFilled && allTasksChecked && consultationComplete && consent && !pending
+  const selectionsPayload = JSON.stringify([
+    ...picks.map(p => ({
+      id: p.id,
+      label: p.label,
+      serviceId: p.serviceId,
+      menuId: p.serviceMenu.id,
+      menuRef: p.menu.id,
+      rewardRef: p.reward.id,
+      channel: p.channel,
+      coverageAgreed: p.channel === 'cooperation'
+        ? JSON.stringify({
+            labels: resolveMenuCoopTasks((p.serviceMenu as { coverage_task_details?: CoopTaskItem[] }).coverage_task_details, p.reward.reward_type).map(t => t.label),
+            at: agreementAt,
+          })
+        : '',
+    })),
+    ...(consultSelected ? [{ id: 'consultation', label: 'まず相談', isConsultation: true, channel: 'referral' as const }] : []),
+  ])
 
   // v3 スケール層：カテゴリ（services.sort 初出順のユニーク値）＋ 検索×チップ AND 絞り込み（クライアントのみ・API非追加）。
   const categories = ['すべて', ...services.reduce<string[]>((acc, s) => {
@@ -308,7 +310,7 @@ export default function ReferPage() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {filteredServices.map((svc, i) => (
-                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name, menus: svc.service_menus.flatMap(sm => (sm.menus ?? []).filter(m => m.active !== false).map(m => ({ id: m.id, name: m.name }))) })} />
+                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} selectedIds={picks.map(p => p.id)} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name, menus: svc.service_menus.flatMap(sm => (sm.menus ?? []).filter(m => m.active !== false).map(m => ({ id: m.id, name: m.name }))) })} />
               ))}
             </div>
             {services.length > 0 && filteredServices.length === 0 && (
@@ -318,44 +320,53 @@ export default function ReferPage() {
               </div>
             )}
             {/* ③ 相談カード＝一等市民（ブランドカードと同一解剖学：0.5px実線・radius14・40px bg-accentタイル） */}
-            <button onClick={() => { setStep('consult'); setError('') }} style={{ width: '100%', marginTop: 12, background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => { setConsultSelected(v => !v); setError(''); setRetryGroupId(null) }} style={{ width: '100%', marginTop: 12, background: '#fff', border: consultSelected ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--blue-bg2)', color: 'var(--c-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 15, fontWeight: 500 }}>まず相談</span>
-                <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>どのメニューか決まっていない・迷っている人はこちら。MBが一緒に考えます</span>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 500 }}>まだ決まっていない → まず相談</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--muted2)', marginTop: 2, lineHeight: 1.5 }}>メニューと一緒に選ぶこともできます。MB Partnersが一緒に考えます</span>
               </span>
-              <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
+              <span aria-hidden style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${consultSelected ? 'var(--c-blue)' : 'var(--line)'}`, background: consultSelected ? 'var(--c-blue)' : '#fff', color: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {consultSelected && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12l4 4L19 7" /></svg>}
               </span>
             </button>
+            {(picks.length > 0 || consultSelected) && (
+              <button onClick={proceedToForm} style={{ ...btnPrimary, width: '100%', marginTop: 16 }}>
+                {picks.length + (consultSelected ? 1 : 0) > 1
+                  ? `この内容で紹介する（${picks.length + (consultSelected ? 1 : 0)}件）`
+                  : 'この内容で紹介する'}
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* ── 登録ページ v3.1 ── */}
-      {step === 'form' && selSvc && (
+      {step === 'form' && (picks.length > 0 || consultSelected) && (
         <div className="page-anim">
           <button onClick={() => setStep('select')} style={backBtn}>← メニュー選択に戻る</button>
           <div style={{ padding: '8px 20px 4px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <ServiceAvatar logoPath={selSvc.logo_path} icon={selSvc.icon} color={selSvc.color} name={selSvc.name} size={40} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{selSvc.name}</div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 2 }}>
-                  <h2 style={{ flex: 1, minWidth: 0, fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>{selMenuName}</h2>
-                  {selReward && <MenuRowPill reward={selReward} />}
-                  <button type="button" onClick={() => setShowSheet(true)} aria-label="メニューの詳細"
-                    style={{ flexShrink: 0, width: 28, height: 28, borderRadius: '50%', border: '0.5px solid var(--line-2)', background: '#fff', color: 'var(--muted2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
-                  </button>
+            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>紹介内容の確認</h2>
+            <div style={{ marginTop: 12, border: C.line, borderRadius: 12, padding: '2px 14px', background: '#fff' }}>
+              {picks.map((pick, index) => (
+                <div key={pick.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '11px 0', borderTop: index ? C.line : 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{pick.serviceName}</div>
+                    <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{pick.menu.name}</div>
+                  </div>
+                  <MenuRowPill reward={pick.reward} />
                 </div>
-              </div>
+              ))}
+              {consultSelected && (
+                <div style={{ display: 'flex', alignItems: 'center', minHeight: 52, fontSize: 14, fontWeight: 500, borderTop: picks.length ? C.line : 'none' }}>まず相談</div>
+              )}
             </div>
           </div>
 
           <form onSubmit={handleSubmit} style={{ padding: '18px 20px 32px' }}>
+            <input type="hidden" name="selections" value={selectionsPayload} readOnly />
             {/* お客さまの情報 */}
             <div style={{ marginBottom: 28 }}>
               <div style={sectionTitle}>お客さまの情報</div>
@@ -385,6 +396,27 @@ export default function ReferPage() {
                 <input style={C.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="7月に引越し希望 など" maxLength={500} /></div>
             </div>
 
+            {consultSelected && (
+              <div style={{ marginBottom: 28 }}>
+                <div style={sectionTitle}>相談内容</div>
+                <label style={C.label}>困りごとの領域（複数選択可）</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 }}>
+                  {CONSULT_AREAS.map(area => {
+                    const on = consultAreas.includes(area)
+                    return <button type="button" key={area} onClick={() => setConsultAreas(current => on ? current.filter(v => v !== area) : [...current, area])}
+                      aria-pressed={on} style={{ border: on ? '1.5px solid var(--c-blue)' : C.line, color: on ? 'var(--c-blue)' : 'var(--muted2)', background: '#fff', borderRadius: 999, padding: '7px 11px', fontFamily: 'inherit', fontSize: 12, fontWeight: on ? 500 : 400, cursor: 'pointer' }}>{area}</button>
+                  })}
+                </div>
+                <label style={C.label}>温度感</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 7, marginBottom: 16 }}>
+                  {(['すぐ', '数ヶ月内', '情報収集'] as const).map(value => <button type="button" key={value} onClick={() => setConsultTemperature(value)}
+                    aria-pressed={consultTemperature === value} style={{ minHeight: 38, border: consultTemperature === value ? '1.5px solid var(--c-blue)' : C.line, color: consultTemperature === value ? 'var(--c-blue)' : 'var(--muted2)', background: '#fff', borderRadius: 9, fontFamily: 'inherit', fontSize: 12, fontWeight: consultTemperature === value ? 500 : 400, cursor: 'pointer' }}>{value}</button>)}
+                </div>
+                <label style={C.label}>ひとこと（任意）</label>
+                <textarea value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} maxLength={500} placeholder="いま困っていることを教えてください" style={{ ...C.input, resize: 'vertical' }} />
+              </div>
+            )}
+
             {/* アポ型：日時の決めかた。連絡のみ：1行 info（アイコン＋11px）。 */}
             {hasAppointment ? (
               <div style={{ marginBottom: 28 }}>
@@ -401,7 +433,7 @@ export default function ReferPage() {
                 <span style={{ color: 'var(--muted)', flexShrink: 0, marginTop: 1, display: 'flex' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" strokeLinecap="round" /></svg>
                 </span>
-                <p style={{ fontSize: 11, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>ご紹介のあとは、MBからお客さまへご連絡します。</p>
+                <p style={{ fontSize: 11, color: 'var(--muted2)', lineHeight: 1.6, margin: 0 }}>ご紹介のあとは、MB Partnersからお客さまへご連絡します。</p>
               </div>
             )}
 
@@ -444,63 +476,14 @@ export default function ReferPage() {
               <label htmlFor="consent" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 16, cursor: 'pointer' }}>
                 <input type="checkbox" id="consent" checked={consent} onChange={e => setConsent(e.target.checked)}
                   style={{ width: 16, height: 16, marginTop: 1, accentColor: 'var(--c-blue)', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--txt)' }}>お客さまに、MBからご連絡することを了承いただいています</span>
+                <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--txt)' }}>お客さまに、MB Partnersからご連絡することを了承いただいています</span>
               </label>
               {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
               <button type="submit" disabled={!canSubmit}
                 style={{ ...btnPrimary, width: '100%', background: canSubmit ? 'var(--c-blue)' : '#E7E7ED', color: canSubmit ? '#fff' : 'var(--muted)', cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-                {pending ? '送信中…' : '紹介する'}
+                {pending ? '送信中…' : retryGroupId ? '登録できなかった内容を再試行する' : picks.length + (consultSelected ? 1 : 0) > 1 ? `${picks.length + (consultSelected ? 1 : 0)}件を紹介する` : '紹介する'}
               </button>
             </div>
-          </form>
-        </div>
-      )}
-
-      {/* ── 相談（サービス未定）起票 ── */}
-      {step === 'consult' && (
-        <div className="page-anim">
-          <button onClick={() => setStep('select')} style={backBtn}>← 戻る</button>
-          {/* ⑤ 相談ページヘッダ再設計：40px bg-accentタイル＋「まず相談」18/500＋説明12/secondary/1.7 */}
-          <div style={{ padding: '8px 20px 4px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <span style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--blue-bg2)', color: 'var(--c-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-.01em' }}>まず相談</h2>
-              <p style={{ fontSize: 12, color: 'var(--muted2)', lineHeight: 1.7, marginTop: 6 }}>メニューが決まっていなくて大丈夫です。お客さまの状況を伺って、MBが最適なご提案を一緒に考えます。</p>
-            </div>
-          </div>
-          <form onSubmit={handleConsultSubmit} style={{ padding: '18px 20px 32px' }}>
-            <div style={{ marginBottom: 14 }}>
-              <Segment value={customerType} onChange={setCustomerType} options={[['individual', '個人'], ['corporate', '法人']]} />
-            </div>
-            {customerType === 'individual' ? (
-              <div style={{ marginBottom: 14 }}><label style={C.label}>お名前（必須）</label>
-                <input style={C.input} value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="山田 太郎" /></div>
-            ) : (
-              <>
-                <div style={{ marginBottom: 14 }}><label style={C.label}>会社名（必須）</label>
-                  <input style={C.input} value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="株式会社〇〇" /></div>
-                <div style={{ marginBottom: 14 }}><label style={C.label}>ご担当者名（任意）</label>
-                  <input style={C.input} value={contactName} onChange={e => setContactName(e.target.value)} placeholder="山田 太郎" /></div>
-              </>
-            )}
-            <div style={{ marginBottom: 14 }}><label style={C.label}>相談したいこと（何を迷っているか）</label>
-              <textarea value={consultNote} onChange={e => setConsultNote(e.target.value)} rows={3} placeholder="例：集客と採用、どちらから着手すべきか迷っている 等" style={{ ...C.input, resize: 'vertical' }} /></div>
-            <div style={{ marginBottom: 12 }}><label style={C.label}>電話番号（任意）</label>
-              <input style={C.input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="09012345678" inputMode="tel" /></div>
-            <div style={{ marginBottom: 8 }}><label style={C.label}>メールアドレス（任意）</label>
-              <input style={C.input} type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@example.com" autoComplete="off" /></div>
-            <p style={{ ...C.note, marginBottom: 16 }}>電話番号とメールアドレスのどちらか一方は必ず入力してください。</p>
-            <label htmlFor="cconsent" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20, cursor: 'pointer' }}>
-              <input type="checkbox" id="cconsent" checked={consent} onChange={e => setConsent(e.target.checked)}
-                style={{ width: 16, height: 16, marginTop: 1, accentColor: 'var(--c-blue)', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--txt)' }}>お客さまに、MBからご連絡することを了承いただいています</span>
-            </label>
-            {error && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
-            <button type="submit" disabled={pending || !nameFilled} style={{ ...btnPrimary, width: '100%', opacity: (pending || !nameFilled) ? 0.4 : 1 }}>
-              {pending ? '送信中…' : '相談する'}
-            </button>
           </form>
         </div>
       )}
@@ -508,16 +491,6 @@ export default function ReferPage() {
       {/* 通水P1: 紹介リンク共有シート（ブランド単位・referral_links既存資産の露出） */}
       {shareSvc && <ShareLinkSheet serviceId={shareSvc.id} serviceName={shareSvc.name} menus={shareSvc.menus} onClose={() => setShareSvc(null)} />}
 
-      {showSheet && selSvc && (
-        <MenuDetailSheet
-          svc={selSvc}
-          menuName={selMenuName}
-          menuDescription={selMenuData?.description ?? null}
-          reward={selReward}
-          tasks={resolveMenuCoopTasks((selMenu as { coverage_task_details?: CoopTaskItem[] } | null)?.coverage_task_details, selReward?.reward_type)}
-          onClose={() => setShowSheet(false)}
-        />
-      )}
     </div>
   )
 }
@@ -555,8 +528,9 @@ function Radio({ active, onSelect, title, desc }: { active: boolean; onSelect: (
 
 // Opportunity Board ブランドカード：フル幅・1行目(ロゴ40px+名前+メニューN+chevron)/2行目(フック文)/3行目(レンジピル+ヒント)。
 //   展開でカード内にメニュー行リスト（0.5px罫線）。展開機構は既存の expandedSvc を維持（URL不変）。
-function BrandCard({ svc, active, index, onToggle, onPick, onShare }: {
+function BrandCard({ svc, active, index, selectedIds, onToggle, onPick, onShare }: {
   svc: ServiceWithMenus; active: boolean; index: number
+  selectedIds: string[]
   onToggle: () => void; onPick: (sm: MenuRow, menu: Menu, reward: MenuReward) => void; onShare: () => void
 }) {
   const audience = (svc as { target_audience?: string | null }).target_audience || ''
@@ -610,17 +584,18 @@ function BrandCard({ svc, active, index, onToggle, onPick, onShare }: {
             <p style={{ fontSize: 12, color: 'var(--muted2)', padding: '13px 0', margin: 0, borderTop: '0.5px solid var(--line)' }}>メニューは準備中です。</p>
           ) : groups.map(({ sm, menu }, i) => {
             const reward = (menu.rewards ?? [])[0]
+            const selected = selectedIds.includes(menu.id)
             // ★一覧のタスクピル＝登録ページのチェック項目 と同一の解決経路（共通純関数）。
             const tasks = resolveMenuCoopTasks((sm as { coverage_task_details?: CoopTaskItem[] }).coverage_task_details, reward?.reward_type)
             return (
-              <button key={menu.id} onClick={() => onPick(sm, menu, reward)}
-                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', borderTop: '0.5px solid var(--line)', padding: '13px 0', display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--txt)' }}>
+              <button key={menu.id} onClick={() => onPick(sm, menu, reward)} aria-pressed={selected}
+                style={{ width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', background: selected ? 'var(--blue-bg2)' : 'none', border: 'none', borderTop: '0.5px solid var(--line)', padding: '13px 8px', display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--txt)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span aria-hidden style={{ width: 17, height: 17, borderRadius: 5, border: `1.5px solid ${selected ? 'var(--c-blue)' : 'var(--line)'}`, background: selected ? 'var(--c-blue)' : '#fff', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {selected && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l4 4L19 7" /></svg>}
+                  </span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menu.name}</span>
                   {reward && <MenuRowPill reward={reward} />}
-                  <span style={{ color: 'var(--muted)', flexShrink: 0, display: 'flex' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 6l6 6-6 6" /></svg>
-                  </span>
                 </span>
                 {tasks.length > 0 && (
                   <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

@@ -117,7 +117,10 @@ function DealEvidence({ dealId, editable, showToast }: { dealId: string; editabl
 }
 
 export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }) {
-  const { services, directors, deliveriesOpt, dealTasks, taskBusy, itemBusy, manageOpen, pending, dlvAdd, ctaConfirm, manageRef, moneyRef, setSelected, setManageOpen, setDlvAdd, setCtaConfirm, setRewardModal, setCancelConfirm, addAssignment, addExpense, deleteExpense, openConfirmDialog, patchAssignmentFee, patchItem, refreshDeals, removeAssignment, savePnl, setExpenseStatus, showToast, toggleDealTask, updateStatus, viewEvidence } = ctx
+  const { deals, services, directors, deliveriesOpt, dealTasks, taskBusy, itemBusy, manageOpen, pending, dlvAdd, ctaConfirm, manageRef, moneyRef, setSelected, setManageOpen, setDlvAdd, setCtaConfirm, setRewardModal, setCancelConfirm, addAssignment, addExpense, deleteExpense, openConfirmDialog, patchAssignmentFee, patchItem, refreshDeals, removeAssignment, savePnl, setExpenseStatus, showToast, toggleDealTask, updateStatus, viewEvidence } = ctx
+  const groupPeers = deal.referral_group_id
+    ? deals.filter(candidate => candidate.referral_group_id === deal.referral_group_id && candidate.id !== deal.id)
+    : []
   // ベンダー純化P1: 納品済みの宣言（vendor面から移管）。波及あり操作＝ripple文法（結果予告→確定）で確認を挟む。
   const [deliverConfirm, setDeliverConfirm] = React.useState<{ id: string; name: string; fee: number } | null>(null)
   const [deliverBusy, setDeliverBusy] = React.useState(false)
@@ -186,6 +189,29 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.1rem', width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
             </div>
 
+            {(groupPeers.length > 0 || deal.is_consultation) && (
+              <div style={{ padding: '11px 22px', borderBottom: '0.5px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {groupPeers.length > 0 && (
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--muted2)', marginRight: 8 }}>同時紹介:</span>
+                    {groupPeers.map(peer => (
+                      <button key={peer.id} onClick={() => setSelected(peer)} style={{ background: 'none', border: 0, padding: '2px 8px 2px 0', color: 'var(--c-blue)', fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                        {peer.is_consultation ? 'まず相談' : menuLabelOf(peer) || peer.services?.name || '案件'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {deal.is_consultation && deal.consult_meta && (
+                  <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                    <span style={{ color: 'var(--muted2)' }}>相談内容:</span>{' '}
+                    {(deal.consult_meta.areas ?? []).join('・') || '—'}
+                    {deal.consult_meta.temperature && <span style={{ color: 'var(--muted2)' }}> ／ {deal.consult_meta.temperature}</span>}
+                    {deal.consult_meta.note && <div style={{ color: 'var(--muted2)', marginTop: 2 }}>{deal.consult_meta.note}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ライフサイクル: 焦点＝動詞ボタン1つ（フェーズが決める次の一手）。
                 受付→対応中: 正典CTA（確認ダイアログ）／対応中→成約: 成約ダイアログ（率/継続/直営は売上入力・明細0は明細作成を兼ねる）／
                 成約×率×報酬未確定: 報酬を確定する（粗利=計算値×率のダイアログ）／成約→支払済: 正典CTA（率はサーバ側で報酬未確定を拒否）／
@@ -194,7 +220,11 @@ export default function DealDrawer({ deal, ctx }: { deal: Deal; ctx: DrawerCtx }
               const st = deal.status
               const nextAct = OPS_NEXT_ACTION[st as keyof typeof OPS_NEXT_ACTION] ?? null
               let act: { label: string; onClick: () => void } | null = null
-              if (st === 'in_progress') {
+              // TODO(consult-reward-freeze.md承認後): 相談のメニュー確定時snapshot凍結をここへ配線する。
+              // 現在は既存の明細作成＋成約動線を前面化するだけで、reward_snapshotは変更しない。
+              if (deal.is_consultation && (deal.deal_items?.length ?? 0) === 0) {
+                act = { label: 'メニューを確定する', onClick: () => openConfirmDialog(deal) }
+              } else if (st === 'in_progress') {
                 act = { label: '成約にする', onClick: () => openConfirmDialog(deal) }
               } else if (st === 'confirmed' && needsBase(deal)) {
                 act = { label: '報酬を確定する', onClick: () => setRewardModal(deal) }

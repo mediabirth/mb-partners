@@ -784,8 +784,8 @@ export default function DealsPage() {
           <>
             <div onClick={() => setConfirmModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(14,14,20,.3)', zIndex: 90 }} />
             <div className="modal-pop" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 400, maxWidth: '92vw', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, zIndex: 95, boxShadow: '0 24px 60px rgba(14,14,20,.22)', padding: '22px 24px' }}>
-              <b style={{ fontSize: '.92rem', display: 'block' }}>{customerHonorific(deal)}を成約にしますか</b>
-              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>{forecastLine(deal.status, 'confirmed')}</p>
+              <b style={{ fontSize: '.92rem', display: 'block' }}>{deal.is_consultation ? '相談のメニューを確定しますか' : `${customerHonorific(deal)}を成約にしますか`}</b>
+              <p style={{ fontSize: '.7rem', color: 'var(--muted2)', marginTop: 6, lineHeight: 1.7 }}>{deal.is_consultation ? 'サービスとメニューを明細に記録します。相談の報酬はここでは確定しません。' : forecastLine(deal.status, 'confirmed')}</p>
               {noItems && (
                 <div style={{ marginTop: 14 }}>
                   <label style={{ display: 'block', fontSize: '.66rem', fontWeight: 500, color: 'var(--muted2)', marginBottom: 6 }}>サービス</label>
@@ -815,7 +815,7 @@ export default function DealsPage() {
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 18, justifyContent: 'flex-end' }}>
                 <button onClick={() => setConfirmModal(null)} className="ui-btn ui-btn--secondary" style={{ fontSize: '.74rem', padding: '9px 16px' }}>キャンセル</button>
-                <button onClick={confirmDeal} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>成約にする</button>
+                <button onClick={confirmDeal} disabled={pending} className="ui-btn ui-btn--primary" style={{ fontSize: '.74rem', padding: '9px 18px' }}>{deal.is_consultation ? 'メニューを確定する' : '成約にする'}</button>
               </div>
             </div>
           </>

@@ -113,6 +113,7 @@ export async function GET() {
   const SEL_BASE = `
       id, customer_name, customer_type, company_name, contact_name, contact_title, customer_email, channel, source, status, amount, base_amount,
       fixed_month, created_at, service_id, menu_id, partner_id, reward_snapshot, reward_ref, continuous_months, fee_snapshot,
+      referral_group_id, is_consultation, consult_meta,
       service_menus(name, coop_enabled, coop_type, coop_value, coop_base),
       services(name, icon, color, logo_path),
       partners(code, frontier_id, frontier_linked_at, profiles(name, color))`

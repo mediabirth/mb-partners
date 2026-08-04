@@ -10,11 +10,14 @@ import { phaseOf } from '@/lib/phase'
 export type Deal = {
   id: string; customer_name: string; channel: string; source: string
   customer_type?: string | null; company_name?: string | null; contact_name?: string | null; contact_title?: string | null
-  status: string; amount: number; base_amount: number | null; created_at: string; service_id: string
+  status: string; amount: number; base_amount: number | null; created_at: string; service_id: string | null
   customer_email?: string | null; fixed_month?: string | null
   lost_at?: string | null; lost_reason?: string | null; lost_note?: string | null
   reward_snapshot: { ref_type?: string; ref_value?: number; ref_base?: string; effective_kind?: string; gate_reason?: string; reward_type?: string; reward_value?: number; months?: number } | null
   continuous_months?: number | null
+  referral_group_id?: string | null
+  is_consultation?: boolean
+  consult_meta?: { areas?: string[]; temperature?: string; note?: string } | null
   service_menus: { name?: string | null; coop_enabled?: boolean | null; coop_type?: string | null; coop_value?: number | null; coop_base?: string | null } | null
   // メニュー名（API側で reward_snapshot.menu_id → menus.name を一括解決・無ければ service_menus 名）
   _menu_name?: string | null

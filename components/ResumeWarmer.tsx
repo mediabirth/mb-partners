@@ -15,6 +15,21 @@ export default function ResumeWarmer({ links = [] }: { links?: string[] }) {
   useEffect(() => {
     let last = 0
     let inflight = false
+    let prefetchTimer: ReturnType<typeof setTimeout> | null = null
+    const cancelPrefetch = () => {
+      if (prefetchTimer === null) return
+      clearTimeout(prefetchTimer)
+      prefetchTimer = null
+    }
+    const schedulePrefetch = () => {
+      cancelPrefetch()
+      // 復帰直後のクリックと同じRSCを同時取得すると遷移が空白化し得る。
+      // 操作がなければ裏で再取得し、操作が先なら通常遷移を優先する。
+      prefetchTimer = setTimeout(() => {
+        prefetchTimer = null
+        for (const href of links) { try { router.prefetch(href) } catch { /* best-effort */ } }
+      }, 750)
+    }
     const warm = () => {
       if (document.visibilityState !== 'visible') return
       const now = Date.now()
@@ -29,12 +44,18 @@ export default function ResumeWarmer({ links = [] }: { links?: string[] }) {
         })
         .catch(() => {})
         .finally(() => { inflight = false })
-      for (const href of links) { try { router.prefetch(href) } catch { /* best-effort */ } }
+      schedulePrefetch()
     }
     const onVis = () => warm()
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('focus', onVis)
-    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis) }
+    document.addEventListener('pointerdown', cancelPrefetch, true)
+    return () => {
+      cancelPrefetch()
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', onVis)
+      document.removeEventListener('pointerdown', cancelPrefetch, true)
+    }
   }, [router, links])
   return null
 }

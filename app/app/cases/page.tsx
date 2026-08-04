@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Fragment } from 'react'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getPartnerWithDeals } from '@/lib/supabase/queries'
 import { customerHonorific } from '@/lib/customer'
@@ -74,7 +75,7 @@ export const runtime = 'edge'
 export default async function CasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string }>
+  searchParams: Promise<{ f?: string; group?: string }>
 }) {
   const user = await getCachedUser()
   if (!user) redirect('/login')
@@ -83,7 +84,7 @@ export default async function CasesPage({
   const result = await getPartnerWithDeals(supabase, user.id)
   if (!result) redirect('/login')
   const { partner, deals } = result
-  const { f = 'active' } = await searchParams
+  const { f = 'active', group: focusedGroup } = await searchParams
 
   // ②B 確定報酬の累計（確定=confirmed/paid の deals.amount＝あなたの報酬・既存計算済み値の読み取り集計のみ。再計算なし）。
   // ②B深化(a) 支払済(paid)/未払い(confirmed) に分割（status を読むだけ・payout/frozenには触れない）。
@@ -100,6 +101,11 @@ export default async function CasesPage({
     if (f === 'lost') return d.status === 'lost'
     return ['received', 'in_progress'].includes(d.status)  // active（既定）
   })
+  const groupCounts = filtered.reduce<Record<string, number>>((acc, deal) => {
+    if (deal.referral_group_id) acc[deal.referral_group_id] = (acc[deal.referral_group_id] ?? 0) + 1
+    return acc
+  }, {})
+  const seenGroups = new Set<string>()
 
   // L2: 明細件数（"+N"用）。service role で安全に集計（best-effort・テーブル未作成なら空）。
   const itemCounts: Record<string, number> = {}
@@ -177,18 +183,29 @@ export default async function CasesPage({
                 : (d.amount > 0 ? `¥${d.amount.toLocaleString()}` : '')
               const step = STATUS_STEP[d.status] ?? 0
               const lost = d.status === 'lost'
+              const groupId = d.referral_group_id ?? null
+              const grouped = Boolean(groupId && groupCounts[groupId] > 1)
+              const firstInGroup = grouped && groupId ? !seenGroups.has(groupId) : false
+              if (groupId) seenGroups.add(groupId)
               return (
-                <Link key={d.id} href={`/app/cases/${d.id}`} className="card-hover lift ui-card"
+                <Fragment key={d.id}>
+                {firstInGroup && (
+                  <div style={{ margin: '8px 2px 7px', paddingTop: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500 }}>{name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted2)', marginTop: 2 }}>同時に紹介した{groupId ? groupCounts[groupId] : 0}件</div>
+                  </div>
+                )}
+                <Link href={`/app/cases/${d.id}`} className="card-hover lift ui-card"
                   data-case-search={`${name}${menuName}`.normalize('NFKC').toLowerCase().replace(/\s+/g, '')}
-                  style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: 10 }}>
+                  style={{ display: 'block', textDecoration: 'none', color: 'var(--txt)', background: '#fff', border: groupId === focusedGroup ? '1.5px solid var(--c-blue)' : '0.5px solid var(--line)', borderRadius: 14, padding: '14px 15px', marginBottom: grouped ? 7 : 10, marginLeft: grouped ? 8 : 0 }}>
                   {/* 上段：ブランドアイコン32px＋名前様/メニュー名＋報酬ピル */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
                     {d.services
                       ? <ServiceAvatar logoPath={d.services.logo_path} icon={d.services.icon} color={d.services.color} name={d.services.name} size={32} />
                       : <ServiceAvatar logoPath={null} icon="" color="#9A9CA8" name="相談" size={32} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuName}</div>
+                      <div style={{ fontSize: 15, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{grouped ? menuName : name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{grouped ? (d.services?.name ?? 'まず相談') : menuName}</div>
                     </div>
                     {rewardText && <RewardPill style={{ flexShrink: 0 }}>{rewardText}</RewardPill>}
                   </div>
@@ -213,6 +230,7 @@ export default async function CasesPage({
                     </div>
                   )}
                 </Link>
+                </Fragment>
               )
             })}
           </div>

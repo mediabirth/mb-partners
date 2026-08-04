@@ -22,7 +22,7 @@ export async function getDealWithEvents(supabase: SupabaseClient, dealId: string
   const [dealRes, eventsRes] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, customer_name, channel, source, status, amount, fixed_month, consent, meeting_at, created_at, internal_memo, service_id, menu_id, reward_snapshot, services(id, name, subtitle, icon, color, logo_path), service_menus(id, name, ref_type, ref_value, ref_trigger, ref_months)')
+      .select('id, customer_name, channel, source, status, amount, fixed_month, consent, meeting_at, created_at, internal_memo, service_id, menu_id, reward_snapshot, referral_group_id, is_consultation, consult_meta, director_id, services(id, name, subtitle, icon, color, logo_path), service_menus(id, name, ref_type, ref_value, ref_trigger, ref_months)')
       .eq('id', dealId)
       .eq('partner_id', partnerId)
       .single(),
@@ -220,6 +220,7 @@ export async function getPartnerWithDeals(supabase: SupabaseClient, userId: stri
       deals:deals!partner_id(
         id, customer_name, customer_type, company_name, contact_name, channel, source, status, amount,
         menu_id, fixed_month, consent, meeting_at, created_at, updated_at, service_id, review_stage, reward_snapshot,
+        referral_group_id, is_consultation, consult_meta,
         services(id, name, subtitle, icon, color, logo_path),
         service_menus(name)
       )
@@ -336,6 +337,9 @@ export type DealRow = {
   customer_type?: string | null; company_name?: string | null; contact_name?: string | null
   status: 'received' | 'in_progress' | 'confirmed' | 'paid' | 'lost'
   amount: number; fixed_month: string | null; menu_id?: string | null
+  referral_group_id?: string | null
+  is_consultation?: boolean
+  consult_meta?: { areas?: string[]; temperature?: string; note?: string } | null
   consent: boolean; meeting_at: string | null
   created_at: string; updated_at: string; service_id: string
   services: { id: string; name: string; subtitle: string | null; icon: string; color: string; logo_path: string | null } | null
