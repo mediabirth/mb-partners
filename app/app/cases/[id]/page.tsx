@@ -13,6 +13,7 @@ import { customerHonorific } from '@/lib/customer'
 import { statusNarrative } from '@/lib/deal-status-narrative'
 import { consultNarrative } from '@/lib/consult-narrative'
 import { DEAL_STATUS } from '@/lib/status'
+import { toPublicTimeline } from '@/lib/public-timeline'
 
 // 操縦席: ステータス語は正典（lib/status.ts DEAL_STATUS）から導出（ローカル再定義の廃止）
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(Object.entries(DEAL_STATUS).map(([k, v]) => [k, v.label]))
@@ -52,12 +53,14 @@ export default async function CaseDetailPage({
   // メニューⓘ（共有 MenuDetailSheet）用：メニュー説明＋サービスの説明/イメージ画像。取れなければⓘ非表示（安全側）。
   let menuInfoDescription: string | null = null
   let svcExtra: { description: string | null; image_url: string | null } | null = null
+  let teamDirector: { name: string; avatar_url: string | null } | null = null
+  let teamDeliveryName: string | null = null
   const snapMenuId = ((deal as { reward_snapshot?: { menu_id?: string } | null }).reward_snapshot)?.menu_id ?? null
   try {
     const { createServiceRoleClient } = await import('@/lib/supabase/server')
     const admin = await createServiceRoleClient()
-    // 磨き④: 相互独立な5本の直列awaitを1段のPromise.allへ（読み取りのみ・結果不変）。
-    const [tasksRes, tplsRes, itRes, mmRes, sxRes] = await Promise.all([
+    // 相互独立な読み取りは1段で取得。チーム取得は金額列を選択しない。
+    const [tasksRes, tplsRes, itRes, mmRes, sxRes, directorRes, assignmentRes] = await Promise.all([
       deal.channel === 'cooperation'
         ? admin.from('deal_tasks').select('id, label, kind, required, done, note, sort').eq('deal_id', id).order('sort')
         : Promise.resolve({ data: null }),
@@ -71,6 +74,16 @@ export default async function CaseDetailPage({
       deal.service_id
         ? admin.from('services').select('description, image_url').eq('id', deal.service_id).maybeSingle()
         : Promise.resolve({ data: null }),
+      deal.director_id
+        ? admin.from('profiles').select('name, avatar_url').eq('id', deal.director_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      admin.from('delivery_assignments')
+        .select('status, deliveries(name)')
+        .eq('deal_id', id)
+        .in('status', ['accepted', 'assigned', 'delivered'])
+        .order('assigned_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ])
     tasks = (tasksRes.data ?? []) as DealTask[]
     for (const t of (tplsRes.data ?? []) as { label: string; description: string | null }[]) if (t.description) taskDesc[t.label] = t.description
@@ -79,6 +92,10 @@ export default async function CaseDetailPage({
     menuInfoDescription = (mmRes.data as { description?: string | null } | null)?.description ?? null
     // ⓘの表示条件は従来同様「新メニュー名が解決できたとき」のみ（svcExtra 自体は並列取得済み）
     svcExtra = newMenuName ? ((sxRes.data as { description: string | null; image_url: string | null } | null) ?? null) : null
+    teamDirector = (directorRes.data as { name: string; avatar_url: string | null } | null) ?? null
+    const assignment = assignmentRes.data as { deliveries?: { name?: string } | { name?: string }[] | null } | null
+    const delivery = Array.isArray(assignment?.deliveries) ? assignment.deliveries[0] : assignment?.deliveries
+    teamDeliveryName = delivery?.name ?? null
   } catch { /* best-effort */ }
   const menuLabel: string | null = newMenuName || ((deal as any).service_menus?.name ?? null)
 
@@ -103,6 +120,7 @@ export default async function CaseDetailPage({
     ? { reward_type: snapReward.reward_type as 'fixed' | 'rate' | 'continuous', reward_value: snapReward.reward_value ?? 0, reward_trigger: snapReward.reward_trigger ?? null, default_months: snapReward.default_months ?? null }
     : null
   const sheetTasks = tasks.map(t => ({ label: t.label, description: taskDesc[t.label] ?? null }))
+  const publicTimeline = toPublicTimeline(events)
 
   return (
     <div>
@@ -190,6 +208,37 @@ export default async function CaseDetailPage({
             </div>
           )}
 
+          {/* 読取専用の公開チーム。委託費等を取得しない境界で構成する。 */}
+          <section style={{ padding: '24px 20px 0' }} aria-labelledby="case-team-title">
+            <div style={{ border: '0.5px solid var(--line)', borderRadius: 14, padding: '15px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <h2 id="case-team-title" style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>この案件のチーム</h2>
+                <details style={{ position: 'relative' }}>
+                  <summary aria-label="チーム表示とは" style={{ cursor: 'pointer', listStyle: 'none', color: 'var(--muted2)', fontSize: 13, lineHeight: 1 }}>ⓘ</summary>
+                  <div style={{ position: 'absolute', zIndex: 5, top: 22, left: -88, width: 240, padding: '10px 12px', border: '0.5px solid var(--line)', borderRadius: 10, background: '#fff', boxShadow: '0 8px 24px rgba(14,14,20,.12)', fontSize: 11, color: 'var(--muted2)', lineHeight: 1.65 }}>
+                    MB担当は案件の進行を支える担当者、実務担当は納品を担う委託先です。担当が決まったあとに表示されます。
+                  </div>
+                </details>
+              </div>
+              {teamDirector && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: teamDeliveryName ? 10 : 0 }}>
+                  <span aria-hidden style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: teamDirector.avatar_url ? `url(${teamDirector.avatar_url}) center/cover` : 'var(--blue-bg2)', display: 'grid', placeItems: 'center', color: 'var(--c-blue)', fontSize: 13, fontWeight: 500 }}>
+                    {teamDirector.avatar_url ? '' : (teamDirector.name.trim()[0] || 'M')}
+                  </span>
+                  <span style={{ minWidth: 0 }}><b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>{teamDirector.name}</b><small style={{ color: 'var(--muted2)', fontSize: 11 }}>MB担当</small></span>
+                </div>
+              )}
+              {teamDeliveryName ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span aria-hidden style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'var(--bg2)', display: 'grid', placeItems: 'center', color: 'var(--muted2)', fontSize: 13, fontWeight: 500 }}>{teamDeliveryName.trim()[0] || '実'}</span>
+                  <span style={{ minWidth: 0 }}><b style={{ display: 'block', fontSize: 13, fontWeight: 500 }}>{teamDeliveryName}</b><small style={{ color: 'var(--muted2)', fontSize: 11 }}>実務担当</small></span>
+                </div>
+              ) : (
+                <p style={{ margin: teamDirector ? '10px 0 0' : 0, fontSize: 12, color: 'var(--muted2)', lineHeight: 1.6 }}>MBが担当を調整中です</p>
+              )}
+            </div>
+          </section>
+
           {/* 4. 進捗ミニステップ（決定②: 報酬到達文言は全種削除・報酬はヘッダのピルに一本化） */}
           <div style={{ padding: '24px 20px 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', margin: '0 1px 6px' }}>
@@ -248,15 +297,15 @@ export default async function CaseDetailPage({
         )}
 
         {/* ⑦ 履歴は記録が出るまで非表示（空状態の説明文を出さない） */}
-        {events.length > 0 && (
+        {publicTimeline.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted2)', marginBottom: 12 }}>これまでの流れ</div>
-          {events.map((e, i) => (
+          {publicTimeline.map((e, i) => (
             <div key={e.id} style={{ display: 'flex', gap: 14, position: 'relative', paddingBottom: 17 }}>
-              {i < events.length - 1 && <div style={{ position: 'absolute', left: 5, top: 16, bottom: 0, width: 1, background: 'var(--line)' }} />}
+              {i < publicTimeline.length - 1 && <div style={{ position: 'absolute', left: 5, top: 16, bottom: 0, width: 1, background: 'var(--line)' }} />}
               <div style={{ width: 11, height: 11, borderRadius: '50%', flexShrink: 0, marginTop: 3, background: i === 0 ? 'var(--c-blue)' : '#D7D7E0' }} />
               <div style={{ fontSize: 13, lineHeight: 1.55, color: i === 0 ? 'var(--txt)' : 'var(--muted2)', fontWeight: 400 }}>
-                {e.body}
+                {e.text}
                 <small style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2, fontWeight: 400 }}>
                   {new Date(e.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </small>

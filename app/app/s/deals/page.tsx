@@ -12,7 +12,9 @@ import { DEAL_STATUS } from '@/lib/status'
 type Asg = { id: string; status: string | null; base_fee: number | null; delivery_name: string; own?: boolean }
 type Dlv = { id: string; name: string; active: boolean }
 type CoopTask = { id: string; label: string; kind: string; required: boolean; done: boolean; note: string | null }
-type Deal = { id: string; customer: string; status: string; brand: string; menu_name: string | null; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: Asg[]; tasks: CoopTask[] }
+type PublicStep = { id: string; kind: string; text: string; created_at: string }
+type Director = { id: string; name: string; avatar_url: string | null }
+type Deal = { id: string; customer: string; status: string; brand: string; menu_name: string | null; created_at: string; fixed_month: string | null; revenue: number; item_id: string | null; from_network: boolean; frozen: boolean; assignments: Asg[]; tasks: CoopTask[]; director: Director | null; team_delivery_name: string | null; timeline: PublicStep[] }
 const COLS = [['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
 const ASG_JP: Record<string, string> = { proposed: '提示中', accepted: '了承済', assigned: '了承済', delivered: '納品済み', declined: '辞退' }
 const FILTERS = [['all', 'すべて'], ['received', '受付'], ['in_progress', '対応中'], ['confirmed', '成約'], ['paid', '支払済']] as const
@@ -242,6 +244,24 @@ export default function SupplierDealsPage() {
                 <span style={{ color: 'var(--muted2)', flexShrink: 0 }}>{l}</span><span style={{ textAlign: 'right' }}>{v}</span>
               </div>
             ))}
+            {/* 自社案件だけを返す supplier/self の読取結果。公開用タイムラインはAPI側でdefault-deny済み。 */}
+            <section style={{ padding: '14px 0', borderBottom: '0.5px solid var(--line)' }} aria-label="この案件のチーム">
+              <div style={{ fontSize: '.7rem', color: 'var(--muted2)', marginBottom: 9 }}>この案件のチーム</div>
+              {detail.director && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: detail.team_delivery_name ? 8 : 0 }}>
+                  <span aria-hidden style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: detail.director.avatar_url ? `url(${detail.director.avatar_url}) center/cover` : 'var(--blue-bg2)', display: 'grid', placeItems: 'center', color: 'var(--c-blue)', fontSize: '.7rem', fontWeight: 500 }}>{detail.director.avatar_url ? '' : (detail.director.name.trim()[0] || 'M')}</span>
+                  <span><b style={{ display: 'block', fontSize: '.72rem', fontWeight: 500 }}>{detail.director.name}</b><small style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>MB担当</small></span>
+                </div>
+              )}
+              {detail.team_delivery_name ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span aria-hidden style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'var(--bg2)', display: 'grid', placeItems: 'center', color: 'var(--muted2)', fontSize: '.7rem', fontWeight: 500 }}>{detail.team_delivery_name.trim()[0] || '実'}</span>
+                  <span><b style={{ display: 'block', fontSize: '.72rem', fontWeight: 500 }}>{detail.team_delivery_name}</b><small style={{ fontSize: '.58rem', color: 'var(--muted2)' }}>実務担当</small></span>
+                </div>
+              ) : (
+                <div style={{ fontSize: '.66rem', color: 'var(--muted)' }}>MBが担当を調整中です</div>
+              )}
+            </section>
             {/* 受注額の入力（成約後・未凍結のみ＝v6でドロワーへ集約） */}
             {(detail.status === 'confirmed' && !detail.frozen) && (
               <div style={{ padding: '12px 0', borderBottom: '0.5px solid var(--line)' }}>
@@ -268,6 +288,18 @@ export default function SupplierDealsPage() {
                       {task.note && <span style={{ display: 'block', marginTop: 2, color: 'var(--muted)', fontSize: '.62rem', whiteSpace: 'pre-wrap' }}>{task.note}</span>}
                     </span>
                     <span style={{ flexShrink: 0, fontSize: '.58rem', color: task.done ? 'var(--green)' : 'var(--muted)' }}>{task.done ? '完了' : '未完了'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {detail.timeline.length > 0 && (
+              <div style={{ padding: '12px 0', borderBottom: '0.5px solid var(--line)' }}>
+                <div style={{ fontSize: '.7rem', color: 'var(--muted2)', marginBottom: 8 }}>これまでの流れ</div>
+                {detail.timeline.map((event, i) => (
+                  <div key={event.id} style={{ display: 'flex', gap: 9, padding: '4px 0', fontSize: '.68rem' }}>
+                    <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: i === 0 ? 'var(--c-blue)' : 'var(--line)', marginTop: 5, flexShrink: 0 }} />
+                    <span style={{ flex: 1 }}>{event.text}<small style={{ display: 'block', marginTop: 2, fontSize: '.56rem', color: 'var(--muted)' }}>{new Date(event.created_at).toLocaleString('ja', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small></span>
                   </div>
                 ))}
               </div>
