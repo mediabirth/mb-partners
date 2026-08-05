@@ -273,6 +273,24 @@ P0-a／P0-b は実装・本番稼働済み。その後の Feature I／I-2（レ�
 - `freezeOverridesForBatch` の `payout_overrides.rate` が `OVERRIDE_RATE` 固定で書かれ、カード率適用時に `amount ≠ base×rate` の証跡矛盾になり得る（支払額は正・記録のみ）→実適用率の記録へ修正予定。
 - `validateSupplierReward` の catch fail-open（DB一時障害時にガード素通り）→fail-closed 化予定。
 
+## 11. v4追補 — 月額固定の全廃とレートカードの単純化（2026-08-05・勝彦裁定＝本節が承認記録）
+
+**裁定（勝彦 2026-08-05）**: 月額固定（オムニス¥50,000）はシステムに内包せず**システム外で別途請求**する。
+サプライヤー間のシステム内差分は**「成果報酬が折半（half_commission）か否か」の1点のみ**とする。
+
+### 11.1 変更内容
+- **月額機構の全廃**: `omnis_monthly` rate_kind・`supplier_charges.kind='omnis_monthly'` 計上・
+  `rate_cards.monthly_fee` 参照・`OMNIS_MONTHLY_FEE` 定数・月次クローズの月額行・UI月額表記を全て撤去。
+  凍結済みデータ0件（charges=0・fee_snapshot付きdeals=0を実測）につき後方互換コード不要＝型ごと削除可。
+- **omnis-founding-v1 の再定義**: 標準（standard-v2）との差は fee_model=half_commission のみ。
+  `payment_fee_rate=0.05` を付与・`monthly_fee=null`。override 0.10・その他は標準と同一。
+- **resolveFeeSnapshot**: selfService 分岐の月額判定を廃止＝同系統×自社メニューは常に payment_fee_5。
+- §4(d)は廃止（本節が上書き）。§0表の「特例(d)」行は失効。
+
+### 11.2 不変
+- 折半（§4(a)・supplierChargeBase=override控除前）・決済5%（§4(b)）・法人override（§4(c)）・
+  2段凍結・パートナー受取不減額の構造保証・fee-hash検証は全て不変。
+
 ---
 
 *実行モデル: v3追補＝Claude Code（リード・2026-07-23）。v2改訂＝Claude Fable 5（claude-fable-5）。v1作成＝Opus 4.8、独立レビュー＝Fable 5（`lineage-rate-review.md`）。v3はread-only（設計書ファイルの改訂のみ・コード/DDL/DB書込/デプロイなし）。*
