@@ -12,7 +12,7 @@ import MoneyTabs from './MoneyTabs'
  * ★数字は単一ソース＝supplierWaterfall（内部=computeCharges・請求と同一）・supplier_charges・deals.amount（支払と同一入力）。独自計算ゼロ。
  * ★内訳バーは components/ui/KpiCard の WaterRow（MBダッシュボードと同一実装）。
  */
-const KIND_JP: Record<string, string> = { omnis_monthly: '月額利用料', half_commission: 'サービス利用料', passthrough_revenue_fee: '販売手数料', payment_fee_5: '決済手数料' }
+const KIND_JP: Record<string, string> = { half_commission: 'サービス利用料', passthrough_revenue_fee: '販売手数料', payment_fee_5: '決済手数料' }
 const CHG_ST: Record<string, { label: string; color: string }> = { unbilled: { label: '締め済み・請求書待ち', color: 'var(--muted2)' }, invoiced: { label: '請求済', color: 'var(--c-blue)' }, settled: { label: 'お支払い確認済み', color: 'var(--green)' } }
 const yen = (n: number) => `¥${Number(n || 0).toLocaleString()}`
 

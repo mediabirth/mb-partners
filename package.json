@@ -13,6 +13,7 @@
     "test:password-reset": "node scripts/verification/permanent/password-reset.e2e.mjs",
     "test:hardening": "node scripts/verification/permanent/hardening.e2e.mjs",
     "test:exp1": "tsx scripts/exp1.e2e.mts",
+    "test:simple-fee1": "NO_BROWSER=1 tsx scripts/simple-fee1.e2e.mts",
     "test:canon": "tsx --test lib/*.test.ts",
     "test:verify": "node scripts/verification/run-permanent.mjs"
   },

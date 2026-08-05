@@ -18,10 +18,10 @@ type Detail = {
   history: { event: string; from_card: string | null; to_card: string | null; created_at: string; note: string | null }[]
   charges_month: number; charges_total: number
 }
-type Card = { id: string; name: string; monthly_fee: number | null; payment_fee_rate: number | null; half_commission_rate: number; override_rate: number; fee_model?: string; revenue_fee_rate?: number | null; deprecated?: boolean }
+type Card = { id: string; name: string; fee_model?: string; deprecated?: boolean }
 const cardSummary = (c: Card) => c.fee_model === 'passthrough'
-  ? `パススルー＋受注額${Math.round((c.revenue_fee_rate ?? 0.05) * 100)}%／決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%／override${Math.round(c.override_rate * 100)}%`
-  : `折半${Math.round(c.half_commission_rate * 100)}%／${c.monthly_fee != null ? `月額¥${Number(c.monthly_fee).toLocaleString()}` : `決済${Math.round((c.payment_fee_rate ?? 0) * 100)}%`}／override${Math.round(c.override_rate * 100)}%`
+  ? '標準（パススルー＋受注額5%）'
+  : '折半（オムニス等の個別契約）'
 const yen = (n: number) => `¥${Number(n || 0).toLocaleString()}`
 const EV_JP: Record<string, string> = { promoted: '昇格', card_changed: 'カード変更', suspended: '契約停止', resumed: '再開' }
 
@@ -99,8 +99,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
 
   async function changeCard() {
     if (!d || !selCard || selCard === d.supplier.rate_card || busy) return
-    const to = cards.find(c => c.id === selCard)
-    if (!confirm(`レートカードを付け替えます（標準移行オプション）。\n\n・${cardLabel(d.supplier.rate_card)} → ${cardLabel(selCard)}\n・適用されるのは「以後に確定する案件」からです\n・確定済の fee_snapshot・凍結済みの請求には一切波及しません\n・月額固定（${to?.monthly_fee != null ? 'あり' : 'なし'}）は次回の月次クローズから反映\n\nよろしいですか？`)) return
+    if (!confirm(`レートカードを付け替えます（標準移行オプション）。\n\n・${cardLabel(d.supplier.rate_card)} → ${cardLabel(selCard)}\n・適用されるのは「以後に確定する案件」からです\n・確定済の fee_snapshot・凍結済みの請求には一切波及しません\n\nよろしいですか？`)) return
     setBusy(true)
     const r = await fetch(`/api/console/suppliers/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rate_card_id: selCard }) })
     const j = await r.json().catch(() => ({}))

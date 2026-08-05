@@ -44,6 +44,11 @@
 
 ## 作業ログ
 
+### 2026-08-05 SIMPLE-FEE-1 — 月額機構全廃・差分は折半のみ
+
+- 承認済み `lineage-rate-design.md` §11 v4どおり、凍結済み0件（charges 0 / fee_snapshot deals 0）を再確認して実装。月額kind・型・分岐・固定行計上・API返却・UI/ⓘを撤去し、DBは `omnis-founding-v1.payment_fee_rate=0.05 / monthly_fee=null` の2列だけ更新。
+- 専用E2E 6/6、supplier money 375px溢れ0、恒久ゲート全green、money 4ハッシュ全桁一致、CCSF1 relational/auth残置0。COPY退避・SQL・grep全数監査・before/afterは `docs/reports/simple_fee1_20260805.md`。
+
 ### 2026-08-05 手数料単純化の裁定（勝彦）→ SIMPLE-FEE-1 発注
 
 - 勝彦裁定: 月額固定（オムニス¥5万）は**システム外請求へ全廃**・サプライヤー間のシステム内差分は「折半か否か」のみ。lineage-rate-design **§11（v4追補）**として承認記録・凍結済みデータ0件の窓につき後方互換コード不要。

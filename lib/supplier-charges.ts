@@ -3,14 +3,14 @@
  * console のクローズ/プレビューと、サプライヤーポータル（本人向け・自社分のみ）で共用する。
  * ★payout_*（MBが払う側）・reward_snapshot・deals.amount には一切非接触（P0-a境界）。
  */
-import { supplierChargeBase, chargePeriodOf, FEE_RATE, loadRateCard, STD_RATE_CARD } from '@/lib/supplier-fee'
+import { supplierChargeBase, chargePeriodOf, FEE_RATE } from '@/lib/supplier-fee'
 
 type AnyClient = { from: (t: string) => any }
 
 export type ChargeRow = {
   supplier_partner_id: string
   deal_id: string | null
-  kind: 'half_commission' | 'passthrough_revenue_fee' | 'payment_fee_5' | 'omnis_monthly'
+  kind: 'half_commission' | 'passthrough_revenue_fee' | 'payment_fee_5'
   period: string
   base_amount: number
   rate: number | null
@@ -23,14 +23,13 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
   const rows: ChargeRow[] = []
   const warnings: string[] = []
 
-  // 無音A(2026-07-18): 相互独立な読み取り（services/deals/カード種別）を1段に並列化＝計算式・値は完全不変（取得順のみ）。
-  const [svsRes, dealsRes, spRes] = await Promise.all([
+  // 無音A(2026-07-18): 相互独立な読み取り（services/deals）を1段に並列化＝計算式・値は完全不変（取得順のみ）。
+  const [svsRes, dealsRes] = await Promise.all([
     admin.from('services').select('id').eq('supplier_partner_id', supplierId),
     admin.from('deals')
       .select('id, customer_name, company_name, amount, fixed_month, created_at, other_cost, status, fee_snapshot, deal_items(revenue)')
       .in('status', ['confirmed', 'paid'])
       .eq('fee_snapshot->>menu_supplier_partner_id', supplierId),
-    admin.from('partners').select('supplier_rate_card').eq('id', supplierId).maybeSingle(),
   ])
   const svs = svsRes.data
   const deals = dealsRes.data
@@ -107,17 +106,6 @@ export async function computeCharges(admin: AnyClient, supplierId: string, perio
     }
   })
   for (const r of p5Rows) if (r) rows.push(r)
-
-  // (d) 月額固定（レートカード駆動: monthly_fee 非nullのカード＝クローズ時点の現行カード基準・設計§4(d)）
-  const sp = spRes.data
-  const card = await loadRateCard(admin, (sp?.supplier_rate_card as string | null) ?? STD_RATE_CARD)
-  if (card.monthly_fee != null) {
-    rows.push({
-      supplier_partner_id: supplierId, deal_id: null, kind: 'omnis_monthly', period,
-      base_amount: card.monthly_fee, rate: null, amount: card.monthly_fee,
-      snapshot: { note: '月額固定（決済手数料に代えて・税別）', rate_card: card.id },
-    })
-  }
 
   // null検知警告（設計§2フォールバック）: サプライヤーメニューの confirmed/paid で fee_snapshot 無し
   if (serviceIds.length) {

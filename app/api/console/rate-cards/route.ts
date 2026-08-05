@@ -18,7 +18,8 @@ export async function GET() {
   const supabase = await createClient()
   if (!(await gate(supabase))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
-  const { data } = await admin.from('rate_cards').select('*').order('created_at')
+  // DBの旧列はDDL互換のため残すが、製品コード/APIからは参照・返却しない（仕様正典 §11）。
+  const { data } = await admin.from('rate_cards').select('id, name, half_commission_rate, payment_fee_rate, override_rate, version, fee_model, revenue_fee_rate, deprecated, created_at').order('created_at')
   return NextResponse.json({ cards: data ?? [] })
 }
 
@@ -29,17 +30,17 @@ export async function POST(req: NextRequest) {
   const id = String(b.id ?? '').trim()
   if (!/^[a-z0-9-]{3,40}$/.test(id)) return NextResponse.json({ error: 'id は英小文字・数字・ハイフン（例: std-v2）' }, { status: 400 })
   if (!b.name) return NextResponse.json({ error: 'name は必須です' }, { status: 400 })
-  const monthly = b.monthly_fee == null || b.monthly_fee === '' ? null : Math.round(Number(b.monthly_fee))
-  const feeRate = b.payment_fee_rate == null || b.payment_fee_rate === '' ? null : Number(b.payment_fee_rate)
-  if ((monthly == null) === (feeRate == null)) return NextResponse.json({ error: '決済手数料率か月額固定の「どちらか一方」を設定してください' }, { status: 400 })
+  const feeModel = b.fee_model === 'passthrough' ? 'passthrough' : 'half_commission'
   const admin = await createServiceRoleClient()
   const { data, error } = await admin.from('rate_cards').insert({
     id, name: String(b.name).trim(),
-    half_commission_rate: Number(b.half_commission_rate ?? 0.5),
-    payment_fee_rate: feeRate, monthly_fee: monthly,
-    override_rate: Number(b.override_rate ?? 0.10),
+    half_commission_rate: 0.5,
+    payment_fee_rate: 0.05,
+    override_rate: 0.10,
+    fee_model: feeModel,
+    revenue_fee_rate: 0.05,
     version: Number(b.version ?? 1) || 1, note: b.note ?? null,
-  }).select('*').single()
+  }).select('id, name, half_commission_rate, payment_fee_rate, override_rate, version, fee_model, revenue_fee_rate, deprecated, created_at').single()
   if (error) return NextResponse.json({ error: error.message.includes('duplicate') ? '同じIDのカードが既に存在します（不変版方式＝既存は書き換え不可）' : error.message }, { status: 409 })
   return NextResponse.json({ card: data }, { status: 201 })
 }

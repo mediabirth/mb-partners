@@ -71,7 +71,7 @@ resolveEffectiveReward(admin, { partnerId, reward }): Promise<{
 | D | 継続の月次確定 | `app/api/console/continuous-payouts/route.ts` | `snap.reward_value` を正（凍結済） | **変更不要**（Aで焼いた値が自動で流れる）。なお標準サプライヤーは継続型を禁止済みのため対象は折半カードのみ |
 | E | 明細（複数deal_items） | `lib/deal-reward.ts` computeDealReward（menusByIdライブ参照） | 複数明細の見積/再計算のみ・単一明細はlegacy(snapshot)計算 | **Phase 1 は対象外と明記**（サプライヤー紹介案件は単一明細）。コンソールで supplier 案件に明細を追加する運用が始まる場合は menusById 解決に override を注入（Phase 2） |
 | F | 支払側（payout/close） | close_month_batch は `deals.amount` を読む | — | **変更不要**（A/Cで確定した amount が唯一の入力） |
-| G | サプライヤー請求 | `lib/supplier-charges.ts` | payment_fee_5 の base＝`deals.amount`（=支払った報酬） | **変更不要・自動整合**（個別率で増減した報酬に 5% がそのまま乗る）。passthrough手数料・折半・月額は報酬額に非依存 |
+| G | サプライヤー請求 | `lib/supplier-charges.ts` | payment_fee_5 の base＝`deals.amount`（=支払った報酬） | **変更不要・自動整合**（個別率で増減した報酬に 5% がそのまま乗る）。passthrough手数料・折半は報酬額に非依存 |
 | H | 確定ガード（逆ザヤ） | `lib/supplier-fee.ts` validateSupplierReward | menu_rewards の保存時ガード | **override 設定APIに同一ガードを適用**（§3・§4）。menu_rewards 本体は不変 |
 
 > 接続点の少なさは既存の「snapshot凍結」思想の恩恵。**書き換えるのは A/B（焼く瞬間）と C（snapshot優先の1判断）だけ**で、支払・請求・継続は自動追随する。
