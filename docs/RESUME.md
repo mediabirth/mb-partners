@@ -28,7 +28,7 @@
 - HEAD: `4efdb02`(+docs) ＝ 本番stamp `4efdb02 ・ 2026-07-26 20:50 JST`（リード独立実測済）。デプロイはCLI一本。
 - デプロイ済バッチ列（全20本検収合格）: …→hardening-1→perf-deep→**UX-5b（64a9cf1・語彙統一）→UX-5c（4efdb02・機能パリティ）＝第5巡163行クローズ**。
 - **money 4ハッシュ正典（2026-07-26 まっさら化後・リード実行/実測）**:
-  - menu_rewards: `c5317c594d08ee0afea4a4764082876c`（MB seed補助: 16行/¥340,100 ✓）
+  - menu_rewards: **`4f1b52d0a027a282e188be76e9372193`（2026-08-05 正式カタログ投入後・MB seed補助: 38行/sum=340,320）**
   - deals: 生き値（突合運用）。**開業儀式クリーンアップ後=`(empty)`/0件（2026-08-05）**。
   - fee: `(empty)`／override: `(empty)`
 - **テストデータ残骸: ゼロ**（demo-teardown 2026-07-24 完遂・partners=MBHOUSE+ZZ6347のみ・services=MB6・broadcasts 0・demo profiles 0・cc-monitor×2生存・孤児frontier参照0）。バックアップ63ファイル/456行はCodex出力ディレクトリに退避（外部共有禁止・復元手順同梱）。
@@ -43,6 +43,14 @@
 ---
 
 ## 作業ログ
+
+### 2026-08-05 正式メニューカタログ投入（勝彦リスト・リード実行）＝開業台帳完成
+
+- 勝彦提供リスト=3ブランド22メニュー（RESONATION9・PRAGMATION6・EMANATION7）。dry-run(rollback)で全数検証→本実行。
+- 内容: 各ブランドにタグライン（subtitle）＋第2層（生み出す/型を作る/放つ）＋メニュー22（一言説明=short/public両設定）＋報酬22（**全て rate/10%/粗利(税抜)**・トリガー「成約後、粗利（税抜）確定で算出」）＋協力タスク88（つなぐauto/referral・アポイントauto/in_progress・アシスト/フォローmanual・ヒアリングmanual※新正書法・勝彦指定順）。
+- 旧メニュー6件（reso/dx配下・BPO等の重複源）は active=false で停止（削除せず・menu_rewards/cttも停止）。service_menus新行の旧式ref列は rate/10/粗利 で整合（レガシー経路でも同率）。
+- 表記正規化1件開示: 「AI導入・自動化・継続改善継続」→「AI導入・自動化・継続改善」（重複「継続」をタイポと判断・一言で戻せる）。
+- 検収: 本番 /api/services 実測=RESONATION9/PRAGMATION6/EMANATION7・旧重複非表示。**正典改定=menu hash `4f1b52d0…`・MB seed 38行/sum=340,320（CLAUDE.md/AGENTS.md同時改定）**。バックアップ=~/Documents/mb-menu-import-backup-20260805。
 
 ### 2026-08-05 開業儀式クリーンアップ（勝彦GO・リード実行）＋メニューリスト取得不能の開示
 
