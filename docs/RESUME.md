@@ -49,6 +49,12 @@
 - 承認済み `lineage-rate-design.md` §11 v4どおり、凍結済み0件（charges 0 / fee_snapshot deals 0）を再確認して実装。月額kind・型・分岐・固定行計上・API返却・UI/ⓘを撤去し、DBは `omnis-founding-v1.payment_fee_rate=0.05 / monthly_fee=null` の2列だけ更新。
 - 専用E2E 6/6、supplier money 375px溢れ0、恒久ゲート全green、money 4ハッシュ全桁一致、CCSF1 relational/auth残置0。COPY退避・SQL・grep全数監査・before/afterは `docs/reports/simple_fee1_20260805.md`。
 
+### 2026-08-05 SIMPLE-FEE-1 検収合格（9472285）＝手数料の単純化完了
+
+- リード独立実測: 本番stamp 9472285=HEAD・rate_cards実測（omnis: monthly=null/pay5=0.05/half_commission・standard: passthrough）・製品コードの月額系識別子/表示語 残存0・menu hash `4f1b52d0…`不変・seed 38/340,320・deals 0・charges 0。
+- 実装は§11どおり: 停止条件（凍結データ0件）をSQL内で二重検査してから実行・不変領域のSHA-256証明（supplierChargeBase/freezeFeeSnapshot/frontier系）・E2E 6/6（折半50%/決済5%/月額行の非出現/金額実算）。**サプライヤーの意味差は fee_model 1点に単純化完了**。
+- 検収時の指摘1件: 統合レポートの完了SHA/デプロイID/本番stamp欄がテンプレ未記入（実態はデプロイ済・リード実測で補完）。レポート最終値の記入漏れは軽微だが再発時は差し戻す旨をCodexへ申し送り。
+
 ### 2026-08-05 手数料単純化の裁定（勝彦）→ SIMPLE-FEE-1 発注
 
 - 勝彦裁定: 月額固定（オムニス¥5万）は**システム外請求へ全廃**・サプライヤー間のシステム内差分は「折半か否か」のみ。lineage-rate-design **§11（v4追補）**として承認記録・凍結済みデータ0件の窓につき後方互換コード不要。
