@@ -32,7 +32,7 @@ export default async function InvitePage({
 
   const { data: invite } = await service
     .from('invites')
-    .select('email, name, expires_at, used_at')
+    .select('email, name, expires_at, used_at, kind, supplier_rate_card')
     .eq('token', token)
     .single()
 
@@ -51,6 +51,7 @@ export default async function InvitePage({
       email={invite.email}
       defaultName={invite.name ?? ''}
       token={token}
+      inviteKind={(invite as { supplier_rate_card?: string | null }).supplier_rate_card ? 'supplier' : ((invite as { kind?: string | null }).kind ?? 'partner')}
     />
   )
 }

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import BankBranchSelect, { type BankDraft } from '@/components/ui/BankBranchSelect'
 
 type Step = 1 | 2 | 3 | 4
-type Step2Field = 'lastName' | 'firstName' | 'phone' | 'address'
+type Step2Field = 'companyName' | 'lastName' | 'firstName' | 'phone' | 'address'
 type Step2Errors = Partial<Record<Step2Field, string>>
 type Step3Field = 'bank' | 'branch' | 'accountNumber' | 'accountHolder'
 type Step3Errors = Partial<Record<Step3Field, string>>
@@ -26,7 +26,9 @@ function Field({ label, children, error }: { label: React.ReactNode; children: R
   )
 }
 
-export default function InviteForm({ email, defaultName, token }: { email: string; defaultName: string; token: string }) {
+export default function InviteForm({ email, defaultName, token, inviteKind = 'partner' }: { email: string; defaultName: string; token: string; inviteKind?: string }) {
+  // サプライヤー招待＝招待時の name は「会社名」。姓名へ分割せず、会社名欄と担当者氏名欄を分けて収集する。
+  const isSupplier = inviteKind === 'supplier'
   const router = useRouter()
   const sp = useSearchParams()
   const frontierFlag = sp.get('role') === 'frontier'   // フロンティアとして登録
@@ -42,13 +44,14 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
   const [passwordConfirm, setPasswordConfirm] = useState('')
   // STEP2（①招待時の氏名は「姓 名」でスペース区切りがある時だけ分割。無ければ空欄で本人入力＝フルネームが姓に入らない）
   const nameParts = (defaultName ?? '').trim().split(/[\s　]+/).filter(Boolean)
-  const [lastName, setLastName] = useState(nameParts.length >= 2 ? nameParts[0] : '')
-  const [firstName, setFirstName] = useState(nameParts.length >= 2 ? nameParts.slice(1).join(' ') : '')
+  const [companyName, setCompanyName] = useState(isSupplier ? (defaultName ?? '').trim() : '')
+  const [lastName, setLastName] = useState(!isSupplier && nameParts.length >= 2 ? nameParts[0] : '')
+  const [firstName, setFirstName] = useState(!isSupplier && nameParts.length >= 2 ? nameParts.slice(1).join(' ') : '')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')   // B: 住所（支払調書の送付・税務手続に使用）
   const [step2Errors, setStep2Errors] = useState<Step2Errors>({})
   // STEP3
-  const [taxType, setTaxType] = useState<'individual' | 'corporate'>('individual')
+  const [taxType, setTaxType] = useState<'individual' | 'corporate'>(isSupplier ? 'corporate' : 'individual')
   // B: 銀行→支店は全銀マスタの段階選択（自由入力フォールバック付き）
   const [bankDraft, setBankDraft] = useState<BankDraft>({ bank_name: '', branch_name: '' })
   const bankName = bankDraft.bank_name
@@ -88,6 +91,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
     if (step === 1 && !step1ok) { setError(password.length < 8 ? 'パスワードは8文字以上で設定してください' : 'パスワードが一致しません'); return }
     if (step === 2) {
       const errors: Step2Errors = {
+        ...(isSupplier && !companyName.trim() && { companyName: '会社名を入力してください' }),
         ...(!lastName.trim() && { lastName: '姓を入力してください' }),
         ...(!firstName.trim() && { firstName: '名を入力してください' }),
         ...(!phone.trim() && { phone: '電話番号を入力してください' }),
@@ -119,6 +123,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token, email, password,
+        companyName: isSupplier ? companyName.trim() : undefined,
         lastName: lastName.trim(), firstName: firstName.trim(),
         phone: phone.trim(), address: address.trim(),
         taxType, bankName: bankName.trim(), branchName: branchName.trim(), accountType,
@@ -194,14 +199,20 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
 
           {step === 2 && (
             <>
+                            {isSupplier && (
+                <Field label="会社名 *" error={step2Errors.companyName}>
+                  <input aria-invalid={!!step2Errors.companyName} value={companyName} onChange={(e) => { setCompanyName(e.target.value); clearStep2Error('companyName') }} placeholder="株式会社オムニス" style={{ ...input, borderColor: step2Errors.companyName ? 'var(--red)' : 'var(--line)' }} />
+                  <p style={{ fontSize: '.62rem', color: 'var(--muted2)', marginTop: 4, lineHeight: 1.6 }}>会社名はお金・請求の画面に、ご担当者のお名前はやり取りの表示に使われます。</p>
+                </Field>
+              )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }}>
-                  <Field label="姓 *" error={step2Errors.lastName}>
+                  <Field label={isSupplier ? "ご担当者の姓 *" : "姓 *"} error={step2Errors.lastName}>
                     <input aria-invalid={!!step2Errors.lastName} value={lastName} onChange={(e) => { setLastName(e.target.value); clearStep2Error('lastName') }} placeholder="山田" style={{ ...input, borderColor: step2Errors.lastName ? 'var(--red)' : 'var(--line)' }} />
                   </Field>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <Field label="名 *" error={step2Errors.firstName}>
+                  <Field label={isSupplier ? "ご担当者の名 *" : "名 *"} error={step2Errors.firstName}>
                     <input aria-invalid={!!step2Errors.firstName} value={firstName} onChange={(e) => { setFirstName(e.target.value); clearStep2Error('firstName') }} placeholder="太郎" style={{ ...input, borderColor: step2Errors.firstName ? 'var(--red)' : 'var(--line)' }} />
                   </Field>
                 </div>
@@ -221,7 +232,7 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
               <Field label="区分 *">
                 <div style={{ display: 'flex', gap: 8 }}>
                   {([['individual', '個人'], ['corporate', '法人']] as const).map(([v, l]) => (
-                    <button key={v} type="button" onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: 'pointer' }}>{l}</button>
+                    <button key={v} type="button" disabled={isSupplier && v === 'individual'} onClick={() => setTaxType(v)} style={{ flex: 1, padding: '10px', borderRadius: 9, border: `1.5px solid ${taxType === v ? 'var(--blue)' : 'var(--line)'}`, background: taxType === v ? 'var(--blue-bg2)' : '#fff', color: taxType === v ? 'var(--blue)' : 'var(--txt)', fontWeight: 500, fontSize: '.8rem', cursor: isSupplier && v === 'individual' ? 'not-allowed' : 'pointer', opacity: isSupplier && v === 'individual' ? .45 : 1 }}>{l}</button>
                   ))}
                 </div>
               </Field>
@@ -243,7 +254,8 @@ export default function InviteForm({ email, defaultName, token }: { email: strin
             <>
               <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
                 {[
-                  ['お名前', `${lastName} ${firstName}`],
+                  ...(isSupplier ? [['会社名', companyName] as [string, string]] : []),
+                  [isSupplier ? 'ご担当者' : 'お名前', `${lastName} ${firstName}`],
                   ['メール', email],
                   ['電話番号', phone],
                   ['住所', address],

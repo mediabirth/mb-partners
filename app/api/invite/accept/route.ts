@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     agreeTerms, agreePrivacy,
     name: legacyName,
     frontierFlag, frontierId,   // R2: ?role=frontier → is_frontier / ?f=<id> → 配下紐づけ
+    companyName,                // サプライヤー招待: 会社名（partners.company_name へ保存）
   } = body
 
   const name = (lastName || firstName)
@@ -216,13 +217,18 @@ export async function POST(req: NextRequest) {
     const inviteSupplierCard = (invite as { supplier_rate_card?: string | null }).supplier_rate_card ?? null
     const frontierFields: Record<string, unknown> = {}
     if (isFrontierInvite) frontierFields.is_frontier = true
-    if (inviteSupplierCard) { frontierFields.is_frontier = true; frontierFields.supplier_rate_card = inviteSupplierCard }
+    if (inviteSupplierCard) {
+      frontierFields.is_frontier = true
+      frontierFields.supplier_rate_card = inviteSupplierCard
+      // サプライヤー正典（lineage-rate-design §7-2）: 法人必須・会社名を partners.company_name へ保存。
+      frontierFields.company_name = (typeof companyName === 'string' && companyName.trim() ? companyName.trim() : (invite as { name?: string | null }).name ?? '').slice(0, 120) || null
+    }
     if (typeof frontierId === 'string' && frontierId) {
       frontierFields.frontier_id = frontierId
       frontierFields.frontier_linked_at = nowIso
     }
     const partnerFields = fullRegistration ? {
-      tax_type: taxType,
+      tax_type: inviteSupplierCard ? 'corporate' : taxType,
       bank,
       phone: (phone ?? '').trim() || null,
       address: (address ?? '').trim() || null,

@@ -6,7 +6,7 @@ type Kind = 'partner' | 'frontier' | 'supplier' | 'delivery'
 const KINDS: { id: Kind; label: string; note: string }[] = [
   { id: 'partner', label: 'パートナー', note: '' },
   { id: 'frontier', label: 'フロンティア', note: '' },
-  { id: 'supplier', label: 'サプライヤー（会社）', note: '' },
+  { id: 'supplier', label: 'サプライヤー', note: '' },
   { id: 'delivery', label: 'デリバリー', note: '営業・紹介も担う方は「パートナー」で迎えてください。デリバリーは実務のみを担う委託先です。' },
 ]
 type Card = { id: string; name: string; deprecated?: boolean }
@@ -112,7 +112,7 @@ export default function InviteForm() {
 
           {error && <p style={{ fontSize: '.72rem', color: 'var(--red)', marginBottom: 12 }}>{error}</p>}
 
-          <button type="submit" className="ui-btn ui-btn--primary" style={{ justifyContent: 'center' }} disabled={loading || !email.trim() || ((kind === 'delivery' || kind === 'supplier') && !name.trim())}>
+          <button type="submit" className="ui-btn ui-btn--primary ui-btn--md" style={{ justifyContent: 'center' }} disabled={loading || !email.trim() || ((kind === 'delivery' || kind === 'supplier') && !name.trim())}>
             <ActionPending state={actionState} idleLabel="招待リンクを作成" pendingLabel="招待を準備しています…" successLabel="作成しました" />
           </button>
         </form>
