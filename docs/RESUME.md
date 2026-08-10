@@ -1,5 +1,26 @@
 # MB Partners — 開発記録 / RESUME（リポ内正本）
 
+## 🔁 セッション引き継ぎ（2026-08-06・リード交代用ヘッダ）
+
+**新セッションの起動手順**: ①本ファイル全読 ②AGENTS.md（Codex恒久指示）③CLAUDE.md（規律正典）。体制=勝彦（最終決定者）／リード=Claude Codeセッション（設計・裁定・発注・検収・記録）／Codex=GPT-5.6 Sol（実装・完全自走）。
+
+**現在地（2026-08-06 時点・全て実測済）**:
+- 本番 stamp `5e5dd7e`=HEAD（invite-polish）。デプロイ=CLI一本（git自動デプロイ恒久停止）。26バッチ連続検収合格。
+- **実運用開始済み**: partners= 高明さん（ZZ4172・㈱オムニスリガーレ・折半カードomnis-founding-v1・法人）／若菜優哉さん（ZZ8240・高さん系統配下）／勝彦（ZZ4820・自己テストでsupplier昇格中＝戻すか勝彦一言待ち）／MBHOUSE。deals=0（最初の実案件待ち）。
+- money正典: menu `4f1b52d0…`・MB seed 38行/340,320・deals/fee/override=(empty)・生き値突合運用。
+- 商品棚: 3ブランド22メニュー（全て粗利10%・協力タスク4種）。手数料=折半orパススルーの1点差（月額全廃・システム外請求）。
+
+**未決（優先順）**:
+1. 高さん（オムニスリガーレ）のブランド・メニュー搭載（台帳方式可・リスト待ち）
+2. ②b 相談の報酬凍結: docs/design/consult-reward-freeze.md v1 **勝彦承認待ち**（承認後 console「メニューを確定する」に凍結配線）
+3. ZZ4820 のsupplier昇格を戻すか（勝彦一言）
+4. バックログ: resume-perfフル走行時マージン（console復帰が単発赤・単独green＝計測隔離バッチ）／成約タイムライン文言分離／supplier固有通知種別／broadcast既読／lint既存456件／vendor324ms=構造下限確定済み／ダーク=要望駆動
+5. 運用系: 第2陣招待・apex MX・カレンダー/OAuth本番確認・LPロゴ素材（PRAGMATION/EMANATION正規ロゴ）
+
+**運用上の教訓（新リード必読）**: 検証サーバの停止はポート基準 `kill $(lsof -t -iTCP:4599 -sTCP:LISTEN)`（pkillはnext-serverに不効）／プローブは hydration-safe fill（値検証つき再fill）／throwaway残置はFK連鎖（supplier_card_events等）まで掃除／復元はCSV NULL化とtoken列に注意（作業ログ 7/24参照）／不可逆データ操作は台帳→勝彦GO→バックアップ→実行。
+
+---
+
 ## 2026-07-26 UX-5c（Codex・機能パリティ）
 
 - console自己管理を中央factory/面別cookie文法のまま追加し、session 32/32×2・4面自己管理43/43を実走。
