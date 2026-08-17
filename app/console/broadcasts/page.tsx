@@ -4,6 +4,7 @@ import PageGuide from '@/components/PageGuide'
 import { GUIDE_BROADCASTS } from '@/lib/console-guides'
 import Link from 'next/link'
 import ConsoleNav from '@/components/ConsoleNav'
+import WeeklyDigestPanel from './WeeklyDigestPanel'
 
 type Broadcast = {
   id: string
@@ -56,7 +57,7 @@ export default function BroadcastsPage() {
 
       <div style={{ flex: 1, marginLeft: 230 }}>
         {/* Top bar */}
-        <div className="console-mobile-header" style={{
+        <div className="console-topbar console-mobile-header" style={{
           background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(10px)',
           borderBottom: '0.5px solid var(--line)', padding: '13px 28px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -75,6 +76,7 @@ export default function BroadcastsPage() {
         </div>
 
         <div className="page-anim" style={{ padding: '28px', maxWidth: 860 }}>
+          <WeeklyDigestPanel />
           {loading && (
             <div className="stagger">
               {[0, 1, 2].map(i => (

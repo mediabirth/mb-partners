@@ -7,6 +7,7 @@ import SettingsScreen from '@/components/ui/SettingsScreen'
 import LineLinkCard from '@/components/LineLinkCard'
 import InviteFellowCard from '@/components/InviteFellowCard'
 import PushToggle from '@/components/PushToggle'
+import EmailNotificationToggle from '@/components/EmailNotificationToggle'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -37,7 +38,7 @@ export default function SettingsPage() {
       ]}
       notifications={[
         { title: 'アプリ内通知', desc: '受信箱でいつでも確認できます', state: 'on' },
-        { title: 'メール通知', desc: '重要なお知らせをメールでお届けします', state: 'on' },
+        { title: 'メール通知', desc: '重要なお知らせと週次ダイジェストをお届けします', control: <EmailNotificationToggle /> },
         // 磨き③: 「準備中」の張りぼてを実トグルへ（購読/解除・非対応環境は静かに表示）
         { title: 'プッシュ通知', desc: '成約などの大事な瞬間をすぐお知らせします', control: <PushToggle /> },
       ]}

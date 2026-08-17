@@ -21,6 +21,7 @@ import BankCard from './BankCard'
 import CompanyNameField from './CompanyNameField'
 import AccountSecurityPanel from '@/components/auth/AccountSecurityPanel'
 import { BUILD_STAMP } from '@/lib/build-stamp'
+import EmailNotificationToggle from '@/components/EmailNotificationToggle'
 // 設定: 会社情報・変更申請履歴・通知先
 const KIND_JP: Record<string, string> = { public_description: '顧客向け説明', image: 'イメージ画像', menu_name: 'メニュー名', visibility: '公開/非公開' }
 export default async function SupplierSettingsPage() {
@@ -42,6 +43,12 @@ export default async function SupplierSettingsPage() {
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>税区分</span><span>{p?.tax_type === 'corporate' ? '法人' : '個人'}</span></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>通知先メール</span><span>{prof?.email ?? '—'}</span></div>
         <div style={ROW}><span style={{ color: 'var(--muted2)' }}>電話番号</span><span>{p?.phone ?? '—'}</span></div>
+      </div>
+
+      <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>通知</h2>
+      <div style={{ ...CARD, marginBottom: 16, padding: '11px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div><div style={{ fontSize: '.74rem', fontWeight: 500 }}>メール通知</div><div style={{ fontSize: '.64rem', color: 'var(--muted2)', marginTop: 2 }}>重要なお知らせと週次ダイジェスト</div></div>
+        <EmailNotificationToggle />
       </div>
 
       <h2 style={{ fontSize: '.78rem', fontWeight: 500, margin: '0 0 8px' }}>振込先口座</h2>
