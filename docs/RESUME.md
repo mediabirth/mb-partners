@@ -4,6 +4,14 @@
 
 **最新（2026-08-18）**: GEN-1「鼓動」を実装。金曜11:00の週次ダイジェスト、3セグメント、決定的な今週のネタ、署名付きワンクリック停止、consoleプレビュー/既定OFFトグルを追加。専用E2Eと恒久ゲートは全green、money 4ハッシュ不変、throwaway残置0。**本配信トグルはOFFのまま**で、点火は設計§5どおり勝彦の手番。
 
+### 2026-08-18 GEN-1 検収合格（904ef40）＝鼓動の器が本番に載った・点火は勝彦の手番
+
+- リード独立実測: 本番stamp 904ef40=HEAD=origin/main・無署名cron GET/POSTとも401・不正token停止は303→静音ページ（oracleなし）・money 4ハッシュ全一致＋MB seed 38行/340,320（全行集計が正典。activeのみ集計=28行/60,260はクエリ定義違いであってデータ変化ではない——検収時に一度誤検知しかけた記録として残す）。
+- 本番consoleを実ブラウザ（owner session mint→mb-auth-console再構築・console.mb-partners.appホスト）で描画実測: トグル「停止中」（aria-checked=false）・次回対象3名=新規未紹介3/進行中0/静か0（DB解決値と一致: ZZ4820/ZZ4172/ZZ8240全員起票0件・登録7日超）・375px溢れ0・トグル86×44・pageerror 0・配信履歴空。
+- コード精査: 文面生成はmoney語/金額表現をassertで構造遮断（違反ネタはfallback縮退）・配信停止はHMAC+timingSafeEqual・停止スイッチは既存member_notification_prefs.email_enabledに一本化（二重管理なし）・冪等はmail_log meta(week_key+partner_id)・トグルOFFはmail_log非接触の完全無音・検証用シンク送信POSTはCRON_SECRET+@mb-system.internal限定で実ユーザー宛は構造的に不可。canonにGEN-1決定性6件が自動配線（lib/*.test.tsグロブ）＝6/6リード再走green。
+- 残置実測0: gen1系profiles/auth/mail_log 0・prefs無効化行0・partners=既知4行のみ。監査証跡として weekly-digest-preview 1行（cc-gen1-sink宛sent）は意図的残置＝承認。
+- **点火待ち**: console→配信→週次ダイジェスト→プレビュー確認→トグルON（設計§5・勝彦の手番）。ON後の初回は金曜11:00 JST・現在の対象3名（勝彦ZZ4820含む）。翌週 src=digest 帰属がGEN計測の初データ。
+
 ### 2026-08-18 GEN-1（Codex・週次パートナーダイジェスト）
 
 - `docs/design/gen1-heartbeat.md` v1どおり、active・メール通知ON・登録3日超・恒久除外を解決し、1パートナー週1通を`mail_log`で冪等化。文面生成は件数/状態語だけを受け、money語・金額表現を生成時ガードで遮断。
