@@ -4,6 +4,7 @@
  */
 import crypto from 'node:crypto'
 import { brandedEmailHtml, escapeHtml } from '@/lib/mail-render'
+import { buildSocialProofCopy, type SocialProofCounts } from '@/lib/social-proof'
 
 export const WEEKLY_DIGEST_TEMPLATE_KEY = 'weekly-digest'
 export const HEARTBEAT_CATALOG_START = '2026-08-05T00:00:00.000Z'
@@ -137,6 +138,7 @@ export function buildDigestCopy(params: {
   progressCount: number
   recentState: string | null
   unreadCount: number
+  socialProof: SocialProofCounts
   tip: DigestTip
   tipUrl: string
   referUrl: string
@@ -147,10 +149,12 @@ export function buildDigestCopy(params: {
   const tipName = safeTipText(params.tip.name, '今週のご紹介ヒント')
   const tipDescription = safeTipText(params.tip.shortDescription, '気になる方がいたら、会話のきっかけとしてお使いください。')
   const recent = params.recentState ?? 'まだありません'
-  const text = `${params.displayName} 様\n\n${INTRO[params.segment]}\n\nあなたの現在地\n・進行中 ${params.progressCount}件\n・直近の動き ${recent}\n・未読 ${params.unreadCount}件\n\n今週のネタ\n${tipName}\n${tipDescription}\n${params.tipUrl}\n\n紹介する\n${params.referUrl}\n\nまず相談\n${params.consultUrl}\n\n週次ダイジェストを停止する\n${params.unsubscribeUrl}`
+  const socialProofLine = buildSocialProofCopy(params.socialProof, 7).digestLine
+  const socialProofText = socialProofLine ? `\n\n${socialProofLine}` : ''
+  const text = `${params.displayName} 様\n\n${INTRO[params.segment]}\n\nあなたの現在地\n・進行中 ${params.progressCount}件\n・直近の動き ${recent}\n・未読 ${params.unreadCount}件${socialProofText}\n\n今週のネタ\n${tipName}\n${tipDescription}\n${params.tipUrl}\n\n紹介する\n${params.referUrl}\n\nまず相談\n${params.consultUrl}\n\n週次ダイジェストを停止する\n${params.unsubscribeUrl}`
 
   // URLを除く可視文言を検査。件数と状態語の数字だけが許可され、money語・金額表現は通らない。
-  assertDigestBoundary([subject, params.displayName, INTRO[params.segment], recent, tipName, tipDescription].join('\n'))
+  assertDigestBoundary([subject, params.displayName, INTRO[params.segment], recent, socialProofLine ?? '', tipName, tipDescription].join('\n'))
 
   const html = brandedEmailHtml({
     blocksHtml: `
@@ -160,6 +164,7 @@ export function buildDigestCopy(params: {
         <p style="margin:0 0 7px;font-size:12px;color:#6E707D">あなたの現在地</p>
         <p style="margin:0;font-size:14px">進行中 ${params.progressCount}件 ・ 直近の動き ${escapeHtml(recent)} ・ 未読 ${params.unreadCount}件</p>
       </div>
+      ${socialProofLine ? `<p style="margin:-7px 0 18px;font-size:13px;color:#474957">${escapeHtml(socialProofLine)}</p>` : ''}
       <p style="margin:0 0 5px;font-size:12px;color:#6E707D">今週のネタ</p>
       <p style="margin:0 0 4px;font-size:16px;font-weight:700">${escapeHtml(tipName)}</p>
       <p style="margin:0 0 16px;font-size:13px;color:#6E707D">${escapeHtml(tipDescription)}</p>

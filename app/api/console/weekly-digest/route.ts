@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { DIGEST_SEGMENT_LABEL, digestWeekKey } from '@/lib/weekly-digest'
 import { loadDigestTipsForPreview, resolveWeeklyDigestAudience, sampleDigestCopies } from '@/lib/weekly-digest-server'
+import { getSocialProof } from '@/lib/social-proof'
 
 export const runtime = 'nodejs'
 
@@ -16,11 +17,12 @@ async function requireOwner() {
 export async function GET() {
   if (!(await requireOwner())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const admin = await createServiceRoleClient()
-  const [{ data: settings, error: settingsError }, audience, tips, { data: logs }] = await Promise.all([
+  const [{ data: settings, error: settingsError }, audience, tips, { data: logs }, socialProof] = await Promise.all([
     admin.from('notification_settings').select('weekly_digest_enabled').eq('id', 1).maybeSingle(),
     resolveWeeklyDigestAudience(admin),
     loadDigestTipsForPreview(admin),
     admin.from('mail_log').select('template_key, status, meta, created_at').in('template_key', ['weekly-digest', 'weekly-digest-unsubscribe']).order('created_at', { ascending: false }).limit(300),
+    getSocialProof(7).catch(() => ({ referrals: 0, wins: 0, newPartners: 0 })),
   ])
   if (settingsError) return NextResponse.json({ error: '週次ダイジェスト設定のmigrationが必要です' }, { status: 503 })
   const segments = { new: 0, active: 0, quiet: 0 }
@@ -34,7 +36,7 @@ export async function GET() {
     if (row.template_key === 'weekly-digest-unsubscribe') entry.stopped++
     history.set(week, entry)
   }
-  const samples = sampleDigestCopies(tips).map(copy => ({
+  const samples = sampleDigestCopies(tips, new Date(), socialProof).map(copy => ({
     segment: copy.segment,
     label: DIGEST_SEGMENT_LABEL[copy.segment],
     subject: copy.subject,

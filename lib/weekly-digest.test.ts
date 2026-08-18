@@ -51,12 +51,36 @@ test('内部シンクとcc-monitorは恒久除外', () => {
 test('文面は金額境界を越えず、危険なネタ説明を安全文へ縮退する', () => {
   const copy = buildDigestCopy({
     segment: 'new', displayName: '山田 太郎', progressCount: 0, recentState: null, unreadCount: 1,
+    socialProof: { referrals: 3, wins: 1, newPartners: 2 },
     tip: { ...TIPS[0], shortDescription: '報酬は¥30,000です' },
     tipUrl: 'https://mb-partners.app/r/a?src=digest', referUrl: 'https://mb-partners.app/app/refer?src=digest',
     consultUrl: 'https://mb-partners.app/app/refer?consult=1&src=digest', unsubscribeUrl: 'https://mb-partners.app/api/weekly-digest/unsubscribe?token=x',
   })
   assert.doesNotMatch(copy.text, /報酬|¥|30,000/)
+  assert.match(copy.text, /あなたの現在地[\s\S]*先週、ネットワークでは 新しい紹介が3件・成約が1件 ありました[\s\S]*今週のネタ/)
   assert.doesNotThrow(() => assertDigestBoundary(copy.text.replaceAll(/https?:\/\/\S+/g, '')))
+})
+
+test('3セグメントsnapshotへ同じ証明行を挿入し、全0では行ごと省略する', () => {
+  for (const segment of ['new', 'active', 'quiet'] as const) {
+    const base = {
+      segment,
+      displayName: '山田 太郎',
+      progressCount: segment === 'active' ? 2 : 0,
+      recentState: segment === 'active' ? '対応中' : null,
+      unreadCount: 0,
+      tip: TIPS[0],
+      tipUrl: 'https://mb-partners.app/r/a?src=digest',
+      referUrl: 'https://mb-partners.app/app/refer?src=digest',
+      consultUrl: 'https://mb-partners.app/app/refer?consult=1&src=digest',
+      unsubscribeUrl: 'https://mb-partners.app/api/weekly-digest/unsubscribe?token=x',
+    }
+    const withProof = buildDigestCopy({ ...base, socialProof: { referrals: 2, wins: 1, newPartners: 9 } })
+    const withoutProof = buildDigestCopy({ ...base, socialProof: { referrals: 0, wins: 0, newPartners: 9 } })
+    assert.match(withProof.text, /あなたの現在地[\s\S]*先週、ネットワークでは 新しい紹介が2件・成約が1件 ありました[\s\S]*今週のネタ/)
+    assert.doesNotMatch(withoutProof.text, /先週、ネットワークでは/)
+    assert.doesNotMatch(withProof.text.match(/先週、ネットワークでは[^\n]+/)?.[0] ?? '', /山田|会社|株式会社|メニュー|報酬|受注額|粗利|委託費|[¥￥]/)
+  }
 })
 
 test('配信停止tokenは署名・期限を検証する', () => {

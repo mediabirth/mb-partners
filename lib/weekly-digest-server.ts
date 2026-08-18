@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/notify'
 import { logMail } from '@/lib/mail-send'
 import { DEAL_STATUS } from '@/lib/status'
+import { getSocialProof, type SocialProofCounts } from '@/lib/social-proof'
 import {
   HEARTBEAT_CATALOG_START,
   WEEKLY_DIGEST_TEMPLATE_KEY,
@@ -86,12 +87,13 @@ export async function resolveWeeklyDigestAudience(admin: SupabaseClient, now = n
   const partnerIds = partners.map(p => p.id)
   const profileIds = partners.map(p => p.profile_id)
 
-  const [{ data: prefs, error: prefsError }, { data: deals, error: dealError }, { data: unread, error: unreadError }, { data: links, error: linkError }, tips] = await Promise.all([
+  const [{ data: prefs, error: prefsError }, { data: deals, error: dealError }, { data: unread, error: unreadError }, { data: links, error: linkError }, tips, socialProof] = await Promise.all([
     admin.from('member_notification_prefs').select('user_id, email_to, email_enabled').in('user_id', profileIds),
     admin.from('deals').select('partner_id, status, created_at, updated_at').in('partner_id', partnerIds),
     admin.from('notifications').select('partner_id').in('partner_id', partnerIds).is('read_at', null),
     admin.from('referral_links').select('partner_id, service_id, token').in('partner_id', partnerIds),
     loadTips(admin),
+    getSocialProof(7).catch(() => ({ referrals: 0, wins: 0, newPartners: 0 })),
   ])
   if (prefsError || dealError || unreadError || linkError) {
     throw new Error(`weekly digest audience query failed: ${prefsError?.message ?? dealError?.message ?? unreadError?.message ?? linkError?.message}`)
@@ -145,6 +147,7 @@ export async function resolveWeeklyDigestAudience(admin: SupabaseClient, now = n
       progressCount,
       recentState: lastDeal ? (DEAL_STATUS[lastDeal.status]?.label ?? lastDeal.status) : null,
       unreadCount: unreadByPartner.get(partner.id) ?? 0,
+      socialProof,
       tip,
       tipUrl,
       referUrl: `${BASE}/app/refer?src=digest`,
@@ -204,7 +207,7 @@ export async function deliverWeeklyDigestRecipients(admin: SupabaseClient, recip
   return { scanned: recipients.length, attempted, sent, duplicate }
 }
 
-export function sampleDigestCopies(tips: DigestTip[], now = new Date()) {
+export function sampleDigestCopies(tips: DigestTip[], now = new Date(), socialProof: SocialProofCounts = { referrals: 0, wins: 0, newPartners: 0 }) {
   if (tips.length === 0) return []
   return (['new', 'active', 'quiet'] as const).map((segment, index) => {
     const tip = selectDigestTip(`preview-${segment}`, now, tips)
@@ -214,6 +217,7 @@ export function sampleDigestCopies(tips: DigestTip[], now = new Date()) {
       progressCount: segment === 'active' ? 2 : 0,
       recentState: segment === 'active' ? '対応中' : null,
       unreadCount: index,
+      socialProof,
       tip,
       tipUrl: `${BASE}/r/preview?src=digest`,
       referUrl: `${BASE}/app/refer?src=digest`,

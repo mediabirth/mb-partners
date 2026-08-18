@@ -12,6 +12,8 @@ import PushOptIn from '@/components/PushOptIn'
 import SupplierConsoleHome from './home/SupplierConsoleHome'
 import FrontierHomeTop from './home/FrontierHomeTop'
 import { getAppPersonaContext } from '@/lib/app-persona'
+import { getSocialProof } from '@/lib/social-proof'
+import SocialProofCard from '@/components/SocialProofCard'
 
 export const runtime = 'edge'
 
@@ -25,11 +27,12 @@ export default async function AppPage() {
   // 磨き④: menus 全件（表示名解決）は何にも依存しないため初回並列に統合（従来は後追い直列＋service client二重生成）。
   const { createServiceRoleClient } = await import('@/lib/supabase/server')
   const admin = await createServiceRoleClient()
-  const [partnerResult, recentEvents, menusRes, persona] = await Promise.all([
+  const [partnerResult, recentEvents, menusRes, persona, socialProof] = await Promise.all([
     getPartnerWithDeals(supabase, uid),
     getRecentEventsByUserId(supabase, uid),
     admin.from('menus').select('id, name').then(r => r, () => ({ data: null })),
     getAppPersonaContext(),
+    getSocialProof(30).catch(() => ({ referrals: 0, wins: 0, newPartners: 0 })),
   ])
   // If no partner record, go to root — root page routes admins to /console.
   // Redirecting to /login here would loop: login→/app→/login for admins.
@@ -199,6 +202,8 @@ export default async function AppPage() {
       </div>
       )}
 
+      <SocialProofCard counts={socialProof} />
+
       {/* やること：今後の商談スケジュールのみ（受付済みは「最近の動き」に集約） */}
       <div style={{ padding: '22px 20px 6px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -286,7 +291,7 @@ export default async function AppPage() {
                   {deal ? customerHonorific(deal) : ''}
                 </div>
                 {/* ③ ステータス語彙は lib/status.ts（単一の正）をそのまま表示。 */}
-                {deal && (() => { const s = dealStatus(deal.status); return <StatusPill size="sm" tone={s.tone} children={s.children} /> })()}
+                {deal && (() => { const s = dealStatus(deal.status); return <StatusPill size="sm" tone={s.tone}>{s.children}</StatusPill> })()}
                 <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>›</span>
               </Link>
             )
