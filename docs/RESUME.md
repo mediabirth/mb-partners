@@ -2,7 +2,17 @@
 
 ## 🔁 セッション引き継ぎ（2026-08-18 更新・リード交代用ヘッダ）
 
-**最新（2026-08-18）**: GEN-1「鼓動」を実装。金曜11:00の週次ダイジェスト、3セグメント、決定的な今週のネタ、署名付きワンクリック停止、consoleプレビュー/既定OFFトグルを追加。専用E2Eと恒久ゲートは全green、money 4ハッシュ不変、throwaway残置0。**本配信トグルはOFFのまま**で、点火は設計§5どおり勝彦の手番。
+**最新（2026-08-18）**: GEN-1「鼓動」（点火待ち）に続き **GEN-2「道具」検収合格・本番反映（59ba899）**＝/r/リンクがOGカード化・共有シートにプレビュー+文面コピー・funnel src/menu帰属開始。GEN-1は金曜11:00の週次ダイジェスト、3セグメント、決定的な今週のネタ、署名付きワンクリック停止、consoleプレビュー/既定OFFトグルを追加。専用E2Eと恒久ゲートは全green、money 4ハッシュ不変、throwaway残置0。**本配信トグルはOFFのまま**で、点火は設計§5どおり勝彦の手番。
+
+### 2026-08-18 GEN-2 検収合格＋リード引き取りデプロイ（59ba899）＝共有リンクの「カード化」が本番へ
+
+- Codexは実装完了もサンドボックス制約（レジストリDNS不可・socket bind不可・実リポジトリread-only）でデプロイ以降を実行不能→**設計どおりの安全側判断**として保留レポート＋完全パッチを納品。リードが完全自走で引き取り: clone から FF 取り込み（コミット同一性保証）→migration→全ゲート→デプロイ→本番実測。
+- diff全精査: 許可表(share-card-public)・OG決定的生成（Zen Old Mincho同梱・実行時外部fetchなし・不正colorやdata:以外の画像は縮退）・ReferralLandingClientは機械的移設（差分=関数名+帰属送信のみ）・既存route不正export(parseButtons等)のlib移設は挙動不変・単体8/8。
+- **funnel_events に src/menu_id をadditive適用**（begin/commit・列2実測）。GEN-1のsrc=digestがこれで実測可能に。
+- test:verify: 1回目RED（リードのtailパイプミスで失敗ステップのログ喪失=手戻り開示）→クリーン再走で**全ステップGREEN**（resume-perf 21/21含む）。
+- デプロイ dpl_5TQqKz9ix3RpP6JP92svrBUa19ix・stamp 59ba899=HEAD実測。**本番プローブ19チェックALL GREEN**（throwaway CCGEN2・残置0機械証明・auth 0）: og:title/og:image×3UA（Mozilla/facebookexternalhit/LINE）・metaにmoney語0・OG画像200/png 38KB/s-maxage=86400・不正token=汎用200（oracleなし）・funnel src=card+menu_id/digest/旧形null記録・dedup（旧形と不正値正規化は同一ハッシュに畳まれ3行=仕様どおり。プローブ初版の期待値4行はリードの読み違い→修正）。
+- 共有シート375px本番実ブラウザ（throwaway・SWブロック）: カードプレビュー実読込200・文面ごとコピー/LINE/URLボタン全44px・src=card・溢れ0・pageerror 0（証跡=docs/reports/gen2_screens/gen2-sheet-375-prod.png）。TTFB before 0.15-0.20s→after 0.13-0.18s=非劣化。money 4ハッシュ+seed 38/340,320 前後完全一致。
+- dx/reso 註: プローブが拾った「dx」はPRAGMATIONの内部id（8/5正典投入時にブランド改名再利用）＝残骸ではない。
 
 ### 2026-08-18 GEN-2「道具」設計確定＋完全自走の再強調（勝彦指示）
 
