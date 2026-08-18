@@ -2,7 +2,16 @@
 
 ## 🔁 セッション引き継ぎ（2026-08-18 更新・リード交代用ヘッダ）
 
-**最新（2026-08-18）**: GEN-1「鼓動」（点火待ち）に続き **GEN-2「道具」（59ba899）・GEN-3「火」（bc38b38）検収合格・本番反映**＝/r/リンクがOGカード化・共有シートにプレビュー+文面コピー・funnel src/menu帰属開始。GEN-1は金曜11:00の週次ダイジェスト、3セグメント、決定的な今週のネタ、署名付きワンクリック停止、consoleプレビュー/既定OFFトグルを追加。専用E2Eと恒久ゲートは全green、money 4ハッシュ不変、throwaway残置0。**本配信トグルはOFFのまま**で、点火は設計§5どおり勝彦の手番。
+**最新（2026-08-18）**: GEN-1「鼓動」（点火待ち）に続き **GEN-2〜4検収合格・本番反映（GEN-4=42d94a6でGENプログラム全4章完成・North Star=2回目紹介率が/console/growthに常設）**＝/r/リンクがOGカード化・共有シートにプレビュー+文面コピー・funnel src/menu帰属開始。GEN-1は金曜11:00の週次ダイジェスト、3セグメント、決定的な今週のネタ、署名付きワンクリック停止、consoleプレビュー/既定OFFトグルを追加。専用E2Eと恒久ゲートは全green、money 4ハッシュ不変、throwaway残置0。**本配信トグルはOFFのまま**で、点火は設計§5どおり勝彦の手番。
+
+### 2026-08-18 GEN-4 検収合格＋リード引き取りデプロイ（42d94a6）＝GENプログラム全4章完成
+
+- 引き取り3回目・型が確立: clone FF取り込み→diff精査（/api/referral実差分3行のみ・reward_snapshot/凍結/帰属不変を確認）→migration先行適用（deals.src additive・growthのselect失敗を防ぐCodex申し送りどおり）→money開始スナップショット→単体5/5→**test:gen4実走**（ローカル4599サーバ+prod DB+suppress: src記録digest/不正null/旧形null・reward_snapshot全ビット同形式の機械比較・率50%(n=1/2)・ステージ1/1/1・中央値4.5日・残置0）→test:verify初回フルGREEN→デプロイ。
+- デプロイ dpl_74vbvmTcuNEDYZq6dhjJZkVzgGmb・stamp 42d94a6=HEAD実測。
+- **本番プローブの新手法**: /r/?src=digest のclient透過は「フォーム実入力→POST捕捉→送信直前abort」で証明（本番書込0・Slack/メール実送信0のままE2E相当の証明。実書込側はsuppress付きローカルE2Eで証明済み＝二段構え）。フォームはlabel/for紐付けなし→.r-field内兄弟input+native setterで hydration-safe fill。
+- 本番growth実測（owner・console host・375px）: North Star節出現・コールドスタート表示が設計どおり正直（率「—（まだ最初の紹介がありません）」・止まっている人0人・8週表は全0行も表示）・**psql突合全一致**（referrers=0・digest_sent=0・funnel_src=0）・溢れ0・pageerror 0（証跡=docs/reports/gen4_screens/gen4-growth-375-prod.png）。
+- money 4ハッシュ+seed 38/340,320 前後完全一致（E2E中のdeals変動→撤去後(empty)/0復帰込み）・CCGEN4残置0。
+- **🔥GENプログラム完成**: 鼓動(GEN-1・点火待ち)→道具(GEN-2)→火(GEN-3)→計測(GEN-4)。残る人の手番=勝彦のダイジェスト点火。点火後は/console/growthのGENループ表が毎週の通信簿になる。
 
 ### 2026-08-18 GEN-4「計測」設計確定（勝彦GO・完全自走）
 
