@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { makeFunnelDedupHash, normalizeFunnelAttribution } from '@/lib/funnel-attribution'
 
 // Wave1-⑤：紹介ファネル計測の公開受け口（additive・fire-and-forget前提）。
 // token→partner_id は「読み取りのみ」で解決（既存の帰属/解決ロジックは改変せず別参照）。
@@ -11,11 +12,12 @@ const VALID_CHANNELS = new Set(['mail', 'line', 'copy', 'qr'])
 
 export async function POST(req: NextRequest) {
   try {
-    const { event_type, token, channel } = await req.json().catch(() => ({}))
+    const { event_type, token, channel, src, menu_id } = await req.json().catch(() => ({}))
     if (!VALID_EVENTS.has(event_type)) return NextResponse.json({ ok: true, skipped: 'invalid event' })
 
     const tok = typeof token === 'string' ? token.slice(0, 64) : null
     const ch = typeof channel === 'string' && VALID_CHANNELS.has(channel) ? channel : null
+    const { src: source, menuId } = normalizeFunnelAttribution(src, menu_id)
 
     const admin = await createServiceRoleClient()
 
@@ -26,8 +28,8 @@ export async function POST(req: NextRequest) {
       partnerId = link?.partner_id ?? null
     }
 
-    // 簡易重複抑制：同一 (event_type, token, channel) が直近10秒にあればスキップ（指標の二重計上防止・最小防御）。
-    const dedupHash = `${event_type}:${tok ?? ''}:${ch ?? ''}`
+    // src/menuも含め、別の流入元・メニューを過剰にまとめない。
+    const dedupHash = makeFunnelDedupHash(event_type, tok, ch, source, menuId)
     const since = new Date(Date.now() - 10_000).toISOString()
     const { data: recent } = await admin
       .from('funnel_events')
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
     if ((recent?.length ?? 0) > 0) return NextResponse.json({ ok: true, deduped: true })
 
     await admin.from('funnel_events').insert({
-      event_type, channel: ch, token: tok, partner_id: partnerId, dedup_hash: dedupHash,
+      event_type, channel: ch, token: tok, partner_id: partnerId, src: source, menu_id: menuId, dedup_hash: dedupHash,
     })
     return NextResponse.json({ ok: true })
   } catch {

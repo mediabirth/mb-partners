@@ -69,7 +69,7 @@ async function attachMenus(services: ServiceWithMenus[]) {
     if (ids.length === 0) return
     // メニュー（名前のみ）
     const { data: menuRows } = await admin
-      .from('menus').select('id, service_menu_id, name, sort, active, calendar_account_id, calendar_member_id, short_description, description')
+      .from('menus').select('id, service_menu_id, name, sort, active, calendar_account_id, calendar_member_id, short_description, public_description, description')
       .in('service_menu_id', ids).eq('active', true).order('sort')
     const menus = (menuRows ?? []) as Menu[]
     const menuIds = menus.map(m => m.id)
@@ -314,6 +314,7 @@ export type Menu = {
   calendar_account_id?: string | null   // 段階B（旧・残置）
   calendar_member_id?: string | null     // 段階3a：担当メンバー（null=既定owner）
   short_description?: string | null      // リファラルWave1：メニュー一言説明（表示専用）
+  public_description?: string | null     // 顧客向け紹介ページと共有カードだけに使う公開説明
   description?: string | null            // menu_context v2：メニュー詳細説明（詳細シート用・null=非表示）
   rewards?: MenuReward[]           // 報酬（複数）・表示用に付与
 }

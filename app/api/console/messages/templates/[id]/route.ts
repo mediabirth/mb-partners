@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { parseButtons, parseTplBlocks } from '../route'
+import { parseButtons, parseTplBlocks } from '@/lib/message-template-parse'
 
 // メッセージセンター Phase3-A：テンプレート編集/削除。owner gate・service_role・隔離表のみ。
 // ★削除はソフト削除（is_active=false）＝履歴/誤操作に強い。money/deals/帰属 非接触。

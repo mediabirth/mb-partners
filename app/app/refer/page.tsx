@@ -86,7 +86,7 @@ export default function ReferPage() {
   const [consent, setConsent]             = useState(false)
   const [taskChecks, setTaskChecks]       = useState<string[]>([])   // 個別タスクのチェック済みラベル
   const [openInfo, setOpenInfo]           = useState<string | null>(null)   // ⓘポップオーバーが開いているタスク
-  const [shareSvc, setShareSvc]           = useState<{ id: string; name: string; menus: { id: string; name: string }[] } | null>(null)  // 通水P1: 共有シート（＋メニュー選択）
+  const [shareSvc, setShareSvc]           = useState<{ id: string; name: string; menus: { id: string; name: string; public_description: string | null }[] } | null>(null)  // 通水P1: 共有シート（＋メニュー選択）
   const [query, setQuery]                 = useState('')                 // v3：検索（クライアント絞り込み）
   const [category, setCategory]           = useState<string>('すべて')   // v3：カテゴリチップ（単一選択）
   const [consultNote, setConsultNote]     = useState('')
@@ -317,7 +317,7 @@ export default function ReferPage() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {filteredServices.map((svc, i) => (
-                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} selectedIds={picks.map(p => p.id)} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name, menus: svc.service_menus.flatMap(sm => (sm.menus ?? []).filter(m => m.active !== false).map(m => ({ id: m.id, name: m.name }))) })} />
+                <BrandCard key={svc.id} svc={svc} active={expandedSvc === svc.id} index={i} selectedIds={picks.map(p => p.id)} onToggle={() => toggleTile(svc)} onPick={pickReward} onShare={() => setShareSvc({ id: svc.id, name: svc.name, menus: svc.service_menus.flatMap(sm => (sm.menus ?? []).filter(m => m.active !== false).map(m => ({ id: m.id, name: m.name, public_description: m.public_description ?? null }))) })} />
               ))}
             </div>
             {services.length > 0 && filteredServices.length === 0 && (

@@ -3,11 +3,22 @@
  * Wave1-⑤：クライアント側ファネル計測（additive・完全非ブロッキング・fire-and-forget）。
  * 既存の共有/送信/閲覧動作には一切割り込まない（後追いで投げるだけ・例外を投げない）。
  */
-type TrackOpts = { token?: string | null; channel?: 'mail' | 'line' | 'copy' | 'qr' }
+type TrackOpts = {
+  token?: string | null
+  channel?: 'mail' | 'line' | 'copy' | 'qr'
+  src?: string | null
+  menuId?: string | null
+}
 
 export function trackFunnel(eventType: 'share' | 'landing_view', opts: TrackOpts = {}): void {
   try {
-    const body = JSON.stringify({ event_type: eventType, token: opts.token ?? undefined, channel: opts.channel })
+    const body = JSON.stringify({
+      event_type: eventType,
+      token: opts.token ?? undefined,
+      channel: opts.channel,
+      src: opts.src ?? undefined,
+      menu_id: opts.menuId ?? undefined,
+    })
     // sendBeacon は描画/遷移をブロックしない。非対応時は keepalive fetch にフォールバック。
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
       navigator.sendBeacon('/api/funnel/track', new Blob([body], { type: 'application/json' }))
