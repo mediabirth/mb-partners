@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/notifications'
 import { notifySlackEvent } from '@/lib/slack'
+import { normalizeFunnelSource } from '@/lib/funnel-attribution'
 import {
   isHoneypotFilled,
   isPlainObject,
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     const contactName = fields.contactName.value
     const contactTitle = fields.contactTitle.value
     const customerEmail = fields.customerEmail.value
+    const referralSrc = normalizeFunnelSource(body.src)
 
     const supabase = await createServiceRoleClient()
 
@@ -113,6 +115,7 @@ export async function POST(req: NextRequest) {
         customer_name: customerName,
         channel: 'referral',
         source,
+        src: referralSrc,
         status: 'received',
         consent: true,
         amount,

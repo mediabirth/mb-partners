@@ -37,7 +37,7 @@ type WinRow = {
 }
 
 const JST_OFFSET = 9 * 60 * 60 * 1000
-const WON_EVENT_BODY = 'ステータスを「成約確定」に変更しました'
+export const WON_EVENT_BODY = 'ステータスを「成約確定」に変更しました'
 
 function nonNegativeInteger(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0
@@ -74,12 +74,26 @@ function singleProfile(value: PartnerIdentity['profiles']): ProfileIdentity | nu
   return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
+export function isSocialProofExcludedIdentity(identity: {
+  isSystem: boolean | null
+  email: string | null
+  code: string | null
+  name: string | null
+}): boolean {
+  if (identity.isSystem) return true
+  const email = identity.email?.trim().toLowerCase() ?? ''
+  const haystack = `${email} ${(identity.code ?? '').toLowerCase()} ${(identity.name ?? '').toLowerCase()}`
+  return email.endsWith('@mb-system.internal') || haystack.includes('cc-monitor')
+}
+
 function isExcludedPartner(partner: PartnerIdentity): boolean {
-  if (partner.is_system) return true
   const profile = singleProfile(partner.profiles)
-  const email = profile?.email?.trim().toLowerCase() ?? ''
-  const identity = `${email} ${(partner.code ?? '').toLowerCase()} ${(profile?.name ?? '').toLowerCase()}`
-  return email.endsWith('@mb-system.internal') || identity.includes('cc-monitor')
+  return isSocialProofExcludedIdentity({
+    isSystem: partner.is_system,
+    email: profile?.email ?? null,
+    code: partner.code,
+    name: profile?.name ?? null,
+  })
 }
 
 function winPartnerId(value: WinRow['deals']): string | null {

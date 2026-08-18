@@ -114,6 +114,7 @@ export default function ReferralLandingClient() {
           customerEmail: email.trim(),
           customerType: company ? 'corporate' : 'individual',
           phone, memo: chosenMenuName ? [`ご相談メニュー: ${chosenMenuName}`, memo].filter(Boolean).join('\n') : memo, via,
+          src: source,
           website,
         }),
       })

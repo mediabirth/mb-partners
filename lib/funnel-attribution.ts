@@ -2,12 +2,18 @@ import { validUuid } from '@/lib/share-card-public'
 
 const VALID_SOURCES = new Set(['digest', 'card'])
 
+export type FunnelSource = 'digest' | 'card'
+
+export function normalizeFunnelSource(src: unknown): FunnelSource | null {
+  return typeof src === 'string' && VALID_SOURCES.has(src) ? src as FunnelSource : null
+}
+
 export function normalizeFunnelAttribution(src: unknown, menuId: unknown): {
   src: 'digest' | 'card' | null
   menuId: string | null
 } {
   return {
-    src: typeof src === 'string' && VALID_SOURCES.has(src) ? src as 'digest' | 'card' : null,
+    src: normalizeFunnelSource(src),
     menuId: validUuid(menuId) ? menuId : null,
   }
 }
