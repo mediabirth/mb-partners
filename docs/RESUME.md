@@ -4,6 +4,11 @@
 
 **最新（2026-08-18）**: GEN-1「鼓動」を実装。金曜11:00の週次ダイジェスト、3セグメント、決定的な今週のネタ、署名付きワンクリック停止、consoleプレビュー/既定OFFトグルを追加。専用E2Eと恒久ゲートは全green、money 4ハッシュ不変、throwaway残置0。**本配信トグルはOFFのまま**で、点火は設計§5どおり勝彦の手番。
 
+### 2026-08-18 GEN-2「道具」設計確定＋完全自走の再強調（勝彦指示）
+
+- 勝彦指示: GEN-2着手＋「リードもCodex発注も完全自走・都度確認禁止」（AGENTS.md体制節に反映済み）。例外は従来どおり=不可逆データ操作・money意味変更・CLAUDE.md人間確認必須節。
+- GEN-2設計書 docs/design/gen2-sharecard.md v1 確定。核心=①/r/[token]は完全クライアント描画でOGメタ無し→server分割+generateMetadataで「貼った瞬間カード」化（既存配布リンクも遡って効く）②OG画像=next/og決定的生成・許可表はpublic_description等の顧客面のみ（short_description/紹介者名/money構造遮断）③共有シートにカードプレビュー+文面ごとコピー+navigator.share ④funnel_eventsへsrc/menu_id追加=GEN-1のsrc=digestがここで初めて実測可能に（GEN-4の土台）。
+
 ### 2026-08-18 GEN-1 検収合格（904ef40）＝鼓動の器が本番に載った・点火は勝彦の手番
 
 - リード独立実測: 本番stamp 904ef40=HEAD=origin/main・無署名cron GET/POSTとも401・不正token停止は303→静音ページ（oracleなし）・money 4ハッシュ全一致＋MB seed 38行/340,320（全行集計が正典。activeのみ集計=28行/60,260はクエリ定義違いであってデータ変化ではない——検収時に一度誤検知しかけた記録として残す）。
